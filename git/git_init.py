@@ -40,8 +40,7 @@ Options:
   -v, --verbose           Enable verbose logging (DEBUG level).
 
 Example:
-  python script_name.py -d ./my_project -u https://github.com/user/repo.git --protect-main-locally
-  python ./git/git_init.py -u git@github.com:Bobain/again-some-shit.git
+  python3 ./git/git_init.py -u git@github.com:Bobain/MonolithicCoffeeMakerAgent --protect-main-locally
 
   Key Changes:
 PRE_PUSH_HOOK_CONTENT_TEMPLATE:
