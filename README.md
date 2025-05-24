@@ -1,4 +1,4 @@
-AI agent toy, written with agents AI. 
+AI agent toy, written with agents AI.
 No idea yet what it will do for real
 
 # Unsolved issues
@@ -16,21 +16,21 @@ A PAT is a more secure way to authenticate with GitHub for command-line operatio
 **1. Generate a Personal Access Token on GitHub:**
 
    a. Go to your GitHub **Settings**. (Click your profile picture in the top-right corner, then "Settings").
-   
+
    b. In the left sidebar, scroll down and click on **Developer settings**.
-   
+
    c. In the left sidebar, click on **Personal access tokens**, then **Tokens (classic)**.
       *(While "Fine-grained tokens" exist, "Tokens (classic)" are often simpler for this direct script usage).*
-   
+
    d. Click the **Generate new token** button (or **Generate new token (classic)**).
-   
+
    e. Give your token a descriptive **Note** (e.g., "Git Initializer Script Token" or "My Laptop Git Access").
-   
+
    f. Set an **Expiration** for your token. For security, avoid "No expiration" if possible. 30 or 90 days is a good start.
-   
+
    g. Under **Select scopes**, you **must** check the **`repo`** scope. This scope grants full control of private and public repositories.
       ![GitHub PAT repo scope](https://i.stack.imgur.com/9N4yN.png) *(Illustrative image, UI might vary slightly)*
-   
+
    h. Click **Generate token** at the bottom of the page.
 
 **2. Copy Your Token:**
@@ -42,7 +42,7 @@ A PAT is a more secure way to authenticate with GitHub for command-line operatio
    When the script (or any Git command) prompts you for your password for `https://github.com`, do the following:
     Username for 'https://github.com': YOUR_GITHUB_USERNAME
     Password for 'https://YOUR_GITHUB_USERNAME@github.com': <PASTE_YOUR_PERSONAL_ACCESS_TOKEN_HERE>
-   
+
 **Do NOT enter your regular GitHub account password. Use the PAT you just generated.**
 
 ### Making it Easier: Credential Helpers

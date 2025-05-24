@@ -51,13 +51,13 @@ Examples:
   python3 ./git/git_init.py -u git@github.com:Bobain/MonolithicCoffeeMakerAgentReinit.git --protect-main-locally
 """
 
-import subprocess
 import argparse
-import os
-import sys
-import shutil
 import logging
-import stat # For making hook executable
+import os
+import shutil
+import stat  # For making hook executable
+import subprocess
+import sys
 
 # --- Script Configuration ---
 # Determine the directory where this script is located.
@@ -67,7 +67,7 @@ GITIGNORE_TEMPLATE_PATH = os.path.join(_SCRIPT_DIR, "ressources", "code", "pytho
 PRE_PUSH_HOOK_TEMPLATE_PATH = os.path.join(_SCRIPT_DIR, "ressources", "hooks", "pre_push_hook_template.sh")
 
 # Configure basic logging
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -75,10 +75,16 @@ class GitRepoInitializer:
     """
     Handles the initialization of a Git repository.
     """
-    def __init__(self, directory=".", repo_url=None,
-                 commit_message="Initial commit with Python .gitignore",
-                 branch_name="main", force_gitignore=False,
-                 protect_main_locally=False):
+
+    def __init__(
+        self,
+        directory=".",
+        repo_url=None,
+        commit_message="Initial commit with Python .gitignore",
+        branch_name="main",
+        force_gitignore=False,
+        protect_main_locally=False,
+    ):
         self.project_path = os.path.abspath(directory)
         self.repo_url = repo_url
         self.commit_message = commit_message
@@ -87,7 +93,7 @@ class GitRepoInitializer:
         self.protect_main_locally = protect_main_locally
 
         self._validate_prerequisites()
-        self._load_template_contents() # Load templates during initialization
+        self._load_template_contents()  # Load templates during initialization
 
     def _load_template_contents(self):
         """Loads template content from files."""
@@ -115,7 +121,6 @@ class GitRepoInitializer:
             logger.error(f"FATAL: Error reading pre-push hook template file: {e}")
             sys.exit(1)
 
-
     def _validate_prerequisites(self):
         """Checks for Git and valid project directory."""
         if not shutil.which("git"):
@@ -133,12 +138,7 @@ class GitRepoInitializer:
             # Pass the current environment to subprocess
             current_env = os.environ.copy()
             process = subprocess.run(
-                command,
-                cwd=self.project_path,
-                check=check,
-                capture_output=capture_output,
-                text=True,
-                env=current_env
+                command, cwd=self.project_path, check=check, capture_output=capture_output, text=True, env=current_env
             )
             if process.stdout and not suppress_output:
                 logger.debug(f"STDOUT:\n{process.stdout.strip()}")
@@ -186,18 +186,17 @@ class GitRepoInitializer:
             logger.info("IMPORTANT: A local pre-push hook has been installed to discourage")
             logger.info(f"direct pushes to '{self.branch_name}'. For true branch protection,")
             logger.info(f"please configure branch protection rules on your GitHub repository:")
-            if "github.com" in self.repo_url: # Basic check for GitHub URL
-                 logger.info(f"  {self.repo_url.replace('.git', '')}/settings/branches")
+            if "github.com" in self.repo_url:  # Basic check for GitHub URL
+                logger.info(f"  {self.repo_url.replace('.git', '')}/settings/branches")
             else:
-                 logger.info(f"  Please find the branch protection settings on your Git host for {self.repo_url}")
+                logger.info(f"  Please find the branch protection settings on your Git host for {self.repo_url}")
             logger.info("--------------------------------------------------------------------")
         elif self.protect_main_locally:
-             logger.info("--------------------------------------------------------------------")
-             logger.info("IMPORTANT: A local pre-push hook has been installed to discourage")
-             logger.info(f"direct pushes to '{self.branch_name}'.")
-             logger.info("Consider setting up server-side branch protection if you connect to a remote.")
-             logger.info("--------------------------------------------------------------------")
-
+            logger.info("--------------------------------------------------------------------")
+            logger.info("IMPORTANT: A local pre-push hook has been installed to discourage")
+            logger.info(f"direct pushes to '{self.branch_name}'.")
+            logger.info("Consider setting up server-side branch protection if you connect to a remote.")
+            logger.info("--------------------------------------------------------------------")
 
     def _git_init(self):
         """Initializes a Git repository if one doesn't exist."""
@@ -211,8 +210,7 @@ class GitRepoInitializer:
         """Sets or renames the main branch."""
         try:
             current_branch_process = self._run_command(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                check=False, suppress_output=True
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"], check=False, suppress_output=True
             )
             current_branch = current_branch_process.stdout.strip() if current_branch_process.returncode == 0 else None
 
@@ -225,8 +223,10 @@ class GitRepoInitializer:
             else:
                 logger.info(f"Branch is already named '{self.branch_name}'.")
         except Exception as e:
-            logger.warning(f"Could not reliably determine or set branch name: {e}. "
-                           f"Proceeding with Git's default or current branch configuration.")
+            logger.warning(
+                f"Could not reliably determine or set branch name: {e}. "
+                f"Proceeding with Git's default or current branch configuration."
+            )
 
     def _create_gitignore(self):
         """Creates the .gitignore file using content from the loaded template."""
@@ -276,20 +276,24 @@ class GitRepoInitializer:
         hooks_dir = os.path.join(self.project_path, ".git", "hooks")
         if not os.path.isdir(hooks_dir):
             # This can happen if .git is a file (worktree/submodule) or init failed very early
-            logger.warning(f"Git hooks directory not found or not a directory: {hooks_dir}. Cannot install pre-push hook. ")
+            logger.warning(
+                f"Git hooks directory not found or not a directory: {hooks_dir}. Cannot install pre-push hook. "
+            )
             return
 
         pre_push_hook_path = os.path.join(hooks_dir, "pre-push")
         hook_content = self.pre_push_hook_template_content.format(protected_branch_name=self.branch_name)
 
-        logger.info(f"Installing pre-push hook to discourage direct pushes to '{self.branch_name}' from template: {PRE_PUSH_HOOK_TEMPLATE_PATH}")
+        logger.info(
+            f"Installing pre-push hook to discourage direct pushes to '{self.branch_name}' from template: {PRE_PUSH_HOOK_TEMPLATE_PATH}"
+        )
         try:
             with open(pre_push_hook_path, "w", encoding="utf-8") as f:
                 f.write(hook_content)
             current_permissions = os.stat(pre_push_hook_path).st_mode
             os.chmod(
                 pre_push_hook_path,
-                current_permissions | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH # Add execute permissions
+                current_permissions | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,  # Add execute permissions
             )
             logger.info(f"Pre-push hook installed at: {pre_push_hook_path}")
         except IOError as e:
@@ -308,48 +312,41 @@ the pre-push hook in a 'ressources' subdirectory relative to its own location.
 Based on script location '{_SCRIPT_DIR}', it expects:
   - .gitignore template: '{GITIGNORE_TEMPLATE_PATH}'
   - pre-push hook template: '{PRE_PUSH_HOOK_TEMPLATE_PATH}'
-"""
+""",
     )
     parser.add_argument(
-        "-d", "--directory",
-        default=".",
-        help="Path to the project directory (default: current directory)."
+        "-d", "--directory", default=".", help="Path to the project directory (default: current directory)."
     )
     parser.add_argument(
-        "-u", "--repo-url",
+        "-u",
+        "--repo-url",
         help="URL of the GitHub repository (e.g., https://github.com/user/repo.git).\n"
-             "If not provided, remote setup and push will be skipped."
+        "If not provided, remote setup and push will be skipped.",
     )
     parser.add_argument(
-        "-m", "--commit-message",
+        "-m",
+        "--commit-message",
         default="Initial commit with Python .gitignore",
-        help="Message for the initial commit."
+        help="Message for the initial commit.",
     )
     parser.add_argument(
-        "-b", "--branch-name",
+        "-b",
+        "--branch-name",
         default="main",
-        help="Name for the primary branch (default: main). This will also be the branch protected by the local hook if enabled."
+        help="Name for the primary branch (default: main). This will also be the branch protected by the local hook if enabled.",
     )
-    parser.add_argument(
-        "--force-gitignore",
-        action="store_true",
-        help="Overwrite .gitignore if it already exists."
-    )
+    parser.add_argument("--force-gitignore", action="store_true", help="Overwrite .gitignore if it already exists.")
     parser.add_argument(
         "--protect-main-locally",
         action="store_true",
-        help="Install a local pre-push hook to discourage direct pushes to the main branch (specified by --branch-name)."
+        help="Install a local pre-push hook to discourage direct pushes to the main branch (specified by --branch-name).",
     )
     parser.add_argument(
         "--run-tests",
         action="store_true",
-        help="Run the integrated unit tests for this script (if defined in this file)."
+        help="Run the integrated unit tests for this script (if defined in this file).",
     )
-    parser.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="Enable verbose logging (DEBUG level)."
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging (DEBUG level).")
 
     args = parser.parse_args()
 
@@ -359,19 +356,21 @@ Based on script location '{_SCRIPT_DIR}', it expects:
     logger.debug(f"Using .gitignore template: {GITIGNORE_TEMPLATE_PATH}")
     logger.debug(f"Using pre-push hook template: {PRE_PUSH_HOOK_TEMPLATE_PATH}")
 
-
     if args.run_tests:
         # Check if tests are actually defined in this file or a linked module
-        if 'TestGitRepoInitializer' in globals():
+        if "TestGitRepoInitializer" in globals():
             import unittest
+
             # Remove script-specific args before passing to unittest
-            test_argv = [sys.argv[0]] # Keep the script name
+            test_argv = [sys.argv[0]]  # Keep the script name
             for arg in sys.argv[1:]:
-                 if arg not in ('--run-tests', '-v', '--verbose', '--protect-main-locally', '--force-gitignore') and \
-                    not (arg.startswith('-d') or arg.startswith('--directory')) and \
-                    not (arg.startswith('-u') or arg.startswith('--repo-url')) and \
-                    not (arg.startswith('-m') or arg.startswith('--commit-message')) and \
-                    not (arg.startswith('-b') or arg.startswith('--branch-name')):
+                if (
+                    arg not in ("--run-tests", "-v", "--verbose", "--protect-main-locally", "--force-gitignore")
+                    and not (arg.startswith("-d") or arg.startswith("--directory"))
+                    and not (arg.startswith("-u") or arg.startswith("--repo-url"))
+                    and not (arg.startswith("-m") or arg.startswith("--commit-message"))
+                    and not (arg.startswith("-b") or arg.startswith("--branch-name"))
+                ):
                     test_argv.append(arg)
             sys.argv = test_argv
             unittest.main(module=__name__, exit=False)
@@ -386,10 +385,10 @@ Based on script location '{_SCRIPT_DIR}', it expects:
             commit_message=args.commit_message,
             branch_name=args.branch_name,
             force_gitignore=args.force_gitignore,
-            protect_main_locally=args.protect_main_locally
+            protect_main_locally=args.protect_main_locally,
         )
         initializer.initialize_repository()
-    except SystemExit: # Catch sys.exit calls from within the class
+    except SystemExit:  # Catch sys.exit calls from within the class
         raise
     except Exception as e:
         logger.critical(f"An unexpected critical error occurred during script execution: {e}", exc_info=True)
@@ -404,9 +403,9 @@ Based on script location '{_SCRIPT_DIR}', it expects:
 
 if __name__ == "__main__":
     # Check if --run-tests is NOT in sys.argv to prevent running main() when tests are run
-    if '--run-tests' not in sys.argv:
+    if "--run-tests" not in sys.argv:
         main()
-    else: # --run-tests is present
+    else:  # --run-tests is present
         # This block is tricky if tests are defined below and main() is also called.
         # The main() function already has logic for --run-tests.
         # The typical structure is `if __name__ == "__main__": main()` and tests run via a test runner.
