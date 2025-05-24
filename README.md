@@ -1,4 +1,5 @@
-AI agent toy that does nothing
+AI agent toy, written with agents AI. 
+No idea yet what it will do for real
 
 # Unsolved issues
 
