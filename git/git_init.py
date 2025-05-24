@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+# co-author : Gemini 2.5 Pro Preview 05-06 in Google AI Studio
 """
 Git Project Initializer Script
 
@@ -41,36 +41,6 @@ Options:
 
 Example:
   python3 ./git/git_init.py -u git@github.com:Bobain/MonolithicCoffeeMakerAgent --protect-main-locally
-
-  Key Changes:
-PRE_PUSH_HOOK_CONTENT_TEMPLATE:
-A new constant holding the shell script for the pre-push hook.
-It's a template that will be formatted with the actual protected_branch_name.
-The hook checks if the push is targeting the protected branch and exits with 1 (failure) if so, printing a helpful message.
-It allows deleting the remote branch.
-It explicitly mentions git push --no-verify as a way to bypass the hook.
-GitRepoInitializer Class:
-__init__: Added protect_main_locally=False argument and stores it.
-initialize_repository():
-Calls _install_pre_push_hook() after the initial _git_push() if self.protect_main_locally is true. This ensures the very first push (setting up the repo) is allowed.
-Prints a prominent message advising the user to set up server-side branch protection rules on GitHub, including a direct link to the settings page.
-_install_pre_push_hook() method:
-Creates the .git/hooks directory if it doesn't exist (though git init usually does).
-Writes the formatted hook content to .git/hooks/pre-push.
-Uses os.chmod and stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH to make the hook file executable, which is crucial for Git to run it.
-Includes error handling for file operations.
-main() function and argparse:
-Added --protect-main-locally command-line argument.
-Passed args.protect_main_locally to the GitRepoInitializer.
-Logging for _run_command:
-Slightly adjusted logging for stderr. If stderr contains "hint:", it's logged as DEBUG because Git often provides useful, non-error hints there. Otherwise, INFO. This makes the default output cleaner.
-Unit Tests (TestGitRepoInitializer):
-test_07_install_pre_push_hook:
-Verifies that the pre-push hook file is created.
-Checks if it's executable (os.access(hook_path, os.X_OK)).
-Reads the hook content and asserts that it contains the correct protected branch name and a marker string.
-setUp and _run_git_command: Modified to use an environment where GIT_CONFIG_GLOBAL and GIT_CONFIG_SYSTEM are nullified. This is important to make tests more predictable, especially regarding init.defaultBranch, as user's global Git config can otherwise interfere.
-test_08_stderr_hint_logging: A new test to check the refined stderr logging for "hint:" messages.
 
 """
 
@@ -207,7 +177,7 @@ dmypy.json
 
 # IDE / Editor specific
 .idea/
-# .vscode/ # Uncomment if you never want to version VSCode settings
+.vscode/ # Uncomment if you never want to version VSCode settings
 *.project
 *.pydevproject
 .sublime-workspace
