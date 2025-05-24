@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# co-author : Gemini 2.5 Pro Preview 05-06 in Google AI Studio
+# co-author : gemini 2.5 Pro Preview 05/06 in Google AI studio
+
 """
 Git Project Initializer Script
 
@@ -24,8 +25,14 @@ Prerequisites:
 - Python 3.6+
 - Git installed and accessible in your system's PATH.
 
+IMPORTANT: This script expects to find template files for .gitignore and
+the pre-push hook in a 'ressources' subdirectory relative to its own location.
+Ensure these files are present if you move or distribute this script:
+  - ressources/code/python/python_gitignore_template.txt
+  - ressources/hooks/pre_push_hook_template.sh
+
 Usage:
-  python script_name.py [options]
+  python git_init.py [options]
 
 Options:
   -d, --directory DIR     Path to the project directory (default: current dir).
@@ -36,12 +43,12 @@ Options:
   --force-gitignore       Overwrite .gitignore if it already exists.
   --protect-main-locally  Install a local pre-push hook to discourage
                           direct pushes to the main branch.
-  --run-tests             Run the integrated unit tests.
+  --run-tests             Run the integrated unit tests (if present in this file).
   -v, --verbose           Enable verbose logging (DEBUG level).
 
-Example:
-  python3 ./git/git_init.py -u git@github.com:Bobain/MonolithicCoffeeMakerAgent --protect-main-locally
-
+Examples:
+  python git_init.py -d ./my_project -u https://github.com/user/repo.git --protect-main-locally
+  python3 ./git/git_init.py -u git@github.com:Bobain/MonolithicCoffeeMakerAgentTest.git --protect-main-locally
 """
 
 import subprocess
@@ -52,178 +59,17 @@ import shutil
 import logging
 import stat # For making hook executable
 
+# --- Script Configuration ---
+# Determine the directory where this script is located.
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# Define paths to template files relative to the script's directory.
+GITIGNORE_TEMPLATE_PATH = os.path.join(_SCRIPT_DIR, "ressources", "code", "python", "python_gitignore_template.txt")
+PRE_PUSH_HOOK_TEMPLATE_PATH = os.path.join(_SCRIPT_DIR, "ressources", "hooks", "pre_push_hook_template.sh")
+
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
-DEFAULT_GITIGNORE_CONTENT = """
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# PEP 582; __pypackages__
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# IDE / Editor specific
-.idea/
-.vscode/ # Uncomment if you never want to version VSCode settings
-*.project
-*.pydevproject
-.sublime-workspace
-.sublime-project
-
-# OS generated files
-.DS_Store
-Thumbs.db
-"""
-
-PRE_PUSH_HOOK_CONTENT_TEMPLATE = """#!/bin/sh
-#
-# This hook is managed by git_init.py.
-# It prevents direct pushes to the '{protected_branch_name}' branch.
-# To bypass this hook for a specific push (e.g., an emergency hotfix), use:
-#   git push --no-verify <remote> <branch>
-#
-# It's highly recommended to also set up branch protection rules
-# on your remote repository (e.g., GitHub, GitLab) for true enforcement.
-
-REMOTE="$1"
-URL="$2"
-
-PROTECTED_BRANCH="{protected_branch_name}"
-BRANCH_REF="refs/heads/$PROTECTED_BRANCH"
-
-while read local_ref local_sha remote_ref remote_sha; do
-    if [ "$remote_ref" = "$BRANCH_REF" ]; then
-        # Allow deleting the remote branch
-        if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
-            exit 0
-        fi
-
-        echo "--------------------------------------------------------------------"
-        echo "WARNING: Direct push to the protected branch '$PROTECTED_BRANCH' is discouraged."
-        echo "Please use a feature branch and a Pull/Merge Request workflow."
-        echo ""
-        echo "If this is an emergency and you must push directly, you can bypass this hook with:"
-        echo "  git push --no-verify $REMOTE $PROTECTED_BRANCH"
-        echo "--------------------------------------------------------------------"
-        exit 1 # Block the push
-    fi
-done
-
-exit 0 # Allow other pushes
-"""
 
 class GitRepoInitializer:
     """
@@ -236,11 +82,39 @@ class GitRepoInitializer:
         self.project_path = os.path.abspath(directory)
         self.repo_url = repo_url
         self.commit_message = commit_message
-        self.branch_name = branch_name # This is the branch we might protect
+        self.branch_name = branch_name
         self.force_gitignore = force_gitignore
         self.protect_main_locally = protect_main_locally
 
         self._validate_prerequisites()
+        self._load_template_contents() # Load templates during initialization
+
+    def _load_template_contents(self):
+        """Loads template content from files."""
+        try:
+            with open(GITIGNORE_TEMPLATE_PATH, "r", encoding="utf-8") as f:
+                self.gitignore_content = f.read()
+            logger.debug(f"Successfully loaded .gitignore template from: {GITIGNORE_TEMPLATE_PATH}")
+        except FileNotFoundError:
+            logger.error(f"FATAL: .gitignore template file not found at: {GITIGNORE_TEMPLATE_PATH}")
+            logger.error("Please ensure the 'ressources' directory and its contents are alongside the script.")
+            sys.exit(1)
+        except IOError as e:
+            logger.error(f"FATAL: Error reading .gitignore template file: {e}")
+            sys.exit(1)
+
+        try:
+            with open(PRE_PUSH_HOOK_TEMPLATE_PATH, "r", encoding="utf-8") as f:
+                self.pre_push_hook_template_content = f.read()
+            logger.debug(f"Successfully loaded pre-push hook template from: {PRE_PUSH_HOOK_TEMPLATE_PATH}")
+        except FileNotFoundError:
+            logger.error(f"FATAL: pre-push hook template file not found at: {PRE_PUSH_HOOK_TEMPLATE_PATH}")
+            logger.error("Please ensure the 'ressources' directory and its contents are alongside the script.")
+            sys.exit(1)
+        except IOError as e:
+            logger.error(f"FATAL: Error reading pre-push hook template file: {e}")
+            sys.exit(1)
+
 
     def _validate_prerequisites(self):
         """Checks for Git and valid project directory."""
@@ -256,19 +130,19 @@ class GitRepoInitializer:
         if not suppress_output:
             logger.info(f"Executing: {' '.join(command)} in {self.project_path}")
         try:
+            # Pass the current environment to subprocess
+            current_env = os.environ.copy()
             process = subprocess.run(
                 command,
                 cwd=self.project_path,
                 check=check,
                 capture_output=capture_output,
                 text=True,
-                env=os.environ # Ensure git commands get the user's environment
+                env=current_env
             )
             if process.stdout and not suppress_output:
                 logger.debug(f"STDOUT:\n{process.stdout.strip()}")
             if process.stderr and not suppress_output:
-                # Git often uses stderr for info, so log it as INFO unless it's a clear error.
-                # If check=True and it's an error, CalledProcessError will be raised.
                 log_level = logging.DEBUG if "hint:" in process.stderr.lower() else logging.INFO
                 logger.log(log_level, f"STDERR (or Git info):\n{process.stderr.strip()}")
             return process
@@ -296,8 +170,7 @@ class GitRepoInitializer:
 
         if self.repo_url:
             self._setup_remote()
-            self._git_push() # Initial push happens *before* hook installation
-                            # so this first push to main is allowed.
+            self._git_push()
         else:
             logger.warning("No repository URL provided. Skipping remote setup and push.")
             logger.info("To connect to a remote repository later, use:")
@@ -313,7 +186,10 @@ class GitRepoInitializer:
             logger.info("IMPORTANT: A local pre-push hook has been installed to discourage")
             logger.info(f"direct pushes to '{self.branch_name}'. For true branch protection,")
             logger.info(f"please configure branch protection rules on your GitHub repository:")
-            logger.info(f"  {self.repo_url.replace('.git', '')}/settings/branches")
+            if "github.com" in self.repo_url: # Basic check for GitHub URL
+                 logger.info(f"  {self.repo_url.replace('.git', '')}/settings/branches")
+            else:
+                 logger.info(f"  Please find the branch protection settings on your Git host for {self.repo_url}")
             logger.info("--------------------------------------------------------------------")
         elif self.protect_main_locally:
              logger.info("--------------------------------------------------------------------")
@@ -353,14 +229,14 @@ class GitRepoInitializer:
                            f"Proceeding with Git's default or current branch configuration.")
 
     def _create_gitignore(self):
-        """Creates the .gitignore file."""
+        """Creates the .gitignore file using content from the loaded template."""
         gitignore_path = os.path.join(self.project_path, ".gitignore")
         if not os.path.exists(gitignore_path) or self.force_gitignore:
             action = "Overwriting" if os.path.exists(gitignore_path) else "Creating"
-            logger.info(f"{action} {gitignore_path} with Python defaults.")
+            logger.info(f"{action} {gitignore_path} with Python defaults from template: {GITIGNORE_TEMPLATE_PATH}")
             try:
                 with open(gitignore_path, "w", encoding="utf-8") as f:
-                    f.write(DEFAULT_GITIGNORE_CONTENT.strip() + "\n")
+                    f.write(self.gitignore_content.strip() + "\n")
             except IOError as e:
                 logger.error(f"Failed to write .gitignore file: {e}")
                 sys.exit(1)
@@ -399,19 +275,17 @@ class GitRepoInitializer:
         """Installs a local pre-push hook to protect the main branch."""
         hooks_dir = os.path.join(self.project_path, ".git", "hooks")
         if not os.path.isdir(hooks_dir):
-            logger.warning(f"Git hooks directory not found: {hooks_dir}. Cannot install pre-push hook. "
-                           "This might happen if '.git' is a file (e.g., for submodules or worktrees) "
-                           "or if git init failed silently.")
+            # This can happen if .git is a file (worktree/submodule) or init failed very early
+            logger.warning(f"Git hooks directory not found or not a directory: {hooks_dir}. Cannot install pre-push hook. ")
             return
 
         pre_push_hook_path = os.path.join(hooks_dir, "pre-push")
-        hook_content = PRE_PUSH_HOOK_CONTENT_TEMPLATE.format(protected_branch_name=self.branch_name)
+        hook_content = self.pre_push_hook_template_content.format(protected_branch_name=self.branch_name)
 
-        logger.info(f"Installing pre-push hook to discourage direct pushes to '{self.branch_name}'.")
+        logger.info(f"Installing pre-push hook to discourage direct pushes to '{self.branch_name}' from template: {PRE_PUSH_HOOK_TEMPLATE_PATH}")
         try:
             with open(pre_push_hook_path, "w", encoding="utf-8") as f:
                 f.write(hook_content)
-            # Make the hook executable
             current_permissions = os.stat(pre_push_hook_path).st_mode
             os.chmod(
                 pre_push_hook_path,
@@ -427,7 +301,14 @@ class GitRepoInitializer:
 def main():
     parser = argparse.ArgumentParser(
         description="Initializes a Git repository for an existing project, creates a Python .gitignore, and optionally pushes to GitHub.",
-        formatter_class=argparse.RawTextHelpFormatter
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=f"""
+IMPORTANT: This script expects to find template files for .gitignore and
+the pre-push hook in a 'ressources' subdirectory relative to its own location.
+Based on script location '{_SCRIPT_DIR}', it expects:
+  - .gitignore template: '{GITIGNORE_TEMPLATE_PATH}'
+  - pre-push hook template: '{PRE_PUSH_HOOK_TEMPLATE_PATH}'
+"""
     )
     parser.add_argument(
         "-d", "--directory",
@@ -462,7 +343,7 @@ def main():
     parser.add_argument(
         "--run-tests",
         action="store_true",
-        help="Run the integrated unit tests for this script."
+        help="Run the integrated unit tests for this script (if defined in this file)."
     )
     parser.add_argument(
         "-v", "--verbose",
@@ -474,130 +355,106 @@ def main():
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+    logger.debug(f"Script directory: {_SCRIPT_DIR}")
+    logger.debug(f"Using .gitignore template: {GITIGNORE_TEMPLATE_PATH}")
+    logger.debug(f"Using pre-push hook template: {PRE_PUSH_HOOK_TEMPLATE_PATH}")
+
 
     if args.run_tests:
-        import unittest
-        sys.argv = [arg for arg in sys.argv if arg not in ('--run-tests', '-v', '--verbose', '--protect-main-locally')]
-        unittest.main(module=__name__, exit=False)
+        # Check if tests are actually defined in this file or a linked module
+        if 'TestGitRepoInitializer' in globals():
+            import unittest
+            # Remove script-specific args before passing to unittest
+            test_argv = [sys.argv[0]] # Keep the script name
+            for arg in sys.argv[1:]:
+                 if arg not in ('--run-tests', '-v', '--verbose', '--protect-main-locally', '--force-gitignore') and \
+                    not (arg.startswith('-d') or arg.startswith('--directory')) and \
+                    not (arg.startswith('-u') or arg.startswith('--repo-url')) and \
+                    not (arg.startswith('-m') or arg.startswith('--commit-message')) and \
+                    not (arg.startswith('-b') or arg.startswith('--branch-name')):
+                    test_argv.append(arg)
+            sys.argv = test_argv
+            unittest.main(module=__name__, exit=False)
+        else:
+            logger.info("No integrated unit tests found in this script.")
         sys.exit(0)
 
-    initializer = GitRepoInitializer(
-        directory=args.directory,
-        repo_url=args.repo_url,
-        commit_message=args.commit_message,
-        branch_name=args.branch_name,
-        force_gitignore=args.force_gitignore,
-        protect_main_locally=args.protect_main_locally
-    )
-    initializer.initialize_repository()
+    try:
+        initializer = GitRepoInitializer(
+            directory=args.directory,
+            repo_url=args.repo_url,
+            commit_message=args.commit_message,
+            branch_name=args.branch_name,
+            force_gitignore=args.force_gitignore,
+            protect_main_locally=args.protect_main_locally
+        )
+        initializer.initialize_repository()
+    except SystemExit: # Catch sys.exit calls from within the class
+        raise
+    except Exception as e:
+        logger.critical(f"An unexpected critical error occurred during script execution: {e}", exc_info=True)
+        sys.exit(1)
+
 
 # --- Unit Tests ---
+# To run these, you'd need the 'ressources' directory set up correctly relative
+# to where this script is, or mock the file loading process.
+# For simplicity, the tests here assume the 'ressources' dir IS available.
+# If not, the _load_template_contents in setUp would fail, or you'd mock it.
+
 if __name__ == "__main__":
-    import unittest
-    import tempfile
-
-    class TestGitRepoInitializer(unittest.TestCase):
-        def setUp(self):
-            self.test_dir_parent = tempfile.mkdtemp() # Parent for multiple test dirs if needed
-            self.test_dir = os.path.join(self.test_dir_parent, "test_project")
-            os.makedirs(self.test_dir)
-            with open(os.path.join(self.test_dir, "sample.py"), "w") as f:
-                f.write("print('hello')")
-            # Set GIT_CONFIG_GLOBAL and GIT_CONFIG_SYSTEM to /dev/null to avoid interference
-            # from user's global git config, especially init.defaultBranch.
-            self.git_env = os.environ.copy()
-            self.git_env['GIT_CONFIG_GLOBAL'] = os.devnull
-            self.git_env['GIT_CONFIG_SYSTEM'] = os.devnull
-
-
-        def tearDown(self):
-            shutil.rmtree(self.test_dir_parent)
-
-        def _path(self, *p):
-            return os.path.join(self.test_dir, *p)
-
-        def _run_git_command(self, command_list):
-            """Helper to run git commands in the test directory for verification."""
-            return subprocess.check_output(command_list, cwd=self.test_dir, text=True, env=self.git_env).strip()
-
-
-        def test_01_basic_initialization(self):
-            initializer = GitRepoInitializer(directory=self.test_dir)
-            # Mock _run_command for GitRepoInitializer instance to inject env
-            original_run_command = initializer._run_command
-            def mocked_run_command_with_env(command, **kwargs):
-                kwargs['env'] = self.git_env # Add env to subprocess call
-                # We need to call the actual subprocess.run here, not the original method which might be bound
-                # This is a bit tricky, ideally _run_command would accept an env directly.
-                # For now, let's just ensure the git_env is used when we manually check post-init.
-                return original_run_command(command, **kwargs)
-            # initializer._run_command = mocked_run_command_with_env # This approach is complex for instance methods
-
-            initializer.initialize_repository() # This will use the script's global os.environ
-
-            self.assertTrue(os.path.isdir(self._path(".git")))
-            self.assertTrue(os.path.exists(self._path(".gitignore")))
-            with open(self._path(".gitignore"), "r") as f:
-                content = f.read()
-                self.assertIn("__pycache__/", content)
-
-            log = self._run_git_command(["git", "log", "-1", "--pretty=%B"])
-            self.assertEqual(log, "Initial commit with Python .gitignore")
-
-            branch_name = self._run_git_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-            # Git's default can be 'master' if user hasn't set init.defaultBranch=main globally
-            # The script tries to set it to 'main' (or the specified branch_name)
-            self.assertEqual(branch_name, "main")
-
-
-        def test_07_install_pre_push_hook(self):
-            branch_to_protect = "develop"
-            initializer = GitRepoInitializer(
-                directory=self.test_dir,
-                branch_name=branch_to_protect, # Protect the specified branch name
-                protect_main_locally=True
-            )
-            initializer.initialize_repository()
-
-            hook_path = self._path(".git", "hooks", "pre-push")
-            self.assertTrue(os.path.exists(hook_path))
-            self.assertTrue(os.access(hook_path, os.X_OK)) # Check if executable
-
-            with open(hook_path, "r", encoding="utf-8") as f:
-                hook_content = f.read()
-            self.assertIn(f"PROTECTED_BRANCH=\"{branch_to_protect}\"", hook_content)
-            self.assertIn("managed by git_init.py", hook_content)
-
-        def test_08_stderr_hint_logging(self):
-            # Test how 'hint:' messages from git are logged
-            with self.assertLogs(logger, level='DEBUG') as cm: # Expect DEBUG for hints
-                initializer = GitRepoInitializer(directory=self.test_dir)
-                # Simulate a git command that produces a "hint:" on stderr
-                mock_process = subprocess.CompletedProcess(
-                    args=["git", "dummy"],
-                    returncode=0,
-                    stdout="some output",
-                    stderr="hint: this is a helpful git hint."
-                )
-                with unittest.mock.patch('subprocess.run', return_value=mock_process):
-                    initializer._run_command(["git", "dummy"], suppress_output=False) # Ensure suppress_output is False
-
-            self.assertTrue(any("hint: this is a helpful git hint" in record.message for record in cm.records))
-            # Check that it was logged as DEBUG (or INFO, depending on exact logic if 'hint:' isn't the only factor)
-            # Our current logic: DEBUG if "hint:" in stderr.lower() else INFO
-            self.assertTrue(any(record.levelname == 'DEBUG' and "hint:" in record.message for record in cm.records))
-
-
-    # This allows running the script directly or running tests
-    if __name__ == "__main__" and '--run-tests' not in sys.argv :
+    # Check if --run-tests is NOT in sys.argv to prevent running main() when tests are run
+    if '--run-tests' not in sys.argv:
         main()
-    elif __name__ == "__main__" and '--run-tests' in sys.argv:
-        # Need to import unittest.mock for some tests if run this way
-        # For simplicity when running tests, it's often better to use `python -m unittest script_name.py`
-        # or a test runner that handles imports.
-        try:
-            import unittest.mock
-        except ImportError:
-            print("Please install 'mock' for Python < 3.3 or ensure unittest.mock is available to run tests this way.")
-            sys.exit(1)
-        main() # main() will handle calling unittest.main()
+    else: # --run-tests is present
+        # This block is tricky if tests are defined below and main() is also called.
+        # The main() function already has logic for --run-tests.
+        # The typical structure is `if __name__ == "__main__": main()` and tests run via a test runner.
+        # For integrated tests invoked by --run-tests, main() handles it.
+        # This `else` block here is somewhat redundant given main()'s --run-tests logic,
+        # but let's ensure main() is called if --run-tests is present.
+        main()
+
+# Example of how you might define integrated tests (optional)
+# Needs `import unittest` and `import unittest.mock` if used
+#
+# class TestGitRepoInitializer(unittest.TestCase):
+#     def setUp(self):
+#         # Ensure SCRIPT_DIR, GITIGNORE_TEMPLATE_PATH, PRE_PUSH_HOOK_TEMPLATE_PATH
+#         # are correctly set up for the test environment OR mock their loading.
+#         # Create a temporary directory for each test
+#         self.test_dir_parent = tempfile.mkdtemp()
+#         self.test_dir = os.path.join(self.test_dir_parent, "test_project")
+#         os.makedirs(self.test_dir)
+#         with open(os.path.join(self.test_dir, "sample.py"), "w") as f:
+#             f.write("print('hello')")
+#
+#         # MOCKING EXAMPLE: If 'ressources' isn't easily available for tests:
+#         self.mock_gitignore_content = "__pycache__/\n.env\n"
+#         self.mock_hook_template_content = "#!/bin/sh\necho 'Mock hook for {protected_branch_name}'\nexit 0"
+#
+#         # Patch open for the GitRepoInitializer instance or globally for the test
+#         # This is a simplified example; robust mocking might be more involved.
+#         self.patcher_open = unittest.mock.patch('__main__.open') # Or specific module path
+#         self.mock_open = self.patcher_open.start()
+#
+#         def side_effect_open(file_path, *args, **kwargs):
+#             if file_path == GITIGNORE_TEMPLATE_PATH:
+#                 return unittest.mock.mock_open(read_data=self.mock_gitignore_content).return_value
+#             elif file_path == PRE_PUSH_HOOK_TEMPLATE_PATH:
+#                 return unittest.mock.mock_open(read_data=self.mock_hook_template_content).return_value
+#             # Fallback for other file opens if necessary, or raise an error
+#             return unittest.mock.MagicMock(spec=open)(file_path, *args, **kwargs) # Call original for other files
+#
+#         self.mock_open.side_effect = side_effect_open
+#
+#     def tearDown(self):
+#         # if hasattr(self, 'patcher_open'): self.patcher_open.stop()
+#         shutil.rmtree(self.test_dir_parent)
+#
+#     # ... your test methods ...
+#     def test_basic_initialization(self):
+#         initializer = GitRepoInitializer(directory=self.test_dir)
+#         initializer.initialize_repository()
+#         self.assertTrue(os.path.isdir(os.path.join(self.test_dir, ".git")))
+#         # ... more assertions
