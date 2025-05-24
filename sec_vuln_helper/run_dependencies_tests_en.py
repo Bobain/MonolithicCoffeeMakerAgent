@@ -18,13 +18,13 @@ python test_all_packages.py --quiet | grep "Testing"
 
 """
 
-import os
-import sys
-import subprocess
 import importlib.util
-from pathlib import Path
 import json
+import os
+import subprocess
+import sys
 import tempfile
+from pathlib import Path
 
 # Replace pkg_resources import with:
 try:
@@ -32,6 +32,7 @@ try:
 except ImportError:
     # Fallback for Python < 3.8
     import pkg_resources
+
     metadata = None
 
 # Then in the code:
@@ -39,6 +40,7 @@ if metadata:
     packages = list(metadata.distributions())
 else:
     packages = list(pkg_resources.working_set)
+
 
 class PackageTester:
     def __init__(self, timeout=60, verbose=True):
@@ -52,10 +54,7 @@ class PackageTester:
         package_path = Path(package_location)
 
         # Common test directory patterns
-        test_patterns = [
-            'test*', 'tests*', '*_test', '*_tests',
-            'Test*', 'Tests*', '*Test', '*Tests'
-        ]
+        test_patterns = ["test*", "tests*", "*_test", "*_tests", "Test*", "Tests*", "*Test", "*Tests"]
 
         for pattern in test_patterns:
             test_dirs.extend(package_path.glob(f"**/{pattern}"))
@@ -69,9 +68,9 @@ class PackageTester:
 
         # Look for configuration files
         config_files = {
-            'pytest': ['pytest.ini', 'pyproject.toml', 'setup.cfg', 'tox.ini'],
-            'unittest': ['unittest.cfg'],
-            'nose': ['nose.cfg', '.noserc']
+            "pytest": ["pytest.ini", "pyproject.toml", "setup.cfg", "tox.ini"],
+            "unittest": ["unittest.cfg"],
+            "nose": ["nose.cfg", ".noserc"],
         }
 
         for framework, configs in config_files.items():
@@ -81,88 +80,64 @@ class PackageTester:
         # Analyze imports in test files
         for test_file in test_dir.glob("**/*.py"):
             try:
-                with open(test_file, 'r', encoding='utf-8') as f:
+                with open(test_file, "r", encoding="utf-8") as f:
                     content = f.read()
-                    if 'import pytest' in content or 'from pytest' in content:
-                        frameworks.append('pytest')
-                    elif 'import unittest' in content or 'from unittest' in content:
-                        frameworks.append('unittest')
-                    elif 'import nose' in content or 'from nose' in content:
-                        frameworks.append('nose')
+                    if "import pytest" in content or "from pytest" in content:
+                        frameworks.append("pytest")
+                    elif "import unittest" in content or "from unittest" in content:
+                        frameworks.append("unittest")
+                    elif "import nose" in content or "from nose" in content:
+                        frameworks.append("nose")
             except Exception:
                 continue
 
-        return list(set(frameworks)) or ['pytest']  # Default to pytest
+        return list(set(frameworks)) or ["pytest"]  # Default to pytest
 
     def run_pytest(self, test_dir, package_name):
         """Run pytest with fixture handling"""
         cmd = [
-            sys.executable, '-m', 'pytest',
+            sys.executable,
+            "-m",
+            "pytest",
             str(test_dir),
-            '-v',
-            '--tb=short',
-            '--maxfail=5',
-            f'--junit-xml=test_results_{package_name}.xml'
+            "-v",
+            "--tb=short",
+            "--maxfail=5",
+            f"--junit-xml=test_results_{package_name}.xml",
         ]
 
         # Look for conftest.py for fixtures
-        if (test_dir / 'conftest.py').exists():
-            cmd.extend(['--confcutdir', str(test_dir)])
+        if (test_dir / "conftest.py").exists():
+            cmd.extend(["--confcutdir", str(test_dir)])
 
         return self._run_command(cmd, test_dir)
 
     def run_unittest(self, test_dir, package_name):
         """Run unittest discover"""
-        cmd = [
-            sys.executable, '-m', 'unittest',
-            'discover',
-            '-s', str(test_dir),
-            '-p', 'test*.py',
-            '-v'
-        ]
+        cmd = [sys.executable, "-m", "unittest", "discover", "-s", str(test_dir), "-p", "test*.py", "-v"]
 
         return self._run_command(cmd, test_dir)
 
     def run_nose(self, test_dir, package_name):
         """Run nose tests"""
-        cmd = [
-            sys.executable, '-m', 'nose',
-            str(test_dir),
-            '-v'
-        ]
+        cmd = [sys.executable, "-m", "nose", str(test_dir), "-v"]
 
         return self._run_command(cmd, test_dir)
 
     def _run_command(self, cmd, cwd):
         """Execute a command with timeout"""
         try:
-            result = subprocess.run(
-                cmd,
-                cwd=cwd,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout
-            )
+            result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=self.timeout)
             return {
-                'success': result.returncode == 0,
-                'stdout': result.stdout,
-                'stderr': result.stderr,
-                'returncode': result.returncode
+                "success": result.returncode == 0,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode,
             }
         except subprocess.TimeoutExpired:
-            return {
-                'success': False,
-                'stdout': '',
-                'stderr': f'Timeout after {self.timeout}s',
-                'returncode': -1
-            }
+            return {"success": False, "stdout": "", "stderr": f"Timeout after {self.timeout}s", "returncode": -1}
         except Exception as e:
-            return {
-                'success': False,
-                'stdout': '',
-                'stderr': str(e),
-                'returncode': -2
-            }
+            return {"success": False, "stdout": "", "stderr": str(e), "returncode": -2}
 
     def test_package(self, package):
         """Test a specific package"""
@@ -177,10 +152,7 @@ class PackageTester:
         test_dirs = self.find_test_directories(package_location)
 
         if not test_dirs:
-            self.results[package_name] = {
-                'status': 'no_tests',
-                'message': 'No test directories found'
-            }
+            self.results[package_name] = {"status": "no_tests", "message": "No test directories found"}
             return
 
         package_results = []
@@ -197,36 +169,29 @@ class PackageTester:
                     print(f"Using framework: {framework}")
 
                 # Run tests based on framework
-                if framework == 'pytest':
+                if framework == "pytest":
                     result = self.run_pytest(test_dir, package_name)
-                elif framework == 'unittest':
+                elif framework == "unittest":
                     result = self.run_unittest(test_dir, package_name)
-                elif framework == 'nose':
+                elif framework == "nose":
                     result = self.run_nose(test_dir, package_name)
                 else:
                     continue
 
-                package_results.append({
-                    'test_dir': str(test_dir),
-                    'framework': framework,
-                    'result': result
-                })
+                package_results.append({"test_dir": str(test_dir), "framework": framework, "result": result})
 
                 if self.verbose:
-                    status = "✓ PASS" if result['success'] else "✗ FAIL"
+                    status = "✓ PASS" if result["success"] else "✗ FAIL"
                     print(f"  {status} ({framework})")
-                    if not result['success'] and result['stderr']:
+                    if not result["success"] and result["stderr"]:
                         print(f"  Error: {result['stderr'][:200]}...")
 
-        self.results[package_name] = {
-            'status': 'tested',
-            'results': package_results
-        }
+        self.results[package_name] = {"status": "tested", "results": package_results}
 
     def test_all_packages(self, exclude_patterns=None):
         """Test all installed packages"""
         if exclude_patterns is None:
-            exclude_patterns = ['pip', 'setuptools', 'wheel', 'pkg-resources']
+            exclude_patterns = ["pip", "setuptools", "wheel", "pkg-resources"]
 
         packages = list(pkg_resources.working_set)
         total = len(packages)
@@ -235,8 +200,7 @@ class PackageTester:
         print("Exclusions:", exclude_patterns)
 
         for i, package in enumerate(packages, 1):
-            if any(pattern in package.project_name.lower()
-                   for pattern in exclude_patterns):
+            if any(pattern in package.project_name.lower() for pattern in exclude_patterns):
                 if self.verbose:
                     print(f"[{i}/{total}] Skipping {package.project_name}")
                 continue
@@ -247,27 +211,24 @@ class PackageTester:
             try:
                 self.test_package(package)
             except Exception as e:
-                self.results[package.project_name] = {
-                    'status': 'error',
-                    'message': str(e)
-                }
+                self.results[package.project_name] = {"status": "error", "message": str(e)}
                 if self.verbose:
                     print(f"  Error: {e}")
 
     def generate_report(self, output_file=None):
         """Generate a test results report"""
         report = {
-            'summary': {
-                'total_packages': len(self.results),
-                'tested': sum(1 for r in self.results.values() if r['status'] == 'tested'),
-                'no_tests': sum(1 for r in self.results.values() if r['status'] == 'no_tests'),
-                'errors': sum(1 for r in self.results.values() if r['status'] == 'error'),
+            "summary": {
+                "total_packages": len(self.results),
+                "tested": sum(1 for r in self.results.values() if r["status"] == "tested"),
+                "no_tests": sum(1 for r in self.results.values() if r["status"] == "no_tests"),
+                "errors": sum(1 for r in self.results.values() if r["status"] == "error"),
             },
-            'details': self.results
+            "details": self.results,
         }
 
         if output_file:
-            with open(output_file, 'w') as f:
+            with open(output_file, "w") as f:
                 json.dump(report, f, indent=2)
 
         return report
@@ -276,23 +237,15 @@ class PackageTester:
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='Test all installed packages')
-    parser.add_argument('--timeout', type=int, default=60,
-                        help='Timeout per test in seconds')
-    parser.add_argument('--quiet', action='store_true',
-                        help='Silent mode')
-    parser.add_argument('--output', type=str,
-                        help='JSON output file')
-    parser.add_argument('--exclude', nargs='*',
-                        default=['pip', 'setuptools', 'wheel'],
-                        help='Packages to exclude')
+    parser = argparse.ArgumentParser(description="Test all installed packages")
+    parser.add_argument("--timeout", type=int, default=60, help="Timeout per test in seconds")
+    parser.add_argument("--quiet", action="store_true", help="Silent mode")
+    parser.add_argument("--output", type=str, help="JSON output file")
+    parser.add_argument("--exclude", nargs="*", default=["pip", "setuptools", "wheel"], help="Packages to exclude")
 
     args = parser.parse_args()
 
-    tester = PackageTester(
-        timeout=args.timeout,
-        verbose=not args.quiet
-    )
+    tester = PackageTester(timeout=args.timeout, verbose=not args.quiet)
 
     try:
         tester.test_all_packages(exclude_patterns=args.exclude)
@@ -313,5 +266,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
