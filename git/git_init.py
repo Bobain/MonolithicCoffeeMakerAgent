@@ -48,7 +48,7 @@ Options:
 
 Examples:
   python git_init.py -d ./my_project -u https://github.com/user/repo.git --protect-main-locally
-  python3 ./git/git_init.py -u git@github.com:Bobain/MonolithicCoffeeMakerAgentTest.git --protect-main-locally
+  python3 ./git/git_init.py -u git@github.com:Bobain/MonolithicCoffeeMakerAgentReinit.git --protect-main-locally
 """
 
 import subprocess
