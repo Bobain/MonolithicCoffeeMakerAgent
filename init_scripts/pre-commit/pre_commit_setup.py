@@ -39,7 +39,7 @@ If this script is `pre_commit_setup.py`, it expects its default template at:
   ./ressources/pre_commit/default_pre_commit_config_template.yaml
 
 Command-Line Usage:
-  python3 ./utils/pre_commit_setup.py
+  python ./init_scripts/pre-commit/pre_commit_setup.py
 
 Common Options:
   -d, --directory DIR     Path to the project directory to set up pre-commit hooks.
@@ -54,7 +54,7 @@ Common Options:
   --help                  Show this help message and exit.
 
 Example - Setup with defaults in current directory:
-  python3 ./utils/pre_commit_setup.py
+  python3 ./pre-commit/pre_commit_setup.py
 
 Example - Setup for a specific project using a custom hooks file:
   python pre_commit_setup.py -d ./my_other_project --hooks-file ./my_custom_hooks.yaml --force-config
@@ -91,8 +91,6 @@ logger = logging.getLogger(__name__)
 # --- Custom Exceptions (Optional but good practice) ---
 class PrerequisiteError(Exception):
     """Custom exception for missing prerequisites."""
-
-    pass
 
 
 class PreCommitManager:
@@ -302,7 +300,7 @@ unless a custom hooks file is specified with --hooks-file.
         # Message already logged by the class, so just exit
         # logger.error(f"Prerequisite missing: {e}") # Redundant if class logs
         sys.exit(2)  # Different exit code for prerequisite errors
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         # Message already logged by the class if it's a known file
         # logger.error(f"File not found: {e}")
         sys.exit(3)
