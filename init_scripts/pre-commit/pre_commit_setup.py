@@ -92,8 +92,6 @@ logger = logging.getLogger(__name__)
 class PrerequisiteError(Exception):
     """Custom exception for missing prerequisites."""
 
-    pass
-
 
 class PreCommitManager:
     """Manages the setup of pre-commit hooks."""
@@ -302,7 +300,7 @@ unless a custom hooks file is specified with --hooks-file.
         # Message already logged by the class, so just exit
         # logger.error(f"Prerequisite missing: {e}") # Redundant if class logs
         sys.exit(2)  # Different exit code for prerequisite errors
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         # Message already logged by the class if it's a known file
         # logger.error(f"File not found: {e}")
         sys.exit(3)

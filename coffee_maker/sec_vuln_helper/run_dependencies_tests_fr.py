@@ -4,12 +4,9 @@ Script pour lancer les tests de tous les packages installés
 Supporte unittest, pytest, nose, et gère les fixtures
 """
 
-import importlib.util
 import json
-import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import pkg_resources

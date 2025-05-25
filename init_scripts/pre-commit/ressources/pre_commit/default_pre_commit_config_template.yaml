@@ -10,6 +10,16 @@ repos:
     hooks:
       - id: isort
         name: isort (python)
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.1 # Use a recent version of autoflake
+    hooks:
+      - id: autoflake
+        args:
+          - --in-place
+          - --remove-all-unused-imports
+          - --remove-unused-variables # Uncomment if you also want to remove unused variables
+          - --expand-star-imports # Uncomment if you want to expand star imports (e.g., from ... import *)
+          # - --ignore-init-module-imports # Optional: if you have __init__.py files where imports are intentionally "unused" but needed for the package interface
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:

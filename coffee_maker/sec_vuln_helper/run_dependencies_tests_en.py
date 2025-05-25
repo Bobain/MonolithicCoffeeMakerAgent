@@ -18,12 +18,9 @@ python test_all_packages.py --quiet | grep "Testing"
 
 """
 
-import importlib.util
 import json
-import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 # Replace pkg_resources import with:
