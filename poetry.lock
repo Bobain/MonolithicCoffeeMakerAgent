@@ -419,6 +419,18 @@ MarkupSafe = ">=2.0"
 i18n = ["Babel (>=2.7)"]
 
 [[package]]
+name = "jsonref"
+version = "1.1.0"
+description = "jsonref is a library for automatic dereferencing of JSON Reference objects for Python."
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "jsonref-1.1.0-py3-none-any.whl", hash = "sha256:590dc7773df6c21cbf948b5dac07a72a251db28b0238ceecce0a2abfa8ec30a9"},
+    {file = "jsonref-1.1.0.tar.gz", hash = "sha256:32fe8e1d85af0fdefbebce950af85590b22b60f9e95443176adbde4e1ecea552"},
+]
+
+[[package]]
 name = "markdown-it-py"
 version = "3.0.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
@@ -543,6 +555,32 @@ uvicorn = {version = ">=0.23.1", markers = "sys_platform != \"emscripten\""}
 cli = ["python-dotenv (>=1.0.0)", "typer (>=0.12.4)"]
 rich = ["rich (>=13.9.4)"]
 ws = ["websockets (>=15.0.1)"]
+
+[[package]]
+name = "mcpadapt"
+version = "0.1.9"
+description = "Adapt MCP servers to many agentic framework."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "mcpadapt-0.1.9-py3-none-any.whl", hash = "sha256:9f2a6ad1155efdf1a43c11e8449ae9258295c4e140c3c6ff672983a8ac8bde33"},
+    {file = "mcpadapt-0.1.9.tar.gz", hash = "sha256:03e601c4c083f3f4eb178e6a6bcd157bcb45e25c140ea0895567bab346b67645"},
+]
+
+[package.dependencies]
+jsonref = ">=1.1.0"
+mcp = ">=1.9.0"
+pydantic = ">=2.10.6"
+python-dotenv = ">=1.0.1"
+
+[package.extras]
+crewai = ["crewai (>=0.108.0)"]
+google-genai = ["google-genai (>=1.2.0)"]
+langchain = ["langchain (>=0.3.14)", "langchain-anthropic (>=0.3.1)", "langgraph (>=0.2.62)"]
+llamaindex = ["llama-index (>=0.12.14)"]
+smolagents = ["smolagents (>=1.2.2)"]
+test = ["crewai (>=0.108.0)", "google-genai (>=1.2.0)", "langchain (>=0.3.14)", "langchain-anthropic (>=0.3.1)", "langgraph (>=0.2.62)", "pytest (>=8.3.4)", "pytest-asyncio (>=0.25.2)", "smolagents (>=1.2.2)"]
 
 [[package]]
 name = "mdurl"
@@ -1000,6 +1038,8 @@ files = [
 [package.dependencies]
 huggingface-hub = ">=0.31.2"
 jinja2 = ">=3.1.4"
+mcp = {version = "*", optional = true, markers = "extra == \"mcp\""}
+mcpadapt = {version = ">=0.0.19", optional = true, markers = "extra == \"mcp\""}
 pillow = ">=10.0.1"
 python-dotenv = "*"
 requests = ">=2.32.3"
@@ -1185,4 +1225,4 @@ standard = ["colorama (>=0.4) ; sys_platform == \"win32\"", "httptools (>=0.6.3)
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "160617ed6522ca08cee9de166dca44c9580faa45120dad1561df86238426bd25"
+content-hash = "1904961e6e18dae367cd25b620aea8f7ce02644f3eacd6ceec14039b0fa8a793"

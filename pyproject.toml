@@ -9,10 +9,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 mcp = {extras = ["cli"], version = "^1.9.1"} # Example of how mcp[cli] might look
-smolagents = "^1.16.1"
-
-[tool.poetry.group.dev.dependencies]
-# ...
+smolagents = {extras = ["mcp"], version = "^1.16.1"}
 
 [build-system]
 requires = ["poetry-core"]
