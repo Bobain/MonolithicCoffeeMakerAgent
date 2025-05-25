@@ -1,4 +1,5 @@
 #!/bin/bash
+# co-author : Gemini 2.5 Pro Preview 05/06
 
 # Script to automate returning to the main branch after a feature branch workflow.
 
@@ -52,15 +53,27 @@ if git merge-base --is-ancestor "$current_branch_tip" "$remote_main_branch_ref";
     echo "'$current_branch' (commit $current_branch_tip) is merged into '$remote_main_branch_ref'."
 else
     # Alternative check using git branch --merged
-    # This checks if the current branch *name* (referring to its local tip) is listed as merged into remote main
-    # This is often more reliable if the push above just happened and the remote main hasn't been re-fetched by other means
-    merged_branches=$(git branch --merged "$remote_main_branch_ref")
-    if echo "$merged_branches" | grep -qw "$current_branch"; then
-        echo "'$current_branch' appears to be merged into '$remote_main_branch_ref'."
+    merged_branches_output=$(git branch --merged "$remote_main_branch_ref" 2>/dev/null) # Capture output, suppress stderr
+    # Process merged_branches_output to get clean branch names
+    # Remove asterisk from current branch, strip whitespace
+    cleaned_merged_branches=""
+    while IFS= read -r line; do
+        # Remove leading/trailing whitespace and asterisk
+        branch_name=$(echo "$line" | sed 's/^[ *]*//;s/[ ]*$//')
+        # Add to list if not empty
+        if [ -n "$branch_name" ]; then
+            cleaned_merged_branches="$cleaned_merged_branches $branch_name"
+        fi
+    done <<< "$merged_branches_output"
+
+    # Check if current_branch is in the cleaned list of merged branches
+    if echo "$cleaned_merged_branches" | grep -E "(^| )$current_branch( |$)" -q; then
+        echo "'$current_branch' appears to be merged into '$remote_main_branch_ref' (checked via local merged branches)."
     else
         echo ""
         echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
         echo "VERIFICATION FAILED: '$current_branch' does not appear to be merged into '$remote_main_branch_ref'."
+        echo "This could be due to a squash merge on the remote, or the branch is genuinely not merged."
         echo "Please ensure your changes are merged on the remote (e.g., via a completed Pull Request)"
         echo "and that '$MAIN_BRANCH' has been fetched locally with the latest changes."
         echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -99,7 +112,6 @@ else
     echo "This can happen if the merge on the remote was a squash merge, or if the merge verification above was overridden."
     echo "If you are certain it can be deleted, you can try:"
     echo "  git branch -D $current_branch"
-    # Optionally, offer to force delete:
     read -p "Force delete local branch '$current_branch'? (y/N) " -n 1 -r force_delete_reply
     echo
     if [[ "$force_delete_reply" =~ ^[Yy]$ ]]; then
