@@ -1,0 +1,108 @@
+#!/bin/bash
+
+echo "DEBUG: Script execution started." # <-- VERY FIRST LINE
+
+set -e
+
+echo "DEBUG: set -e executed." # <-- AFTER set -e
+
+MAIN_BRANCH="main"
+REMOTE_NAME="origin"
+
+echo "DEBUG: Variables set. Getting current branch..."
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+# If the above command fails, the script would have exited due to set -e
+# and you wouldn't see the next echo.
+echo "DEBUG: Current branch determined as: '$current_branch'"
+
+if [ -z "$current_branch" ]; then
+    echo "ERROR: Could not determine current branch. Are you in a Git repository?"
+    exit 1
+fi
+
+if [ "$current_branch" = "$MAIN_BRANCH" ]; then
+    echo "DEBUG: On main branch."
+    echo "You are already on the '$MAIN_BRANCH' branch."
+    echo "Pulling latest changes for '$MAIN_BRANCH'..."
+    git pull "$REMOTE_NAME" "$MAIN_BRANCH"
+    echo "DEBUG: Pull complete or already up-to-date."
+    exit 0
+fi
+
+echo "DEBUG: Not on main branch. Current branch: $current_branch. Proceeding..."
+echo "Current branch: $current_branch"
+
+# Check if there are uncommitted changes
+echo "DEBUG: Checking for uncommitted changes..."
+if ! git diff-index --quiet HEAD --; then
+    echo "DEBUG: Uncommitted changes found."
+    echo "You have uncommitted changes. Please commit or stash them first."
+    exit 1
+fi
+echo "DEBUG: No uncommitted changes."
+
+# Ensure the current branch is pushed
+echo "DEBUG: Pushing '$current_branch' to '$REMOTE_NAME'..."
+if git push "$REMOTE_NAME" "$current_branch"; then
+    echo "DEBUG: '$current_branch' pushed successfully."
+    echo "'$current_branch' pushed successfully."
+else
+    echo "DEBUG: Failed to push '$current_branch'."
+    echo "Failed to push '$current_branch'. Please resolve issues and try again."
+    exit 1
+fi
+echo "DEBUG: Push successful."
+
+# --- Crucial Manual Step ---
+echo ""
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+echo "IMPORTANT: Before proceeding, please ensure that your branch '$current_branch'"
+echo "has been reviewed, approved, and MERGED into '$MAIN_BRANCH' on the remote repository"
+echo "(e.g., via a completed Pull Request on GitHub/GitLab/etc.)."
+echo "This script CANNOT verify the remote merge status automatically."
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+echo ""
+echo "DEBUG: Prompting user for merge confirmation..."
+read -p "Has '$current_branch' been merged into '$MAIN_BRANCH' on the remote? (y/N) " -n 1 -r
+echo # Move to a new line
+
+if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
+    echo "DEBUG: User aborted merge confirmation."
+    echo "Aborted by user. Please complete the remote merge process."
+    exit 1
+fi
+echo "DEBUG: User confirmed merge."
+
+# Checkout and pull main branch
+echo "DEBUG: Switching to '$MAIN_BRANCH' branch..."
+if ! git checkout "$MAIN_BRANCH"; then
+    echo "DEBUG: Failed to checkout '$MAIN_BRANCH'."
+    echo "Failed to checkout '$MAIN_BRANCH'."
+    exit 1
+fi
+echo "DEBUG: Switched to '$MAIN_BRANCH'."
+
+echo "DEBUG: Pulling latest changes for '$MAIN_BRANCH'..."
+if ! git pull "$REMOTE_NAME" "$MAIN_BRANCH"; then
+    echo "DEBUG: Failed to pull '$MAIN_BRANCH'."
+    echo "Failed to pull '$MAIN_BRANCH'."
+    exit 1
+fi
+echo "DEBUG: Pulled '$MAIN_BRANCH'."
+
+# Delete the local feature branch
+echo "DEBUG: Deleting local branch '$current_branch'..."
+if git branch -d "$current_branch"; then
+    echo "DEBUG: Local branch '$current_branch' deleted successfully."
+    echo "Local branch '$current_branch' deleted successfully."
+else
+    echo "DEBUG: Failed to delete local branch '$current_branch' with -d."
+    echo "Failed to delete local branch '$current_branch'."
+    echo "This might be because it contains unmerged commits relative to its upstream or HEAD (which is now $MAIN_BRANCH)."
+    echo "If you are certain it can be deleted, you can try:"
+    echo "  git branch -D $current_branch"
+fi
+echo "DEBUG: Branch deletion attempt complete."
+
+echo "Process complete. You are now on the '$MAIN_BRANCH' branch."
+echo "DEBUG: Script finished."
