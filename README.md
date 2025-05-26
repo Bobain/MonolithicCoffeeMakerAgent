@@ -1,6 +1,8 @@
 AI agent toy, written with agents AI.
 No idea yet what it will do for real
 
+![Boondoggle](ressources/README/coffee_maker.png)
+
 # Setup
 
 Don't use this package : it does nothing
