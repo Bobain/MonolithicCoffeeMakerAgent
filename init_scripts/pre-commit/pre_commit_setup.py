@@ -54,7 +54,7 @@ Common Options:
   --help                  Show this help message and exit.
 
 Example - Setup with defaults in current directory:
-  python3 ./pre-commit/pre_commit_setup.py
+  python init_scripts/pre-commit/pre_commit_setup.py
 
 Example - Setup for a specific project using a custom hooks file:
   python pre_commit_setup.py -d ./my_other_project --hooks-file ./my_custom_hooks.yaml --force-config
