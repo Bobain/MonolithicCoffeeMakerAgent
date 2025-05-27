@@ -3,11 +3,83 @@ No idea yet what it will do for real
 
 ![Boondoggle](ressources/README/coffee_maker.png)
 
-# Setup
+<!-- co-author : Gemini 2.5 Pro Preview -->
 
 Don't use this package : it does nothing
 
 # Some help
+
+## Advice for Developing an Agent in Python
+
+Here are some specific recommendations to keep in mind when building this Python agent:
+
+### 1. Python Project Structure (might not be up to date)
+
+```text
+MonolithicCoffeeMakerAgent/
+├── coffee_maker/ # The main source package
+│ ├── init.py
+│ ├── agent_core.py # Main agent logic
+│ ├── module_example/ # Specific modules/capabilities
+│ │ ├── init.py
+│ │ └── coffee_making_module.py # Example module
+│ └── utils/ # Utility functions
+├── tests/ # Unit and integration tests
+│ ├── init.py
+│ ├── test_agent_core.py
+│ └── test_coffee_making_module.py
+├── docs/ # Documentation
+│ └── usage.md
+├── examples/ # Usage examples
+│ └── ...
+├── ...
+├── .env.example # Example environment file : the one you use should be named .env and never ever be commited/pushed
+├── ...
+├── README.md # This file!
+├── ...
+```
+
+### 2. Robust Logging
+
+Good logging is crucial for understanding and debugging your agent's behavior.
+
+*   Use Python's built-in `logging` module.
+*   Configure different log levels (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+*   Allow configuration of log formats and their destinations (console, file).
+
+#### Basic logging setup example
+import logging
+
+#### Configure basic logging
+logging.basicConfig(
+    level=logging.INFO, # Set the default logging level
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', # Define log message format
+    datefmt='%Y-%m-%d %H:%M:%S' # Define date format
+)
+
+#### Create a logger instance for the current module
+logger = logging.getLogger(__name__)
+
+#### Example log messages
+logger.info("Agent has started successfully.")
+logger.debug("This is a detailed debug message for troubleshooting.")
+logger.warning("A potential issue was detected.")
+
+### 3. Thorough Testing
+
+useless as long as it does nothing
+
+Testing is essential to ensure the agent's reliability and robustness.
+*   Unit Tests: Test small units of code (functions, methods) in isolation. The pytest framework is highly recommended for its simplicity and power.
+*   Integration Tests: Test how different modules of the agent interact with each other and with external systems (if any).
+*   Using fixtures if needed
+*   Mocking: Use mocks (e.g., Python's unittest.mock library) to simulate external dependencies (APIs, file systems, databases) during tests. This allows for isolated and predictable testing.
+
+### 4. Documenting Agent Capabilities
+
+useless as long as it does nothing
+
+
 
 ## git_init.py failure : Support for password authentication was removed on August 13, 2021 : GitHub Authentication for Pushing
 
