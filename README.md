@@ -15,47 +15,29 @@ Here are some specific recommendations to keep in mind when building this Python
 
 ### 1. Python Project Structure (might not be up to date)
 
+```text
 monolithic_coffee_maker_agent/
-
 ├── coffee_maker/ # The main source package
-
 │ ├── init.py
-
 │ ├── agent_core.py # Main agent logic
-
 │ ├── module_example/ # Specific modules/capabilities
-
 │ │ ├── init.py
-
 │ │ └── coffee_making_module.py # Example module
-
 │ └── utils/ # Utility functions
-
 ├── tests/ # Unit and integration tests
-
 │ ├── init.py
-
 │ ├── test_agent_core.py
-
 │ └── test_coffee_making_module.py
-
 ├── docs/ # Documentation
-
 │ └── usage.md
-
 ├── examples/ # Usage examples
-
 │ └── ...
-
 ├── ...
-
 ├── .env.example # Example environment file : the one you use should be named .env and never ever be commited/pushed
-
 ├── ...
-
 ├── README.md # This file!
-
 ├── ...
+```
 
 ### 2. Robust Logging
 
