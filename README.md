@@ -16,7 +16,7 @@ Here are some specific recommendations to keep in mind when building this Python
 ### 1. Python Project Structure (might not be up to date)
 
 ```text
-monolithic_coffee_maker_agent/
+MonolithicCoffeeMakerAgent/
 ├── coffee_maker/ # The main source package
 │ ├── init.py
 │ ├── agent_core.py # Main agent logic
