@@ -63,7 +63,7 @@ jobs:
     environment:
       name: pypi # Ensure this matches the environment configured on PyPI and GitHub
       # Update 'coffee-maker' if your PyPI project name differs from pyproject.toml name
-      url: https://test.pypi.org/project/coffee-maker/${{ github.event.release.tag_name }}
+      url: https://pypi.org/project/coffee-maker/${{ github.event.release.tag_name }}
 
     steps:
       - name: Retrieve release distributions from artifact
@@ -74,8 +74,3 @@ jobs:
 
       - name: Publish release distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        # No API token needed due to trusted publishing.
-        # This will publish to PyPI by default.
-        # To publish to TestPyPI (as configured in the environment URL for now), add/ensure:
-        with:
-          repository-url: https://test.pypi.org/legacy/
