@@ -3,7 +3,7 @@ name = "coffee_maker"
 version = "0.0.1"
 description = "An agent that roast, grind, brew and serve your coffee. or not..."
 authors = ["Bobain and some code agents"]
-license = "MIT" # Or your chosen license... NO idea
+license = "Apache 2.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
