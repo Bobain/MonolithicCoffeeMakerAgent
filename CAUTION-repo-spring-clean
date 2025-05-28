@@ -1,0 +1,69 @@
+#!/bin/bash
+# co-author : Gemini 2.5 Pro Preview
+
+# This script deletes local and remote branches merged into the main branch.
+# USE WITH CAUTION, ESPECIALLY FOR REMOTE BRANCHES.
+
+MAIN_BRANCH="main" # Change if your main branch has a different name (e.g., "master")
+PROTECTED_BRANCHES_REGEX="^\*|$MAIN_BRANCH|master|develop" # Branches to never delete
+
+echo "--- Cleaning up branches merged into '$MAIN_BRANCH' ---"
+
+# 1. Go to the main branch and update it
+echo ""
+echo "1. Updating the '$MAIN_BRANCH' branch..."
+if ! git checkout "$MAIN_BRANCH"; then
+    echo "Error: Could not switch to branch '$MAIN_BRANCH'."
+    exit 1
+fi
+if ! git pull origin "$MAIN_BRANCH"; then
+    echo "Error: Could not update branch '$MAIN_BRANCH' from origin."
+    exit 1
+fi
+echo "Branch '$MAIN_BRANCH' updated."
+
+# 2. Deleting LOCAL merged branches
+echo ""
+echo "2. LOCAL branches merged into '$MAIN_BRANCH' (excluding protected branches):"
+LOCAL_MERGED_BRANCHES=$(git branch --merged "$MAIN_BRANCH" | grep -vE "$PROTECTED_BRANCHES_REGEX")
+
+if [ -z "$LOCAL_MERGED_BRANCHES" ]; then
+    echo "No local merged branches (excluding protected ones) to delete."
+else
+    echo "$LOCAL_MERGED_BRANCHES"
+    read -p "Do you want to delete these LOCAL branches? (y/N): " confirm_local_delete
+    if [[ "$confirm_local_delete" =~ ^[Yy]$ ]]; then
+        echo "$LOCAL_MERGED_BRANCHES" | xargs git branch -d
+        echo "Local branches deleted."
+    else
+        echo "Deletion of local branches canceled."
+    fi
+fi
+
+# 3. Prune remote branches (cleans up local references)
+echo ""
+echo "3. Updating remote branch references (fetch --prune)..."
+git fetch origin --prune
+echo "Remote references updated."
+
+# 4. Deleting REMOTE (origin) merged branches
+echo ""
+echo "4. REMOTE branches (on origin) merged into '$MAIN_BRANCH' (excluding protected branches):"
+# Ensure the local main used for comparison is indeed origin/main
+REMOTE_MERGED_BRANCHES=$(git branch -r --merged "origin/$MAIN_BRANCH" | grep 'origin/' | grep -vE "HEAD|$PROTECTED_BRANCHES_REGEX" | sed 's|origin/||')
+
+if [ -z "$REMOTE_MERGED_BRANCHES" ]; then
+    echo "No remote branches (on origin) merged to delete."
+else
+    echo "$REMOTE_MERGED_BRANCHES"
+    read -p "WARNING: Do you want to delete these REMOTE branches on 'origin'? (y/N): " confirm_remote_delete
+    if [[ "$confirm_remote_delete" =~ ^[Yy]$ ]]; then
+        echo "$REMOTE_MERGED_BRANCHES" | xargs -I {} git push origin --delete {}
+        echo "Remote branches deleted."
+    else
+        echo "Deletion of remote branches canceled."
+    fi
+fi
+
+echo ""
+echo "--- Cleanup finished ---"
