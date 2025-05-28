@@ -1,0 +1,101 @@
+#!/bin/bash
+# co-author : Gemini 2.5 Pro Preview
+
+# Script to prepare for a new release:
+# 1. Ensures we are on the main branch and it's up-to-date.
+# 2. Checks if the target new branch (provided as argument) already exists.
+# 3. Creates the new branch (name provided as an argument) and switches to it.
+# 4. Bumps the patch version in pyproject.toml using Poetry on the new branch.
+
+set -e # Exit immediately if a command exits with a non-zero status.
+# set -x # Uncomment for debugging (prints each command before execution)
+
+# --- Configuration ---
+MAIN_BRANCH="main" # Or "master", or your primary development branch
+
+# --- Functions ---
+get_current_branch() {
+  git rev-parse --abbrev-ref HEAD
+}
+
+# --- Argument Handling ---
+if [ -z "$1" ]; then
+  echo "Error: New branch name not provided."
+  echo "Usage: $0 <new-branch-name>"
+  exit 1
+fi
+NEW_BRANCH_NAME="$1"
+
+# --- Main Logic ---
+
+echo "Starting release preparation..."
+echo "Target new branch name: '$NEW_BRANCH_NAME'"
+
+# 1. Ensure we are on the main branch and pull it
+CURRENT_BRANCH_ON_START=$(get_current_branch)
+if [ "$CURRENT_BRANCH_ON_START" != "$MAIN_BRANCH" ]; then
+  echo "Error: Not on the '$MAIN_BRANCH' branch. Current branch is '$CURRENT_BRANCH_ON_START'."
+  echo "Please switch to '$MAIN_BRANCH' before running this script."
+  exit 1
+fi
+echo "Currently on branch '$MAIN_BRANCH'."
+
+echo "Attempting to pull latest changes for '$MAIN_BRANCH' from origin..."
+if git pull origin "$MAIN_BRANCH"; then
+  echo "'$MAIN_BRANCH' is now up to date."
+else
+  echo "Error: Failed to pull latest changes for '$MAIN_BRANCH'."
+  echo "Please resolve any conflicts or stash/commit local changes and try again."
+  exit 1
+fi
+
+# 2. Check that the branch we want to create does not already exist
+if git show-ref --quiet "refs/heads/$NEW_BRANCH_NAME"; then
+  echo "Error: Branch '$NEW_BRANCH_NAME' already exists locally."
+  echo "Please choose a different branch name or delete the existing one."
+  exit 1
+fi
+# Check if it exists on remote as well
+if git ls-remote --exit-code --heads origin "$NEW_BRANCH_NAME"; then
+  echo "Error: Branch '$NEW_BRANCH_NAME' already exists on the remote 'origin'."
+  echo "Please choose a different branch name."
+  exit 1
+fi
+echo "Branch '$NEW_BRANCH_NAME' does not exist locally or on remote 'origin'. Good to proceed."
+
+# 3. Create the new branch and switch to it
+echo "Creating and switching to new branch: '$NEW_BRANCH_NAME'..."
+git checkout -b "$NEW_BRANCH_NAME"
+
+CURRENT_BRANCH_AFTER_CHECKOUT=$(get_current_branch)
+if [ "$CURRENT_BRANCH_AFTER_CHECKOUT" != "$NEW_BRANCH_NAME" ]; then
+  echo "Error: Failed to switch to the new branch '$NEW_BRANCH_NAME'. Still on '$CURRENT_BRANCH_AFTER_CHECKOUT'."
+  exit 1
+fi
+echo "Successfully switched to new branch '$NEW_BRANCH_NAME'."
+
+# 4. Bump the poetry version (on the new branch)
+CURRENT_VERSION_POETRY_BEFORE_BUMP=$(poetry version --short)
+echo "Current version (on branch '$NEW_BRANCH_NAME' before bump): $CURRENT_VERSION_POETRY_BEFORE_BUMP"
+
+echo "Bumping patch version using Poetry..."
+poetry version patch # This bumps the version in pyproject.toml
+BUMPED_VERSION_POETRY=$(poetry version --short) # Get the newly bumped version
+
+if [ "$CURRENT_VERSION_POETRY_BEFORE_BUMP" == "$BUMPED_VERSION_POETRY" ]; then
+  echo "Warning: Poetry did not change the version. Current: $CURRENT_VERSION_POETRY_BEFORE_BUMP, After bump attempt: $BUMPED_VERSION_POETRY"
+  echo "The version in pyproject.toml is $BUMPED_VERSION_POETRY."
+  read -p "Is this expected, and should we proceed with this version? (y/N): " confirm_proceed
+  if [[ ! "$confirm_proceed" =~ ^[Yy]$ ]]; then
+    echo "Aborting."
+    exit 1
+  fi
+else
+  echo "Version in pyproject.toml successfully bumped to: $BUMPED_VERSION_POETRY"
+fi
+
+echo "RUNNING : git add pyproject.toml"
+git add pyproject.toml
+
+echo "RUNNING : git commit -m \" Bump version to $BUMPED_VERSION_POETRY\""
+git commit -m " Bump version to $BUMPED_VERSION_POETRY"
