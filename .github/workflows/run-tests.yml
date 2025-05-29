@@ -4,12 +4,6 @@
 name: Run Python Tests
 
 on:
-  push:
-    branches:
-      - main
-      - 'feature/**'
-      - 'fix/**'
-      - '**' # unsure this will run tests for any branch whatever its name
   pull_request:
     branches:
       - main
