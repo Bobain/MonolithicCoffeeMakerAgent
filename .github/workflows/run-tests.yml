@@ -18,8 +18,7 @@ jobs:
   test:
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }} in github env = testing
     runs-on: ${{ matrix.os }}
-    # ADD THIS ENVIRONMENT KEY:
-    environment: ci-tests # Or whatever you named your environment in GitHub settings
+    environment: ci-tests
     strategy:
       fail-fast: false
       matrix:
