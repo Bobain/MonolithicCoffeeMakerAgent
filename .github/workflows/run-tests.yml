@@ -16,7 +16,7 @@ on:
 
 jobs:
   test:
-    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }} in github env = ci-tests
+    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }} with COFFEE_MAKER_RUN_TEST =
     runs-on: ${{ matrix.os }}
     environment: ci-tests
     strategy:
@@ -54,6 +54,8 @@ jobs:
         # Or if pytest is a main dependency: poetry install --no-interaction
 
       - name: Run tests and collect coverage data
+        env:
+          COFFEE_MAKER_RUN_TEST: ${{ secrets.COFFEE_MAKER_RUN_TEST }}
         run: |
           poetry run pytest -v --cov=coffee_maker --cov-report=xml:coverage.xml --cov-report=html:cov_html
           # your_package_name is the name of the Python package you want to measure coverage for.
