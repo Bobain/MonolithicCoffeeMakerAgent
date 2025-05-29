@@ -4,13 +4,18 @@
 name: Run Python Tests
 
 on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - '**'
   pull_request:
     branches:
       - main
 
 jobs:
   test:
-    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }} with COFFEE_MAKER_RUN_TEST =
+    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }} with COFFEE_MAKER_RUN_TEST = "${{ secrets.COFFEE_MAKER_RUN_TEST }}"
     runs-on: ${{ matrix.os }}
     environment: ci-tests
     strategy:
