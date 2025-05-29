@@ -16,7 +16,7 @@ on:
 
 jobs:
   test:
-    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }} in github env = testing
+    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }} in github env = ci-tests
     runs-on: ${{ matrix.os }}
     environment: ci-tests
     strategy:
