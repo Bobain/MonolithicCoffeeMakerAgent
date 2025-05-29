@@ -16,13 +16,15 @@ on:
 
 jobs:
   test:
-    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }} in github env = testing
     runs-on: ${{ matrix.os }}
+    # ADD THIS ENVIRONMENT KEY:
+    environment: ci-tests # Or whatever you named your environment in GitHub settings
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.12"] # Adjust to your project's supported Python versions
+        python-version: ["3.12"]
 
     steps:
       - name: Checkout repository
