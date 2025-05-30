@@ -6,8 +6,6 @@ name: ci-tests
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 permissions: # Add this
   contents: read
