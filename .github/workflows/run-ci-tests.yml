@@ -18,7 +18,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }} # Uncommented this for convenience
+      url: ${{ steps.deployment.outputs.page_url }}
     strategy:
       fail-fast: false
       matrix:
@@ -69,16 +69,42 @@ jobs:
           name: coverage-xml-${{ matrix.python-version }}-${{ matrix.os }}
           path: coverage.xml
 
-      # ADD THIS STEP:
       - name: Prepare Pages artifact by adding .nojekyll
         if: always()
-        run: touch cov_html/.nojekyll # Create an empty .nojekyll file in the coverage HTML directory
+        run: |
+          if [ -d "cov_html" ]; then
+            echo "cov_html directory exists. Creating .nojekyll file."
+            touch cov_html/.nojekyll
+          else
+            echo "Error: cov_html directory does not exist. Cannot create .nojekyll."
+            # Optionally, create cov_html and .nojekyll if you want an empty page on test failure
+            # mkdir cov_html
+            # touch cov_html/.nojekyll
+            # echo "<html><body><h1>Coverage report generation failed.</h1></body></html>" > cov_html/index.html
+            # exit 1 # Or let it proceed to upload an empty/error page
+          fi
+
+      # ADD/MODIFY THIS VERIFICATION STEP:
+      - name: Verify Pages artifact contents
+        if: always()
+        run: |
+          echo "Listing contents of cov_html directory before upload:"
+          if [ -d "cov_html" ]; then
+            ls -la cov_html
+            if [ -f "cov_html/.nojekyll" ]; then
+              echo ".nojekyll file found in cov_html."
+            else
+              echo "Error: .nojekyll file NOT found in cov_html."
+            fi
+          else
+            echo "Error: cov_html directory does not exist for verification."
+          fi
 
       - name: Upload HTML coverage artifact for GitHub Pages
         if: always()
         uses: actions/upload-pages-artifact@v3
         with:
-          path: cov_html # This directory now contains .nojekyll
+          path: cov_html
 
       - name: Deploy HTML coverage to GitHub Pages
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
