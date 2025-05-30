@@ -5,13 +5,9 @@ name: Run Python Tests
 
 on:
   push:
-    branches:
-      - 'feature/**'
-      - 'fix/**'
-      - '**'
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
   test:
