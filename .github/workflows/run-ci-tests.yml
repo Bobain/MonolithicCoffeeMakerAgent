@@ -7,18 +7,18 @@ on:
   push:
     branches: [ "main" ]
 
-permissions: # Add this
+permissions:
   contents: read
-  pages: write # Required to deploy to GitHub Pages
-  id-token: write # Required for trusted publishing
+  pages: write
+  id-token: write
 
 jobs:
   test:
     name: ci-tests ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     environment:
-      name: github-pages # Optional: if you want to use a Pages environment
-      # url: ${{ steps.deployment.outputs.page_url }} # Optional: link to the deployed page
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }} # Uncommented this for convenience
     strategy:
       fail-fast: false
       matrix:
@@ -39,12 +39,10 @@ jobs:
         with:
           virtualenvs-create: true
           virtualenvs-in-project: true
-          # Consider adding:
-          # version: "latest" # Or a specific Poetry version
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v4
-        id: poetry-cache # Give an id to the cache step
+        id: poetry-cache
         with:
           path: .venv
           key: ${{ runner.os }}-poetry-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
@@ -52,21 +50,17 @@ jobs:
             ${{ runner.os }}-poetry-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        # Ensure cache is hit before running install
         if: steps.poetry-cache.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --with dev --no-root
-        # --no-root can be useful if your project itself isn't installed as editable during tests
 
-      - name: Install project and dependencies (if cache not hit for poetry install or if project files changed)
+      - name: Install project and dependencies
         run: poetry install --no-interaction --with dev
 
       - name: Run tests and collect coverage data
         env:
-          COFFEE_MAKER_RUN_CI_TESTS: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }} # Ensure this secret is set in your repository settings
-          # Add other necessary env vars for your tests
+          COFFEE_MAKER_RUN_CI_TESTS: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }}
         run: |
           poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=xml:coverage.xml --cov-report=html:cov_html
-          # Ensure 'coffee_maker' is the correct path to your source code for coverage
 
       - name: Upload coverage report (XML)
         if: always()
@@ -75,15 +69,18 @@ jobs:
           name: coverage-xml-${{ matrix.python-version }}-${{ matrix.os }}
           path: coverage.xml
 
-      # New steps for GitHub Pages
+      # ADD THIS STEP:
+      - name: Prepare Pages artifact by adding .nojekyll
+        if: always()
+        run: touch cov_html/.nojekyll # Create an empty .nojekyll file in the coverage HTML directory
+
       - name: Upload HTML coverage artifact for GitHub Pages
         if: always()
         uses: actions/upload-pages-artifact@v3
         with:
-          path: cov_html # Upload the entire HTML report directory
+          path: cov_html # This directory now contains .nojekyll
 
       - name: Deploy HTML coverage to GitHub Pages
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' # Deploy only on push to main
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: deployment
         uses: actions/deploy-pages@v4
-        # This step needs the 'pages: write' and 'id-token: write' permissions set at the job or workflow level.
