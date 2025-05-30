@@ -75,6 +75,10 @@ Testing is essential to ensure the agent's reliability and robustness.
 *   Using fixtures if needed
 *   Mocking: Use mocks (e.g., Python's unittest.mock library) to simulate external dependencies (APIs, file systems, databases) during tests. This allows for isolated and predictable testing.
 
+ci-tests code coverage:
+[**code coverage**](https://bobain.github.io/MonolithicCoffeeMakerAgent/)
+
+
 ### 4. Documenting Agent Capabilities
 
 useless as long as it does nothing
