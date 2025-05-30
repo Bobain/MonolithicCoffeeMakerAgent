@@ -1,12 +1,10 @@
 # .github/workflows/run-tests.yml
 # co-author : Gemini 2.5 Pro Preview
 
-name: Run Python Tests
+name: ci-tests
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
     branches: [ "main" ]
 
 permissions: # Add this
@@ -19,7 +17,7 @@ jobs:
     name: ci-tests ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     environment:
-      name: ci-tests # Optional: if you want to use a Pages environment
+      name: github-pages # Optional: if you want to use a Pages environment
       # url: ${{ steps.deployment.outputs.page_url }} # Optional: link to the deployed page
     strategy:
       fail-fast: false
