@@ -1,4 +1,4 @@
-# .github/workflows/run-tests.yml
+# .github/workflows/run-ci-tests.yml
 # co-author : Gemini 2.5 Pro Preview
 
 name: ci-tests
@@ -62,10 +62,10 @@ jobs:
 
       - name: Run tests and collect coverage data
         env:
-          COFFEE_MAKER_RUN_TEST: ${{ secrets.COFFEE_MAKER_RUN_TEST }}
+          COFFEE_MAKER_RUN_TEST: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }} # Ensure this secret is set in your repository settings
           # Add other necessary env vars for your tests
         run: |
-          poetry run pytest -v --cov=coffee_maker --cov-report=xml:coverage.xml --cov-report=html:cov_html
+          poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=xml:coverage.xml --cov-report=html:cov_html
           # Ensure 'coffee_maker' is the correct path to your source code for coverage
 
       - name: Upload coverage report (XML)

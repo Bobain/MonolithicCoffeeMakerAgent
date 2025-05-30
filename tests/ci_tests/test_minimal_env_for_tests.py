@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # --- Configuration ---
-REQUIRED_ENV_VAR_NAME = "COFFEE_MAKER_RUN_TEST"
+REQUIRED_ENV_VAR_NAME = "COFFEE_MAKER_RUN_CI_TESTS"
 EXPECTED_ENV_VAR_VALUE = "True"
 
 
