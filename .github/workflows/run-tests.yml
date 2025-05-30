@@ -4,14 +4,8 @@
 name: Run Python Tests
 
 on:
-  push:
-    branches:
-      - 'feature/**'
-      - 'fix/**'
-      - '**'
   pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
   test:
