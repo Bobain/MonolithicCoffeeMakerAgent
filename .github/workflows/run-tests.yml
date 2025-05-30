@@ -16,11 +16,11 @@ permissions: # Add this
 
 jobs:
   test:
-    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    name: ci-tests ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     environment:
-      name: github-pages # Optional: if you want to use a Pages environment
-      url: ${{ steps.deployment.outputs.page_url }} # Optional: link to the deployed page
+      name: ci-tests # Optional: if you want to use a Pages environment
+      # url: ${{ steps.deployment.outputs.page_url }} # Optional: link to the deployed page
     strategy:
       fail-fast: false
       matrix:
