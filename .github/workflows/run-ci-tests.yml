@@ -16,6 +16,8 @@ jobs:
   test:
     name: ci-tests ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    env:
+      COFFEE_MAKER_RUN_CI_TESTS = ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }} # Ensure this secret is set in your repository settings
     environment:
       name: github-pages # Optional: if you want to use a Pages environment
       # url: ${{ steps.deployment.outputs.page_url }} # Optional: link to the deployed page
