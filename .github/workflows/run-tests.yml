@@ -9,11 +9,18 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions: # Add this
+  contents: read
+  pages: write # Required to deploy to GitHub Pages
+  id-token: write # Required for trusted publishing
+
 jobs:
   test:
-    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    name: ci-tests ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    environment: ci-tests
+    environment:
+      name: ci-tests # Optional: if you want to use a Pages environment
+      # url: ${{ steps.deployment.outputs.page_url }} # Optional: link to the deployed page
     strategy:
       fail-fast: false
       matrix:
@@ -34,39 +41,51 @@ jobs:
         with:
           virtualenvs-create: true
           virtualenvs-in-project: true
+          # Consider adding:
+          # version: "latest" # Or a specific Poetry version
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v4
+        id: poetry-cache # Give an id to the cache step
         with:
           path: .venv
           key: ${{ runner.os }}-poetry-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
             ${{ runner.os }}-poetry-${{ matrix.python-version }}-
 
-      - name: Install dependencies (including dev/test dependencies)
-        run: poetry install --no-interaction --with dev # Assuming pytest is in 'dev' group
-        # If you have a separate 'test' group: poetry install --no-interaction --with test
-        # Or if pytest is a main dependency: poetry install --no-interaction
+      - name: Install dependencies
+        # Ensure cache is hit before running install
+        if: steps.poetry-cache.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --with dev --no-root
+        # --no-root can be useful if your project itself isn't installed as editable during tests
+
+      - name: Install project and dependencies (if cache not hit for poetry install or if project files changed)
+        run: poetry install --no-interaction --with dev
 
       - name: Run tests and collect coverage data
         env:
           COFFEE_MAKER_RUN_TEST: ${{ secrets.COFFEE_MAKER_RUN_TEST }}
+          # Add other necessary env vars for your tests
         run: |
           poetry run pytest -v --cov=coffee_maker --cov-report=xml:coverage.xml --cov-report=html:cov_html
-          # your_package_name is the name of the Python package you want to measure coverage for.
-          # --cov-report=xml:coverage.xml generates an XML report (e.g., for Codecov/Coveralls)
-          # --cov-report=html:cov_html generates an HTML report in the 'cov_html' directory
+          # Ensure 'coffee_maker' is the correct path to your source code for coverage
 
       - name: Upload coverage report (XML)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-xml
+          name: coverage-xml-${{ matrix.python-version }}-${{ matrix.os }}
           path: coverage.xml
 
-      - name: Upload coverage report (HTML)
+      # New steps for GitHub Pages
+      - name: Upload HTML coverage artifact for GitHub Pages
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: coverage-html
-          path: cov_html/ # Upload the entire HTML report directory
+          path: cov_html # Upload the entire HTML report directory
+
+      - name: Deploy HTML coverage to GitHub Pages
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' # Deploy only on push to main
+        id: deployment
+        uses: actions/deploy-pages@v4
+        # This step needs the 'pages: write' and 'id-token: write' permissions set at the job or workflow level.
