@@ -32,7 +32,8 @@ def main():
         else:
             # This is where the error from the screenshot occurs:
             print(
-                f"::error::Failure: PR version ({pr_version_str}) must be greater than main version ({main_version_str}).\n PLEASE GET SURE TO MERGE MAIN INTO YOUR PR as often as possible",
+                f"::error::Failure: PR version ({pr_version_str}) must be greater than main version ({main_version_str})."
+                f"\n PLEASE GET SURE TO MERGE MAIN INTO YOUR PR as often as possible",
                 file=sys.stderr,
             )  # This uses the correct variables
             sys.exit(1)  # Failure
