@@ -1,0 +1,66 @@
+# .github/workflows/version-check.yml
+# co-author : Gemini 2.5 Pro Preview
+
+name: Version Check on PR to Main
+
+on:
+  pull_request:
+    branches:
+      - main # Or your primary branch name
+    types: [opened, synchronize, reopened] # Run when PR is opened, updated, or reopened
+
+jobs:
+  check_version_increment:
+    name: Check Project Version Increment
+    runs-on: ubuntu-latest
+    # No need for job outputs if the job fails directly based on the script's exit code
+
+    steps:
+      - name: Checkout PR branch code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Or your preferred Python version
+
+      - name: Install dependencies
+        run: pip install toml packaging # For pyproject.toml parsing and version comparison
+
+      - name: Get version from PR branch
+        id: get_pr_version
+        shell: bash
+        run: |
+          # Adjust path and parsing if version is stored differently
+          VERSION=$(python -c "import toml; data = toml.load('pyproject.toml'); print(data['tool']['poetry']['version'])")
+          echo "PR Branch Version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout main branch code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }} # Target branch of the PR (e.g., main)
+          path: main_branch_code # Checkout to a different directory
+
+      - name: Get version from main branch
+        id: get_main_version
+        shell: bash
+        run: |
+          # Adjust path and parsing if version is stored differently
+          VERSION=$(python -c "import toml; data = toml.load('main_branch_code/pyproject.toml'); print(data['tool']['poetry']['version'])")
+          echo "Main Branch Version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Make version comparison script executable
+        run: chmod +x .github/scripts/compare_versions.py
+        # This step is good practice, though `python .github/scripts/...` would also work
+
+      - name: Compare versions using external script
+        id: compare_versions # id might not be strictly needed if not using outputs
+        shell: bash
+        run: |
+          PR_VERSION="${{ steps.get_pr_version.outputs.version }}"
+          MAIN_VERSION="${{ steps.get_main_version.outputs.version }}"
+
+          # Execute the Python script. It will exit with non-zero on failure.
+          python .github/scripts/compare_versions.py "$PR_VERSION" "$MAIN_VERSION"
