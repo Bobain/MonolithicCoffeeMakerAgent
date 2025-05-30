@@ -16,8 +16,6 @@ jobs:
   test:
     name: ci-tests ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    env:
-      COFFEE_MAKER_RUN_CI_TESTS = ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }} # Ensure this secret is set in your repository settings
     environment:
       name: github-pages # Optional: if you want to use a Pages environment
       # url: ${{ steps.deployment.outputs.page_url }} # Optional: link to the deployed page
@@ -64,7 +62,7 @@ jobs:
 
       - name: Run tests and collect coverage data
         env:
-          COFFEE_MAKER_RUN_TEST: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }} # Ensure this secret is set in your repository settings
+          COFFEE_MAKER_RUN_CI_TESTS: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }} # Ensure this secret is set in your repository settings
           # Add other necessary env vars for your tests
         run: |
           poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=xml:coverage.xml --cov-report=html:cov_html
