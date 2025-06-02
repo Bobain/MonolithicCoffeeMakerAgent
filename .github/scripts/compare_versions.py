@@ -7,7 +7,10 @@ from packaging.version import parse
 
 def main():
     if len(sys.argv) != 3:
-        print("::error::Usage: python compare_versions.py <pr_version> <main_version>", file=sys.stderr)
+        print(
+            "::error::Usage: python compare_versions.py <pr_version> <main_version>",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     pr_version_str = sys.argv[1]  # This is correct
