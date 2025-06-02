@@ -3,6 +3,7 @@
 import json
 import logging
 import pathlib
+import platform
 import subprocess
 
 import gradio as gr
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 # --- Configuration for the sentiment analysis worker ---
 VENV_DIR_PATH = pathlib.Path(__file__).parent / ".sentiment_venv"  # Name of the virtual environment directory
+PYTHON_VERSION = platform.python_version()
 PACKAGES_TO_INSTALL = ["textblob==0.19.0"]
 
 # Path to the sentiment worker script
