@@ -5,10 +5,6 @@ import shutil
 import subprocess
 import sys
 
-version_str = platform.python_version()
-print(version_str)
-
-
 DEFAULT_PYTON_VERSION = platform.python_version()  # Default Python version for the virtual environment
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -30,7 +26,7 @@ def get_venv_python_executable(venv_dir_path: pathlib.Path) -> str:
 
 def setup_isolated_venv(
     venv_dir_path: pathlib.Path = None,
-    pakages_to_install: list[str] = None,
+    packages_to_install: list[str] = None,
     overwrite_existing: bool = True,
     python_version: str = DEFAULT_PYTON_VERSION,
 ) -> None:
@@ -39,7 +35,7 @@ def setup_isolated_venv(
     Uses 'uv' for environment and package management.
     Args:
         venv_dir_path (pathlib.Path): Path to the virtual environment directory.
-        pakages_to_install (list[str]): List of packages to install in the virtual environment.
+        packages_to_install (list[str]): List of packages to install in the virtual environment.
         overwrite_existing (bool): Whether to overwrite an existing virtual environment.
         python_version (str): Python version to use for the virtual environment.
     Returns:
@@ -47,7 +43,7 @@ def setup_isolated_venv(
     """
 
     assert venv_dir_path is not None, "venv_dir_path must be provided"
-    assert pakages_to_install is not None, "pakages_to_install must be provided"
+    assert packages_to_install is not None, "packages_to_install must be provided"
 
     venv_python_executable = get_venv_python_executable(venv_dir_path)
 
@@ -64,10 +60,10 @@ def setup_isolated_venv(
             capture_output=True,
             text=True,
         )
-        logger.info(f"Virtual environment '{venv_dir_path}' created successfully.")
+        logger.info(f"Virtual environment '{venv_dir_path}' created successfully with {python_version=}.")
 
         # Install packages in the venv
-        for package in pakages_to_install:
+        for package in packages_to_install:
             install_command = ["uv", "pip", "install", "-p", venv_python_executable, package]
             logger.info(f"Installing {package} using command: {' '.join(install_command)}")
             result = subprocess.run(install_command, check=True, capture_output=True, text=True)

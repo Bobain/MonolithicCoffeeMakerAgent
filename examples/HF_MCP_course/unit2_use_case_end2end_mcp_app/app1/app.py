@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 # --- Configuration for the sentiment analysis worker ---
 VENV_DIR_PATH = pathlib.Path(__file__).parent / ".sentiment_venv"  # Name of the virtual environment directory
-PYTHON_VERSION_FOR_VENV = "3.12"  # Desired Python for the venv
-PAKAGES_TO_INSTALL = ["textblob==0.19.0"]
+PACKAGES_TO_INSTALL = ["textblob==0.19.0"]
 
 # Path to the sentiment worker script
 WORKER_SCRIPT_PATH = pathlib.Path(__file__).parent / "sentiment_worker.py"
@@ -28,15 +27,25 @@ def sentiment_analysis(text: str) -> dict:
     """
     Analyze the sentiment of the given text by calling the sentiment_worker.py script
     in its dedicated virtual environment.
+
+    Args:
+        text (str): The text to analyze.
+
+    Returns:
+        dict: A dictionary containing the sentiment analysis results
+              (e.g., {"polarity": 0.5, "subjectivity": 0.5, "assessment": "positive"})
+              or an error message (e.g., {"error": "Error details"}).
     """
     if not text.strip():
         return {"error": "Input text cannot be empty."}
 
     try:
-        venv_python_executable = setup_isolated_venv(VENV_DIR_PATH, PAKAGES_TO_INSTALL)
+        venv_python_executable = setup_isolated_venv(
+            venv_dir_path=VENV_DIR_PATH, packages_to_install=PACKAGES_TO_INSTALL
+        )
     except Exception as e:
         logger.critical(f"Function sentiment analysis failed: Could not set up sentiment worker environment: {e}")
-        exit(1)
+        return {"error": f"Failed to set up sentiment worker environment: {str(e)}"}
 
     if not pathlib.Path(venv_python_executable).exists():
         logger.error(
@@ -63,13 +72,22 @@ def sentiment_analysis(text: str) -> dict:
         if result.returncode != 0:
             logger.error(f"Sentiment worker script failed with exit code {result.returncode}")
             logger.error(f"Worker stderr: {result.stderr.strip()}")
-            logger.error(f"Worker stdout: {result.stdout.strip()}")  # Log stdout too, it might have JSON error
+            logger.error(f"Worker stdout: {result.stdout.strip()}")
             try:
-                # Try to parse stdout as JSON even on error, worker might output JSON error
                 error_json = json.loads(result.stdout.strip())
-                return error_json if "error" in error_json else {"error": f"Worker failed: {result.stderr.strip()}"}
+                if "error" in error_json:
+                    return error_json
+                else:
+                    # If worker failed but stdout was JSON without an 'error' key, construct a clear error.
+                    return {
+                        "error": f"Worker script failed (exit code {result.returncode}). Unexpected JSON output.",
+                        "worker_stdout": result.stdout.strip(),  # Include original output for debugging
+                        "worker_stderr": result.stderr.strip(),
+                    }
             except json.JSONDecodeError:
-                return {"error": f"Worker script failed. Stderr: {result.stderr.strip()}"}
+                return {
+                    "error": f"Worker script failed (exit code {result.returncode}). Stderr: {result.stderr.strip()}"
+                }
 
         # Parse the JSON output from the worker script
         analysis_result = json.loads(result.stdout.strip())
