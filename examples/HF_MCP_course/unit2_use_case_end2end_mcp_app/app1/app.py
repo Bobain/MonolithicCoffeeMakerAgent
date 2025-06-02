@@ -101,7 +101,7 @@ def sentiment_analysis(text: str) -> dict:
     except json.JSONDecodeError:
         logger.error(f"Failed to decode JSON response from sentiment worker. Raw output: {result.stdout.strip()}")
         return {"error": "Invalid response from sentiment analysis worker."}
-    except Exception as e:
+    except Exception as e: # Consider catching more specific exceptions if possible
         logger.error(f"An unexpected error occurred while running sentiment analysis: {e}")
         return {"error": f"An unexpected error occurred: {str(e)}"}
 
