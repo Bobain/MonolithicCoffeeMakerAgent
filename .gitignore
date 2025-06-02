@@ -127,3 +127,6 @@ dmypy.json
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# gradio data files
+.gradio/

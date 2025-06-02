@@ -1,9 +1,9 @@
-# Company X Python Style Guide
+# Bobain's crew Python Style Guide
 
 # Introduction
-This style guide outlines the coding conventions for Python code developed at Company X.
+This style guide outlines the coding conventions for Python code developed by Bobain's crew.
 It's based on PEP 8, but with some modifications to address specific needs and
-preferences within our organization.
+preferences within our team.
 
 # Key Principles
 * **Readability:** Code should be easy to understand for all team members.
@@ -73,7 +73,7 @@ preferences within our organization.
 * **Use complete sentences:** Start comments with a capital letter and use proper punctuation.
 
 ## Logging
-* **Use a standard logging framework:**  Company X uses the built-in `logging` module.
+* **Use a standard logging framework:**  Bobain's crew uses the built-in `logging` module.
 * **Log at appropriate levels:** DEBUG, INFO, WARNING, ERROR, CRITICAL
 * **Provide context:** Include relevant information in log messages to aid debugging.
 
@@ -94,7 +94,7 @@ import hashlib
 import logging
 import os
 
-from companyx.db import user_database
+from bobains_crew.db import user_database
 
 LOGGER = logging.getLogger(__name__)
 
