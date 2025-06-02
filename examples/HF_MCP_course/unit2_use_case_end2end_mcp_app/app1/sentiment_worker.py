@@ -39,7 +39,7 @@ if __name__ == "__main__":
             result = analyze(input_text)
             print(json.dumps(result))  # Output result as JSON to stdout
             ### TODO!!! this will not work with a real server/client setup
-        except Exception as e:
+        except Exception as e:  # Consider catching specific exceptions like ValueError, TypeError, etc.
             logger.error(f"Error during sentiment analysis in worker: {e}")
             print(json.dumps({"error": str(e)}))
             sys.exit(1)
