@@ -42,9 +42,12 @@ def setup_isolated_venv(
         FileNotFoundError: If 'uv' command is not found.
     """
 
-    assert venv_dir_path is not None, "venv_dir_path must be provided"
-    assert packages_to_install is not None, "packages_to_install must be provided"
-    assert python_version is not None, "python_version must be provided"
+    if venv_dir_path is None:
+        raise ValueError("venv_dir_path must be provided")
+    if packages_to_install is None:
+        raise ValueError("packages_to_install must be provided")
+    if python_version is None:
+        raise ValueError("python_version must be provided")
 
     venv_python_executable = get_venv_python_executable(venv_dir_path)
     needs_venv_creation = False
