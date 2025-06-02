@@ -21,7 +21,7 @@ def get_venv_python_executable(venv_dir_path: pathlib.Path) -> str:
         return str(venv_dir_path / "bin" / "python")
 
 
-def setup_isolated_venv(
+def setup_uv_pip(
     venv_dir_path: pathlib.Path = None,
     packages_to_install: list[str] = None,
     python_version: str = None,
