@@ -78,7 +78,7 @@ preferences within our team.
 * **Provide context:** Include relevant information in log messages to aid debugging.
 
 ## Error Handling
-* **Use specific exceptions:** Avoid using broad exceptions like `Exception` when possible.
+* **Use specific exceptions:** Avoid using broad exceptions like `Exception` when possible (do not over-engineer by trying to catch every specific Exceptions the code is still no mature enough to know what errors it can encounter).
 * **Handle exceptions gracefully:** Provide informative error messages and avoid crashing the program.
 * **Use `try...except` blocks:**  Isolate code that might raise exceptions.
 

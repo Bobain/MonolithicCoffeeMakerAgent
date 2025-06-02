@@ -8,7 +8,7 @@ import subprocess
 
 import gradio as gr
 
-from coffee_maker.utils.isolated_venv import setup_isolated_venv
+from coffee_maker.utils.setup_isolated_venv import setup_uv_pip
 
 # Configure logging for the main app
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -42,10 +42,10 @@ def sentiment_analysis(text: str) -> dict:
         return {"error": "Input text cannot be empty."}
 
     try:
-        venv_python_executable = setup_isolated_venv(
+        venv_python_executable = setup_uv_pip(
             venv_dir_path=VENV_DIR_PATH, packages_to_install=PACKAGES_TO_INSTALL, python_version=PYTHON_VERSION
         )
-    except Exception as e:
+    except Exception as e:  # Consider catching more specific exceptions if possible
         logger.critical(f"Function sentiment analysis failed: Could not set up sentiment worker environment: {e}")
         return {"error": f"Failed to set up sentiment worker environment: {str(e)}"}
 
