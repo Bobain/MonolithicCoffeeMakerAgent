@@ -43,7 +43,7 @@ def sentiment_analysis(text: str) -> dict:
 
     try:
         venv_python_executable = setup_isolated_venv(
-            venv_dir_path=VENV_DIR_PATH, packages_to_install=PACKAGES_TO_INSTALL
+            venv_dir_path=VENV_DIR_PATH, packages_to_install=PACKAGES_TO_INSTALL, python_version=PYTHON_VERSION
         )
     except Exception as e:
         logger.critical(f"Function sentiment analysis failed: Could not set up sentiment worker environment: {e}")
@@ -101,7 +101,7 @@ def sentiment_analysis(text: str) -> dict:
     except json.JSONDecodeError:
         logger.error(f"Failed to decode JSON response from sentiment worker. Raw output: {result.stdout.strip()}")
         return {"error": "Invalid response from sentiment analysis worker."}
-    except Exception as e: # Consider catching more specific exceptions if possible
+    except Exception as e:  # Consider catching more specific exceptions if possible
         logger.error(f"An unexpected error occurred while running sentiment analysis: {e}")
         return {"error": f"An unexpected error occurred: {str(e)}"}
 
