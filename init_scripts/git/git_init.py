@@ -143,7 +143,12 @@ class GitRepoInitializer:
         try:
             current_env = os.environ.copy()
             process = subprocess.run(
-                command, cwd=self.project_path, check=check, capture_output=capture_output, text=True, env=current_env
+                command,
+                cwd=self.project_path,
+                check=check,
+                capture_output=capture_output,
+                text=True,
+                env=current_env,
             )
             if process.stdout and not suppress_output:
                 logger.debug(f"STDOUT:\n{process.stdout.strip()}")
@@ -229,7 +234,11 @@ class GitRepoInitializer:
         self._create_gitignore()
 
         if self.protect_main_push:
-            self._install_git_hook("pre-push", self.pre_push_hook_template_content, PRE_PUSH_HOOK_TEMPLATE_PATH)
+            self._install_git_hook(
+                "pre-push",
+                self.pre_push_hook_template_content,
+                PRE_PUSH_HOOK_TEMPLATE_PATH,
+            )
         # Removed call to install pre-commit hook
 
         self._git_add()
@@ -268,7 +277,9 @@ class GitRepoInitializer:
     def _set_branch_name(self):
         try:
             current_branch_process = self._run_command(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"], check=False, suppress_output=True
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                check=False,
+                suppress_output=True,
             )
             current_branch = current_branch_process.stdout.strip() if current_branch_process.returncode == 0 else None
 
@@ -337,7 +348,10 @@ relative to its own location ('{_SCRIPT_DIR}'):
 """,  # Removed pre-commit hook from epilog
     )
     parser.add_argument(
-        "-d", "--directory", default=".", help="Path to the project directory (default: current directory)."
+        "-d",
+        "--directory",
+        default=".",
+        help="Path to the project directory (default: current directory).",
     )
     parser.add_argument(
         "-u",
@@ -356,7 +370,11 @@ relative to its own location ('{_SCRIPT_DIR}'):
         default="main",
         help="Name for the primary branch (default: main). This is the branch the pre-push hook will aim to protect.",
     )
-    parser.add_argument("--force-gitignore", action="store_true", help="Overwrite .gitignore if it already exists.")
+    parser.add_argument(
+        "--force-gitignore",
+        action="store_true",
+        help="Overwrite .gitignore if it already exists.",
+    )
     # Removed --no-protect-main-commit argument
     parser.add_argument(
         "--no-protect-main-push",
@@ -375,7 +393,12 @@ relative to its own location ('{_SCRIPT_DIR}'):
         action="store_true",
         help="Run the integrated unit tests for this script (if defined in this file).",
     )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging (DEBUG level).")
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging (DEBUG level).",
+    )
     parser.set_defaults(protect_main_push=True, auto_setup_remote=True)  # Removed protect_main_commit from defaults
 
     args = parser.parse_args()
@@ -444,7 +467,10 @@ relative to its own location ('{_SCRIPT_DIR}'):
     except SystemExit:
         raise
     except Exception as e:
-        logger.critical(f"An unexpected critical error occurred during script execution: {e}", exc_info=True)
+        logger.critical(
+            f"An unexpected critical error occurred during script execution: {e}",
+            exc_info=True,
+        )
         sys.exit(1)
 
 
