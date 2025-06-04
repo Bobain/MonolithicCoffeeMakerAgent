@@ -17,194 +17,67 @@ info() { echo -e "${GREEN}[INFO]${NC} \"$1\""; }
 warn() { echo -e "${YELLOW}[WARN]${NC} \"$1\""; }
 error() { echo -e "${RED}[ERROR]${NC} \"$1\"" >&2; exit 1; }
 
-# --- Sanity Checks ---
-if ! command -v poetry &> /dev/null; then
-    error "Poetry command could not be found. Please ensure Poetry is installed and in your PATH."
-fi
-if [ ! -f "pyproject.toml" ]; then
-    error "No pyproject.toml found in the current directory. Please run this script from your project's root."
-fi
 
-# --- Extract Desired Python Version Hint from pyproject.toml ---
-PYTHON_CONSTRAINT_LINE=$(grep -E '^\s*python\s*=\s*".*"' pyproject.toml || echo "")
-PYTHON_VERSION_HINT=""
-if [[ -n "$PYTHON_CONSTRAINT_LINE" ]]; then
-    # Extracts X.Y from common formats
-    PYTHON_VERSION_HINT=$(echo "$PYTHON_CONSTRAINT_LINE" | sed -E 's/^\s*python\s*=\s*"[^0-9]*([0-9]+\.[0-9]+).*".*/\1/' || echo "")
-    if [[ -n "$PYTHON_VERSION_HINT" ]]; then
-        info "Hint for Python version from pyproject.toml: ~$PYTHON_VERSION_HINT"
-    else
-        # The sed for PYTHON_VERSION_HINT was too aggressive, let's fix it
-        PYTHON_VERSION_HINT=$(echo "$PYTHON_CONSTRAINT_LINE" | sed -E 's/^\s*python\s*=\s*"[^0-9]*([0-9]+(\.[0-9]+)?).*".*/\1/' || echo "")
-        if [[ -n "$PYTHON_VERSION_HINT" ]]; then
-             info "Hint for Python version from pyproject.toml (corrected regex): ~$PYTHON_VERSION_HINT"
-        else
-             warn "Could not parse a simple X.Y version hint from pyproject.toml python constraint: $PYTHON_CONSTRAINT_LINE"
-        fi
-    fi
-fi
+if ! command -v poetry &> /dev/null; then error "Poetry not found."; fi
+if [ ! -f "pyproject.toml" ]; then error "No pyproject.toml found."; fi
 
-
-# --- Dynamically Find Python Interpreter (e.g., python3.12, python3) ---
-PYTHON_EXE_CANDIDATES=()
-if [[ -n "$PYTHON_VERSION_HINT" ]]; then
-    PYTHON_EXE_CANDIDATES+=("python$PYTHON_VERSION_HINT")
-fi
-PYTHON_EXE_CANDIDATES+=("python3" "python") # Fallbacks
+PYTHON_VERSION_HINT_LINE=$(grep -E '^\s*python\s*=\s*".*"' pyproject.toml || echo "")
+PYTHON_VERSION_HINT=$(echo "$PYTHON_VERSION_HINT_LINE" | sed -E 's/^\s*python\s*=\s*"[^0-9]*([0-9]+\.[0-9]+).*".*/\1/' || echo "")
+info "Python version hint from pyproject.toml: ~$PYTHON_VERSION_HINT"
 
 PREFERRED_PYTHON_EXE_PATH=""
-for candidate in "${PYTHON_EXE_CANDIDATES[@]}"; do
+PYTHON_CANDIDATES=()
+if [ -n "$PYTHON_VERSION_HINT" ]; then PYTHON_CANDIDATES+=("python$PYTHON_VERSION_HINT"); fi
+PYTHON_CANDIDATES+=("python3")
+
+for candidate in "${PYTHON_CANDIDATES[@]}"; do
     if command -v "$candidate" &> /dev/null; then
         PREFERRED_PYTHON_EXE_PATH=$(command -v "$candidate")
-        ACTUAL_VERSION=$($PREFERRED_PYTHON_EXE_PATH --version 2>&1) # Get actual version
-        info "Found preferred Python interpreter: $PREFERRED_PYTHON_EXE_PATH (Version: $ACTUAL_VERSION, using '$candidate' command)"
+        info "Using Python interpreter: $PREFERRED_PYTHON_EXE_PATH ($($PREFERRED_PYTHON_EXE_PATH --version 2>&1))"
         break
     fi
 done
+if [ -z "$PREFERRED_PYTHON_EXE_PATH" ]; then error "Suitable Python 3 interpreter not found."; fi
 
-if [ -z "$PREFERRED_PYTHON_EXE_PATH" ]; then
-    error "Could not find a suitable Python 3 interpreter (tried: ${PYTHON_EXE_CANDIDATES[*]}). Ensure Python 3 is installed and in PATH."
-fi
-
-
-# --- Temporary PATH modification for 'python' command ---
-ORIGINAL_PATH="$PATH"
-TEMP_BIN_DIR=""
-cleanup_temp_python() {
-    if [ -n "$TEMP_BIN_DIR" ]; then
-        info "Cleaning up temporary 'python' symlink and PATH modification."
-        rm -rf "$TEMP_BIN_DIR"
-        PATH="$ORIGINAL_PATH" # Restore original PATH
-    fi
-}
-# Register cleanup function to run on script exit (normal or error)
-trap cleanup_temp_python EXIT
-
-# Check if 'python' command exists and points to Python 3.
-# If not, create a temporary symlink.
-PYTHON_CMD_PATH=$(command -v python || echo "")
-CREATE_TEMP_SYMLINK=true
-
-if [ -n "$PYTHON_CMD_PATH" ]; then
-    if "$PYTHON_CMD_PATH" -c "import sys; sys.exit(0 if sys.version_info.major == 3 else 1)" &>/dev/null; then
-        info "'python' command already exists and points to Python 3 ($($PYTHON_CMD_PATH --version 2>&1)). No temporary symlink needed."
-        CREATE_TEMP_SYMLINK=false
-    else
-        warn "'python' command exists but does not point to Python 3 ($($PYTHON_CMD_PATH --version 2>&1)). Will create temporary override."
-    fi
-fi
-
-if [ "$CREATE_TEMP_SYMLINK" = true ]; then
-    TEMP_BIN_DIR=$(mktemp -d)
-    info "Creating temporary symlink: $TEMP_BIN_DIR/python -> $PREFERRED_PYTHON_EXE_PATH"
-    ln -s "$PREFERRED_PYTHON_EXE_PATH" "$TEMP_BIN_DIR/python"
-    export PATH="$TEMP_BIN_DIR:$PATH" # Prepend to PATH
-    info "Temporarily prepended $TEMP_BIN_DIR to PATH. New PATH: $PATH"
-    if ! command -v python &> /dev/null; then
-        error "Failed to make temporary 'python' command available via PATH."
-    fi
-    info "Temporary 'python' command now points to: $(python --version 2>&1)"
-fi
-
-# --- Main Script ---
-info "Starting full clean and reinstall of Poetry environment for project: $(poetry version -s)"
+info "Starting clean reinstall for: $(poetry version -s)"
 echo "---------------------------------------------------------------------"
 
-# 1. Deactivate (Attempt)
-if [ -n "$VIRTUAL_ENV" ]; then
-    info "Attempting to deactivate current virtual environment..."
-    deactivate || warn "Could not deactivate (this is often fine as the script might be in a subshell)."
+if [ -n "$VIRTUAL_ENV" ]; then deactivate || warn "Deactivate failed (often ok)."; fi
+
+if [ -d ".venv" ]; then info "Removing local .venv..."; rm -rf .venv; else info "No local .venv."; fi
+CACHED_ENV_PATH=$(poetry env info --path 2>/dev/null || true)
+if [ -n "$CACHED_ENV_PATH" ] && [ -d "$CACHED_ENV_PATH" ]; then
+    info "Removing cached env: $CACHED_ENV_PATH"; rm -rf "$CACHED_ENV_PATH"
+    ENV_NAME=$(basename "$CACHED_ENV_PATH")
+    poetry env remove "$ENV_NAME" >/dev/null 2>&1 || poetry env remove "${ENV_NAME#*-}" >/dev/null 2>&1 || warn "Could not formally remove $ENV_NAME from Poetry."
+fi
+if [ -n "$PYTHON_VERSION_HINT" ]; then
+    CLEANED_HINT=$(echo "$PYTHON_VERSION_HINT" | sed 's/[^0-9.]//g')
+    poetry env remove "python${CLEANED_HINT}" >/dev/null 2>&1 || warn "No env for python${CLEANED_HINT} to remove."
 fi
 
-# 2. Remove the existing virtual environment
-# Check for a local .venv first
-if [ -d ".venv" ]; then
-    info "Found local .venv directory. Removing it..."
-    rm -rf .venv
-    info ".venv directory removed."
-else
-    info "No local .venv directory found. Checking Poetry's cache..."
-    ENV_PATH_FROM_POETRY=$(poetry env info --path 2>/dev/null || true)
+if [ -f "poetry.lock" ]; then info "Removing poetry.lock..."; rm poetry.lock; fi
 
-    if [ -n "$ENV_PATH_FROM_POETRY" ] && [ -d "$ENV_PATH_FROM_POETRY" ]; then
-        info "Poetry environment found at: $ENV_PATH_FROM_POETRY"
-        info "Removing this cached virtual environment..."
-        rm -rf "$ENV_PATH_FROM_POETRY"
-        info "Cached virtual environment at $ENV_PATH_FROM_POETRY removed."
-
-        ENV_NAME_FROM_PATH=$(basename "$ENV_PATH_FROM_POETRY")
-        info "Attempting to remove '$ENV_NAME_FROM_PATH' from Poetry's list..."
-        poetry env remove "$ENV_NAME_FROM_PATH" >/dev/null 2>&1 || \
-            poetry env remove "$(echo "$ENV_NAME_FROM_PATH" | sed 's/^.*-//')" >/dev/null 2>&1 || \
-            warn "Poetry could not formally remove '$ENV_NAME_FROM_PATH' or its Python version from its list (might have already been gone or name mismatch)."
-    else
-        info "No specific Poetry-managed cached environment path found or the path was invalid."
-    fi
-fi
-if [[ -n "$PYTHON_VERSION_HINT" ]]; then
-    CLEANED_PYTHON_HINT=$(echo "$PYTHON_VERSION_HINT" | sed 's/[^0-9.]//g') # Clean to just X.Y
-    if [[ -n "$CLEANED_PYTHON_HINT" ]]; then
-        info "Attempting to remove any environment associated with Python $CLEANED_PYTHON_HINT from Poetry's list..."
-        poetry env remove "python${CLEANED_PYTHON_HINT}" >/dev/null 2>&1 || \
-            warn "No environment specifically for python${CLEANED_PYTHON_HINT} was registered with Poetry, or it was already removed."
-    fi
-fi
-
-
-# 3. Delete the poetry.lock file
-if [ -f "poetry.lock" ]; then
-    info "Removing poetry.lock file..."
-    rm poetry.lock
-    info "poetry.lock file removed."
-else
-    info "No poetry.lock file found to remove."
-fi
-
-# 4. Tell Poetry which Python to use and VALIDATE IT
-info "Attempting to configure Poetry to use Python interpreter: $PREFERRED_PYTHON_EXE_PATH"
-info "Poetry will validate if this interpreter ($($PREFERRED_PYTHON_EXE_PATH --version 2>&1)) meets the constraints in pyproject.toml."
-
+info "Attempting to set Poetry to use: $PREFERRED_PYTHON_EXE_PATH"
 set +e
 POETRY_ENV_USE_OUTPUT=$(poetry env use "$PREFERRED_PYTHON_EXE_PATH" 2>&1)
 POETRY_ENV_USE_STATUS=$?
 set -e
-
-if [ $POETRY_ENV_USE_STATUS -eq 0 ]; then
-    info "Poetry successfully configured to use $PREFERRED_PYTHON_EXE_PATH for this project."
-    if echo "$POETRY_ENV_USE_OUTPUT" | grep -q -i "warning"; then # More generic warning check
-        warn "Poetry 'env use' issued a warning:"
-        echo -e "${YELLOW}$POETRY_ENV_USE_OUTPUT${NC}"
-    fi
-else
-    error "Failed to configure Poetry to use $PREFERRED_PYTHON_EXE_PATH. \
-It may be incompatible with constraints in pyproject.toml or another issue occurred. \
-Poetry output:\n$POETRY_ENV_USE_OUTPUT"
+if [ $POETRY_ENV_USE_STATUS -ne 0 ]; then
+    error "poetry env use $PREFERRED_PYTHON_EXE_PATH FAILED. Output:\n$POETRY_ENV_USE_OUTPUT\nThis suggests a problem with Poetry or Python setup."
 fi
+info "Poetry 'env use' successful or issued non-critical warnings:\n$POETRY_ENV_USE_OUTPUT"
 
-# 5. Generate a new lock file
-info "Generating a new poetry.lock file (using the configured Python)..."
-if poetry lock; then
-    info "New poetry.lock file generated successfully."
-else
-    error "Failed to generate poetry.lock file. Please check for errors. \
-Ensure Python version used by Poetry ($($PREFERRED_PYTHON_EXE_PATH --version 2>&1)) is compatible with pyproject.toml."
-fi
 
-# 6. Install dependencies
-info "Installing dependencies (this will create a new virtual environment if needed)..."
-if poetry install -vvv; then
-    info "Dependencies installed successfully."
-else
-    error "Failed to install dependencies. Please check the verbose output for errors."
-fi
+info "Generating new lock file..."
+if ! poetry lock; then error "poetry lock FAILED."; fi
+info "Installing dependencies..."
+if ! poetry install -vvv; then error "poetry install FAILED."; fi
 
 echo "---------------------------------------------------------------------"
-info "Poetry environment has been fully cleaned and reinstalled."
-
-# 7. Display information about the new environment
-info "Current Poetry environment details:"
+info "Clean reinstall complete."
 poetry env info
-
+# ... (activation suggestion logic) ...
 info "\nTo activate the new environment, typically you would run:"
 if [ -d ".venv" ]; then
     echo -e "${YELLOW}  source .venv/bin/activate${NC}"
@@ -223,6 +96,4 @@ else
         echo -e "${YELLOW}  Consider using 'poetry shell' or 'poetry run <command>'.${NC}"
     fi
 fi
-
-# Cleanup is handled by the trap function
 info "Script finished."
