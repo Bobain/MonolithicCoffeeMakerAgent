@@ -1,7 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env zsh
 # co-author : Gemini 2.5 Pro Preview
-# Script to fully clean and reinstall a Poetry environment,
-# addressing potential "python" command not found issues.
+# Script to fully clean and reinstall a Poetry environment.
+# Attempts to find a suitable Python interpreter, prioritizing pyenv,
+# then common system locations, making fewer assumptions about the script's PATH.
 
 # Exit immediately if a command exits with a non-zero status.
 set -e
@@ -16,84 +17,300 @@ NC='\033[0m' # No Color
 info() { echo -e "${GREEN}[INFO]${NC} \"$1\""; }
 warn() { echo -e "${YELLOW}[WARN]${NC} \"$1\""; }
 error() { echo -e "${RED}[ERROR]${NC} \"$1\"" >&2; exit 1; }
+debug() { echo -e "${YELLOW}[DEBUG]${NC} \"$1\""; }
+
+# --- SCRIPT ENVIRONMENT DIAGNOSTICS (EARLY) ---
+info "--- Early Script Environment Diagnostics ---"
+info "Running with shell: $(ps -p $$ -ocomm=)"
+info "Initial script PATH: $PATH"
+info "--- End Early Diagnostics ---"
 
 
-if ! command -v poetry &> /dev/null; then error "Poetry not found."; fi
-if [ ! -f "pyproject.toml" ]; then error "No pyproject.toml found."; fi
-
-PYTHON_VERSION_HINT_LINE=$(grep -E '^\s*python\s*=\s*".*"' pyproject.toml || echo "")
-PYTHON_VERSION_HINT=$(echo "$PYTHON_VERSION_HINT_LINE" | sed -E 's/^\s*python\s*=\s*"[^0-9]*([0-9]+\.[0-9]+).*".*/\1/' || echo "")
-info "Python version hint from pyproject.toml: ~$PYTHON_VERSION_HINT"
-
-PREFERRED_PYTHON_EXE_PATH=""
-PYTHON_CANDIDATES=()
-if [ -n "$PYTHON_VERSION_HINT" ]; then PYTHON_CANDIDATES+=("python$PYTHON_VERSION_HINT"); fi
-PYTHON_CANDIDATES+=("python3")
-
-for candidate in "${PYTHON_CANDIDATES[@]}"; do
-    if command -v "$candidate" &> /dev/null; then
-        PREFERRED_PYTHON_EXE_PATH=$(command -v "$candidate")
-        info "Using Python interpreter: $PREFERRED_PYTHON_EXE_PATH ($($PREFERRED_PYTHON_EXE_PATH --version 2>&1))"
-        break
+# --- Sanity Checks ---
+if ! command -v poetry &> /dev/null; then
+    warn "Poetry command not found directly in PATH. Will try common locations."
+    # Common Poetry installation paths
+    COMMON_POETRY_PATHS=(
+        "$HOME/.local/bin/poetry"
+        "$HOME/.poetry/bin/poetry"
+        "/opt/homebrew/bin/poetry" # Homebrew on Apple Silicon
+        "/usr/local/bin/poetry"    # Homebrew on Intel Mac
+    )
+    POETRY_CMD=""
+    for p_path in "${COMMON_POETRY_PATHS[@]}"; do
+        if [ -x "$p_path" ]; then
+            POETRY_CMD="$p_path"
+            info "Found Poetry at: $POETRY_CMD"
+            break
+        fi
+    done
+    if [ -z "$POETRY_CMD" ]; then
+        error "Poetry command could not be found in PATH or common locations. Please ensure Poetry is installed."
     fi
-done
-if [ -z "$PREFERRED_PYTHON_EXE_PATH" ]; then error "Suitable Python 3 interpreter not found."; fi
+else
+    POETRY_CMD=$(command -v poetry)
+    info "Poetry found in PATH at: $POETRY_CMD"
+fi
 
-info "Starting clean reinstall for: $(poetry version -s)"
+if [ ! -f "pyproject.toml" ]; then error "No pyproject.toml found in the current directory."; fi
+
+# --- Extract Desired Python Version Hint from pyproject.toml ---
+PYTHON_VERSION_HINT_RAW_LINE=$($POETRY_CMD run python -c "
+import tomli
+with open('pyproject.toml', 'rb') as f:
+    data = tomli.load(f)
+python_constraint = data.get('tool', {}).get('poetry', {}).get('dependencies', {}).get('python', '')
+print(python_constraint)
+" 2>/dev/null || echo "") # Use Poetry to run python for toml parsing
+
+PYTHON_VERSION_XY="" # Will store X.Y like 3.12
+PYTHON_VERSION_X=""  # Will store X like 3
+if [[ -n "$PYTHON_VERSION_HINT_RAW_LINE" ]]; then
+    debug "Raw Python constraint from pyproject.toml: '$PYTHON_VERSION_HINT_RAW_LINE'"
+    if [[ "$PYTHON_VERSION_HINT_RAW_LINE" =~ [^0-9]*([0-9]+)\.([0-9]+) ]]; then # BASH/ZSH regex for X.Y
+        PYTHON_VERSION_X="${BASH_REMATCH[1]}"
+        PYTHON_VERSION_XY="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+        info "Python X.Y version hint from pyproject.toml: ~$PYTHON_VERSION_XY"
+    elif [[ "$PYTHON_VERSION_HINT_RAW_LINE" =~ [^0-9]*([0-9]+) ]]; then # BASH/ZSH regex for X
+        PYTHON_VERSION_X="${BASH_REMATCH[1]}"
+        warn "Only major Python version hint (~${PYTHON_VERSION_X}) found. Will search for any Python ${PYTHON_VERSION_X}.x."
+    else
+        warn "Could not parse a version hint from pyproject.toml python constraint: $PYTHON_VERSION_HINT_RAW_LINE"
+    fi
+else
+    warn "Could not read Python constraint from pyproject.toml using 'poetry run python'. Ensure 'tomli' is available or adjust parsing."
+fi
+
+# --- Dynamically Find a SUITABLE Python Interpreter ---
+PREFERRED_PYTHON_EXE_PATH=""
+
+# Define common installation prefixes for Python on macOS
+COMMON_SYSTEM_PYTHON_PREFIXES=(
+    "/Library/Frameworks/Python.framework/Versions" # python.org installers
+    "/opt/homebrew/opt"                             # Homebrew on Apple Silicon (e.g., python@3.12)
+    "/usr/local/opt"                                # Homebrew on Intel Macs (e.g., python@3.12)
+    "/usr/bin"                                      # System-provided (often older or stubs)
+    "/usr/local/bin"                                # Other custom installs
+)
+
+# 1. Try Pyenv if available
+PYENV_CMD=""
+if command -v pyenv &> /dev/null; then
+    PYENV_CMD=$(command -v pyenv)
+    info "Pyenv found at $PYENV_CMD. Attempting to find a suitable pyenv Python version."
+    PYENV_ROOT=$($PYENV_CMD root)
+    debug "PYENV_ROOT is: $PYENV_ROOT"
+
+    INSTALLED_PYENV_VERSIONS=$($PYENV_CMD versions --bare --skip-aliases 2>/dev/null || true)
+    debug "Installed pyenv versions (bare): $INSTALLED_PYENV_VERSIONS"
+
+    PYENV_CANDIDATE_VERSIONS_TO_CHECK=()
+    # ... (pyenv version matching logic - kept similar to previous version) ...
+    if [ -n "$PYTHON_VERSION_XY" ]; then
+        for v_full in $INSTALLED_PYENV_VERSIONS; do if [[ "$v_full" == "$PYTHON_VERSION_XY" || "$v_full" == "$PYTHON_VERSION_XY."* ]]; then PYENV_CANDIDATE_VERSIONS_TO_CHECK+=("$v_full"); fi; done
+    elif [ -n "$PYTHON_VERSION_X" ]; then
+         for v_full in $INSTALLED_PYENV_VERSIONS; do if [[ "$v_full" == "$PYTHON_VERSION_X."* ]]; then PYENV_CANDIDATE_VERSIONS_TO_CHECK+=("$v_full"); fi; done
+    fi
+    if [ ${#PYENV_CANDIDATE_VERSIONS_TO_CHECK[@]} -eq 0 ]; then
+        for v_full in $INSTALLED_PYENV_VERSIONS; do if [[ "$v_full" == "3."* ]]; then PYENV_CANDIDATE_VERSIONS_TO_CHECK+=("$v_full"); fi; done
+    fi
+
+    SORTED_PYENV_CANDIDATES=($(echo "${PYENV_CANDIDATE_VERSIONS_TO_CHECK[@]}" | tr ' ' '\n' | sort -V -r))
+    debug "Sorted pyenv candidates: ${SORTED_PYENV_CANDIDATES[*]}"
+
+    for pyenv_ver in "${SORTED_PYENV_CANDIDATES[@]}"; do
+        PYENV_PYTHON_PATH="$PYENV_ROOT/versions/$pyenv_ver/bin/python" # Try 'python' first
+        if ! [ -x "$PYENV_PYTHON_PATH" ]; then PYENV_PYTHON_PATH="$PYENV_ROOT/versions/$pyenv_ver/bin/python3"; fi # Then 'python3'
+
+        if [ -x "$PYENV_PYTHON_PATH" ]; then
+            if "$PYENV_PYTHON_PATH" -c "import sys; sys.exit(0 if sys.version_info.major == 3 else 1)" &>/dev/null; then
+                PREFERRED_PYTHON_EXE_PATH="$PYENV_PYTHON_PATH"
+                info "Using PYENV Python interpreter: $PREFERRED_PYTHON_EXE_PATH ($($PREFERRED_PYTHON_EXE_PATH --version 2>&1))"
+                break
+            fi
+        fi
+    done
+    if [ -n "$PREFERRED_PYTHON_EXE_PATH" ]; then info "Selected pyenv Python. Skipping system search."; else warn "No suitable Python found via pyenv. Will try system search."; fi
+fi
+
+
+# 2. Fallback to System Search if Pyenv didn't yield a result
+if [ -z "$PREFERRED_PYTHON_EXE_PATH" ]; then
+    info "Searching for a suitable SYSTEM Python interpreter..."
+    SYSTEM_PYTHON_CANDIDATES_CMDS=() # python3.12, python3
+    if [ -n "$PYTHON_VERSION_XY" ]; then SYSTEM_PYTHON_CANDIDATES_CMDS+=("python$PYTHON_VERSION_XY"); fi
+    SYSTEM_PYTHON_CANDIDATES_CMDS+=("python3")
+
+    # Determine Poetry cache directory pattern (user-specific)
+    OS_TYPE=$(uname -s)
+    if [[ "$OS_TYPE" == "Darwin" ]]; then POETRY_CACHE_DIR_PATTERN_USER="$HOME/Library/Caches/pypoetry/virtualenvs/"; else POETRY_CACHE_DIR_PATTERN_USER="$HOME/.cache/pypoetry/virtualenvs/"; fi
+
+    # Search known prefixes AND then try PATH commands
+    PATHS_TO_CHECK=()
+    # Construct paths from common prefixes
+    for prefix in "${COMMON_SYSTEM_PYTHON_PREFIXES[@]}"; do
+        if [ -n "$PYTHON_VERSION_XY" ]; then
+             PATHS_TO_CHECK+=("$prefix/python$PYTHON_VERSION_XY/bin/python$PYTHON_VERSION_XY") # e.g. /opt/homebrew/opt/python@3.12/bin/python3.12
+             PATHS_TO_CHECK+=("$prefix/$PYTHON_VERSION_XY/bin/python$PYTHON_VERSION_XY")       # e.g. /Library/.../3.12/bin/python3.12
+             PATHS_TO_CHECK+=("$prefix/python$PYTHON_VERSION_XY")                             # e.g. /usr/local/bin/python3.12
+        fi
+        PATHS_TO_CHECK+=("$prefix/python3") # e.g. /usr/bin/python3
+    done
+
+    # Add paths found via 'command -v -a' for broader search
+    for candidate_cmd in "${SYSTEM_PYTHON_CANDIDATES_CMDS[@]}"; do
+        FOUND_IN_PATH=$(command -v -a "$candidate_cmd" 2>/dev/null || true)
+        if [ -n "$FOUND_IN_PATH" ]; then
+            while IFS= read -r p_path; do PATHS_TO_CHECK+=("$p_path"); done <<< "$FOUND_IN_PATH"
+        fi
+    done
+
+    # Deduplicate paths
+    UNIQUE_PATHS_TO_CHECK=($(echo "${PATHS_TO_CHECK[@]}" | tr ' ' '\n' | sort -u))
+    debug "System paths to check for Python: ${UNIQUE_PATHS_TO_CHECK[*]}"
+
+    for found_path in "${UNIQUE_PATHS_TO_CHECK[@]}"; do
+        if [ ! -x "$found_path" ]; then debug "Path '$found_path' not executable or not found. Skipping."; continue; fi # Must exist and be executable
+
+        REAL_FOUND_PATH=$(realpath "$found_path" 2>/dev/null || echo "$found_path")
+        debug "Evaluating system path: '$found_path' (real: '$REAL_FOUND_PATH')"
+        IS_VALID_SYSTEM_PYTHON=true
+
+        # Filter out paths from Poetry's cache or local .venv
+        if [[ -n "$POETRY_CACHE_DIR_PATTERN_USER" && "$REAL_FOUND_PATH" == "$POETRY_CACHE_DIR_PATTERN_USER"* ]]; then debug "FILTERED (Poetry Cache)"; IS_VALID_SYSTEM_PYTHON=false; fi
+        if $IS_VALID_SYSTEM_PYTHON && [[ "$REAL_FOUND_PATH" == *"/.venv/bin/"* ]]; then debug "FILTERED (Local .venv)"; IS_VALID_SYSTEM_PYTHON=false; fi
+        if $IS_VALID_SYSTEM_PYTHON && [ -n "$VIRTUAL_ENV" ]; then
+            REAL_VIRTUAL_ENV_PYTHON_PATH=$(realpath "$VIRTUAL_ENV/bin/python" 2>/dev/null || realpath "$VIRTUAL_ENV/bin/python3" 2>/dev/null || echo "")
+            if [[ -n "$REAL_VIRTUAL_ENV_PYTHON_PATH" && "$REAL_FOUND_PATH" == "$REAL_VIRTUAL_ENV_PYTHON_PATH" ]]; then debug "FILTERED (Active VIRTUAL_ENV)"; IS_VALID_SYSTEM_PYTHON=false; fi
+        fi
+
+        if $IS_VALID_SYSTEM_PYTHON; then
+            if "$found_path" -c "import sys; sys.exit(0 if sys.version_info.major == 3 else 1)" &>/dev/null; then
+                PYTHON_VER_OUTPUT=$("$found_path" --version 2>&1)
+                # Basic compatibility check with hint (X.Y)
+                VERSION_MATCHES_HINT=false
+                if [ -n "$PYTHON_VERSION_XY" ]; then
+                    if [[ "$PYTHON_VER_OUTPUT" == *"$PYTHON_VERSION_XY"* ]]; then VERSION_MATCHES_HINT=true; fi
+                elif [ -n "$PYTHON_VERSION_X" ]; then # Only major version hint
+                    if [[ "$PYTHON_VER_OUTPUT" == *"Python ${PYTHON_VERSION_X}."* ]]; then VERSION_MATCHES_HINT=true; fi
+                else # No hint, any Python 3 is fine for now
+                    VERSION_MATCHES_HINT=true
+                fi
+
+                if $VERSION_MATCHES_HINT; then
+                    debug "Path '$found_path' IS Python 3 and matches hint (Version: $PYTHON_VER_OUTPUT). SELECTING IT."
+                    PREFERRED_PYTHON_EXE_PATH="$found_path"
+                    info "Using SYSTEM Python interpreter: $PREFERRED_PYTHON_EXE_PATH ($PYTHON_VER_OUTPUT)"
+                    break # Found one
+                else
+                    debug "Path '$found_path' IS Python 3 (Version: $PYTHON_VER_OUTPUT), but does not match X.Y hint '$PYTHON_VERSION_XY'. Will consider if no better match."
+                    # Could store this as a fallback if PREFERRED_PYTHON_EXE_PATH remains empty
+                fi
+            else
+                debug "Path '$found_path' is NOT Python 3. Skipping."
+            fi
+        fi
+        if [ -n "$PREFERRED_PYTHON_EXE_PATH" ]; then break; fi # Break outer loop if found
+    done
+fi
+
+
+if [ -z "$PREFERRED_PYTHON_EXE_PATH" ]; then
+    error "Suitable Python 3 interpreter (pyenv or system) not found.
+Checked pyenv, common system locations, and PATH based on pyproject.toml hint (~$PYTHON_VERSION_XY) and 'python3'.
+Please ensure a Python 3 installation is available and discoverable outside of Poetry-managed virtual environments."
+fi
+
+# --- Main Script (continues from here) ---
+info "Starting clean reinstall for: $($POETRY_CMD version -s)" # Use POETRY_CMD
 echo "---------------------------------------------------------------------"
 
-if [ -n "$VIRTUAL_ENV" ]; then deactivate || warn "Deactivate failed (often ok)."; fi
-
-if [ -d ".venv" ]; then info "Removing local .venv..."; rm -rf .venv; else info "No local .venv."; fi
-CACHED_ENV_PATH=$(poetry env info --path 2>/dev/null || true)
-if [ -n "$CACHED_ENV_PATH" ] && [ -d "$CACHED_ENV_PATH" ]; then
-    info "Removing cached env: $CACHED_ENV_PATH"; rm -rf "$CACHED_ENV_PATH"
-    ENV_NAME=$(basename "$CACHED_ENV_PATH")
-    poetry env remove "$ENV_NAME" >/dev/null 2>&1 || poetry env remove "${ENV_NAME#*-}" >/dev/null 2>&1 || warn "Could not formally remove $ENV_NAME from Poetry."
-fi
-if [ -n "$PYTHON_VERSION_HINT" ]; then
-    CLEANED_HINT=$(echo "$PYTHON_VERSION_HINT" | sed 's/[^0-9.]//g')
-    poetry env remove "python${CLEANED_HINT}" >/dev/null 2>&1 || warn "No env for python${CLEANED_HINT} to remove."
+if [ -n "$VIRTUAL_ENV" ]; then
+    warn "A virtual environment ($VIRTUAL_ENV) was active. 'deactivate' might not work in script."
 fi
 
-if [ -f "poetry.lock" ]; then info "Removing poetry.lock..."; rm poetry.lock; fi
+# Remove local .venv if it exists
+if [ -d ".venv" ]; then info "Removing local .venv directory..."; rm -rf .venv; info ".venv directory removed."; else info "No local .venv directory found."; fi
 
-info "Attempting to set Poetry to use: $PREFERRED_PYTHON_EXE_PATH"
+# Remove Poetry's cached environment for this project
+CACHED_ENV_PATH_FOR_REMOVAL=$($POETRY_CMD env info --path 2>/dev/null || true)
+if [ -n "$CACHED_ENV_PATH_FOR_REMOVAL" ] && [ -d "$CACHED_ENV_PATH_FOR_REMOVAL" ]; then
+    # ... (rest of the removal logic for cached env, using $POETRY_CMD) ...
+    REAL_CACHED_ENV_PATH_FOR_REMOVAL=$(realpath "$CACHED_ENV_PATH_FOR_REMOVAL" 2>/dev/null || echo "$CACHED_ENV_PATH_FOR_REMOVAL")
+    REAL_PREFERRED_PYTHON_DIR_FOR_CHECK=""
+    if [ -n "$PREFERRED_PYTHON_EXE_PATH" ]; then
+        PREFERRED_PYTHON_DIR_FOR_CHECK=$(dirname "$PREFERRED_PYTHON_EXE_PATH")
+        REAL_PREFERRED_PYTHON_DIR_FOR_CHECK=$(realpath "$PREFERRED_PYTHON_DIR_FOR_CHECK" 2>/dev/null || echo "$PREFERRED_PYTHON_DIR_FOR_CHECK")
+    fi
+
+    if [ -n "$REAL_PREFERRED_PYTHON_DIR_FOR_CHECK" ] && [[ "$REAL_CACHED_ENV_PATH_FOR_REMOVAL" != "$REAL_PREFERRED_PYTHON_DIR_FOR_CHECK" && "$REAL_PREFERRED_PYTHON_DIR_FOR_CHECK" != "$REAL_CACHED_ENV_PATH_FOR_REMOVAL"* ]]; then
+        info "Removing cached env: $CACHED_ENV_PATH_FOR_REMOVAL"
+        rm -rf "$CACHED_ENV_PATH_FOR_REMOVAL"
+        ENV_NAME=$(basename "$CACHED_ENV_PATH_FOR_REMOVAL")
+        $POETRY_CMD env remove "$ENV_NAME" >/dev/null 2>&1 || $POETRY_CMD env remove "${ENV_NAME#*-}" >/dev/null 2>&1 || warn "Could not formally remove $ENV_NAME from Poetry's list."
+    else
+        warn "Skipping removal of $CACHED_ENV_PATH_FOR_REMOVAL as it might be related to chosen Python ($PREFERRED_PYTHON_EXE_PATH)."
+    fi
+else
+    info "No specific Poetry-managed cached environment path found to remove."
+fi
+
+
+if [ -n "$PYTHON_VERSION_XY" ]; then
+    info "Attempting to remove any env for python${PYTHON_VERSION_XY} from Poetry..."
+    $POETRY_CMD env remove "python${PYTHON_VERSION_XY}" >/dev/null 2>&1 || warn "No environment for python${PYTHON_VERSION_XY} to remove from Poetry's list."
+fi
+
+if [ -f "poetry.lock" ]; then info "Removing poetry.lock file..."; rm poetry.lock; info "poetry.lock file removed."; else info "No poetry.lock file found to remove."; fi
+
+info "Attempting to set Poetry to use Python: $PREFERRED_PYTHON_EXE_PATH"
+info "Poetry will validate if this interpreter ($($PREFERRED_PYTHON_EXE_PATH --version 2>&1)) meets constraints in pyproject.toml."
+
 set +e
-POETRY_ENV_USE_OUTPUT=$(poetry env use "$PREFERRED_PYTHON_EXE_PATH" 2>&1)
+POETRY_ENV_USE_OUTPUT=$($POETRY_CMD env use "$PREFERRED_PYTHON_EXE_PATH" 2>&1)
 POETRY_ENV_USE_STATUS=$?
 set -e
-if [ $POETRY_ENV_USE_STATUS -ne 0 ]; then
-    error "poetry env use $PREFERRED_PYTHON_EXE_PATH FAILED. Output:\n$POETRY_ENV_USE_OUTPUT\nThis suggests a problem with Poetry or Python setup."
+
+if [ $POETRY_ENV_USE_STATUS -eq 0 ]; then
+    info "Poetry successfully configured to use $PREFERRED_PYTHON_EXE_PATH."
+    if echo "$POETRY_ENV_USE_OUTPUT" | grep -q -i "warning"; then
+        warn "Poetry 'env use' issued a warning(s):\n$POETRY_ENV_USE_OUTPUT"
+    fi
+else
+    error "Poetry 'env use $PREFERRED_PYTHON_EXE_PATH' FAILED. Status: $POETRY_ENV_USE_STATUS. Output:\n$POETRY_ENV_USE_OUTPUT"
 fi
-info "Poetry 'env use' successful or issued non-critical warnings:\n$POETRY_ENV_USE_OUTPUT"
 
+info "Generating new poetry.lock file..."
+if ! $POETRY_CMD lock; then
+    error "Poetry 'lock' FAILED. Ensure Python ($($PREFERRED_PYTHON_EXE_PATH --version 2>&1)) is compatible."
+fi
+info "poetry.lock file generated successfully."
 
-info "Generating new lock file..."
-if ! poetry lock; then error "poetry lock FAILED."; fi
-info "Installing dependencies..."
-if ! poetry install -vvv; then error "poetry install FAILED."; fi
+info "Installing dependencies (this will create a new virtual environment if needed)..."
+if ! $POETRY_CMD install -vvv; then error "Poetry 'install' FAILED."; fi
+info "Dependencies installed successfully."
 
 echo "---------------------------------------------------------------------"
 info "Clean reinstall complete."
-poetry env info
-# ... (activation suggestion logic) ...
+$POETRY_CMD env info
+
 info "\nTo activate the new environment, typically you would run:"
 if [ -d ".venv" ]; then
     echo -e "${YELLOW}  source .venv/bin/activate${NC}"
 else
-    ACTIVATION_PYTHON_EXE=$(poetry env info --executable 2>/dev/null || true)
+    ACTIVATION_PYTHON_EXE=$($POETRY_CMD env info --executable 2>/dev/null || true)
     if [ -n "$ACTIVATION_PYTHON_EXE" ]; then
         ACTIVATE_SCRIPT_PATH="$(dirname "$ACTIVATION_PYTHON_EXE")/activate"
         if [ -f "$ACTIVATE_SCRIPT_PATH" ]; then
              echo -e "${YELLOW}  source \"$ACTIVATE_SCRIPT_PATH\"${NC}"
         else
-             warn "Could not determine the exact activate script path from a Poetry environment."
+             warn "Could not determine the exact activate script path."
              echo -e "${YELLOW}  Consider using 'poetry shell' or 'poetry run <command>'.${NC}"
         fi
     else
-        warn "Could not determine the new environment path automatically via 'poetry env info --executable'."
+        warn "Could not determine new environment path automatically."
         echo -e "${YELLOW}  Consider using 'poetry shell' or 'poetry run <command>'.${NC}"
     fi
 fi
+
 info "Script finished."
