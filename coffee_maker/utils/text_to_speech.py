@@ -1,8 +1,6 @@
 # co-author : Gemini 2.5 Pro Preview
 import logging
 
-import pyttsx3
-
 # Set up a logger for this module.
 # In a larger application, the root logger would typically be configured elsewhere.
 # For a standalone script or a module intended to be used as a utility,
@@ -21,6 +19,12 @@ def text_to_speech_pyttsx3(text, voice_id=None, rate=150, volume=1.0):
         rate (int, optional): The speech rate (words per minute). Defaults to 150.
         volume (float, optional): The speech volume (0.0 to 1.0). Defaults to 1.0.
     """
+    try:
+        import pyttsx3
+    except ImportError:
+        logger.error("pyttsx3 is not installed. Please install.")
+        raise RuntimeError("pyttsx3 is not installed. Please install it.")
+
     try:
         logger.info("Initializing pyttsx3 engine.")
         engine = pyttsx3.init()

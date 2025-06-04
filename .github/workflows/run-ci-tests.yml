@@ -110,3 +110,7 @@ jobs:
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Run pip-audit #--ignore=pyyaml for instance if you want to ignore a specific package
+        run: |
+          poetry run pip-audit --fail-on=high --fail-on=critical

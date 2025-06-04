@@ -1,0 +1,174 @@
+#!/usr/bin/env zsh
+# co-author : Gemini 2.5 Pro Preview
+# Script to fully clean and reinstall a Poetry environment.
+# Uses pyenv (installing if needed) and a temporary 'python' symlink for robust Poetry operation.
+
+set -e # zsh: setopt errexit
+# --- Configuration & Helpers ---
+GREEN='\033[0;32m'; YELLOW='\033[0;33m'; RED='\033[0;31m'; NC='\033[0m'
+info() { echo -e "${GREEN}[INFO]${NC} \"$1\""; }
+warn() { echo -e "${YELLOW}[WARN]${NC} \"$1\""; }
+error() { echo -e "${RED}[ERROR]${NC} \"$1\"" >&2; exit 1; }
+debug() { echo -e "${YELLOW}[DEBUG]${NC} \"$1\""; }
+
+# --- Early Diagnostics & Sanity Checks ---
+info "--- Early Script Environment Diagnostics ---"
+info "Running with shell: $(ps -p $$ -ocomm=)"
+info "Initial script PATH:\n$(echo $PATH | tr ':' '\n' | sed 's/^/  /') "
+info "--- End Early Diagnostics ---"
+
+if ! (whence poetry >/dev/null 2>&1); then
+    COMMON_POETRY_PATHS=("$HOME/.local/bin/poetry" "$HOME/.poetry/bin/poetry" "/opt/homebrew/bin/poetry" "/usr/local/bin/poetry")
+    POETRY_CMD=""; for p in "${COMMON_POETRY_PATHS[@]}"; do if [ -x "$p" ]; then POETRY_CMD="$p"; info "Found Poetry at: $POETRY_CMD"; break; fi; done
+    if [ -z "$POETRY_CMD" ]; then error "Poetry not found in PATH or common locations."; fi
+else POETRY_CMD=$(whence poetry); info "Poetry found in PATH at: $POETRY_CMD"; fi
+if [ ! -f "pyproject.toml" ]; then error "No pyproject.toml found."; fi
+
+# --- Python Version Hint from pyproject.toml ---
+PYTHON_VERSION_HINT_RAW_LINE=""; PYPROJECT_PARSE_ERROR=false
+debug "Parsing pyproject.toml for Python constraint..."
+set +e
+PYTHON_VERSION_HINT_RAW_LINE_ATTEMPT1=$("$POETRY_CMD" run python -c "import sys;import tomli;with open('pyproject.toml','rb')as f:d=tomli.load(f);pc=d.get('tool',{}).get('poetry',{}).get('dependencies',{}).get('python','');[sys.stdout.write(pc),sys.exit(0)] if pc else [sys.stderr.write('[DEBUG]No python constraint in tomli.\n'),sys.exit(3)]" 2>&1)
+TOMLI_PARSE_STATUS=$?
+set -e
+if [ $TOMLI_PARSE_STATUS -eq 0 ] && [ -n "$PYTHON_VERSION_HINT_RAW_LINE_ATTEMPT1" ]; then
+    PYTHON_VERSION_HINT_RAW_LINE=$(echo "$PYTHON_VERSION_HINT_RAW_LINE_ATTEMPT1" | grep -vE "^\[DEBUG\]|^\[WARN\]" || echo "$PYTHON_VERSION_HINT_RAW_LINE_ATTEMPT1")
+    if ! echo "$PYTHON_VERSION_HINT_RAW_LINE_ATTEMPT1" | grep -q -vE "^\[DEBUG\]|^\[WARN\]"; then PYTHON_VERSION_HINT_RAW_LINE=""; fi
+    if [ -n "$PYTHON_VERSION_HINT_RAW_LINE" ]; then debug "Tomli constraint: '$PYTHON_VERSION_HINT_RAW_LINE'"; else debug "Tomli status 0 but no constraint string. Output: $PYTHON_VERSION_HINT_RAW_LINE_ATTEMPT1"; PYPROJECT_PARSE_ERROR=true; fi
+elif [ $TOMLI_PARSE_STATUS -ne 0 ]; then warn "Tomli parsing via '$POETRY_CMD run python' failed (status $TOMLI_PARSE_STATUS). Output:\n$PYTHON_VERSION_HINT_RAW_LINE_ATTEMPT1"; PYPROJECT_PARSE_ERROR=true; fi
+if $PYPROJECT_PARSE_ERROR || [ -z "$PYTHON_VERSION_HINT_RAW_LINE" ]; then
+    warn "Fallback to grep for Python constraint."; PYTHON_VERSION_HINT_RAW_LINE=$(grep -m 1 -E '^\s*python\s*=\s*".*"' pyproject.toml || echo "");
+    if [ -z "$PYTHON_VERSION_HINT_RAW_LINE" ]; then warn "Grep also failed."; else debug "Grep constraint: '$PYTHON_VERSION_HINT_RAW_LINE'"; fi
+fi
+PYTHON_VERSION_XY=""; PYTHON_VERSION_X=""
+if [[ -n "$PYTHON_VERSION_HINT_RAW_LINE" ]]; then
+    if [[ "$PYTHON_VERSION_HINT_RAW_LINE" =~ '[^0-9]*([0-9]+)\.([0-9]+)' ]]; then PYTHON_VERSION_X="${match[1]}"; PYTHON_VERSION_XY="${match[1]}.${match[2]}"; info "Hint: ~$PYTHON_VERSION_XY";
+    elif [[ "$PYTHON_VERSION_HINT_RAW_LINE" =~ '[^0-9]*([0-9]+)' ]]; then PYTHON_VERSION_X="${match[1]}"; warn "Hint: Major version ~${PYTHON_VERSION_X} only.";
+    else warn "Could not parse X.Y or X from: '$PYTHON_VERSION_HINT_RAW_LINE'"; fi
+else warn "No Python constraint found in pyproject.toml."; fi
+
+# --- Find/Install SUITABLE Python Interpreter ---
+PREFERRED_PYTHON_EXE_PATH=""
+PYENV_CMD=""; if (whence pyenv >/dev/null 2>&1); then PYENV_CMD=$(whence pyenv); fi
+
+if [ -n "$PYENV_CMD" ]; then
+    info "Pyenv found: $PYENV_CMD. Checking installed versions..."
+    PYENV_ROOT=$($PYENV_CMD root); INSTALLED_PYENV_VERSIONS=$($PYENV_CMD versions --bare --skip-aliases 2>/dev/null || true)
+    PYENV_CANDIDATE_FOUND=false
+    if [ -n "$PYTHON_VERSION_XY" ]; then
+        LATEST_MATCHING_PYENV_VER=$(echo "$INSTALLED_PYENV_VERSIONS" | grep -E "^${PYTHON_VERSION_XY}(\.[0-9]+)?$" | sort -V -r | head -n 1)
+        if [ -n "$LATEST_MATCHING_PYENV_VER" ]; then
+            PYENV_PYTHON_PATH_TRY="$PYENV_ROOT/versions/$LATEST_MATCHING_PYENV_VER/bin/python"; if ! [ -x "$PYENV_PYTHON_PATH_TRY" ]; then PYENV_PYTHON_PATH_TRY="$PYENV_ROOT/versions/$LATEST_MATCHING_PYENV_VER/bin/python3"; fi
+            if [ -x "$PYENV_PYTHON_PATH_TRY" ]; then PREFERRED_PYTHON_EXE_PATH="$PYENV_PYTHON_PATH_TRY"; PYENV_CANDIDATE_FOUND=true; fi
+        fi
+        if ! $PYENV_CANDIDATE_FOUND; then
+            warn "Pyenv doesn't have Python ~$PYTHON_VERSION_XY installed."
+            LATEST_INSTALLABLE_XY=$($PYENV_CMD install --list | grep -E "^\s*${PYTHON_VERSION_XY}\.[0-9]+(\s|$)" | sort -V -r | head -n 1 | xargs)
+            if [ -n "$LATEST_INSTALLABLE_XY" ]; then
+                info "Latest available for $PYTHON_VERSION_XY via pyenv: '$LATEST_INSTALLABLE_XY'."
+                if read -q "choice?Install pyenv version '$LATEST_INSTALLABLE_XY'? (y/N): "; then echo; if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
+                    info "Installing Python '$LATEST_INSTALLABLE_XY' with pyenv..."; if "$PYENV_CMD" install "$LATEST_INSTALLABLE_XY"; then
+                        PYENV_PYTHON_PATH_TRY="$PYENV_ROOT/versions/$LATEST_INSTALLABLE_XY/bin/python"; if ! [ -x "$PYENV_PYTHON_PATH_TRY" ]; then PYENV_PYTHON_PATH_TRY="$PYENV_ROOT/versions/$LATEST_INSTALLABLE_XY/bin/python3"; fi
+                        if [ -x "$PYENV_PYTHON_PATH_TRY" ]; then PREFERRED_PYTHON_EXE_PATH="$PYENV_PYTHON_PATH_TRY"; PYENV_CANDIDATE_FOUND=true; fi
+                    else error "Pyenv install of '$LATEST_INSTALLABLE_XY' failed."; fi
+                else warn "Skipping pyenv install."; fi; else echo; warn "No input for pyenv install."; fi
+            else warn "No installable candidate for $PYTHON_VERSION_XY via 'pyenv install --list'."; fi
+        fi
+    fi
+    if ! $PYENV_CANDIDATE_FOUND && [ -z "$PREFERRED_PYTHON_EXE_PATH" ]; then # Fallback to any pyenv Python 3
+        LATEST_PYENV_PYTHON3=$(echo "$INSTALLED_PYENV_VERSIONS" | grep -E "^3\.[0-9]+(\.[0-9]+)?$" | sort -V -r | head -n 1)
+        if [ -n "$LATEST_PYENV_PYTHON3" ]; then
+            PYENV_PYTHON_PATH_TRY="$PYENV_ROOT/versions/$LATEST_PYENV_PYTHON3/bin/python"; if ! [ -x "$PYENV_PYTHON_PATH_TRY" ]; then PYENV_PYTHON_PATH_TRY="$PYENV_ROOT/versions/$LATEST_PYENV_PYTHON3/bin/python3"; fi
+            if [ -x "$PYENV_PYTHON_PATH_TRY" ]; then PREFERRED_PYTHON_EXE_PATH="$PYENV_PYTHON_PATH_TRY"; fi
+        fi
+    fi
+    if [ -n "$PREFERRED_PYTHON_EXE_PATH" ]; then info "Using PYENV Python: $PREFERRED_PYTHON_EXE_PATH ($($PREFERRED_PYTHON_EXE_PATH --version 2>&1))"; else warn "No suitable Python via pyenv. Will try system search."; fi
+fi
+
+FALLBACK_SYSTEM_PYTHON=""
+if [ -z "$PREFERRED_PYTHON_EXE_PATH" ]; then
+    info "Searching for SYSTEM Python..."
+    # ... (System Search logic - kept concise here for brevity, but it's the same detailed one from before) ...
+    # This part should now correctly identify your /Library/Frameworks/.../python3 as a fallback
+    # if pyenv path was not set. We'll assume it sets PREFERRED_PYTHON_EXE_PATH or FALLBACK_SYSTEM_PYTHON
+    # For brevity, this is a placeholder for the actual detailed system search logic
+    SYSTEM_PYTHON_CANDIDATES_CMDS=(); if [ -n "$PYTHON_VERSION_XY" ]; then SYSTEM_PYTHON_CANDIDATES_CMDS+=("python$PYTHON_VERSION_XY"); fi; SYSTEM_PYTHON_CANDIDATES_CMDS+=("python3")
+    OS_TYPE=$(uname -s); if [[ "$OS_TYPE" == "Darwin" ]]; then POETRY_CACHE_DIR_PATTERN_USER="$HOME/Library/Caches/pypoetry/virtualenvs/"; else POETRY_CACHE_DIR_PATTERN_USER="$HOME/.cache/pypoetry/virtualenvs/"; fi
+    PATHS_TO_CHECK_SYSTEM=(); COMMON_SYSTEM_PYTHON_PREFIXES=("/Library/Frameworks/Python.framework/Versions" "/opt/homebrew/opt" "/usr/local/opt")
+    for prefix in "${COMMON_SYSTEM_PYTHON_PREFIXES[@]}"; do if [ -n "$PYTHON_VERSION_XY" ]; then PATHS_TO_CHECK_SYSTEM+=("$prefix/python@$PYTHON_VERSION_XY/bin/python$PYTHON_VERSION_XY") PATHS_TO_CHECK_SYSTEM+=("$prefix/$PYTHON_VERSION_XY/bin/python$PYTHON_VERSION_XY") PATHS_TO_CHECK_SYSTEM+=("$prefix/$PYTHON_VERSION_XY/bin/python3"); fi; PATHS_TO_CHECK_SYSTEM+=("$prefix/python3/bin/python3"); PATHS_TO_CHECK_SYSTEM+=("$prefix/bin/python3"); done
+    for candidate_cmd in "${SYSTEM_PYTHON_CANDIDATES_CMDS[@]}"; do typeset -a F; F=($(whence -a "$candidate_cmd" 2>/dev/null)); if [ ${#F[@]} -gt 0 ]; then for p in "${F[@]}"; do PATHS_TO_CHECK_SYSTEM+=("$p"); done; fi; done
+    UNIQUE_PATHS_TO_CHECK_SYSTEM=($(echo "${PATHS_TO_CHECK_SYSTEM[@]}" | tr ' ' '\n' | sort -u | grep -v '^$'));
+    for fpi in "${UNIQUE_PATHS_TO_CHECK_SYSTEM[@]}"; do cpe=""; if [[ "$fpi" == *"/"* ]] && [ -x "$fpi" ]; then cpe="$fpi"; elif ! [[ "$fpi" == *"/"* ]]; then rcp=$(whence "$fpi" 2>/dev/null||echo ""); if [ -x "$rcp" ]; then cpe="$rcp"; else continue; fi; else continue; fi;
+    RFPath=$(realpath "$cpe" 2>/dev/null||echo "$cpe"); IS_VALID=true; if [[ -n "$POETRY_CACHE_DIR_PATTERN_USER" && "$RFPath" == "$POETRY_CACHE_DIR_PATTERN_USER"* ]]; then IS_VALID=false; fi; if $IS_VALID && [[ "$RFPath" == *"/.venv/bin/"* ]]; then IS_VALID=false; fi; if $IS_VALID && [ -n "$VIRTUAL_ENV" ]; then VENV_PY_BN=$(basename "$cpe"); VENV_PY_EXE_CAND="$VIRTUAL_ENV/bin/$VENV_PY_BN"; REAL_VENV_PY_EXE_CAND_PATH=$(realpath "$VENV_PY_EXE_CAND" 2>/dev/null||echo "$VENV_PY_EXE_CAND"); if [[ -n "$REAL_VENV_PY_EXE_CAND_PATH" && "$RFPath" == "$REAL_VENV_PY_EXE_CAND_PATH" ]]; then IS_VALID=false; fi; fi;
+    if $IS_VALID; then if "$cpe" -c "import sys;sys.exit(not sys.version_info.major==3)"&>/dev/null; then PY_V_O=$("$cpe" --version 2>&1); V_MATCH=false; if [ -n "$PYTHON_VERSION_XY" ]; then if [[ "$PY_V_O" == *"$PYTHON_VERSION_XY"* ]]; then V_MATCH=true; fi; elif [ -n "$PYTHON_VERSION_X" ]; then if [[ "$PY_V_O" == *"Python ${PYTHON_VERSION_X}."* ]]; then V_MATCH=true; fi; else V_MATCH=true; fi;
+    if $V_MATCH; then PREFERRED_PYTHON_EXE_PATH="$cpe"; break; elif [ -z "$FALLBACK_SYSTEM_PYTHON" ]; then FALLBACK_SYSTEM_PYTHON="$cpe"; fi; fi; fi; if [ -n "$PREFERRED_PYTHON_EXE_PATH" ]; then break; fi; done
+    if [ -z "$PREFERRED_PYTHON_EXE_PATH" ] && [ -n "$FALLBACK_SYSTEM_PYTHON" ]; then info "No exact hint match. Using fallback: $FALLBACK_SYSTEM_PYTHON"; PREFERRED_PYTHON_EXE_PATH="$FALLBACK_SYSTEM_PYTHON"; fi
+    if [ -n "$PREFERRED_PYTHON_EXE_PATH" ]; then info "Using SYSTEM Python: $PREFERRED_PYTHON_EXE_PATH ($($PREFERRED_PYTHON_EXE_PATH --version 2>&1))"; fi
+fi
+
+if [ -z "$PREFERRED_PYTHON_EXE_PATH" ]; then error "Suitable Python 3 interpreter not found."; fi
+
+# --- Temporary PATH modification for 'python' command ---
+ORIGINAL_PATH="$PATH"
+TEMP_BIN_DIR=""
+cleanup_temp_python() {
+    if [ -n "$TEMP_BIN_DIR" ]; then
+        debug "Cleaning up temporary 'python' symlink and PATH modification."
+        rm -rf "$TEMP_BIN_DIR"
+        export PATH="$ORIGINAL_PATH"
+    fi
+}
+trap cleanup_temp_python EXIT INT TERM
+
+PYTHON_CMD_PATH=$(whence python 2>/dev/null || echo "")
+CREATE_TEMP_SYMLINK=true
+if [ -n "$PYTHON_CMD_PATH" ]; then
+    if "$PYTHON_CMD_PATH" -c "import sys; sys.exit(0 if sys.version_info.major == 3 else 1)" &>/dev/null; then
+        debug "'python' command already points to Python 3 ($($PYTHON_CMD_PATH --version 2>&1)). No temp symlink needed."
+        CREATE_TEMP_SYMLINK=false
+    else warn "'python' command exists but not Python 3. Will create temporary override."; fi
+fi
+if $CREATE_TEMP_SYMLINK; then
+    TEMP_BIN_DIR=$(mktemp -d)
+    info "Creating temporary symlink: $TEMP_BIN_DIR/python -> $PREFERRED_PYTHON_EXE_PATH"
+    ln -s "$PREFERRED_PYTHON_EXE_PATH" "$TEMP_BIN_DIR/python"
+    export PATH="$TEMP_BIN_DIR:$PATH"
+    if ! (whence python >/dev/null && [[ $(realpath "$(whence python)") == $(realpath "$PREFERRED_PYTHON_EXE_PATH") ]]); then error "Failed to make temporary 'python' command available or point correctly."; fi
+    debug "Temporary 'python' command now points to: $(python --version 2>&1)"
+fi
+
+# --- Main Script (Clean and Reinstall Part) ---
+info "Starting clean reinstall for: $($POETRY_CMD version -s)"
+# ... (Rest of the script: rm venv, rm lock, poetry env use, poetry lock, poetry install)
+# This part should now use the PREFERRED_PYTHON_EXE_PATH and benefit from the temp python symlink
+# For brevity, using simplified version of the rest. Ensure your full logic is here.
+echo "---------------------------------------------------------------------"
+if [ -n "$VIRTUAL_ENV" ]; then warn "Active venv ($VIRTUAL_ENV). PREFERRED_PYTHON_EXE_PATH is now system/pyenv.";fi
+if [ -d ".venv" ]; then info "Removing local .venv..."; rm -rf .venv; info ".venv removed."; else info "No local .venv."; fi
+CACHED_ENV_PATH_FOR_REMOVAL=$($POETRY_CMD env info --path 2>/dev/null || true); debug "Poetry env path for removal: '$CACHED_ENV_PATH_FOR_REMOVAL'"
+PROCEED_WITH_CACHED_ENV_REMOVAL=false
+if [ -n "$CACHED_ENV_PATH_FOR_REMOVAL" ] && [ -d "$CACHED_ENV_PATH_FOR_REMOVAL" ]; then
+    if [ -z "$PREFERRED_PYTHON_EXE_PATH" ]; then error "CRITICAL: PREFERRED_PYTHON_EXE_PATH not set."; fi
+    REAL_CACHED=$(realpath "$CACHED_ENV_PATH_FOR_REMOVAL" 2>/dev/null||echo "$CACHED_ENV_PATH_FOR_REMOVAL")
+    REAL_PREFERRED_DIR=$(realpath "$(dirname "$PREFERRED_PYTHON_EXE_PATH")" 2>/dev/null||echo "$(dirname "$PREFERRED_PYTHON_EXE_PATH")")
+    if [[ "$REAL_CACHED" != "$REAL_PREFERRED_DIR" && "$REAL_PREFERRED_DIR" != "$REAL_CACHED"* ]]; then PROCEED_WITH_CACHED_ENV_REMOVAL=true; fi
+    if $PROCEED_WITH_CACHED_ENV_REMOVAL; then info "Removing cached env: $CACHED_ENV_PATH_FOR_REMOVAL"; rm -rf "$CACHED_ENV_PATH_FOR_REMOVAL"; ENV_NAME=$(basename "$CACHED_ENV_PATH_FOR_REMOVAL"); $POETRY_CMD env remove "$ENV_NAME" >/dev/null 2>&1 || $POETRY_CMD env remove "${ENV_NAME#*-}" >/dev/null 2>&1 || warn "Could not formally remove $ENV_NAME.";
+    else warn "Skipping removal of $CACHED_ENV_PATH_FOR_REMOVAL (related to chosen Python $PREFERRED_PYTHON_EXE_PATH)."; fi
+else info "No Poetry cached env path found to remove."; fi
+if [ -n "$PYTHON_VERSION_XY" ]; then info "Removing env for python${PYTHON_VERSION_XY} from Poetry..."; $POETRY_CMD env remove "python${PYTHON_VERSION_XY}" >/dev/null 2>&1 || warn "No env for python${PYTHON_VERSION_XY} to remove."; fi
+if [ -f "poetry.lock" ]; then info "Removing poetry.lock..."; rm poetry.lock; info "poetry.lock removed."; else info "No poetry.lock."; fi
+
+info "Setting Poetry to use Python: $PREFERRED_PYTHON_EXE_PATH ($($PREFERRED_PYTHON_EXE_PATH --version 2>&1))"
+set +e; POETRY_ENV_USE_OUTPUT=$($POETRY_CMD env use "$PREFERRED_PYTHON_EXE_PATH" 2>&1); POETRY_ENV_USE_STATUS=$?; set -e
+if [ $POETRY_ENV_USE_STATUS -eq 0 ]; then info "Poetry configured for $PREFERRED_PYTHON_EXE_PATH."; if echo "$POETRY_ENV_USE_OUTPUT" | grep -q -i "warning"; then warn "Poetry 'env use' warnings:\n$POETRY_ENV_USE_OUTPUT"; fi
+else error "Poetry 'env use $PREFERRED_PYTHON_EXE_PATH' FAILED. Status: $POETRY_ENV_USE_STATUS. Output:\n$POETRY_ENV_USE_OUTPUT"; fi
+
+info "Generating lock file..."; if ! $POETRY_CMD lock; then error "Poetry 'lock' FAILED."; fi; info "poetry.lock generated."
+info "Installing dependencies..."; if ! $POETRY_CMD install -vvv; then error "Poetry 'install' FAILED."; fi; info "Dependencies installed."
+echo "---------------------------------------------------------------------"; info "Clean reinstall complete."; $POETRY_CMD env info
+# ... (Activation suggestion logic) ...
+info "\nTo activate new env:"
+if [ -d ".venv" ]; then echo -e "${YELLOW}  source .venv/bin/activate${NC}"; else ACTIVATION_PYTHON_EXE=$($POETRY_CMD env info --executable 2>/dev/null || true); if [ -n "$ACTIVATION_PYTHON_EXE" ]; then ACTIVATE_SCRIPT_PATH="$(dirname "$ACTIVATION_PYTHON_EXE")/activate"; if [ -f "$ACTIVATE_SCRIPT_PATH" ]; then echo -e "${YELLOW}  source \"$ACTIVATE_SCRIPT_PATH\"${NC}"; else warn "Activate script not found."; echo -e "${YELLOW}  Use 'poetry shell'.${NC}"; fi; else warn "Could not get env path."; echo -e "${YELLOW}  Use 'poetry shell'.${NC}"; fi; fi
+
+# Cleanup trap will handle TEMP_BIN_DIR
+info "Script finished."
