@@ -128,7 +128,7 @@ class PreCommitManager:
     def _check_prerequisites(self):
         """Checks if pre-commit is installed and project directory exists."""
         if not shutil.which("pre-commit"):
-            msg = "pre-commit command not found. Please install pre-commit: pip install pre-commit"
+            msg = "pre-commit command not found. Please install pre-commit."
             logger.error(msg)
             raise PrerequisiteError(msg)  # Using custom exception
 
