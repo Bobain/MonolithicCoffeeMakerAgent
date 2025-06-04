@@ -8,9 +8,9 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-mcp = {extras = ["cli"], version = ">=1.9.0"}
-smolagents = {extras = ["mcp"], version = ">=1.16.1"}
-gradio = {extras = ["mcp"], version = ">=5.31.0"}
+mcp = {extras = ["cli"], version = "^1.9.0"}
+smolagents = {extras = ["mcp"], version = "^1.16.1"}
+gradio = {extras = ["mcp"], version = "^5.31.0"}
 # pyttsx3 = ">=2.98"
 
 [tool.poetry.group.dev.dependencies]
