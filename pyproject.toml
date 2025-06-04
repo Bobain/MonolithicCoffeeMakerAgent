@@ -15,6 +15,7 @@ gradio = {extras = ["mcp"], version = "^5.31.0"}
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
 pytest-cov = "^6.0"
+pip-audit = "^2.9"
 
 
 [tool.poetry.urls]
