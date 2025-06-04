@@ -23,7 +23,7 @@ def text_to_speech_pyttsx3(text, voice_id=None, rate=150, volume=1.0):
         import pyttsx3
     except ImportError:
         logger.error("pyttsx3 is not installed. Please install.")
-        raise RuntimeError("pyttsx3 is not installed. Please install it .")
+        raise RuntimeError("pyttsx3 is not installed. Please install it.")
 
     try:
         logger.info("Initializing pyttsx3 engine.")
