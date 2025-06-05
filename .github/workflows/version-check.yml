@@ -8,6 +8,7 @@ on:
     branches:
       - main # Or your primary branch name
     types: [opened, synchronize, reopened] # Run when PR is opened, updated, or reopened
+  workflow_dispatch:
 
 jobs:
   check_version_increment:
@@ -22,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11' # Or your preferred Python version
+          python-version: '3.12' # Or your preferred Python version
 
       - name: Install dependencies
         run: pip install toml packaging # For pyproject.toml parsing and version comparison
