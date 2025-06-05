@@ -12,11 +12,6 @@ files = [
     {file = "aiofiles-24.1.0.tar.gz", hash = "sha256:22a075c9e5a3810f0c2e48f3008c94d68c65d763b9b03857924c99e57355166c"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "annotated-types"
 version = "0.7.0"
@@ -28,11 +23,6 @@ files = [
     {file = "annotated_types-0.7.0-py3-none-any.whl", hash = "sha256:1f02e8b43a8fbbc3f3e0d4f0f4bfc8131bcb4eebe8849b8e5c773f3a1c582a53"},
     {file = "annotated_types-0.7.0.tar.gz", hash = "sha256:aff07c09a53a08bc8cfccb9c85b05f1aa9a2a6f23728d790723543408344ce89"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "anyio"
@@ -55,11 +45,6 @@ typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 doc = ["Sphinx (>=8.2,<9.0)", "packaging", "sphinx-autodoc-typehints (>=1.2.0)", "sphinx_rtd_theme"]
 test = ["anyio[trio]", "blockbuster (>=1.5.23)", "coverage[toml] (>=7)", "exceptiongroup (>=1.2.0)", "hypothesis (>=4.0)", "psutil (>=5.9)", "pytest (>=7.0)", "trustme", "truststore (>=0.9.1) ; python_version >= \"3.10\"", "uvloop (>=0.21) ; platform_python_implementation == \"CPython\" and platform_system != \"Windows\" and python_version < \"3.14\""]
 trio = ["trio (>=0.26.1)"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "audioop-lts"
@@ -105,11 +90,6 @@ files = [
     {file = "audioop_lts-0.2.1.tar.gz", hash = "sha256:e81268da0baa880431b68b1308ab7257eb33f356e57a5f9b1f915dfb13dd1387"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "bleach"
 version = "3.2.0"
@@ -126,11 +106,6 @@ files = [
 packaging = "*"
 six = ">=1.9.0"
 webencodings = "*"
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "boolean-py"
@@ -149,11 +124,6 @@ dev = ["build", "twine"]
 docs = ["Sphinx (>=3.3.1)", "doc8 (>=0.8.1)", "sphinx-rtd-theme (>=0.5.0)", "sphinxcontrib-apidoc (>=0.3.0)"]
 linting = ["black", "isort", "pycodestyle"]
 testing = ["pytest (>=6,!=7.0.0)", "pytest-xdist (>=2)"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "cachecontrol"
@@ -177,11 +147,6 @@ dev = ["CacheControl[filecache,redis]", "build", "cherrypy", "codespell[tomli]",
 filecache = ["filelock (>=3.8.0)"]
 redis = ["redis (>=2.10.5)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "certifi"
 version = "2025.4.26"
@@ -194,11 +159,6 @@ files = [
     {file = "certifi-2025.4.26.tar.gz", hash = "sha256:0a816057ea3cdefcef70270d2c515e4506bbc954f417fa5ade2021213bb8f0c6"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "cfgv"
 version = "3.4.0"
@@ -210,11 +170,6 @@ files = [
     {file = "cfgv-3.4.0-py2.py3-none-any.whl", hash = "sha256:b7265b1f29fd3316bfcd2b330d63d024f2bfd8bcb8b0272f8e19a504856c48f9"},
     {file = "cfgv-3.4.0.tar.gz", hash = "sha256:e52591d4c5f5dead8e0f673fb16db7949d2cfb3f7da4582893288f0ded8fe560"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "charset-normalizer"
@@ -318,11 +273,6 @@ files = [
     {file = "charset_normalizer-3.4.2.tar.gz", hash = "sha256:5baececa9ecba31eff645232d59845c07aa030f0c81ee70184a90d35099a0e63"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "click"
 version = "8.2.1"
@@ -338,11 +288,6 @@ files = [
 [package.dependencies]
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "colorama"
 version = "0.4.6"
@@ -355,11 +300,6 @@ files = [
     {file = "colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44"},
 ]
 markers = {main = "platform_system == \"Windows\"", dev = "sys_platform == \"win32\""}
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "coverage"
@@ -441,17 +381,12 @@ files = [
 [package.extras]
 toml = ["tomli ; python_full_version <= \"3.11.0a6\""]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "cyclonedx-python-lib"
 version = "9.1.0"
 description = "Python library for CycloneDX"
 optional = false
-python-versions = ">=3.8,<4.0"
+python-versions = "<4.0,>=3.8"
 groups = ["dev"]
 files = [
     {file = "cyclonedx_python_lib-9.1.0-py3-none-any.whl", hash = "sha256:55693fca8edaecc3363b24af14e82cc6e659eb1e8353e58b587c42652ce0fb52"},
@@ -469,11 +404,6 @@ json-validation = ["jsonschema[format] (>=4.18,<5.0)"]
 validation = ["jsonschema[format] (>=4.18,<5.0)", "lxml (>=4,<6)"]
 xml-validation = ["lxml (>=4,<6)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "defusedxml"
 version = "0.7.1"
@@ -486,11 +416,6 @@ files = [
     {file = "defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "distlib"
 version = "0.3.9"
@@ -502,11 +427,6 @@ files = [
     {file = "distlib-0.3.9-py2.py3-none-any.whl", hash = "sha256:47f8c22fd27c27e25a65601af709b38e4f0a45ea4fc2e710f65755fa8caaaf87"},
     {file = "distlib-0.3.9.tar.gz", hash = "sha256:a60f20dea646b8a33f3e7772f74dc0b2d0772d2837ee1342a00645c81edf9403"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "fastapi"
@@ -529,11 +449,6 @@ typing-extensions = ">=4.8.0"
 all = ["email-validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.5)", "httpx (>=0.23.0)", "itsdangerous (>=1.1.0)", "jinja2 (>=3.1.5)", "orjson (>=3.2.1)", "pydantic-extra-types (>=2.0.0)", "pydantic-settings (>=2.0.0)", "python-multipart (>=0.0.18)", "pyyaml (>=5.3.1)", "ujson (>=4.0.1,!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0)", "uvicorn[standard] (>=0.12.0)"]
 standard = ["email-validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.5)", "httpx (>=0.23.0)", "jinja2 (>=3.1.5)", "python-multipart (>=0.0.18)", "uvicorn[standard] (>=0.12.0)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "ffmpy"
 version = "0.6.0"
@@ -548,11 +463,6 @@ files = [
 
 [package.extras]
 psutil = ["psutil (>=5.8.0)"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "filelock"
@@ -570,11 +480,6 @@ files = [
 docs = ["furo (>=2024.8.6)", "sphinx (>=8.1.3)", "sphinx-autodoc-typehints (>=3)"]
 testing = ["covdefaults (>=2.3)", "coverage (>=7.6.10)", "diff-cover (>=9.2.1)", "pytest (>=8.3.4)", "pytest-asyncio (>=0.25.2)", "pytest-cov (>=6)", "pytest-mock (>=3.14)", "pytest-timeout (>=2.3.1)", "virtualenv (>=20.28.1)"]
 typing = ["typing-extensions (>=4.12.2) ; python_version < \"3.11\""]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "fsspec"
@@ -615,11 +520,6 @@ test = ["aiohttp (!=4.0.0a0,!=4.0.0a1)", "numpy", "pytest", "pytest-asyncio (!=0
 test-downstream = ["aiobotocore (>=2.5.4,<3.0.0)", "dask[dataframe,test]", "moto[server] (>4,<5)", "pytest-timeout", "xarray"]
 test-full = ["adlfs", "aiohttp (!=4.0.0a0,!=4.0.0a1)", "cloudpickle", "dask", "distributed", "dropbox", "dropboxdrivefs", "fastparquet", "fusepy", "gcsfs", "jinja2", "kerchunk", "libarchive-c", "lz4", "notebook", "numpy", "ocifs", "pandas", "panel", "paramiko", "pyarrow", "pyarrow (>=1)", "pyftpdlib", "pygit2", "pytest", "pytest-asyncio (!=0.22.0)", "pytest-benchmark", "pytest-cov", "pytest-mock", "pytest-recording", "pytest-rerunfailures", "python-snappy", "requests", "smbprotocol", "tqdm", "urllib3", "zarr", "zstandard"]
 tqdm = ["tqdm"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "gradio"
@@ -672,11 +572,6 @@ uvicorn = {version = ">=0.14.0", markers = "sys_platform != \"emscripten\""}
 mcp = ["mcp (==1.9.0)", "pydantic (>=2.11) ; sys_platform != \"emscripten\""]
 oauth = ["authlib", "itsdangerous"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "gradio-client"
 version = "1.10.2"
@@ -697,11 +592,6 @@ packaging = "*"
 typing-extensions = ">=4.0,<5.0"
 websockets = ">=10.0,<16.0"
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "groovy"
 version = "0.1.2"
@@ -717,11 +607,6 @@ files = [
 [package.extras]
 dev = ["pytest", "ruff (==0.9.3)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "h11"
 version = "0.16.0"
@@ -733,11 +618,6 @@ files = [
     {file = "h11-0.16.0-py3-none-any.whl", hash = "sha256:63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86"},
     {file = "h11-0.16.0.tar.gz", hash = "sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "hf-xet"
@@ -761,11 +641,6 @@ files = [
 [package.extras]
 tests = ["pytest"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "httpcore"
 version = "1.0.9"
@@ -787,11 +662,6 @@ asyncio = ["anyio (>=4.0,<5.0)"]
 http2 = ["h2 (>=3,<5)"]
 socks = ["socksio (==1.*)"]
 trio = ["trio (>=0.22.0,<1.0)"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "httpx"
@@ -818,11 +688,6 @@ http2 = ["h2 (>=3,<5)"]
 socks = ["socksio (==1.*)"]
 zstd = ["zstandard (>=0.18.0)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "httpx-sse"
 version = "0.4.0"
@@ -834,11 +699,6 @@ files = [
     {file = "httpx-sse-0.4.0.tar.gz", hash = "sha256:1e81a3a3070ce322add1d3529ed42eb5f70817f45ed6ec915ab753f961139721"},
     {file = "httpx_sse-0.4.0-py3-none-any.whl", hash = "sha256:f329af6eae57eaa2bdfd962b42524764af68075ea87370a2de920af5341e318f"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "huggingface-hub"
@@ -879,11 +739,6 @@ testing = ["InquirerPy (==0.3.4)", "Jinja2", "Pillow", "aiohttp", "authlib (>=1.
 torch = ["safetensors[torch]", "torch"]
 typing = ["types-PyYAML", "types-requests", "types-simplejson", "types-toml", "types-tqdm", "types-urllib3", "typing-extensions (>=4.8.0)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "identify"
 version = "2.6.12"
@@ -898,11 +753,6 @@ files = [
 
 [package.extras]
 license = ["ukkonen"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "idna"
@@ -919,11 +769,6 @@ files = [
 [package.extras]
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "iniconfig"
 version = "2.1.0"
@@ -935,11 +780,6 @@ files = [
     {file = "iniconfig-2.1.0-py3-none-any.whl", hash = "sha256:9deba5723312380e77435581c6bf4935c94cbfab9b1ed33ef8d238ea168eb760"},
     {file = "iniconfig-2.1.0.tar.gz", hash = "sha256:3abbd2e30b36733fee78f9c7f7308f2d0050e88f0087fd25c2645f63c773e1c7"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "jinja2"
@@ -959,11 +799,6 @@ MarkupSafe = ">=2.0"
 [package.extras]
 i18n = ["Babel (>=2.7)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "jsonref"
 version = "1.1.0"
@@ -975,11 +810,6 @@ files = [
     {file = "jsonref-1.1.0-py3-none-any.whl", hash = "sha256:590dc7773df6c21cbf948b5dac07a72a251db28b0238ceecce0a2abfa8ec30a9"},
     {file = "jsonref-1.1.0.tar.gz", hash = "sha256:32fe8e1d85af0fdefbebce950af85590b22b60f9e95443176adbde4e1ecea552"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "license-expression"
@@ -999,11 +829,6 @@ files = [
 [package.extras]
 docs = ["Sphinx (>=5.0.2)", "doc8 (>=0.11.2)", "sphinx-autobuild", "sphinx-copybutton", "sphinx-reredirects (>=0.1.2)", "sphinx-rtd-dark-mode (>=1.3.0)", "sphinx-rtd-theme (>=1.0.0)", "sphinxcontrib-apidoc (>=0.4.0)"]
 testing = ["black", "isort", "pytest (>=6,!=7.0.0)", "pytest-xdist (>=2)", "twine"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "markdown-it-py"
@@ -1029,11 +854,6 @@ plugins = ["mdit-py-plugins"]
 profiling = ["gprof2dot"]
 rtd = ["jupyter_sphinx", "mdit-py-plugins", "myst-parser", "pyyaml", "sphinx", "sphinx-copybutton", "sphinx-design", "sphinx_book_theme"]
 testing = ["coverage", "pytest", "pytest-cov", "pytest-regressions"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "markupsafe"
@@ -1106,11 +926,6 @@ files = [
     {file = "markupsafe-3.0.2.tar.gz", hash = "sha256:ee55d3edf80167e48ea11a923c7386f4669df67d7994554387f84e7d8b0a2bf0"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "mcp"
 version = "1.9.0"
@@ -1141,11 +956,6 @@ cli = ["python-dotenv (>=1.0.0)", "typer (>=0.12.4)"]
 rich = ["rich (>=13.9.4)"]
 ws = ["websockets (>=15.0.1)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "mcpadapt"
 version = "0.1.9"
@@ -1172,11 +982,6 @@ llamaindex = ["llama-index (>=0.12.14)"]
 smolagents = ["smolagents (>=1.2.2)"]
 test = ["crewai (>=0.108.0)", "google-genai (>=1.2.0)", "langchain (>=0.3.14)", "langchain-anthropic (>=0.3.1)", "langgraph (>=0.2.62)", "pytest (>=8.3.4)", "pytest-asyncio (>=0.25.2)", "smolagents (>=1.2.2)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "mdurl"
 version = "0.1.2"
@@ -1188,11 +993,6 @@ files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
     {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "msgpack"
@@ -1268,27 +1068,17 @@ files = [
     {file = "msgpack-1.1.0.tar.gz", hash = "sha256:dd432ccc2c72b914e4cb77afce64aab761c1137cc698be3984eee260bcb2896e"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "nodeenv"
 version = "1.9.1"
 description = "Node.js virtual environment builder"
 optional = false
-python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*"
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 groups = ["dev"]
 files = [
     {file = "nodeenv-1.9.1-py2.py3-none-any.whl", hash = "sha256:ba11c9782d29c27c70ffbdda2d7415098754709be8a7056d79a737cd901155c9"},
     {file = "nodeenv-1.9.1.tar.gz", hash = "sha256:6ec12890a2dab7946721edbfbcd91f3319c6ccc9aec47be7c7e6b7011ee6645f"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "numpy"
@@ -1354,11 +1144,6 @@ files = [
     {file = "numpy-2.2.6-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:d042d24c90c41b54fd506da306759e06e568864df8ec17ccc17e9e884634fd00"},
     {file = "numpy-2.2.6.tar.gz", hash = "sha256:e29554e2bef54a90aa5cc07da6ce955accb83f21ab5de01a62c8478897b264fd"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "orjson"
@@ -1442,11 +1227,6 @@ files = [
     {file = "orjson-3.10.18.tar.gz", hash = "sha256:e8da3947d92123eda795b68228cafe2724815621fe35e8e320a9e9593a4bcd53"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "packageurl-python"
 version = "0.17.0"
@@ -1465,11 +1245,6 @@ lint = ["black", "isort", "mypy"]
 sqlalchemy = ["sqlalchemy (>=2.0.0)"]
 test = ["pytest"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "packaging"
 version = "25.0"
@@ -1481,11 +1256,6 @@ files = [
     {file = "packaging-25.0-py3-none-any.whl", hash = "sha256:29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484"},
     {file = "packaging-25.0.tar.gz", hash = "sha256:d443872c98d677bf60f6a1f2f8c1cb748e8fe762d2bf9d3148b5599295b0fc4f"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "pandas"
@@ -1553,11 +1323,6 @@ spss = ["pyreadstat (>=1.2.0)"]
 sql-other = ["SQLAlchemy (>=2.0.0)", "adbc-driver-postgresql (>=0.8.0)", "adbc-driver-sqlite (>=0.8.0)"]
 test = ["hypothesis (>=6.46.1)", "pytest (>=7.3.2)", "pytest-xdist (>=2.2.0)"]
 xml = ["lxml (>=4.9.2)"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "pillow"
@@ -1659,11 +1424,6 @@ tests = ["check-manifest", "coverage (>=7.4.2)", "defusedxml", "markdown2", "ole
 typing = ["typing-extensions ; python_version < \"3.10\""]
 xmp = ["defusedxml"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "pip"
 version = "25.1.1"
@@ -1675,11 +1435,6 @@ files = [
     {file = "pip-25.1.1-py3-none-any.whl", hash = "sha256:2913a38a2abf4ea6b64ab507bd9e967f3b53dc1ede74b01b0931e1ce548751af"},
     {file = "pip-25.1.1.tar.gz", hash = "sha256:3de45d411d308d5054c2168185d8da7f9a2cd753dbac8acbfa88a8909ecd9077"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "pip-api"
@@ -1695,11 +1450,6 @@ files = [
 
 [package.dependencies]
 pip = "*"
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "pip-audit"
@@ -1730,11 +1480,6 @@ doc = ["pdoc"]
 lint = ["interrogate (>=1.6,<2.0)", "mypy", "ruff (>=0.9,<1.0)", "types-requests", "types-toml"]
 test = ["coverage[toml] (>=7.0,!=7.3.3,<8.0)", "pretend", "pytest", "pytest-cov"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "pip-requirements-parser"
 version = "32.0.1"
@@ -1755,11 +1500,6 @@ pyparsing = "*"
 docs = ["Sphinx (>=3.3.1)", "doc8 (>=0.8.1)", "sphinx-rtd-theme (>=0.5.0)"]
 testing = ["aboutcode-toolkit (>=6.0.0)", "black", "pytest (>=6,!=7.0.0)", "pytest-xdist (>=2)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "platformdirs"
 version = "4.3.8"
@@ -1777,11 +1517,6 @@ docs = ["furo (>=2024.8.6)", "proselint (>=0.14)", "sphinx (>=8.1.3)", "sphinx-a
 test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=8.3.4)", "pytest-cov (>=6)", "pytest-mock (>=3.14)"]
 type = ["mypy (>=1.14.1)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "pluggy"
 version = "1.6.0"
@@ -1797,11 +1532,6 @@ files = [
 [package.extras]
 dev = ["pre-commit", "tox"]
 testing = ["coverage", "pytest", "pytest-benchmark"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "pre-commit"
@@ -1822,17 +1552,12 @@ nodeenv = ">=0.11.1"
 pyyaml = ">=5.1"
 virtualenv = ">=20.10.0"
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "py-serializable"
 version = "2.0.0"
 description = "Library for serializing and deserializing Python Objects to and from JSON and XML."
 optional = false
-python-versions = ">=3.8,<4.0"
+python-versions = "<4.0,>=3.8"
 groups = ["dev"]
 files = [
     {file = "py_serializable-2.0.0-py3-none-any.whl", hash = "sha256:1721e4c0368adeec965c183168da4b912024702f19e15e13f8577098b9a4f8fe"},
@@ -1841,11 +1566,6 @@ files = [
 
 [package.dependencies]
 defusedxml = ">=0.7.1,<0.8.0"
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "pydantic"
@@ -1868,11 +1588,6 @@ typing-inspection = ">=0.4.0"
 [package.extras]
 email = ["email-validator (>=2.0.0)"]
 timezone = ["tzdata ; python_version >= \"3.9\" and platform_system == \"Windows\""]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "pydantic-core"
@@ -1986,11 +1701,6 @@ files = [
 [package.dependencies]
 typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "pydantic-settings"
 version = "2.9.1"
@@ -2015,11 +1725,6 @@ gcp-secret-manager = ["google-cloud-secret-manager (>=2.23.1)"]
 toml = ["tomli (>=2.0.1)"]
 yaml = ["pyyaml (>=6.0.1)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "pydub"
 version = "0.25.1"
@@ -2031,11 +1736,6 @@ files = [
     {file = "pydub-0.25.1-py2.py3-none-any.whl", hash = "sha256:65617e33033874b59d87db603aa1ed450633288aefead953b30bded59cb599a6"},
     {file = "pydub-0.25.1.tar.gz", hash = "sha256:980a33ce9949cab2a569606b65674d748ecbca4f0796887fd6f46173a7b0d30f"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "pygments"
@@ -2052,11 +1752,6 @@ files = [
 [package.extras]
 windows-terminal = ["colorama (>=0.4.6)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "pyparsing"
 version = "3.2.3"
@@ -2071,11 +1766,6 @@ files = [
 
 [package.extras]
 diagrams = ["jinja2", "railroad-diagrams"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "pytest"
@@ -2099,11 +1789,6 @@ pygments = ">=2.7.2"
 [package.extras]
 dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "requests", "setuptools", "xmlschema"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "pytest-cov"
 version = "6.1.1"
@@ -2123,11 +1808,6 @@ pytest = ">=4.6"
 [package.extras]
 testing = ["fields", "hunter", "process-tests", "pytest-xdist", "virtualenv"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
@@ -2142,11 +1822,6 @@ files = [
 
 [package.dependencies]
 six = ">=1.5"
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "python-dotenv"
@@ -2163,11 +1838,6 @@ files = [
 [package.extras]
 cli = ["click (>=5.0)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "python-multipart"
 version = "0.0.20"
@@ -2180,11 +1850,6 @@ files = [
     {file = "python_multipart-0.0.20.tar.gz", hash = "sha256:8dd0cab45b8e23064ae09147625994d090fa46f5b0d1e13af944c331a7fa9d13"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "pytz"
 version = "2025.2"
@@ -2196,11 +1861,6 @@ files = [
     {file = "pytz-2025.2-py2.py3-none-any.whl", hash = "sha256:5ddf76296dd8c44c26eb8f4b6f35488f3ccbf6fbbd7adee0b7262d43f0ec2f00"},
     {file = "pytz-2025.2.tar.gz", hash = "sha256:360b9e3dbb49a209c21ad61809c7fb453643e048b38924c765813546746e81c3"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "pyyaml"
@@ -2265,11 +1925,6 @@ files = [
     {file = "pyyaml-6.0.2.tar.gz", hash = "sha256:d584d9ec91ad65861cc08d42e834324ef890a082e591037abe114850ff7bbc3e"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "requests"
 version = "2.32.3"
@@ -2292,11 +1947,6 @@ urllib3 = ">=1.21.1,<3"
 socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "rich"
 version = "14.0.0"
@@ -2315,11 +1965,6 @@ pygments = ">=2.13.0,<3.0.0"
 
 [package.extras]
 jupyter = ["ipywidgets (>=7.5.1,<9)"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "ruff"
@@ -2350,11 +1995,6 @@ files = [
     {file = "ruff-0.11.12.tar.gz", hash = "sha256:43cf7f69c7d7c7d7513b9d59c5d8cafd704e05944f978614aa9faff6ac202603"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "safehttpx"
 version = "0.1.6"
@@ -2373,11 +2013,6 @@ httpx = "*"
 [package.extras]
 dev = ["pytest"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "semantic-version"
 version = "2.10.0"
@@ -2394,11 +2029,6 @@ files = [
 dev = ["Django (>=1.11)", "check-manifest", "colorama (<=0.4.1) ; python_version == \"3.4\"", "coverage", "flake8", "nose2", "readme-renderer (<25.0) ; python_version == \"3.4\"", "tox", "wheel", "zest.releaser[recommended]"]
 doc = ["Sphinx", "sphinx-rtd-theme"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "shellingham"
 version = "1.5.4"
@@ -2411,27 +2041,17 @@ files = [
     {file = "shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "six"
 version = "1.17.0"
 description = "Python 2 and 3 compatibility utilities"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 groups = ["main"]
 files = [
     {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
     {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "smolagents"
@@ -2476,11 +2096,6 @@ transformers = ["accelerate", "smolagents[torch]", "transformers (>=4.0.0)"]
 vision = ["helium", "selenium"]
 vllm = ["torch", "vllm"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "sniffio"
 version = "1.3.1"
@@ -2493,11 +2108,6 @@ files = [
     {file = "sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "sortedcontainers"
 version = "2.4.0"
@@ -2509,11 +2119,6 @@ files = [
     {file = "sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"},
     {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "sse-starlette"
@@ -2536,11 +2141,6 @@ examples = ["aiosqlite (>=0.21.0)", "fastapi (>=0.115.12)", "sqlalchemy[asyncio,
 granian = ["granian (>=2.3.1)"]
 uvicorn = ["uvicorn (>=0.34.0)"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "starlette"
 version = "0.46.2"
@@ -2559,11 +2159,6 @@ anyio = ">=3.6.2,<5"
 [package.extras]
 full = ["httpx (>=0.27.0,<0.29.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.18)", "pyyaml"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "toml"
 version = "0.10.2"
@@ -2576,11 +2171,6 @@ files = [
     {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "tomlkit"
 version = "0.13.2"
@@ -2592,11 +2182,6 @@ files = [
     {file = "tomlkit-0.13.2-py3-none-any.whl", hash = "sha256:7a974427f6e119197f670fbbbeae7bef749a6c14e793db934baefc1b5f03efde"},
     {file = "tomlkit-0.13.2.tar.gz", hash = "sha256:fff5fe59a87295b278abd31bec92c15d9bc4a06885ab12bcea52c71119392e79"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "tqdm"
@@ -2620,11 +2205,6 @@ notebook = ["ipywidgets (>=6)"]
 slack = ["slack-sdk"]
 telegram = ["requests"]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "typer"
 version = "0.16.0"
@@ -2643,11 +2223,6 @@ rich = ">=10.11.0"
 shellingham = ">=1.3.0"
 typing-extensions = ">=3.7.4.3"
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "typing-extensions"
 version = "4.14.0"
@@ -2659,11 +2234,6 @@ files = [
     {file = "typing_extensions-4.14.0-py3-none-any.whl", hash = "sha256:a1514509136dd0b477638fc68d6a91497af5076466ad0fa6c338e44e359944af"},
     {file = "typing_extensions-4.14.0.tar.gz", hash = "sha256:8676b788e32f02ab42d9e7c61324048ae4c6d844a399eebace3d4979d75ceef4"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "typing-inspection"
@@ -2680,11 +2250,6 @@ files = [
 [package.dependencies]
 typing-extensions = ">=4.12.0"
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "tzdata"
 version = "2025.2"
@@ -2696,11 +2261,6 @@ files = [
     {file = "tzdata-2025.2-py2.py3-none-any.whl", hash = "sha256:1a403fada01ff9221ca8044d701868fa132215d84beb92242d9acd2147f667a8"},
     {file = "tzdata-2025.2.tar.gz", hash = "sha256:b60a638fcc0daffadf82fe0f57e53d06bdec2f36c4df66280ae79bce6bd6f2b9"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "urllib3"
@@ -2719,11 +2279,6 @@ brotli = ["brotli (>=1.0.9) ; platform_python_implementation == \"CPython\"", "b
 h2 = ["h2 (>=4,<5)"]
 socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "uvicorn"
@@ -2744,11 +2299,6 @@ h11 = ">=0.8"
 
 [package.extras]
 standard = ["colorama (>=0.4) ; sys_platform == \"win32\"", "httptools (>=0.6.3)", "python-dotenv (>=0.13)", "pyyaml (>=5.1)", "uvloop (>=0.15.1) ; sys_platform != \"win32\" and sys_platform != \"cygwin\" and platform_python_implementation != \"PyPy\"", "watchfiles (>=0.13)", "websockets (>=10.4)"]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "virtualenv"
@@ -2771,11 +2321,6 @@ platformdirs = ">=3.9.1,<5"
 docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.2,!=7.3)", "sphinx-argparse (>=0.4)", "sphinxcontrib-towncrier (>=0.2.1a0)", "towncrier (>=23.6)"]
 test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess (>=1)", "flaky (>=3.7)", "packaging (>=23.1)", "pytest (>=7.4)", "pytest-env (>=0.8.2)", "pytest-freezer (>=0.4.8) ; platform_python_implementation == \"PyPy\" or platform_python_implementation == \"GraalVM\" or platform_python_implementation == \"CPython\" and sys_platform == \"win32\" and python_version >= \"3.13\"", "pytest-mock (>=3.11.1)", "pytest-randomly (>=3.12)", "pytest-timeout (>=2.1)", "setuptools (>=68)", "time-machine (>=2.10) ; platform_python_implementation == \"CPython\""]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [[package]]
 name = "webencodings"
 version = "0.5.1"
@@ -2787,11 +2332,6 @@ files = [
     {file = "webencodings-0.5.1-py2.py3-none-any.whl", hash = "sha256:a0af1213f3c2226497a97e2b3aa01a7e4bee4f403f95be16fc9acd2947514a78"},
     {file = "webencodings-0.5.1.tar.gz", hash = "sha256:b36a1c245f2d304965eb4e0a82848379241dc04b865afcc4aab16748587e1923"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
 
 [[package]]
 name = "websockets"
@@ -2872,12 +2412,7 @@ files = [
     {file = "websockets-15.0.1.tar.gz", hash = "sha256:82544de02076bafba038ce055ee6412d68da13ab47f0c60cab827346de828dee"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple"
-reference = "safety"
-
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "c4cb2471821ca4a794dc9abc866dd2b679fd3a6ab86dec453d699703f08bf420"
+content-hash = "a902a65bc90b3a91b9ccb5f60fb417f4cf8444ed72fc0be4bc7a0066bf4ab7c9"

@@ -26,10 +26,6 @@ pre-commit = "^4.0"
 "Repository" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"
 "Bug Tracker" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent/issues"
 
-[[tool.poetry.source]]
-name = "safety"
-url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple/"
-priority = "primary"
 
 [build-system]
 requires = ["poetry-core"]
