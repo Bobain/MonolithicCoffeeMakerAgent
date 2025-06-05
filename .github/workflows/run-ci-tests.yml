@@ -1,13 +1,16 @@
 # .github/workflows/run-ci-tests.yml
 # co-author : Gemini 2.5 Pro Preview
 
-name: ci-tests
+name: ci-tests-and-reports
 
 on:
   push:
     branches: [ "main" ]
-  # Optional: Allow manual trigger
-  workflow_dispatch:
+#  pull_request: # Run on pull requests targeting main
+#    branches: [ "main" ]
+  release:
+    types: [published] # Runs when a release is published.
+  workflow_dispatch: # Manual trigger
 
 permissions:
   contents: read
@@ -18,6 +21,8 @@ jobs:
   test:
     name: ci-tests ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    # Conditionally set up environment for pages deployment only if it's an event that should deploy
+    # This avoids trying to get a deployment URL for PR checks if you don't deploy previews
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -25,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.12"] # Using the version from your previous pip-audit attempts
+        python-version: ["3.12"]
 
     steps:
       - name: Checkout repository
@@ -40,7 +45,7 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           virtualenvs-create: true
-          virtualenvs-in-project: true # Using .venv in project root
+          virtualenvs-in-project: true
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v4
@@ -64,19 +69,16 @@ jobs:
         run: |
           poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=xml:coverage.xml --cov-report=html:reports/coverage
 
-      # --- PIP-AUDIT REPORTING ---
-      - name: Run pip-audit and generate HTML report
+      - name: Run pip-audit and generate text report
         run: |
-          poetry run pip-audit --format html --output reports/pip_audit/pip_audit_report.html || echo "pip-audit found issues or an error occurred, but we are just reporting."
-          # The '|| echo ...' makes the step succeed even if pip-audit finds vulnerabilities and exits non-zero,
-          # as you decided to rely on Dependabot for failing/alerting.
+          mkdir -p reports/pip_audit
+          poetry run pip-audit --output reports/pip_audit/pip_audit_report.txt || echo "pip-audit may have found issues or an error occurred, but we are just reporting."
 
-      # --- PREPARE PAGES ARTIFACT ---
       - name: Create overall reports directory for Pages
-        run: mkdir -p gh_pages_artifact # This will be the root for GitHub Pages
+        run: mkdir -p gh_pages_artifact
 
       - name: Copy Coverage report to Pages artifact directory
-        if: always() # Run even if previous steps failed, to see partial reports
+        if: always()
         run: |
           if [ -d "reports/coverage" ]; then
             cp -r reports/coverage gh_pages_artifact/coverage
@@ -87,29 +89,49 @@ jobs:
             echo "<html><body><h1>Coverage report not generated.</h1></body></html>" > gh_pages_artifact/coverage/index.html
           fi
 
-      - name: Copy pip-audit report to Pages artifact directory
+      - name: Copy pip-audit report and HTML wrapper to Pages artifact directory
         if: always()
         run: |
-          if [ -d "reports/pip_audit" ] && [ -f "reports/pip_audit/pip_audit_report.html" ]; then
-            cp -r reports/pip_audit gh_pages_artifact/pip_audit
-            echo "pip-audit report copied."
+          mkdir -p gh_pages_artifact/pip_audit
+          GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          if [ -f "reports/pip_audit/pip_audit_report.txt" ]; then
+            cp reports/pip_audit/pip_audit_report.txt gh_pages_artifact/pip_audit/pip_audit_report.txt
+            echo "pip-audit text report copied."
+
+            WRAPPER_TEMPLATE_PATH=".github/workflows/pages_templates/pip_audit_wrapper.html"
+            DEST_WRAPPER_PATH="gh_pages_artifact/pip_audit/index.html"
+
+            if [ -f "$WRAPPER_TEMPLATE_PATH" ]; then
+              cp "$WRAPPER_TEMPLATE_PATH" "$DEST_WRAPPER_PATH"
+              sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_WRAPPER_PATH"
+              echo "pip-audit HTML wrapper copied as index.html and timestamped."
+            else
+              echo "Warning: $WRAPPER_TEMPLATE_PATH not found. Creating basic pip-audit placeholder."
+              echo "<html><body><h1>pip-audit report text file: <a href='pip_audit_report.txt'>pip_audit_report.txt</a></h1><p>HTML wrapper template not found. Generated: $GENERATED_TIMESTAMP</p></body></html>" > "$DEST_WRAPPER_PATH"
+            fi
           else
-            echo "Warning: pip-audit report directory or file not found."
-            mkdir -p gh_pages_artifact/pip_audit
-            echo "<html><body><h1>pip-audit report not generated.</h1></body></html>" > gh_pages_artifact/pip_audit/pip_audit_report.html
+            echo "Warning: reports/pip_audit/pip_audit_report.txt not found."
+            echo "<html><body><h1>pip-audit report not generated.</h1><p>Timestamp: $GENERATED_TIMESTAMP</p></body></html>" > gh_pages_artifact/pip_audit/index.html
           fi
 
-      - name: Create index.html for GitHub Pages
+      - name: Create main index.html for GitHub Pages
         if: always()
         run: |
-          # Check if your template exists, otherwise create a basic one
-          if [ -f ".github/workflows/pages_templates/index.html" ]; then
-            cp .github/workflows/pages_templates/index.html gh_pages_artifact/index.html
+          TEMPLATE_INDEX_PATH=".github/workflows/pages_templates/index.html"
+          DEST_INDEX_PATH="gh_pages_artifact/index.html"
+          GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          if [ -f "$TEMPLATE_INDEX_PATH" ]; then
+            cp "$TEMPLATE_INDEX_PATH" "$DEST_INDEX_PATH"
+            sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_INDEX_PATH"
+            echo "Main landing page (index.html) copied from template and timestamped: $TEMPLATE_INDEX_PATH"
           else
-            echo "Warning: .github/workflows/pages_templates/index.html not found. Creating a basic index page."
-            echo '<!DOCTYPE html><html><head><title>CI Reports</title></head><body><h1>CI Reports</h1><ul><li><a href="coverage/index.html">Coverage Report</a></li><li><a href="pip_audit/pip_audit_report.html">pip-audit Report</a></li></ul></body></html>' > gh_pages_artifact/index.html
+            echo "Error: Main landing page template not found at $TEMPLATE_INDEX_PATH."
+            echo "Please ensure this template file exists in your repository."
+            exit 1
           fi
-          echo "Landing page (index.html) created/copied."
+          echo "Main landing page (index.html) successfully prepared for Pages artifact."
 
       - name: Add .nojekyll to Pages artifact directory
         if: always()
@@ -120,24 +142,23 @@ jobs:
         run: |
           echo "Listing contents of gh_pages_artifact directory before upload:"
           ls -Rla gh_pages_artifact
-          if [ -f "gh_pages_artifact/.nojekyll" ]; then
-            echo ".nojekyll file found in gh_pages_artifact."
-          else
-            echo "Error: .nojekyll file NOT found in gh_pages_artifact."
-            # exit 1 # Optionally fail if .nojekyll is critical
-          fi
-          if [ ! -f "gh_pages_artifact/index.html" ]; then
-            echo "Error: index.html NOT found in gh_pages_artifact."
-            # exit 1 # Optionally fail if index.html is critical
-          fi
 
       - name: Upload HTML reports artifact for GitHub Pages
+        # This step runs for all relevant triggers (push to main, PR, release, workflow_dispatch)
+        # because the artifact might be useful for PRs even if not deployed.
         if: always()
         uses: actions/upload-pages-artifact@v3
         with:
-          path: gh_pages_artifact # Upload the gh_pages_artifact directory
+          path: gh_pages_artifact
 
       - name: Deploy reports to GitHub Pages
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # This step ONLY runs for push to main, published releases, or manual dispatches
+        if: >
+          always() &&
+          (
+            (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+            (github.event_name == 'release' && github.event.action == 'published') ||
+            (github.event_name == 'workflow_dispatch')
+          )
         id: deployment
         uses: actions/deploy-pages@v4
