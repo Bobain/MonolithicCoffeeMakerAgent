@@ -6,11 +6,11 @@ name: ci-tests-and-reports
 on:
   push:
     branches: [ "main" ]
-#  pull_request:
+#  pull_request: # Run on pull requests targeting main
 #    branches: [ "main" ]
-  release: # Keep release here if you want this workflow (with Pages deploy) to also run on release
-    types: [published]
-  workflow_dispatch:
+  release:
+    types: [published] # Runs when a release is published.
+  workflow_dispatch: # Manual trigger
 
 permissions:
   contents: read
@@ -32,16 +32,18 @@ jobs:
   deploy_reports_job:
     name: Prepare and Deploy Reports to GitHub Pages
     runs-on: ubuntu-latest
-    needs: [ci_checks_job] # <<<< Depends on the reusable CI checks passing
+    needs: [ci_checks_job] # Depends on the reusable CI checks passing
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     # Condition for deployment (only on main push, release, or manual trigger)
+    # The artifact generation steps within this job will run if `always()` is true
+    # but the final `deploy-pages` action is further conditioned by the event type.
     if: >
-      always() && # always() to run artifact steps even if ci_checks_job is skipped by other conditions
+      always() &&
       (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-        (github.event_name == 'release' && github.event.action == 'published') ||
+        (github.event.name == 'release' && github.event.action == 'published') ||
         (github.event_name == 'workflow_dispatch')
       )
 
@@ -49,9 +51,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Setup Python & Poetry again for THIS job if needed for report generation commands
-      # Or, if reusable workflow produced artifacts, download them.
-      # For now, assuming this job might regenerate/collect reports.
       - name: Set up Python 3.12 # Specific version for this job's tools
         uses: actions/setup-python@v5
         with:
@@ -59,15 +58,13 @@ jobs:
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
-        with: # Re-setup poetry for this job
+        with:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
       - name: Install dependencies (for report generation tools if any)
-        run: poetry install --no-interaction --with dev # Or specific groups
+        run: poetry install --no-interaction --with dev
 
-      # --- REGENERATE REPORTS OR DOWNLOAD ARTIFACTS ---
-      # Option 1: Re-run commands that generate reports (if they are quick)
       - name: Generate Coverage report for Pages
         env:
           COFFEE_MAKER_RUN_CI_TESTS: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }}
@@ -77,24 +74,13 @@ jobs:
       - name: Generate pip-audit text report for Pages
         run: |
           mkdir -p reports/pip_audit
-          poetry run pip-audit --output reports/pip_audit/pip_audit_report.txt || echo "Pip-audit report generation finished."
+          poetry run pip-audit --output reports/pip_audit/pip_audit_report.txt || echo "Pip-audit report generation finished (may have found issues or errored)."
 
-      # Option 2: If reusable workflow uploaded artifacts, download them here instead of regenerating.
-      # Example:
-      # - name: Download coverage artifact (if uploaded by reusable workflow)
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: coverage-html-report #<<< Example name
-      #     path: reports/coverage
-
-      # ... (The rest of your steps for copying reports to gh_pages_artifact, creating index.html, and deploying)
       - name: Create overall reports directory for Pages
         run: mkdir -p gh_pages_artifact
 
       - name: Copy Coverage report to Pages artifact directory
-        # ... (same as before)
-        if: always()
-        run: |
+        run: | # if: always() is inherited from the job's if for this step
           if [ -d "reports/coverage" ]; then
             cp -r reports/coverage gh_pages_artifact/coverage
             echo "Coverage report copied."
@@ -105,9 +91,7 @@ jobs:
           fi
 
       - name: Copy pip-audit report and HTML wrapper to Pages artifact directory
-        # ... (same as before)
-        if: always()
-        run: |
+        run: | # if: always() is inherited
           mkdir -p gh_pages_artifact/pip_audit
           GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
           if [ -f "reports/pip_audit/pip_audit_report.txt" ]; then
@@ -118,24 +102,30 @@ jobs:
           else echo "Warning: reports/pip_audit/pip_audit_report.txt not found."; echo "<html><body><h1>pip-audit report not generated.</h1><p>$GENERATED_TIMESTAMP</p></body></html>" > gh_pages_artifact/pip_audit/index.html; fi
 
       - name: Create main index.html for GitHub Pages
-        # ... (same as before)
-        if: always()
-        run: |
+        run: | # if: always() is inherited
           TEMPLATE_INDEX_PATH=".github/workflows/pages_templates/index.html"; DEST_INDEX_PATH="gh_pages_artifact/index.html"; GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
           if [ -f "$TEMPLATE_INDEX_PATH" ]; then cp "$TEMPLATE_INDEX_PATH" "$DEST_INDEX_PATH"; sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_INDEX_PATH"; echo "Main landing page copied & timestamped.";
-          else echo "Error: $TEMPLATE_INDEX_PATH not found."; exit 1; fi
+          else echo "Error: $TEMPLATE_INDEX_PATH not found. This is a required file."; exit 1; fi
           echo "Main landing page successfully prepared."
 
       - name: Add .nojekyll
-        if: always()
-        run: touch gh_pages_artifact/.nojekyll
+        run: touch gh_pages_artifact/.nojekyll # if: always() is inherited
+
+      - name: Verify Pages artifact contents
+        run: | # if: always() is inherited
+          echo "Listing contents of gh_pages_artifact directory before upload:"
+          ls -Rla gh_pages_artifact
 
       - name: Upload HTML reports artifact for GitHub Pages
-        if: always()
+        # This step will run if the job's `if` condition is met due to always() and event type
         uses: actions/upload-pages-artifact@v3
         with:
           path: gh_pages_artifact
 
       - name: Deploy reports to GitHub Pages
-        id: deployment # ID is on this step
+        id: deployment
+        # This step uses the same encompassing 'if' condition from the job level.
+        # No need to repeat the full condition here if the job's 'if' already gates it correctly for deployment events.
+        # However, if you want to be super explicit or add more conditions JUST for deployment action:
+        # if: github.event_name == 'push' && github.ref == 'refs/heads/main' || (github.event_name == 'release' && github.event.action == 'published') || github.event_name == 'workflow_dispatch'
         uses: actions/deploy-pages@v4
