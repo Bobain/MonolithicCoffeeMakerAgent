@@ -1,0 +1,39 @@
+<!-- co-author : Gemini 2.5 Pro Preview -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pip-audit Vulnerability Report</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        pre { white-space: pre-wrap; word-wrap: break-word; background-color: #eee; padding: 15px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dependency Vulnerability Report (pip-audit)</h1>
+        <p>The following is the output from <code>pip-audit</code> (columns format):</p>
+        <pre id="audit-output">Loading report...</pre>
+    </div>
+    <script>
+        // This script assumes pip_audit_report.txt is in the same directory
+        fetch('pip_audit_report.txt')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+                return response.text();
+            })
+            .then(text => {
+                document.getElementById('audit-output').textContent = text;
+            })
+            .catch(error => {
+                document.getElementById('audit-output').textContent = 'Error loading pip-audit report: ' + error;
+                console.error('Error fetching pip-audit report:', error);
+            });
+    </script>
+</body>
+</html>
