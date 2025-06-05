@@ -12,6 +12,7 @@ mcp = {extras = ["cli"], version = "^1.9.0"}
 smolagents = {extras = ["mcp"], version = "^1.16.1"}
 gradio = {extras = ["mcp"], version = "^5.31.0"}
 python-dotenv = "^1.1.0"
+bleach = "3.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
@@ -24,6 +25,11 @@ pre-commit = "^4.0"
 "Homepage" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"
 "Repository" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"
 "Bug Tracker" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent/issues"
+
+[[tool.poetry.source]]
+name = "safety"
+url = "https://pkgs.safetycli.com/repository/bobain/project/monolithiccoffeemakeragent/pypi/simple/"
+priority = "primary"
 
 [build-system]
 requires = ["poetry-core"]

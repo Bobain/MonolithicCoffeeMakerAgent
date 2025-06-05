@@ -6,6 +6,8 @@ name: ci-tests
 on:
   push:
     branches: [ "main" ]
+  # Optional: Allow manual trigger
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.12"]
+        python-version: ["3.12"] # Using the version from your previous pip-audit attempts
 
     steps:
       - name: Checkout repository
@@ -38,7 +40,7 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           virtualenvs-create: true
-          virtualenvs-in-project: true
+          virtualenvs-in-project: true # Using .venv in project root
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v4
@@ -49,7 +51,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-poetry-${{ matrix.python-version }}-
 
-      - name: Install dependencies
+      - name: Install dependencies (if cache miss)
         if: steps.poetry-cache.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --with dev --no-root
 
@@ -60,57 +62,82 @@ jobs:
         env:
           COFFEE_MAKER_RUN_CI_TESTS: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }}
         run: |
-          poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=xml:coverage.xml --cov-report=html:cov_html
+          poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=xml:coverage.xml --cov-report=html:reports/coverage
 
-      - name: Upload coverage report (XML)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-xml-${{ matrix.python-version }}-${{ matrix.os }}
-          path: coverage.xml
-
-      - name: Prepare Pages artifact by adding .nojekyll
-        if: always()
+      # --- PIP-AUDIT REPORTING ---
+      - name: Run pip-audit and generate HTML report
         run: |
-          if [ -d "cov_html" ]; then
-            echo "cov_html directory exists. Creating .nojekyll file."
-            touch cov_html/.nojekyll
+          poetry run pip-audit --format html --output reports/pip_audit/pip_audit_report.html || echo "pip-audit found issues or an error occurred, but we are just reporting."
+          # The '|| echo ...' makes the step succeed even if pip-audit finds vulnerabilities and exits non-zero,
+          # as you decided to rely on Dependabot for failing/alerting.
+
+      # --- PREPARE PAGES ARTIFACT ---
+      - name: Create overall reports directory for Pages
+        run: mkdir -p gh_pages_artifact # This will be the root for GitHub Pages
+
+      - name: Copy Coverage report to Pages artifact directory
+        if: always() # Run even if previous steps failed, to see partial reports
+        run: |
+          if [ -d "reports/coverage" ]; then
+            cp -r reports/coverage gh_pages_artifact/coverage
+            echo "Coverage report copied."
           else
-            echo "Error: cov_html directory does not exist. Cannot create .nojekyll."
-            # Optionally, create cov_html and .nojekyll if you want an empty page on test failure
-            # mkdir cov_html
-            # touch cov_html/.nojekyll
-            # echo "<html><body><h1>Coverage report generation failed.</h1></body></html>" > cov_html/index.html
-            # exit 1 # Or let it proceed to upload an empty/error page
+            echo "Warning: Coverage report directory (reports/coverage) not found."
+            mkdir -p gh_pages_artifact/coverage
+            echo "<html><body><h1>Coverage report not generated.</h1></body></html>" > gh_pages_artifact/coverage/index.html
           fi
 
-      # ADD/MODIFY THIS VERIFICATION STEP:
+      - name: Copy pip-audit report to Pages artifact directory
+        if: always()
+        run: |
+          if [ -d "reports/pip_audit" ] && [ -f "reports/pip_audit/pip_audit_report.html" ]; then
+            cp -r reports/pip_audit gh_pages_artifact/pip_audit
+            echo "pip-audit report copied."
+          else
+            echo "Warning: pip-audit report directory or file not found."
+            mkdir -p gh_pages_artifact/pip_audit
+            echo "<html><body><h1>pip-audit report not generated.</h1></body></html>" > gh_pages_artifact/pip_audit/pip_audit_report.html
+          fi
+
+      - name: Create index.html for GitHub Pages
+        if: always()
+        run: |
+          # Check if your template exists, otherwise create a basic one
+          if [ -f ".github/workflows/pages_templates/index.html" ]; then
+            cp .github/workflows/pages_templates/index.html gh_pages_artifact/index.html
+          else
+            echo "Warning: .github/workflows/pages_templates/index.html not found. Creating a basic index page."
+            echo '<!DOCTYPE html><html><head><title>CI Reports</title></head><body><h1>CI Reports</h1><ul><li><a href="coverage/index.html">Coverage Report</a></li><li><a href="pip_audit/pip_audit_report.html">pip-audit Report</a></li></ul></body></html>' > gh_pages_artifact/index.html
+          fi
+          echo "Landing page (index.html) created/copied."
+
+      - name: Add .nojekyll to Pages artifact directory
+        if: always()
+        run: touch gh_pages_artifact/.nojekyll
+
       - name: Verify Pages artifact contents
         if: always()
         run: |
-          echo "Listing contents of cov_html directory before upload:"
-          if [ -d "cov_html" ]; then
-            ls -la cov_html
-            if [ -f "cov_html/.nojekyll" ]; then
-              echo ".nojekyll file found in cov_html."
-            else
-              echo "Error: .nojekyll file NOT found in cov_html."
-            fi
+          echo "Listing contents of gh_pages_artifact directory before upload:"
+          ls -Rla gh_pages_artifact
+          if [ -f "gh_pages_artifact/.nojekyll" ]; then
+            echo ".nojekyll file found in gh_pages_artifact."
           else
-            echo "Error: cov_html directory does not exist for verification."
+            echo "Error: .nojekyll file NOT found in gh_pages_artifact."
+            # exit 1 # Optionally fail if .nojekyll is critical
+          fi
+          if [ ! -f "gh_pages_artifact/index.html" ]; then
+            echo "Error: index.html NOT found in gh_pages_artifact."
+            # exit 1 # Optionally fail if index.html is critical
           fi
 
-      - name: Upload HTML coverage artifact for GitHub Pages
+      - name: Upload HTML reports artifact for GitHub Pages
         if: always()
         uses: actions/upload-pages-artifact@v3
         with:
-          path: cov_html
+          path: gh_pages_artifact # Upload the gh_pages_artifact directory
 
-      - name: Deploy HTML coverage to GitHub Pages
+      - name: Deploy reports to GitHub Pages
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: deployment
         uses: actions/deploy-pages@v4
-
-      - name: Run pip-audit #--ignore=pyyaml for instance if you want to ignore a specific package
-        run: |
-          poetry run pip-audit --fail-on=high --fail-on=critical
