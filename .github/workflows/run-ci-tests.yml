@@ -6,11 +6,11 @@ name: ci-tests-and-reports
 on:
   push:
     branches: [ "main" ]
-#  pull_request: # Run on pull requests targeting main
+#  pull_request:
 #    branches: [ "main" ]
-  release:
-    types: [published] # Runs when a release is published.
-  workflow_dispatch: # Manual trigger
+  release: # Keep release here if you want this workflow (with Pages deploy) to also run on release
+    types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,66 +18,81 @@ permissions:
   id-token: write
 
 jobs:
-  test:
-    name: ci-tests ${{ matrix.python-version }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    # Conditionally set up environment for pages deployment only if it's an event that should deploy
-    # This avoids trying to get a deployment URL for PR checks if you don't deploy previews
+  # Job that calls the reusable CI checks
+  ci_checks_job:
+    name: Perform CI Checks
+    uses: ./.github/workflows/reusable-ci-checks.yml # Path to your reusable workflow
+    with:
+      python-version: "3.12" # Or use matrix strategy here if needed
+      os: 'ubuntu-latest'
+    secrets:
+      COFFEE_MAKER_RUN_CI_TESTS_SECRET: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }}
+
+  # Job for deploying reports to Pages - depends on the CI checks job
+  deploy_reports_job:
+    name: Prepare and Deploy Reports to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [ci_checks_job] # <<<< Depends on the reusable CI checks passing
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.12"]
+    # Condition for deployment (only on main push, release, or manual trigger)
+    if: >
+      always() && # always() to run artifact steps even if ci_checks_job is skipped by other conditions
+      (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'release' && github.event.action == 'published') ||
+        (github.event_name == 'workflow_dispatch')
+      )
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      # Setup Python & Poetry again for THIS job if needed for report generation commands
+      # Or, if reusable workflow produced artifacts, download them.
+      # For now, assuming this job might regenerate/collect reports.
+      - name: Set up Python 3.12 # Specific version for this job's tools
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
-        with:
+        with: # Re-setup poetry for this job
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Cache Poetry virtualenv
-        uses: actions/cache@v4
-        id: poetry-cache
-        with:
-          path: .venv
-          key: ${{ runner.os }}-poetry-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-${{ matrix.python-version }}-
+      - name: Install dependencies (for report generation tools if any)
+        run: poetry install --no-interaction --with dev # Or specific groups
 
-      - name: Install dependencies (if cache miss)
-        if: steps.poetry-cache.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --with dev --no-root
-
-      - name: Install project and dependencies
-        run: poetry install --no-interaction --with dev
-
-      - name: Run tests and collect coverage data
+      # --- REGENERATE REPORTS OR DOWNLOAD ARTIFACTS ---
+      # Option 1: Re-run commands that generate reports (if they are quick)
+      - name: Generate Coverage report for Pages
         env:
           COFFEE_MAKER_RUN_CI_TESTS: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }}
         run: |
-          poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=xml:coverage.xml --cov-report=html:reports/coverage
+          poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=html:reports/coverage
 
-      - name: Run pip-audit and generate text report
+      - name: Generate pip-audit text report for Pages
         run: |
           mkdir -p reports/pip_audit
-          poetry run pip-audit --output reports/pip_audit/pip_audit_report.txt || echo "pip-audit may have found issues or an error occurred, but we are just reporting."
+          poetry run pip-audit --output reports/pip_audit/pip_audit_report.txt || echo "Pip-audit report generation finished."
 
+      # Option 2: If reusable workflow uploaded artifacts, download them here instead of regenerating.
+      # Example:
+      # - name: Download coverage artifact (if uploaded by reusable workflow)
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: coverage-html-report #<<< Example name
+      #     path: reports/coverage
+
+      # ... (The rest of your steps for copying reports to gh_pages_artifact, creating index.html, and deploying)
       - name: Create overall reports directory for Pages
         run: mkdir -p gh_pages_artifact
 
       - name: Copy Coverage report to Pages artifact directory
+        # ... (same as before)
         if: always()
         run: |
           if [ -d "reports/coverage" ]; then
@@ -90,75 +105,37 @@ jobs:
           fi
 
       - name: Copy pip-audit report and HTML wrapper to Pages artifact directory
+        # ... (same as before)
         if: always()
         run: |
           mkdir -p gh_pages_artifact/pip_audit
           GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-
           if [ -f "reports/pip_audit/pip_audit_report.txt" ]; then
             cp reports/pip_audit/pip_audit_report.txt gh_pages_artifact/pip_audit/pip_audit_report.txt
-            echo "pip-audit text report copied."
-
-            WRAPPER_TEMPLATE_PATH=".github/workflows/pages_templates/pip_audit_wrapper.html"
-            DEST_WRAPPER_PATH="gh_pages_artifact/pip_audit/index.html"
-
-            if [ -f "$WRAPPER_TEMPLATE_PATH" ]; then
-              cp "$WRAPPER_TEMPLATE_PATH" "$DEST_WRAPPER_PATH"
-              sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_WRAPPER_PATH"
-              echo "pip-audit HTML wrapper copied as index.html and timestamped."
-            else
-              echo "Warning: $WRAPPER_TEMPLATE_PATH not found. Creating basic pip-audit placeholder."
-              echo "<html><body><h1>pip-audit report text file: <a href='pip_audit_report.txt'>pip_audit_report.txt</a></h1><p>HTML wrapper template not found. Generated: $GENERATED_TIMESTAMP</p></body></html>" > "$DEST_WRAPPER_PATH"
-            fi
-          else
-            echo "Warning: reports/pip_audit/pip_audit_report.txt not found."
-            echo "<html><body><h1>pip-audit report not generated.</h1><p>Timestamp: $GENERATED_TIMESTAMP</p></body></html>" > gh_pages_artifact/pip_audit/index.html
-          fi
+            WRAPPER_TEMPLATE_PATH=".github/workflows/pages_templates/pip_audit_wrapper.html"; DEST_WRAPPER_PATH="gh_pages_artifact/pip_audit/index.html"
+            if [ -f "$WRAPPER_TEMPLATE_PATH" ]; then cp "$WRAPPER_TEMPLATE_PATH" "$DEST_WRAPPER_PATH"; sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_WRAPPER_PATH"; echo "pip-audit HTML wrapper copied & timestamped.";
+            else echo "Warning: $WRAPPER_TEMPLATE_PATH not found."; echo "<html><body><h1><a href='pip_audit_report.txt'>pip_audit_report.txt</a></h1><p>Wrapper template missing. Generated: $GENERATED_TIMESTAMP</p></body></html>" > "$DEST_WRAPPER_PATH"; fi
+          else echo "Warning: reports/pip_audit/pip_audit_report.txt not found."; echo "<html><body><h1>pip-audit report not generated.</h1><p>$GENERATED_TIMESTAMP</p></body></html>" > gh_pages_artifact/pip_audit/index.html; fi
 
       - name: Create main index.html for GitHub Pages
+        # ... (same as before)
         if: always()
         run: |
-          TEMPLATE_INDEX_PATH=".github/workflows/pages_templates/index.html"
-          DEST_INDEX_PATH="gh_pages_artifact/index.html"
-          GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          TEMPLATE_INDEX_PATH=".github/workflows/pages_templates/index.html"; DEST_INDEX_PATH="gh_pages_artifact/index.html"; GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          if [ -f "$TEMPLATE_INDEX_PATH" ]; then cp "$TEMPLATE_INDEX_PATH" "$DEST_INDEX_PATH"; sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_INDEX_PATH"; echo "Main landing page copied & timestamped.";
+          else echo "Error: $TEMPLATE_INDEX_PATH not found."; exit 1; fi
+          echo "Main landing page successfully prepared."
 
-          if [ -f "$TEMPLATE_INDEX_PATH" ]; then
-            cp "$TEMPLATE_INDEX_PATH" "$DEST_INDEX_PATH"
-            sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_INDEX_PATH"
-            echo "Main landing page (index.html) copied from template and timestamped: $TEMPLATE_INDEX_PATH"
-          else
-            echo "Error: Main landing page template not found at $TEMPLATE_INDEX_PATH."
-            echo "Please ensure this template file exists in your repository."
-            exit 1
-          fi
-          echo "Main landing page (index.html) successfully prepared for Pages artifact."
-
-      - name: Add .nojekyll to Pages artifact directory
+      - name: Add .nojekyll
         if: always()
         run: touch gh_pages_artifact/.nojekyll
 
-      - name: Verify Pages artifact contents
-        if: always()
-        run: |
-          echo "Listing contents of gh_pages_artifact directory before upload:"
-          ls -Rla gh_pages_artifact
-
       - name: Upload HTML reports artifact for GitHub Pages
-        # This step runs for all relevant triggers (push to main, PR, release, workflow_dispatch)
-        # because the artifact might be useful for PRs even if not deployed.
         if: always()
         uses: actions/upload-pages-artifact@v3
         with:
           path: gh_pages_artifact
 
       - name: Deploy reports to GitHub Pages
-        # This step ONLY runs for push to main, published releases, or manual dispatches
-        if: >
-          always() &&
-          (
-            (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-            (github.event_name == 'release' && github.event.action == 'published') ||
-            (github.event_name == 'workflow_dispatch')
-          )
-        id: deployment
+        id: deployment # ID is on this step
         uses: actions/deploy-pages@v4

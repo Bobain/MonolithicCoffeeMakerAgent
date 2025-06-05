@@ -1,6 +1,8 @@
 AI agent toy, written with agents AI.
 No idea yet what it will do for real
 
+[**Static github pages**](https://bobain.github.io/MonolithicCoffeeMakerAgent/)
+
 ![Boondoggle](ressources/README/coffee_maker.png)
 
 <!-- co-author : Gemini 2.5 Pro Preview -->
@@ -74,9 +76,6 @@ Testing is essential to ensure the agent's reliability and robustness.
 *   Integration Tests: Test how different modules of the agent interact with each other and with external systems (if any).
 *   Using fixtures if needed
 *   Mocking: Use mocks (e.g., Python's unittest.mock library) to simulate external dependencies (APIs, file systems, databases) during tests. This allows for isolated and predictable testing.
-
-ci-tests code coverage:
-[**code coverage**](https://bobain.github.io/MonolithicCoffeeMakerAgent/)
 
 
 ### 4. Documenting Agent Capabilities
