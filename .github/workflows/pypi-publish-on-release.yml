@@ -1,78 +1,97 @@
 # .github/workflows/pypi-publish-on-release.yml
 # co-author : Gemini 2.5 Pro Preview
 
-name: Upload Python Package to PyPI (Poetry)
+name: Test, Build, and Upload Python Package to PyPI
 
 on:
   release:
     types: [published]
-  workflow_dispatch:
+  workflow_dispatch: # Allow manual trigger
 
 permissions:
-  contents: read
+  contents: read # Needed for checkout and potentially by reusable workflow
+  # id-token: write # This should be defined at the job level (publish-to-pypi)
 
 jobs:
-  build-package:
-    name: Build Python distribution with Poetry
-    runs-on: ubuntu-latest
+  #--------------------------------------------------
+  # JOB 1: Run Core CI Checks (Reusable Workflow)
+  #--------------------------------------------------
+  run_ci_checks: # Changed job ID for clarity
+    name: Perform CI Checks
+    uses: ./.github/workflows/reusable-ci-checks.yml # Path to your reusable workflow
+    with:
+      python-version: "3.12" # Or your desired matrix version for release checks
+      os: 'ubuntu-latest'
 
+  #--------------------------------------------------
+  # JOB 2: Build the package
+  # This job now depends on the CI checks passing.
+  #--------------------------------------------------
+  build-package:
+    name: Build Python distribution
+    runs-on: ubuntu-latest
+    needs: [run_ci_checks] # <<<< IMPORTANT: Depends on successful CI checks
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Checkout the code corresponding to the release tag
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12" # Manual sync: Ensure this base matches pyproject.toml
+          python-version: "3.12"
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
 
       - name: Verify version consistency
         run: |
-          # Get version from pyproject.toml using Poetry
           PYPROJECT_VERSION=$(poetry version --short)
-          echo "Version in pyproject.toml: $PYPROJECT_VERSION"
-
-          # Get version from GitHub tag (remove 'v' prefix if present)
           TAG_NAME="${{ github.event.release.tag_name }}"
-          TAG_VERSION="${TAG_NAME#v}" # Removes 'v' prefix if it exists
+          TAG_VERSION="${TAG_NAME#v}"
+          echo "Version in pyproject.toml: $PYPROJECT_VERSION"
           echo "Version from GitHub tag: $TAG_VERSION (original tag: $TAG_NAME)"
-
           if [ "$PYPROJECT_VERSION" != "$TAG_VERSION" ]; then
             echo "Error: Version in pyproject.toml ('$PYPROJECT_VERSION') does not match tag version ('$TAG_VERSION')!"
             exit 1
           fi
           echo "Versions successfully verified."
 
-      - name: Build release distributions using Poetry
-        run: poetry build
+      - name: Install dependencies and build
+        run: |
+          poetry version ${{ github.event.release.tag_name }} # Ensure pyproject.toml version is set from tag
+          poetry install --no-dev --no-interaction --sync # Install only runtime dependencies
+          poetry build
 
       - name: Upload distributions as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: python-package-dists
+          name: python-package-dists-${{ github.event.release.tag_name }} # Use tag in artifact name
           path: dist/
 
+  #--------------------------------------------------
+  # JOB 3: Publish to PyPI
+  #--------------------------------------------------
   publish-to-pypi:
     name: Publish Python distribution to PyPI
     runs-on: ubuntu-latest
-    needs:
-      - build-package
+    needs: [build-package] # Depends on the build job
     permissions:
-      id-token: write
-
+      id-token: write # Specific permission for this job for trusted publishing
     environment:
-      name: pypi
+      name: pypi # Make sure you have a 'pypi' environment configured in repo settings for trusted publishing
       url: https://pypi.org/project/coffee-maker/${{ github.event.release.tag_name }}
 
     steps:
       - name: Retrieve release distributions from artifact
         uses: actions/download-artifact@v4
         with:
-          name: python-package-dists
+          name: python-package-dists-${{ github.event.release.tag_name }}
           path: dist/
 
       - name: Publish release distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        # No 'with: repository-url:' needed for real PyPI
+        # No 'with: repository-url:' needed for real PyPI if using trusted publishing
+        # Ensure your PyPI environment is configured for trusted publishing (OIDC)

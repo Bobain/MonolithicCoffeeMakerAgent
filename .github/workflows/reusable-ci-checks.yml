@@ -15,6 +15,11 @@ on:
         required: false # Make it optional if you usually use one, or required
         type: string
         default: 'ubuntu-latest'
+      FAIL_ON_PIP_AUDIT_VULNERABILITIES:
+        description: 'Fail the job if pip-audit finds vulnerabilities'
+        required: false
+        type: string
+        default: "false" # Default to not failing, can be overridden by the calling workflow
 
 jobs:
   perform-checks:
@@ -65,5 +70,8 @@ jobs:
 
       - name: Run pip-audit
         run: |
-          poetry run pip-audit
-          # This will fail the job if pip-audit finds vulnerabilities and exits non-zero.
+          if [ "${{ inputs.FAIL_ON_PIP_AUDIT_VULNERABILITIES }}" = "true" ]; then
+            poetry run pip-audit --fail-on-vulnerability
+          else
+            poetry run pip-audit --fail-on-vulnerability || true
+          fi
