@@ -1,76 +1,141 @@
-# .github/workflows/reusable-ci-checks.yml
+# .github/workflows/publish-ci-tests.yml
 # co-author : Gemini 2.5 Pro Preview
 
-name: Reusable CI Checks
+name: Publish CI Test Reports
 
 on:
-  workflow_call:
-    inputs:
-      python-version:
-        description: 'Python version to use'
-        required: true
-        type: string
-      os:
-        description: 'Operating system to run on'
-        required: false
-        type: string
-        default: 'ubuntu-latest'
-      # This input now controls the environment variable directly
-      COFFEE_MAKER_RUN_CI_TESTS_VALUE:
-        description: 'Value for COFFEE_MAKER_RUN_CI_TESTS env var (e.g., "True" or "False")'
-        required: false
-        type: string
-        default: "True" # Default behavior if caller doesn't specify
-    # 'secrets:' block for workflow inputs is removed as we are not passing repo secrets for this flag
+  push:
+    branches: [ "main" ]
+  release:
+    types: [published] # Runs when a release is published.
+  workflow_dispatch: # Manual trigger
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
-  perform-checks:
-    name: CI Checks on Python ${{ inputs.python-version }} OS ${{ inputs.os }}
-    runs-on: ${{ inputs.os }}
-    defaults:
-      run:
-        shell: bash
+  # Job that calls the reusable CI checks and requests report generation
+  ci_checks_and_reports_job:
+    name: Perform CI Checks and Generate Reports
+    uses: ./.github/workflows/reusable-ci-checks.yml # Path to your reusable workflow
+    with:
+      python-version: "3.12"
+      os: 'ubuntu-latest'
+      COFFEE_MAKER_RUN_CI_TESTS_VALUE: "True"
+      generate_coverage_report: "true"  # Request coverage report artifact
+      generate_pip_audit_report: "true" # Request pip-audit report artifact
+
+  # Job for deploying downloaded reports to Pages - depends on the CI checks job
+  deploy_downloaded_reports_job:
+    name: Deploy Downloaded Reports to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [ci_checks_and_reports_job] # Depends on the reusable CI checks and report generation
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # No job-level COFFEE_MAKER_RUN_CI_TESTS needed here as tests/checks are not re-run
+
+    if: >
+      (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'release' && github.event.action == 'published') ||
+        (github.event_name == 'workflow_dispatch')
+      )
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v5
+      # Python and Poetry setup might be needed if any local scripts are run for page generation,
+      # but not for report generation itself as that's done upstream.
+      # For copying templates, it's not strictly needed unless scripts require it.
+      # - name: Set up Python 3.12
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: "3.12"
+      # - name: Install Poetry
+      #   uses: snok/install-poetry@v1
+      # - name: Install dependencies (if local scripts need them)
+      #   run: poetry install --no-interaction --with dev
+
+      - name: Create overall reports directory for Pages
+        run: mkdir -p gh_pages_artifact
+
+      - name: Download Coverage Report Artifact
+        uses: actions/download-artifact@v4
         with:
-          python-version: ${{ inputs.python-version }}
+          name: coverage-report-artifact
+          path: gh_pages_artifact/coverage # Download directly into the Pages staging subdirectory
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Download Pip-Audit Report Artifact
+        uses: actions/download-artifact@v4
         with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
+          name: pip-audit-report-artifact
+          # This will download pip_audit_report.txt into gh_pages_artifact/pip_audit/
+          path: gh_pages_artifact/pip_audit
 
-      - name: Cache Poetry virtualenv
-        uses: actions/cache@v4
-        id: poetry-cache
-        with:
-          path: .venv
-          key: ${{ inputs.os }}-poetry-${{ inputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            ${{ inputs.os }}-poetry-${{ inputs.python-version }}-
-
-      - name: Install dependencies (if cache miss)
-        if: steps.poetry-cache.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --with dev --no-root
-
-      - name: Install project and all dependencies
-        run: poetry install --no-interaction --with dev
-
-      - name: Run tests (pytest)
-        env:
-          # Use the input value directly for the environment variable
-          COFFEE_MAKER_RUN_CI_TESTS: ${{ inputs.COFFEE_MAKER_RUN_CI_TESTS_VALUE }}
+      # The 'Copy Coverage report...' step is no longer needed as the download
+      # places the artifact (real or placeholder) directly into gh_pages_artifact/coverage.
+      # We can add a verification step if desired.
+      - name: Verify downloaded Coverage report presence
         run: |
-          echo "pytest will run with COFFEE_MAKER_RUN_CI_TESTS=${{ inputs.COFFEE_MAKER_RUN_CI_TESTS_VALUE }}"
-          poetry run pytest tests/ci_tests/ -v
+          if [ -f "gh_pages_artifact/coverage/index.html" ]; then
+            echo "Coverage report (or placeholder) found at gh_pages_artifact/coverage/index.html."
+          else
+            echo "Warning: Coverage report artifact seems to be missing from gh_pages_artifact/coverage/index.html after download."
+            # Create a fallback placeholder if download somehow failed to place it
+            mkdir -p gh_pages_artifact/coverage
+            echo "<html><head><title>Coverage Report</title></head><body><h1>Coverage report artifact was not found after download.</h1></body></html>" > gh_pages_artifact/coverage/index.html
+          fi
 
-      - name: Run pip-audit
+      - name: Prepare pip-audit HTML wrapper for Pages
         run: |
-          poetry run pip-audit
-          # This will fail the job if pip-audit finds vulnerabilities and exits non-zero.
+          # gh_pages_artifact/pip_audit/pip_audit_report.txt is present from download step.
+          # It contains either the real report or a placeholder from the reusable workflow.
+          GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          REPORT_FILE_PATH="gh_pages_artifact/pip_audit/pip_audit_report.txt"
+          WRAPPER_TEMPLATE_PATH=".github/workflows/pages_templates/pip_audit_wrapper.html"
+          DEST_WRAPPER_PATH="gh_pages_artifact/pip_audit/index.html"
+
+          # Ensure the directory for the wrapper exists
+          mkdir -p gh_pages_artifact/pip_audit
+
+          if [ ! -f "$REPORT_FILE_PATH" ]; then
+            echo "Error: Downloaded pip-audit report ($REPORT_FILE_PATH) not found. Creating placeholder wrapper."
+            echo "<html><head><title>Pip Audit Report</title></head><body><h1>Pip-audit report artifact was not found after download.</h1><p>Generated: $GENERATED_TIMESTAMP</p></body></html>" > "$DEST_WRAPPER_PATH"
+          elif [ -f "$WRAPPER_TEMPLATE_PATH" ]; then
+            cp "$WRAPPER_TEMPLATE_PATH" "$DEST_WRAPPER_PATH"
+            sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_WRAPPER_PATH"
+            echo "pip-audit HTML wrapper created & timestamped using the downloaded report."
+          else
+            # Wrapper template is missing, but we should have the report file.
+            echo "Warning: Wrapper template $WRAPPER_TEMPLATE_PATH not found. Creating basic wrapper."
+            echo "<html><head><title>Pip Audit Report</title></head><body><h1><a href='pip_audit_report.txt'>View Pip Audit Report</a></h1><p>Report generated: $GENERATED_TIMESTAMP. (Wrapper template missing)</p></body></html>" > "$DEST_WRAPPER_PATH"
+          fi
+
+      - name: Create main index.html for GitHub Pages
+        run: |
+          TEMPLATE_INDEX_PATH=".github/workflows/pages_templates/index.html"; DEST_INDEX_PATH="gh_pages_artifact/index.html"; GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          if [ -f "$TEMPLATE_INDEX_PATH" ]; then cp "$TEMPLATE_INDEX_PATH" "$DEST_INDEX_PATH"; sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_INDEX_PATH"; echo "Main landing page copied & timestamped.";
+          else echo "Error: $TEMPLATE_INDEX_PATH not found. This is a required file."; exit 1; fi
+          echo "Main landing page successfully prepared."
+
+      - name: Add .nojekyll
+        run: touch gh_pages_artifact/.nojekyll
+
+      - name: Verify Pages artifact contents
+        run: |
+          echo "Listing contents of gh_pages_artifact directory before upload:"
+          ls -Rla gh_pages_artifact
+
+      - name: Upload HTML reports artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: gh_pages_artifact
+
+      - name: Deploy reports to GitHub Pages
+        id: deployment
+        if: needs.ci_checks_and_reports_job.result == 'success' # Explicitly check for CI success before deploying
+        uses: actions/deploy-pages@v4
