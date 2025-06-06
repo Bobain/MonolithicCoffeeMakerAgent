@@ -25,8 +25,8 @@ jobs:
     with:
       python-version: "3.12" # Or use matrix strategy here if needed
       os: 'ubuntu-latest'
-    secrets:
-      COFFEE_MAKER_RUN_CI_TESTS_SECRET: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }}
+    env:
+      COFFEE_MAKER_RUN_CI_TESTS: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }}
 
   # Job for deploying reports to Pages - depends on the CI checks job
   deploy_reports_job:
