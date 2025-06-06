@@ -1,15 +1,16 @@
 # .github/workflows/run-ci-tests.yml
+# co-author : Gemini 2.5 Pro Preview
 
 name: ci-tests-and-reports
 
 on:
   push:
     branches: [ "main" ]
-#  pull_request:
-#    branches: [ "main" ]
+  pull_request: # Run on pull requests targeting main
+    branches: [ "main" ]
   release:
-    types: [published]
-  workflow_dispatch:
+    types: [published] # Runs when a release is published.
+  workflow_dispatch: # Manual trigger
 
 permissions:
   contents: read
@@ -17,34 +18,45 @@ permissions:
   id-token: write
 
 jobs:
+  # Job that calls the reusable CI checks
   ci_checks_job:
     name: Perform CI Checks
-    uses: ./.github/workflows/reusable-ci-checks.yml
+    uses: ./.github/workflows/reusable-ci-checks.yml # Path to your reusable workflow
     with:
       python-version: "3.12"
       os: 'ubuntu-latest'
-      # FAIL_ON_PIP_AUDIT_VULNERABILITIES: "false" # This was in your provided file
-      # Ensure you are passing the COFFEE_MAKER_RUN_CI_TESTS_VALUE if you want to override the default "True"
-      # If you omit it, the default "True" from reusable-ci-checks.yml will be used for this job.
-      # For example, to be explicit:
+      # Pass the value for the COFFEE_MAKER_RUN_CI_TESTS_VALUE input
+      # Set to "True" for typical CI runs, or adjust as needed.
       COFFEE_MAKER_RUN_CI_TESTS_VALUE: "True"
+    # No 'secrets:' block needed here if COFFEE_MAKER_RUN_CI_TESTS is handled purely by inputs in the reusable workflow
 
-
+  # Job for preparing reports and deploying to Pages - depends on the CI checks job
   deploy_reports_job:
     name: Prepare and Deploy Reports to GitHub Pages
     runs-on: ubuntu-latest
-    needs: [ci_checks_job]
-    environment: # Keep this if you use GitHub Pages environment features (like protection rules)
+    needs: [ci_checks_job] # Depends on the reusable CI checks
+    environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    # Add the env block here to make it available for pytest in this job
-    env:
-      COFFEE_MAKER_RUN_CI_TESTS: "True" # <<<< ADD THIS
+    env: # Environment variable for pytest run in this job
+      COFFEE_MAKER_RUN_CI_TESTS: "True"
+    # This job will run if its 'needs' are met AND the 'if' condition below is true.
+    # The 'if' condition gates the actual deployment.
+    # The 'always()' part of the condition ensures that if the job is *skipped* due to
+    # the event type not matching (e.g., a PR build), it doesn't show as an error,
+    # but rather as a skipped job if 'ci_checks_job' passed.
+    # However, the primary gate for deployment is the event type check.
+    # If ci_checks_job fails, this job will be skipped unless if: always() is used *alone*
+    # For deploying, we typically want it to run only if ci_checks_job succeeded AND it's a deploy event.
+    # So, the job-level `if` should reflect the deployment condition.
+    # Individual steps for artifact creation can use `if: always()` if needed,
+    # but the final deploy step should be strictly conditional.
+
+    # Condition for this entire job to run (and thus for deployment to potentially happen)
     if: >
-      always() &&
       (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-        (github.event_name == 'release' && github.event.action == 'published') || # Corrected: github.event.name to github.event_name
+        (github.event_name == 'release' && github.event.action == 'published') ||
         (github.event_name == 'workflow_dispatch')
       )
 
@@ -63,20 +75,20 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Install dependencies (for report generation tools if any)
+      - name: Install dependencies (including dev for reporting tools)
         run: poetry install --no-interaction --with dev
 
       - name: Generate Coverage report for Pages
-        # This step will now inherit COFFEE_MAKER_RUN_CI_TESTS="True" from the job's env block
+        # This step runs if the job's 'if' condition is met.
+        # COFFEE_MAKER_RUN_CI_TESTS is inherited from the job's 'env' block.
         run: |
-          echo "In deploy_reports_job: COFFEE_MAKER_RUN_CI_TESTS is set to [${COFFEE_MAKER_RUN_CI_TESTS}]" # For debugging
-          poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=html:reports/coverage
+          echo "In deploy_reports_job: COFFEE_MAKER_RUN_CI_TESTS is set to [${COFFEE_MAKER_RUN_CI_TESTS}]"
+          poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=html:reports/coverage || echo "Coverage generation step finished (may have failed but allowing workflow to continue for reporting)."
 
-      # ... rest of your deploy_reports_job steps ...
       - name: Generate pip-audit text report for Pages
         run: |
           mkdir -p reports/pip_audit
-          poetry run pip-audit --output reports/pip_audit/pip_audit_report.txt || echo "Pip-audit report generation finished (may have found issues or errored)."
+          poetry run pip-audit --output reports/pip_audit/pip_audit_report.txt || echo "Pip-audit report generation finished (may have found issues or errored, but allowing workflow to continue for reporting)."
 
       - name: Create overall reports directory for Pages
         run: mkdir -p gh_pages_artifact
@@ -125,4 +137,9 @@ jobs:
 
       - name: Deploy reports to GitHub Pages
         id: deployment
+        # This step implicitly uses the job-level 'if' condition.
+        # It will only run if ci_checks_job succeeded (due to 'needs') AND
+        # the event type matched the job's 'if' condition.
+        # An additional 'if' can be added here for more fine-grained control if needed.
+        if: needs.ci_checks_job.result == 'success' # Explicitly check for CI success before deploying
         uses: actions/deploy-pages@v4
