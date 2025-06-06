@@ -15,10 +15,6 @@ on:
         required: false # Make it optional if you usually use one, or required
         type: string
         default: 'ubuntu-latest'
-    secrets: # Define secrets that this reusable workflow needs
-      COFFEE_MAKER_RUN_CI_TESTS_SECRET: # Use a generic name for the secret input
-        description: 'Secret for running CI tests'
-        required: false # Make it optional if not always needed
 
 jobs:
   perform-checks:
@@ -62,9 +58,6 @@ jobs:
         run: poetry install --no-interaction --with dev
 
       - name: Run tests (pytest)
-        env:
-          # Map the input secret to the env var expected by your tests
-          COFFEE_MAKER_RUN_CI_TESTS: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS_SECRET }}
         run: |
           poetry run pytest tests/ci_tests/ -v
           # Removed coverage generation from here, as it's specific to the Pages deployment workflow.
