@@ -25,6 +25,7 @@ jobs:
     with:
       python-version: "3.12" # Or use matrix strategy here if needed
       os: 'ubuntu-latest'
+      FAIL_ON_PIP_AUDIT_VULNERABILITIES: "false" # Set to true if you want to fail the job on pip-audit vulnerabilities
 
   # Job for deploying reports to Pages - depends on the CI checks job
   deploy_reports_job:
