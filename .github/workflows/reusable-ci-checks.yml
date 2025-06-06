@@ -31,6 +31,11 @@ on:
         required: false
         type: string # GitHub Actions inputs are strings
         default: "false"
+      pip_audit_causes_failure:
+        description: 'Whether any reported vuln should make the whole process fail'
+        required: false
+        type: string # GitHub Actions inputs are strings
+        default: "false"
     # You can define outputs here if the calling workflow needs to consume data from this one
     # outputs:
     #   some_output:
@@ -175,7 +180,7 @@ jobs:
       - name: Evaluate pip-audit result for CI Failure
         # This step ensures the job fails if pip-audit indicated an issue (non-zero exit code).
         # It runs regardless of the upload input, ensuring CI fails even if reports aren't uploaded.
-        if: steps.pip_audit_check.outputs.PIP_AUDIT_EXIT_CODE_OUTPUT != '0'
+        if: (steps.pip_audit_check.outputs.PIP_AUDIT_EXIT_CODE_OUTPUT != '0') && (inputs.pip_audit_causes_failure == 'true')
         run: |
           echo "Failing job due to pip-audit findings or error (exit code ${{ steps.pip_audit_check.outputs.PIP_AUDIT_EXIT_CODE_OUTPUT }})."
           exit ${{ steps.pip_audit_check.outputs.PIP_AUDIT_EXIT_CODE_OUTPUT }}

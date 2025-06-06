@@ -1,7 +1,7 @@
-# .github/workflows/run-ci-tests.yml
+# .github/workflows/publish-ci-tests.yml
 # co-author : Gemini 2.5 Pro Preview
 
-name: ci-tests-and-reports
+name: publish-ci-tests
 
 on:
   push:
