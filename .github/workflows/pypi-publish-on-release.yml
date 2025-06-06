@@ -65,8 +65,8 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/project/coffee-maker/${{ github.event.release.tag_name }}
-    env:
-      COFFEE_MAKER_RUN_CI_TESTS: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS }}
+    secrets:
+      COFFEE_MAKER_RUN_CI_TESTS_SECRET: ${{ secrets.COFFEE_MAKER_RUN_CI_TESTS_SECRET }}
 
     steps:
       - name: Retrieve release distributions from artifact
