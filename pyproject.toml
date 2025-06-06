@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "coffee_maker"
-version = "0.0.24"
+version = "0.0.26"
 description = "An agent that roast, grind, brew and serve your coffee. or not..."
 authors = ["Bobain and some code agents"]
 license = "Apache 2.0"

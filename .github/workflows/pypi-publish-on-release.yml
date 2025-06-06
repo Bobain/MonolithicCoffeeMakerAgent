@@ -6,36 +6,31 @@ name: Test, Build, and Upload Python Package to PyPI
 on:
   release:
     types: [published]
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
 
 permissions:
-  contents: read # Needed for checkout and potentially by reusable workflow
-  # id-token: write # This should be defined at the job level (publish-to-pypi)
+  contents: read
+  # id-token: write # Only needed if using trusted publishing (OIDC) with GitHub Environments
+                   # If using API token, this isn't strictly needed at the workflow level for PyPI.
 
 jobs:
-  #--------------------------------------------------
-  # JOB 1: Run Core CI Checks (Reusable Workflow)
-  #--------------------------------------------------
-  run_ci_checks: # Changed job ID for clarity
+  run_ci_checks:
     name: Perform CI Checks
-    uses: ./.github/workflows/reusable-ci-checks.yml # Path to your reusable workflow
+    uses: ./.github/workflows/reusable-ci-checks.yml
     with:
-      python-version: "3.12" # Or your desired matrix version for release checks
+      python-version: "3.12"
       os: 'ubuntu-latest'
+      COFFEE_MAKER_RUN_CI_TESTS_VALUE: "True" # Explicitly set for release builds
+                                            # Or "False" if tests needing it should not run/fail for release builds
 
-  #--------------------------------------------------
-  # JOB 2: Build the package
-  # This job now depends on the CI checks passing.
-  #--------------------------------------------------
   build-package:
     name: Build Python distribution
     runs-on: ubuntu-latest
-    needs: [run_ci_checks] # <<<< IMPORTANT: Depends on successful CI checks
+    needs: [run_ci_checks]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Checkout the code corresponding to the release tag
           ref: ${{ github.event.release.tag_name }}
 
       - name: Set up Python
@@ -61,28 +56,25 @@ jobs:
 
       - name: Install dependencies and build
         run: |
-          poetry version ${{ github.event.release.tag_name }} # Ensure pyproject.toml version is set from tag
-          poetry install --no-dev --no-interaction --sync # Install only runtime dependencies
+          # poetry version ${{ github.event.release.tag_name }} # This might fail if tag has 'v' and poetry doesn't expect it, or vice-versa
+                                                               # The verification above is usually sufficient.
+                                                               # If needed, ensure poetry version aligns with TAG_VERSION (without 'v')
+          poetry install --no-dev --no-interaction --sync
           poetry build
 
       - name: Upload distributions as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: python-package-dists-${{ github.event.release.tag_name }} # Use tag in artifact name
+          name: python-package-dists-${{ github.event.release.tag_name }}
           path: dist/
 
-  #--------------------------------------------------
-  # JOB 3: Publish to PyPI
-  #--------------------------------------------------
   publish-to-pypi:
     name: Publish Python distribution to PyPI
     runs-on: ubuntu-latest
-    needs: [build-package] # Depends on the build job
-    permissions:
-      id-token: write # Specific permission for this job for trusted publishing
-    environment:
-      name: pypi # Make sure you have a 'pypi' environment configured in repo settings for trusted publishing
-      url: https://pypi.org/project/coffee-maker/${{ github.event.release.tag_name }}
+    needs: [build-package]
+    # Removed 'environment:' key to avoid GitHub Environments for PyPI
+    # 'permissions: id-token: write' would be needed if you were using OIDC trusted publishing.
+    # For token-based auth, the token is usually passed via a secret in the 'with' block of the pypa action.
 
     steps:
       - name: Retrieve release distributions from artifact
@@ -93,5 +85,9 @@ jobs:
 
       - name: Publish release distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        # No 'with: repository-url:' needed for real PyPI if using trusted publishing
-        # Ensure your PyPI environment is configured for trusted publishing (OIDC)
+        with:
+          # You now NEED to provide an API token if not using trusted publishing / OIDC
+          # Store this token as a secret in your GitHub repository settings
+          # e.g., name it PYPI_API_TOKEN
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          # repository_url: https://test.pypi.org/legacy/ # Uncomment to publish to TestPyPI

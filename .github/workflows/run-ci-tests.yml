@@ -1,16 +1,15 @@
 # .github/workflows/run-ci-tests.yml
-# co-author : Gemini 2.5 Pro Preview
 
 name: ci-tests-and-reports
 
 on:
   push:
     branches: [ "main" ]
-#  pull_request: # Run on pull requests targeting main
+#  pull_request:
 #    branches: [ "main" ]
   release:
-    types: [published] # Runs when a release is published.
-  workflow_dispatch: # Manual trigger
+    types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,31 +17,34 @@ permissions:
   id-token: write
 
 jobs:
-  # Job that calls the reusable CI checks
   ci_checks_job:
     name: Perform CI Checks
-    uses: ./.github/workflows/reusable-ci-checks.yml # Path to your reusable workflow
+    uses: ./.github/workflows/reusable-ci-checks.yml
     with:
-      python-version: "3.12" # Or use matrix strategy here if needed
+      python-version: "3.12"
       os: 'ubuntu-latest'
-      FAIL_ON_PIP_AUDIT_VULNERABILITIES: "false" # Set to true if you want to fail the job on pip-audit vulnerabilities
+      # FAIL_ON_PIP_AUDIT_VULNERABILITIES: "false" # This was in your provided file
+      # Ensure you are passing the COFFEE_MAKER_RUN_CI_TESTS_VALUE if you want to override the default "True"
+      # If you omit it, the default "True" from reusable-ci-checks.yml will be used for this job.
+      # For example, to be explicit:
+      COFFEE_MAKER_RUN_CI_TESTS_VALUE: "True"
 
-  # Job for deploying reports to Pages - depends on the CI checks job
+
   deploy_reports_job:
     name: Prepare and Deploy Reports to GitHub Pages
     runs-on: ubuntu-latest
-    needs: [ci_checks_job] # Depends on the reusable CI checks passing
-    environment:
+    needs: [ci_checks_job]
+    environment: # Keep this if you use GitHub Pages environment features (like protection rules)
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    # Condition for deployment (only on main push, release, or manual trigger)
-    # The artifact generation steps within this job will run if `always()` is true
-    # but the final `deploy-pages` action is further conditioned by the event type.
+    # Add the env block here to make it available for pytest in this job
+    env:
+      COFFEE_MAKER_RUN_CI_TESTS: "True" # <<<< ADD THIS
     if: >
       always() &&
       (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-        (github.event.name == 'release' && github.event.action == 'published') ||
+        (github.event_name == 'release' && github.event.action == 'published') || # Corrected: github.event.name to github.event_name
         (github.event_name == 'workflow_dispatch')
       )
 
@@ -50,7 +52,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.12 # Specific version for this job's tools
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -65,9 +67,12 @@ jobs:
         run: poetry install --no-interaction --with dev
 
       - name: Generate Coverage report for Pages
+        # This step will now inherit COFFEE_MAKER_RUN_CI_TESTS="True" from the job's env block
         run: |
+          echo "In deploy_reports_job: COFFEE_MAKER_RUN_CI_TESTS is set to [${COFFEE_MAKER_RUN_CI_TESTS}]" # For debugging
           poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=html:reports/coverage
 
+      # ... rest of your deploy_reports_job steps ...
       - name: Generate pip-audit text report for Pages
         run: |
           mkdir -p reports/pip_audit
@@ -77,7 +82,7 @@ jobs:
         run: mkdir -p gh_pages_artifact
 
       - name: Copy Coverage report to Pages artifact directory
-        run: | # if: always() is inherited from the job's if for this step
+        run: |
           if [ -d "reports/coverage" ]; then
             cp -r reports/coverage gh_pages_artifact/coverage
             echo "Coverage report copied."
@@ -88,7 +93,7 @@ jobs:
           fi
 
       - name: Copy pip-audit report and HTML wrapper to Pages artifact directory
-        run: | # if: always() is inherited
+        run: |
           mkdir -p gh_pages_artifact/pip_audit
           GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
           if [ -f "reports/pip_audit/pip_audit_report.txt" ]; then
@@ -99,30 +104,25 @@ jobs:
           else echo "Warning: reports/pip_audit/pip_audit_report.txt not found."; echo "<html><body><h1>pip-audit report not generated.</h1><p>$GENERATED_TIMESTAMP</p></body></html>" > gh_pages_artifact/pip_audit/index.html; fi
 
       - name: Create main index.html for GitHub Pages
-        run: | # if: always() is inherited
+        run: |
           TEMPLATE_INDEX_PATH=".github/workflows/pages_templates/index.html"; DEST_INDEX_PATH="gh_pages_artifact/index.html"; GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
           if [ -f "$TEMPLATE_INDEX_PATH" ]; then cp "$TEMPLATE_INDEX_PATH" "$DEST_INDEX_PATH"; sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_INDEX_PATH"; echo "Main landing page copied & timestamped.";
           else echo "Error: $TEMPLATE_INDEX_PATH not found. This is a required file."; exit 1; fi
           echo "Main landing page successfully prepared."
 
       - name: Add .nojekyll
-        run: touch gh_pages_artifact/.nojekyll # if: always() is inherited
+        run: touch gh_pages_artifact/.nojekyll
 
       - name: Verify Pages artifact contents
-        run: | # if: always() is inherited
+        run: |
           echo "Listing contents of gh_pages_artifact directory before upload:"
           ls -Rla gh_pages_artifact
 
       - name: Upload HTML reports artifact for GitHub Pages
-        # This step will run if the job's `if` condition is met due to always() and event type
         uses: actions/upload-pages-artifact@v3
         with:
           path: gh_pages_artifact
 
       - name: Deploy reports to GitHub Pages
         id: deployment
-        # This step uses the same encompassing 'if' condition from the job level.
-        # No need to repeat the full condition here if the job's 'if' already gates it correctly for deployment events.
-        # However, if you want to be super explicit or add more conditions JUST for deployment action:
-        # if: github.event_name == 'push' && github.ref == 'refs/heads/main' || (github.event_name == 'release' && github.event.action == 'published') || github.event_name == 'workflow_dispatch'
         uses: actions/deploy-pages@v4

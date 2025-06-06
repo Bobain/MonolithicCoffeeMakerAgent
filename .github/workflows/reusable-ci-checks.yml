@@ -4,7 +4,7 @@
 name: Reusable CI Checks
 
 on:
-  workflow_call: # This makes it a reusable workflow
+  workflow_call:
     inputs:
       python-version:
         description: 'Python version to use'
@@ -12,19 +12,16 @@ on:
         type: string
       os:
         description: 'Operating system to run on'
-        required: false # Make it optional if you usually use one, or required
+        required: false
         type: string
         default: 'ubuntu-latest'
-      FAIL_ON_PIP_AUDIT_VULNERABILITIES:
-        description: 'Fail the job if pip-audit finds vulnerabilities'
+      # This input now controls the environment variable directly
+      COFFEE_MAKER_RUN_CI_TESTS_VALUE:
+        description: 'Value for COFFEE_MAKER_RUN_CI_TESTS env var (e.g., "True" or "False")'
         required: false
         type: string
-        default: "False" # Default to not failing, can be overridden by the calling workflow
-      COFFEE_MAKER_RUN_CI_TESTS:
-        description: 'run CI tests for the Coffee Maker project'
-        required: false
-        type: string
-        default: "True"
+        default: "True" # Default behavior if caller doesn't specify
+    # 'secrets:' block for workflow inputs is removed as we are not passing repo secrets for this flag
 
 jobs:
   perform-checks:
@@ -32,7 +29,7 @@ jobs:
     runs-on: ${{ inputs.os }}
     defaults:
       run:
-        shell: bash # Explicitly set shell if needed, though usually defaults fine
+        shell: bash
 
     steps:
       - name: Checkout repository
@@ -51,7 +48,7 @@ jobs:
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v4
-        id: poetry-cache # Give it an id if you need to reference its output, though not critical here
+        id: poetry-cache
         with:
           path: .venv
           key: ${{ inputs.os }}-poetry-${{ inputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
@@ -59,8 +56,6 @@ jobs:
             ${{ inputs.os }}-poetry-${{ inputs.python-version }}-
 
       - name: Install dependencies (if cache miss)
-        # Note: poetry install --no-root is often for libraries. If this is an app, --no-root might be omitted.
-        # Kept as per your original CI.
         if: steps.poetry-cache.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --with dev --no-root
 
@@ -69,16 +64,13 @@ jobs:
 
       - name: Run tests (pytest)
         env:
-          COFFEE_MAKER_RUN_CI_TESTS : ${{ inputs.COFFEE_MAKER_RUN_CI_TESTS }}
+          # Use the input value directly for the environment variable
+          COFFEE_MAKER_RUN_CI_TESTS: ${{ inputs.COFFEE_MAKER_RUN_CI_TESTS_VALUE }}
         run: |
+          echo "pytest will run with COFFEE_MAKER_RUN_CI_TESTS=${{ inputs.COFFEE_MAKER_RUN_CI_TESTS_VALUE }}"
           poetry run pytest tests/ci_tests/ -v
-          # Removed coverage generation from here, as it's specific to the Pages deployment workflow.
-          # If coverage data IS needed by the calling workflow, this reusable one could output it as an artifact.
 
       - name: Run pip-audit
         run: |
-          if [ "${{ inputs.FAIL_ON_PIP_AUDIT_VULNERABILITIES }}" = "true" ]; then
-            poetry run pip-audit --fail-on-vulnerability
-          else
-            poetry run pip-audit --fail-on-vulnerability || true
-          fi
+          poetry run pip-audit
+          # This will fail the job if pip-audit finds vulnerabilities and exits non-zero.
