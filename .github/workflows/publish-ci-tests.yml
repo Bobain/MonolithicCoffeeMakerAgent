@@ -6,8 +6,6 @@ name: ci-tests-and-reports
 on:
   push:
     branches: [ "main" ]
-  pull_request: # Run on pull requests targeting main
-    branches: [ "main" ]
   release:
     types: [published] # Runs when a release is published.
   workflow_dispatch: # Manual trigger
