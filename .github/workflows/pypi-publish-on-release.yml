@@ -5,38 +5,47 @@ name: Test, Build, and Upload Python Package to PyPI
 
 on:
   release:
-    types: [published]
-  workflow_dispatch:
+    types: [published] # Only run when a release is officially published
+  workflow_dispatch:   # Allow manual triggering
 
+# Overall workflow permissions.
+# `contents: read` is needed by actions/checkout.
+# `id-token: write` is set at the job level for `publish-to-pypi` for better security scoping.
 permissions:
   contents: read
-  # id-token: write # Only needed if using trusted publishing (OIDC) with GitHub Environments
-                   # If using API token, this isn't strictly needed at the workflow level for PyPI.
 
 jobs:
+  #--------------------------------------------------
+  # JOB 1: Run Core CI Checks (Reusable Workflow)
+  #--------------------------------------------------
   run_ci_checks:
     name: Perform CI Checks
-    uses: ./.github/workflows/reusable-ci-checks.yml
+    uses: ./.github/workflows/reusable-ci-checks.yml # Assumes reusable-ci-checks.yml is in this path
     with:
-      python-version: "3.12"
+      python-version: "3.12" # Or your desired Python version for CI
       os: 'ubuntu-latest'
-      COFFEE_MAKER_RUN_CI_TESTS_VALUE: "True" # Explicitly set for release builds
-                                            # Or "False" if tests needing it should not run/fail for release builds
+      COFFEE_MAKER_RUN_CI_TESTS_VALUE: "True" # Ensure tests run as expected for releases
+    # No `secrets:` needed here for COFFEE_MAKER_RUN_CI_TESTS_VALUE if handled by input default or direct value
 
+  #--------------------------------------------------
+  # JOB 2: Build the package
+  # Depends on successful CI checks.
+  #--------------------------------------------------
   build-package:
     name: Build Python distribution
     runs-on: ubuntu-latest
-    needs: [run_ci_checks]
+    needs: [run_ci_checks] # IMPORTANT: This job runs only if run_ci_checks succeeds
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          # Checkout the code corresponding to the release tag that triggered the workflow
           ref: ${{ github.event.release.tag_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.12" # Should match the version used for CI/tests
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
@@ -45,36 +54,45 @@ jobs:
         run: |
           PYPROJECT_VERSION=$(poetry version --short)
           TAG_NAME="${{ github.event.release.tag_name }}"
+          # Remove 'v' prefix from tag for comparison, if present
           TAG_VERSION="${TAG_NAME#v}"
           echo "Version in pyproject.toml: $PYPROJECT_VERSION"
           echo "Version from GitHub tag: $TAG_VERSION (original tag: $TAG_NAME)"
+
           if [ "$PYPROJECT_VERSION" != "$TAG_VERSION" ]; then
             echo "Error: Version in pyproject.toml ('$PYPROJECT_VERSION') does not match tag version ('$TAG_VERSION')!"
             exit 1
           fi
           echo "Versions successfully verified."
 
-      - name: Install dependencies and build
+      - name: Install dependencies and build distributable package
         run: |
-          # poetry version ${{ github.event.release.tag_name }} # This might fail if tag has 'v' and poetry doesn't expect it, or vice-versa
-                                                               # The verification above is usually sufficient.
-                                                               # If needed, ensure poetry version aligns with TAG_VERSION (without 'v')
-          poetry install --with dev --no-interaction --sync
+          # Optional: Ensure pyproject.toml reflects the tag version if not already done
+          # poetry version $TAG_VERSION # (Ensure TAG_VERSION here does not have 'v' if poetry version doesn't want it)
+          poetry install --no-interaction --sync --only main
           poetry build
 
       - name: Upload distributions as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: python-package-dists-${{ github.event.release.tag_name }}
+          name: python-package-dists-${{ github.event.release.tag_name }} # Unique artifact name per release
           path: dist/
 
+  #--------------------------------------------------
+  # JOB 3: Publish to PyPI using Trusted Publishing
+  # Depends on a successful build.
+  #--------------------------------------------------
   publish-to-pypi:
     name: Publish Python distribution to PyPI
     runs-on: ubuntu-latest
-    needs: [build-package]
-    # Removed 'environment:' key to avoid GitHub Environments for PyPI
-    # 'permissions: id-token: write' would be needed if you were using OIDC trusted publishing.
-    # For token-based auth, the token is usually passed via a secret in the 'with' block of the pypa action.
+    needs: [build-package] # IMPORTANT: This job runs only if build-package succeeds
+    permissions:
+      id-token: write   # REQUIRED for OIDC trusted publishing
+    # No 'environment:' key needed here if you left it blank in PyPI trusted publisher settings.
+    # If you DID specify an environment name (e.g., "pypi") on PyPI, add it here:
+    # environment:
+    #   name: pypi
+    #   url: https://pypi.org/project/coffee-maker/${{ github.event.release.tag_name }}
 
     steps:
       - name: Retrieve release distributions from artifact
@@ -85,9 +103,5 @@ jobs:
 
       - name: Publish release distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          # You now NEED to provide an API token if not using trusted publishing / OIDC
-          # Store this token as a secret in your GitHub repository settings
-          # e.g., name it PYPI_API_TOKEN
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          # repository_url: https://test.pypi.org/legacy/ # Uncomment to publish to TestPyPI
+        # No 'with: password:' or 'with: token:' is needed for OIDC trusted publishing.
+        # The action will automatically handle the OIDC token exchange.
