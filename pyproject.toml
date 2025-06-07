@@ -12,7 +12,6 @@ mcp = {extras = ["cli"], version = "^1.9.0"}
 smolagents = {extras = ["mcp"], version = "^1.16.1"}
 gradio = {extras = ["mcp"], version = "^5.31.0"}
 python-dotenv = "^1.1.0"
-bleach = "3.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
