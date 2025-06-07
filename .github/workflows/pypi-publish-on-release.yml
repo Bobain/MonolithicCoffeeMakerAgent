@@ -59,7 +59,7 @@ jobs:
           # poetry version ${{ github.event.release.tag_name }} # This might fail if tag has 'v' and poetry doesn't expect it, or vice-versa
                                                                # The verification above is usually sufficient.
                                                                # If needed, ensure poetry version aligns with TAG_VERSION (without 'v')
-          poetry install --no-dev --no-interaction --sync
+          poetry install --with dev --no-interaction --sync
           poetry build
 
       - name: Upload distributions as artifact
