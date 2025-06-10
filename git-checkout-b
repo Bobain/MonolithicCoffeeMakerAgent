@@ -6,6 +6,7 @@
 # 2. Checks if the target new branch (provided as argument) already exists.
 # 3. Creates the new branch (name provided as an argument) and switches to it.
 # 4. Bumps the patch version in pyproject.toml using Poetry on the new branch.
+# 5. Commit the needed changes both in pyproject.toml and poetry.lock
 
 set -e # Exit immediately if a command exits with a non-zero status.
 # set -x # Uncomment for debugging (prints each command before execution)
@@ -96,6 +97,12 @@ fi
 
 echo "RUNNING : git add pyproject.toml"
 git add pyproject.toml
+
+echo "RUNNING : poetry lock --no-update"
+poetry lock --no-update
+
+echo "RUNNING : git add poetry.lock"
+git add poetry.lock
 
 echo "RUNNING : git commit -m \" Bump version to $BUMPED_VERSION_POETRY\""
 git commit -m " Bump version to $BUMPED_VERSION_POETRY"
