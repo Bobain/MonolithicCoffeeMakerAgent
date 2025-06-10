@@ -35,8 +35,6 @@ def test_coffee_maker_run_test_variable_is_set_to_true():
             f"No .env file found. Test relies on '{REQUIRED_ENV_VAR_NAME}' "
             "being set either in .env or the system environment."
         )
-        # The test will proceed and fail at the assert if the variable isn't set
-        # by other means (e.g., system environment).
 
     logger.info(f"Checking for environment variable: '{REQUIRED_ENV_VAR_NAME}'")
     env_var_value = os.getenv(REQUIRED_ENV_VAR_NAME)

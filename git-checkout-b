@@ -98,8 +98,8 @@ fi
 echo "RUNNING : git add pyproject.toml"
 git add pyproject.toml
 
-echo "RUNNING : poetry lock --no-update"
-poetry lock --no-update
+echo "RUNNING : poetry lock"
+poetry lock
 
 echo "RUNNING : git add poetry.lock"
 git add poetry.lock
