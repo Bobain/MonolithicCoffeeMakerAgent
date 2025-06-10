@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "coffee_maker"
-version = "0.0.36"
+version = "0.0.37"
 description = "An agent that roast, grind, brew and serve your coffee. or not..."
 authors = ["Bobain and some code agents"]
 license = "Apache 2.0"
@@ -18,6 +18,8 @@ pytest = "^8.0"
 pytest-cov = "^6.0"
 pip-audit = "^2.9"
 pre-commit = "^4.0"
+pytest-html = "^4.1.1"
+pdoc = "^15.0.4"
 
 
 [tool.poetry.urls]
