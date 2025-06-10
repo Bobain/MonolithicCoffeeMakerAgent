@@ -124,13 +124,31 @@ jobs:
           TEMPLATE_INDEX_PATH=".github/workflows/pages_templates/index.html"
           DEST_INDEX_PATH="gh_pages_artifact/index.html"
           GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          PACKAGE_VERSION="${{ steps.get_package_version.outputs.version }}" # Use output from previous step
+          PACKAGE_VERSION="${{ steps.get_package_version.outputs.version }}"
+
+          # Determine the source branch information
+          SOURCE_BRANCH_INFO=""
+          if [ "${{ github.event_name }}" == "push" ]; then
+            SOURCE_BRANCH_INFO="Push to ${{ github.ref_name }}"
+          elif [ "${{ github.event_name }}" == "release" ]; then
+            SOURCE_BRANCH_INFO="Release: ${{ github.event.release.tag_name }} (target: ${{ github.event.release.target_commitish }})"
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            SOURCE_BRANCH_INFO="Manual dispatch on ${{ github.ref_name }}"
+            if [ -n "${{ github.event.inputs.ref_to_build_from }}" ]; then # Example if you add an input for ref
+              SOURCE_BRANCH_INFO="Manual dispatch, building from: ${{ github.event.inputs.ref_to_build_from }}"
+            fi
+          else
+            SOURCE_BRANCH_INFO="${{ github.ref_name }} (event: ${{ github.event_name }})"
+          fi
+          echo "Source branch info: $SOURCE_BRANCH_INFO"
+
 
           if [ ! -f "$TEMPLATE_INDEX_PATH" ]; then echo "Error: Main index template $TEMPLATE_INDEX_PATH not found."; exit 1; fi
           cp "$TEMPLATE_INDEX_PATH" "$DEST_INDEX_PATH"
 
           sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_INDEX_PATH"
-          sed -i "s|<!-- PACKAGE_VERSION -->|$PACKAGE_VERSION|g" "$DEST_INDEX_PATH" # Inject package version
+          sed -i "s|<!-- PACKAGE_VERSION -->|$PACKAGE_VERSION|g" "$DEST_INDEX_PATH"
+          sed -i "s|<!-- SOURCE_BRANCH -->|$SOURCE_BRANCH_INFO|g" "$DEST_INDEX_PATH" # Inject source branch info
 
           PYTEST_HTML_ITEM='<li class="report-unavailable">CI Test Results: Not available</li>'; if [ -f "gh_pages_artifact/pytest_tests/index.html" ]; then PYTEST_HTML_ITEM='<li class="report-item"><a href="pytest_tests/index.html">CI Test Results (HTML)</a></li>'; fi
           sed -i "s|<!-- PYTEST_REPORT_ITEM -->|$PYTEST_HTML_ITEM|g" "$DEST_INDEX_PATH"
