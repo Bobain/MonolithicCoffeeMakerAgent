@@ -1,0 +1,143 @@
+# .github/workflows/publish-ci-tests.yml
+# co-author : Gemini 2.5 Pro Preview
+
+name: publish-ci-tests
+
+on:
+  push:
+    branches: [ "main" ]
+  release:
+    types: [published] # Runs when a release is published.
+  workflow_dispatch: # Manual trigger
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  # Job that calls the reusable CI checks
+  ci_checks_job:
+    name: Perform CI Checks
+    uses: ./.github/workflows/reusable-ci-checks.yml # Path to your reusable workflow
+    with:
+      python-version: "3.12"
+      os: 'ubuntu-latest'
+      # Pass the value for the COFFEE_MAKER_RUN_CI_TESTS_VALUE input
+      # Set to "True" for typical CI runs, or adjust as needed.
+      COFFEE_MAKER_RUN_CI_TESTS_VALUE: "True"
+    # No 'secrets:' block needed here if COFFEE_MAKER_RUN_CI_TESTS is handled purely by inputs in the reusable workflow
+
+  # Job for preparing reports and deploying to Pages - depends on the CI checks job
+  deploy_reports_job:
+    name: Prepare and Deploy Reports to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [ci_checks_job] # Depends on the reusable CI checks
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env: # Environment variable for pytest run in this job
+      COFFEE_MAKER_RUN_CI_TESTS: "True"
+    # This job will run if its 'needs' are met AND the 'if' condition below is true.
+    # The 'if' condition gates the actual deployment.
+    # The 'always()' part of the condition ensures that if the job is *skipped* due to
+    # the event type not matching (e.g., a PR build), it doesn't show as an error,
+    # but rather as a skipped job if 'ci_checks_job' passed.
+    # However, the primary gate for deployment is the event type check.
+    # If ci_checks_job fails, this job will be skipped unless if: always() is used *alone*
+    # For deploying, we typically want it to run only if ci_checks_job succeeded AND it's a deploy event.
+    # So, the job-level `if` should reflect the deployment condition.
+    # Individual steps for artifact creation can use `if: always()` if needed,
+    # but the final deploy step should be strictly conditional.
+
+    # Condition for this entire job to run (and thus for deployment to potentially happen)
+    if: >
+      (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'release' && github.event.action == 'published') ||
+        (github.event_name == 'workflow_dispatch')
+      )
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies (including dev for reporting tools)
+        run: poetry install --no-interaction --with dev
+
+      - name: Generate Coverage report for Pages
+        # This step runs if the job's 'if' condition is met.
+        # COFFEE_MAKER_RUN_CI_TESTS is inherited from the job's 'env' block.
+        run: |
+          echo "In deploy_reports_job: COFFEE_MAKER_RUN_CI_TESTS is set to [${COFFEE_MAKER_RUN_CI_TESTS}]"
+          poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=html:reports/coverage || echo "Coverage generation step finished (may have failed but allowing workflow to continue for reporting)."
+
+      - name: Generate pip-audit text report for Pages
+        run: |
+          mkdir -p reports/pip_audit
+          poetry run pip-audit --output reports/pip_audit/pip_audit_report.txt || echo "Pip-audit report generation finished (may have found issues or errored, but allowing workflow to continue for reporting)."
+
+      - name: Create overall reports directory for Pages
+        run: mkdir -p gh_pages_artifact
+
+      - name: Copy Coverage report to Pages artifact directory
+        run: |
+          if [ -d "reports/coverage" ]; then
+            cp -r reports/coverage gh_pages_artifact/coverage
+            echo "Coverage report copied."
+          else
+            echo "Warning: Coverage report directory (reports/coverage) not found."
+            mkdir -p gh_pages_artifact/coverage
+            echo "<html><body><h1>Coverage report not generated.</h1></body></html>" > gh_pages_artifact/coverage/index.html
+          fi
+
+      - name: Copy pip-audit report and HTML wrapper to Pages artifact directory
+        run: |
+          mkdir -p gh_pages_artifact/pip_audit
+          GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          if [ -f "reports/pip_audit/pip_audit_report.txt" ]; then
+            cp reports/pip_audit/pip_audit_report.txt gh_pages_artifact/pip_audit/pip_audit_report.txt
+            WRAPPER_TEMPLATE_PATH=".github/workflows/pages_templates/pip_audit_wrapper.html"; DEST_WRAPPER_PATH="gh_pages_artifact/pip_audit/index.html"
+            if [ -f "$WRAPPER_TEMPLATE_PATH" ]; then cp "$WRAPPER_TEMPLATE_PATH" "$DEST_WRAPPER_PATH"; sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_WRAPPER_PATH"; echo "pip-audit HTML wrapper copied & timestamped.";
+            else echo "Warning: $WRAPPER_TEMPLATE_PATH not found."; echo "<html><body><h1><a href='pip_audit_report.txt'>pip_audit_report.txt</a></h1><p>Wrapper template missing. Generated: $GENERATED_TIMESTAMP</p></body></html>" > "$DEST_WRAPPER_PATH"; fi
+          else echo "Warning: reports/pip_audit/pip_audit_report.txt not found."; echo "<html><body><h1>pip-audit report not generated.</h1><p>$GENERATED_TIMESTAMP</p></body></html>" > gh_pages_artifact/pip_audit/index.html; fi
+
+      - name: Create main index.html for GitHub Pages
+        run: |
+          TEMPLATE_INDEX_PATH=".github/workflows/pages_templates/index.html"; DEST_INDEX_PATH="gh_pages_artifact/index.html"; GENERATED_TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          if [ -f "$TEMPLATE_INDEX_PATH" ]; then cp "$TEMPLATE_INDEX_PATH" "$DEST_INDEX_PATH"; sed -i "s|<!-- TIMESTAMP -->|$GENERATED_TIMESTAMP|g" "$DEST_INDEX_PATH"; echo "Main landing page copied & timestamped.";
+          else echo "Error: $TEMPLATE_INDEX_PATH not found. This is a required file."; exit 1; fi
+          echo "Main landing page successfully prepared."
+
+      - name: Add .nojekyll
+        run: touch gh_pages_artifact/.nojekyll
+
+      - name: Verify Pages artifact contents
+        run: |
+          echo "Listing contents of gh_pages_artifact directory before upload:"
+          ls -Rla gh_pages_artifact
+
+      - name: Upload HTML reports artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: gh_pages_artifact
+
+      - name: Deploy reports to GitHub Pages
+        id: deployment
+        # This step implicitly uses the job-level 'if' condition.
+        # It will only run if ci_checks_job succeeded (due to 'needs') AND
+        # the event type matched the job's 'if' condition.
+        # An additional 'if' can be added here for more fine-grained control if needed.
+        if: needs.ci_checks_job.result == 'success' # Explicitly check for CI success before deploying
+        uses: actions/deploy-pages@v4
