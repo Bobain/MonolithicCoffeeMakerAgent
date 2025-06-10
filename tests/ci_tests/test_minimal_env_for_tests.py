@@ -30,7 +30,7 @@ def test_coffee_maker_run_test_variable_is_set_to_true():
     # It does not raise an error if .env is not found.
     found_dotenv = load_dotenv()
 
-    if not found_dotenv:
+    if (not found_dotenv) and os.getenv(REQUIRED_ENV_VAR_NAME, None) is None:
         logger.warning(
             f"No .env file found. Test relies on '{REQUIRED_ENV_VAR_NAME}' "
             "being set either in .env or the system environment."
