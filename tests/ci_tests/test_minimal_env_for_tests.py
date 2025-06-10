@@ -41,11 +41,6 @@ def test_coffee_maker_run_test_variable_is_set_to_true():
     logger.info(f"Checking for environment variable: '{REQUIRED_ENV_VAR_NAME}'")
     env_var_value = os.getenv(REQUIRED_ENV_VAR_NAME)
 
-    assert env_var_value is not None, (
-        f"Environment variable '{REQUIRED_ENV_VAR_NAME}' not found. "
-        f"This variable is required, expected to be set to '{EXPECTED_ENV_VAR_VALUE}'."
-    )
-
     logger.info(f"Found '{REQUIRED_ENV_VAR_NAME}' with value: '{env_var_value}'")
 
     assert env_var_value == EXPECTED_ENV_VAR_VALUE, (
