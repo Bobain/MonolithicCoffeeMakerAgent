@@ -16,16 +16,13 @@ on:
         required: true
         type: string
         default: 'ubuntu-latest'
-      COFFEE_MAKER_RUN_CI_TESTS_VALUE:
-        description: 'Value for COFFEE_MAKER_RUN_CI_TESTS env var (e.g., "True" or "False")'
-        required: false
-        type: string
-        default: "True"
 
 jobs:
   perform-checks:
     name: CI Checks on Python ${{ inputs.python-version }} OS ${{ inputs.os }}
     runs-on: ${{ inputs.os }}
+    env:
+      COFFEE_MAKER_RUN_CI_TESTS: "True"
     defaults:
       run:
         shell: bash
@@ -61,8 +58,6 @@ jobs:
       - name: Install project and all dependencies
         run: poetry install --no-interaction --with dev
 
-      - name: Run tests/ci_tests with Coverage
-        env:
-          COFFEE_MAKER_RUN_CI_TESTS: ${{ inputs.COFFEE_MAKER_RUN_CI_TESTS_VALUE }}
+      - name: Run tests/ci_tests
         run: |
-          poetry run pytest tests/ci_tests/ -v --cov=coffee_maker --cov-report=term
+          poetry run pytest tests/ci_tests/
