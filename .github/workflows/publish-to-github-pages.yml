@@ -57,6 +57,8 @@ jobs:
       - name: Run Pytest with Coverage and HTML Report
         id: run_pytest # Give this step an ID
         # This step will continue even if tests fail, outcome will be checked later
+        env:
+          COFFEE_MAKER_RUN_CI_TESTS_VALUE: "True"
         run: |
           mkdir -p reports/pytest_report
           mkdir -p reports/coverage
