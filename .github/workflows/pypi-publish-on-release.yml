@@ -20,12 +20,10 @@ jobs:
   #--------------------------------------------------
   run_ci_checks:
     name: Perform CI Checks
-    uses: ./.github/workflows/reusable-ci-checks.yml # Assumes reusable-ci-checks.yml is in this path
+    uses: ./.github/workflows/reusable-ci-checks.yml
     with:
       python-version: "3.12" # Or your desired Python version for CI
       os: 'ubuntu-latest'
-      COFFEE_MAKER_RUN_CI_TESTS_VALUE: "True" # Ensure tests run as expected for releases
-    # No `secrets:` needed here for COFFEE_MAKER_RUN_CI_TESTS_VALUE if handled by input default or direct value
 
   #--------------------------------------------------
   # JOB 2: Build the package
