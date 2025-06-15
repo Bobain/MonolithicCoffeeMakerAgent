@@ -29,4 +29,5 @@ def test_known_bug_expected_to_fail_strictly() -> None:
     # or if the calculation was just plain wrong.
     # For demonstration, let's assume the buggy code returns a wrong number instead of crashing.
     buggy_calculation_result = numerator / denominator_from_buggy_code  # instead of, say, 2
-    assert buggy_calculation_result == 2, "Calculation affected by bug #XYZ is incorrect."
+    # This assertion is unreachable if ZeroDivisionError occurs as expected due to `denominator_from_buggy_code = 0`.
+    # assert buggy_calculation_result == 2, "Calculation affected by bug #XYZ is incorrect."
