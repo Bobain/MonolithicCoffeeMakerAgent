@@ -8,11 +8,12 @@ def test_feature_not_implemented_yet() -> None:
     This test checks for a feature that is known to be missing
     or a bug that is expected. It's marked as xfail.
     """
-    # Imagine this is a call to a function or method that isn't ready
-    # and would either raise an error or return an incorrect result.
-
-    with pytest.raises(NotImplementedError):
-        call_unimplemented_function()
+    try:
+        raise NotImplementedError("Oups, this is not yet implemented")
+    except NotImplementedError:
+        # Imagine this is a call to a function or method that does not even exists
+        with pytest.raises(NotImplementedError):
+            call_unimplemented_function()
 
 
 @pytest.mark.xfail(strict=True, reason="Known bug #XYZ: Division by zero under specific conditions.")
@@ -26,8 +27,4 @@ def test_known_bug_expected_to_fail_strictly() -> None:
     denominator_from_buggy_code = 0  # This would cause a ZeroDivisionError
 
     # This assertion will fail because of the ZeroDivisionError
-    # or if the calculation was just plain wrong.
-    # For demonstration, let's assume the buggy code returns a wrong number instead of crashing.
     buggy_calculation_result = numerator / denominator_from_buggy_code  # instead of, say, 2
-    # This assertion is unreachable if ZeroDivisionError occurs as expected due to `denominator_from_buggy_code = 0`.
-    # assert buggy_calculation_result == 2, "Calculation affected by bug #XYZ is incorrect."
