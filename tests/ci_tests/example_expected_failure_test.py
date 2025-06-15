@@ -16,7 +16,7 @@ def test_feature_not_implemented_yet() -> None:
 
 
 @pytest.mark.xfail(strict=True, reason="Known bug #XYZ: Division by zero under specific conditions.")
-def test_known_bug_expected_to_fail_strictly():
+def test_known_bug_expected_to_fail_strictly() -> None:
     """
     This test covers a known bug. If it unexpectedly passes (XPASS),
     the test suite will fail because strict=True. This helps to
