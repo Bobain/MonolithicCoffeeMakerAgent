@@ -3,7 +3,7 @@ import pytest
 
 
 @pytest.mark.xfail(reason="This feature (e.g., advanced_calculation) is not yet implemented.")
-def test_feature_not_implemented_yet():
+def test_feature_not_implemented_yet() -> None:
     """
     This test checks for a feature that is known to be missing
     or a bug that is expected. It's marked as xfail.
