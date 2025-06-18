@@ -13,7 +13,7 @@ DEFAULT_STYLEGUIDE_PATH = "./.gemini/styleguide.md"
 # Relative path to the .env file
 DEFAULT_ENV_FILE_PATH = "./.env"
 # Environment variable name for the API key
-API_KEY_ENV_VAR = "GEMINI_API_KEY"
+API_KEY_ENV_VAR = "GEMINI_API_KEY"  # Assuming you prefer this, as discussed
 
 # Delimiters for parsing LLM response
 MODIFIED_CODE_DELIMITER_START = "---MODIFIED_CODE_START---"
@@ -124,7 +124,6 @@ def parse_llm_response(llm_full_response: str) -> tuple[str | None, str | None]:
         else:
             print("Warning: Could not find modified code delimiters in LLM response.")
             # Fallback: assume the whole response is code if delimiters are missing
-            # This might happen if the model doesn't follow instructions perfectly.
             if EXPLANATIONS_DELIMITER_START not in llm_full_response:
                 modified_code = llm_full_response.strip()
 
@@ -135,7 +134,6 @@ def parse_llm_response(llm_full_response: str) -> tuple[str | None, str | None]:
             explanations = llm_full_response[start_expl_idx + len(EXPLANATIONS_DELIMITER_START) : end_expl_idx].strip()
         else:
             print("Warning: Could not find explanations delimiters in LLM response.")
-            # If code was found but explanations weren't, explanations remain None
 
         if not modified_code and not explanations and llm_full_response:
             print("Warning: Could not parse LLM response using delimiters. Treating entire response as modified code.")
@@ -154,10 +152,7 @@ def get_ai_suggestion(api_key: str, model_name: str, prompt: str) -> tuple[str |
         model = genai.GenerativeModel(model_name)
         print(f"Sending request to Gemini model '{model_name}'...")
 
-        # For code formatting and structured output, lower temperature is often better.
-        generation_config = genai.types.GenerationConfig(
-            candidate_count=1, temperature=0.1  # Lower temperature for more deterministic and structured output
-        )
+        generation_config = genai.types.GenerationConfig(candidate_count=1, temperature=0.1)
 
         response = model.generate_content(prompt, generation_config=generation_config)
 
@@ -168,11 +163,18 @@ def get_ai_suggestion(api_key: str, model_name: str, prompt: str) -> tuple[str |
             return None, None
 
         full_llm_output = response.text
+
+        # --- TEMPORARY DEBUGGING: Print raw LLM response ---
+        print("\n" + "=" * 20 + " RAW LLM RESPONSE " + "=" * 20)
+        print(full_llm_output)
+        print("=" * 58 + "\n")
+        # --- END TEMPORARY DEBUGGING ---
+
         return parse_llm_response(full_llm_output)
 
     except Exception as e:
         print(f"Error calling Gemini API: {e}")
-        if hasattr(e, "response") and e.response:  # Check for API specific error details
+        if hasattr(e, "response") and e.response:
             print(f"API Response Status: {e.response.status_code}")
             print(f"API Response Body: {e.response.text}")
         return None, None
@@ -184,30 +186,26 @@ def generate_and_write_diff(
     """Generates a diff and writes it to a .diff.<filename> file, including explanations."""
     original_filename = os.path.basename(target_file_path)
     diff_filename = f".diff.{original_filename}"
-    # Place the diff file in the same directory as the target file
     diff_file_path = os.path.join(os.path.dirname(target_file_path), diff_filename)
 
     original_lines = original_content.splitlines(keepends=True)
     modified_lines = modified_content.splitlines(keepends=True)
 
-    # Create a unified diff
-    # fromfile and tofile are conventional names used in diff headers
     diff_generator = difflib.unified_diff(
         original_lines,
         modified_lines,
         fromfile=f"a/{original_filename}",
         tofile=f"b/{original_filename}",
-        lineterm="",  # Avoids extra newlines if source lines already have them
+        lineterm="",
     )
 
     diff_content_list = list(diff_generator)
 
     if not diff_content_list and original_content.strip() == modified_content.strip():
-        print(f"No textual changes detected. Diff file '{diff_file_path}' will not be created.")
-        # If explanations exist even without code changes, we might still want to write them.
+        print(f"No textual changes detected.")
         if explanations:
             try:
-                with open(diff_file_path, "w", encoding="utf-8") as f:
+                with open(diff_file_path, "w", encoding="utf-8") as f:  # CORRECTED ENCODING
                     f.write(f"# AI Explanations for file: {original_filename}\n")
                     f.write("# No textual code changes were proposed by the AI.\n")
                     f.write("# However, the AI provided the following comments/explanations:\n")
@@ -218,15 +216,17 @@ def generate_and_write_diff(
             except Exception as e:
                 print(f"Error writing explanations (no code changes) to diff file '{diff_file_path}': {e}")
                 return False
-        return True  # No changes, no diff file needed beyond explanations.
+        else:
+            print(f"Diff file '{diff_file_path}' will not be created as there are no changes and no explanations.")
+        return True
 
     try:
-        with open(diff_file_path, "w", encoding="utf-utf-8") as f:
+        with open(diff_file_path, "w", encoding="utf-8") as f:  # CORRECTED ENCODING
             f.write(f"# Diff for {original_filename} (AI Suggested Changes)\n")
             f.write("# Generated by auto_gemini_styleguide.py\n")
             f.write("-" * 30 + " GIT-STYLE UNIFIED DIFF " + "-" * 30 + "\n")
             for line in diff_content_list:
-                f.write(line)  # These lines already have newlines if keepends=True was used
+                f.write(line)
 
             if explanations:
                 f.write("\n\n" + "-" * 30 + " AI EXPLANATIONS FOR CHANGES " + "-" * 30 + "\n")
@@ -247,9 +247,7 @@ def main():
         description="Autocorrects a file using Google AI according to a style guide and generates a diff with explanations.",
         formatter_class=argparse.RawTextHelpFormatter,
     )
-    parser.add_argument(
-        "target_file_path", help="The path to the Python file to autocorrect."  # This is now a positional argument
-    )
+    parser.add_argument("target_file_path", help="The path to the Python file to autocorrect.")
     parser.add_argument(
         "--styleguide",
         default=DEFAULT_STYLEGUIDE_PATH,
@@ -262,8 +260,8 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="gemini-1.5-flash-latest",  # Using a fast and capable model
-        help="The Gemini model to use (e.g., 'gemini-1.5-flash-latest', 'gemini-pro').",
+        default="gemini-1.5-flash-latest",
+        help="The Gemini model to use (e.g., 'gemini-1.5-flash-latest', 'gemini-pro', 'gemini-1.0-pro-latest').",
     )
     parser.add_argument(
         "--backup", action="store_true", help="Create a backup of the original file (as .bak) before overwriting."
@@ -295,20 +293,18 @@ def main():
         print(f"Creating backup: {backup_file_path}")
         if not write_file_content(backup_file_path, original_code_content):
             print("Warning: Failed to create backup. Proceeding cautiously.")
-            # Consider exiting if backup is critical: return 1
 
     prompt = construct_llm_prompt(style_guide_content, original_code_content, pathlib.Path(args.target_file_path).name)
-    # For debugging the prompt:
+    # For debugging the prompt (optional):
     # print("\n--- CONSTRUCTED PROMPT (snippet) ---")
-    # print(prompt[:1000] + "..." if len(prompt) > 1000 else prompt)
+    # print(prompt[:1500] + "..." if len(prompt) > 1500 else prompt)
     # print("--- END OF PROMPT SNIPPET ---\n")
 
     modified_code, explanations = get_ai_suggestion(api_key, args.model, prompt)
 
-    if modified_code is not None:  # Even if explanations are None, proceed if code is modified
+    if modified_code is not None:
         print("\n--- AI Suggestion Received ---")
 
-        # Generate and write the diff file, including explanations
         generate_and_write_diff(original_code_content, modified_code, args.target_file_path, explanations)
 
         if args.no_modify:

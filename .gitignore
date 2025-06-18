@@ -130,3 +130,6 @@ Thumbs.db
 
 # gradio data files
 .gradio/
+
+# diff files
+*.diff.*
