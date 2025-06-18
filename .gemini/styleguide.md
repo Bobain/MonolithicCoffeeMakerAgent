@@ -15,10 +15,7 @@ preferences within our team.
 # Deviations from PEP 8
 
 ## Line Length
-* **Maximum line length:** 120 characters (instead of PEP 8's 79).
-    * Modern screens allow for wider lines, improving code readability in many cases.
-    * Many common patterns in our codebase, like long strings or URLs, often exceed 79 characters.
-* Exception to this rule : if black would leave it as it is, then it is fine to have more than 120 characters
+* **Maximum line length:** 120 characters (instead of PEP 8's 79). But in the same cases as Black formatter would do, it is acceptable to have lines exceeding 120 characters. Just let Black decide
 
 ## Indentation
 * **Use 4 spaces per indentation level.** (PEP 8 recommendation)
