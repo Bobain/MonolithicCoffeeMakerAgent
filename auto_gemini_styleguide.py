@@ -1,4 +1,4 @@
-# co-author : Gemini Code Assist
+# co-author: Gemini Code Assist
 import argparse
 import difflib  # For generating diffs
 import os
@@ -13,7 +13,7 @@ DEFAULT_STYLEGUIDE_PATH = "./.gemini/styleguide.md"
 # Relative path to the .env file
 DEFAULT_ENV_FILE_PATH = "./.env"
 # Environment variable name for the API key
-API_KEY_ENV_VAR = "GEMINI_API_KEY"  # Assuming you prefer this, as discussed
+API_KEY_ENV_VAR = "GEMINI_API_KEY"  # As per your preference
 
 # Delimiters for parsing LLM response
 MODIFIED_CODE_DELIMITER_START = "---MODIFIED_CODE_START---"
@@ -114,33 +114,84 @@ def parse_llm_response(llm_full_response: str) -> tuple[str | None, str | None]:
     explanations = None
 
     try:
-        # Extract modified code
-        start_code_idx = llm_full_response.find(MODIFIED_CODE_DELIMITER_START)
-        end_code_idx = llm_full_response.find(MODIFIED_CODE_DELIMITER_END)
-        if start_code_idx != -1 and end_code_idx != -1 and start_code_idx < end_code_idx:
-            modified_code = llm_full_response[
-                start_code_idx + len(MODIFIED_CODE_DELIMITER_START) : end_code_idx
+        # Find main block delimiters
+        code_block_start_outer_idx = llm_full_response.find(MODIFIED_CODE_DELIMITER_START)
+        explanations_block_start_idx = llm_full_response.find(EXPLANATIONS_DELIMITER_START)
+        explanations_block_end_idx = llm_full_response.find(EXPLANATIONS_DELIMITER_END)
+
+        if code_block_start_outer_idx != -1 and explanations_block_start_idx != -1:
+            # The AI's code output is between MODIFIED_CODE_DELIMITER_START and EXPLANATIONS_DELIMITER_START.
+            # The AI is *supposed* to put MODIFIED_CODE_DELIMITER_END in this segment.
+
+            # Slice from after MODIFIED_CODE_DELIMITER_START to before EXPLANATIONS_DELIMITER_START
+            # This segment contains the AI's code output and its intended MODIFIED_CODE_DELIMITER_END
+            potential_code_block_with_its_end_delimiter = llm_full_response[
+                code_block_start_outer_idx + len(MODIFIED_CODE_DELIMITER_START) : explanations_block_start_idx
+            ]
+
+            # Now find the MODIFIED_CODE_DELIMITER_END within this specific segment.
+            # We use rfind because the AI should place its *actual* end delimiter at the end of this segment.
+            end_code_idx_within_segment = potential_code_block_with_its_end_delimiter.rfind(MODIFIED_CODE_DELIMITER_END)
+
+            if end_code_idx_within_segment != -1:
+                modified_code = potential_code_block_with_its_end_delimiter[:end_code_idx_within_segment].strip()
+            else:
+                # If MODIFIED_CODE_DELIMITER_END is missing within the segment,
+                # assume the whole segment (minus trailing whitespace) is the code.
+                # This can happen if the AI forgets the end delimiter for code but correctly starts explanations.
+                print(
+                    f"Warning: '{MODIFIED_CODE_DELIMITER_END}' not found between code start and explanations start. "
+                    "Taking content up to explanations as modified code."
+                )
+                modified_code = potential_code_block_with_its_end_delimiter.strip()
+        else:
+            # This case handles if the primary structure (code start or explanation start) is missing.
+            print("Warning: Could not find primary delimiters for code block start or explanations start.")
+            # Fallback to simpler parsing if the main structure is broken
+            # but individual start/end delimiters for code might exist.
+            first_start = llm_full_response.find(MODIFIED_CODE_DELIMITER_START)
+            first_end = llm_full_response.find(MODIFIED_CODE_DELIMITER_END)
+            if first_start != -1 and first_end != -1 and first_start < first_end:
+                # This is the old logic, less robust, but a fallback.
+                modified_code = llm_full_response[first_start + len(MODIFIED_CODE_DELIMITER_START) : first_end].strip()
+                print("Warning: Used fallback parsing for modified code.")
+            elif (
+                llm_full_response
+                and EXPLANATIONS_DELIMITER_START not in llm_full_response
+                and EXPLANATIONS_DELIMITER_END not in llm_full_response
+            ):
+                # If no explanation delimiters at all, assume whole thing is code
+                modified_code = llm_full_response.strip()
+                print("Warning: No explanation delimiters found. Treating entire response as modified code.")
+
+        # Extract explanations (this part was generally okay)
+        if explanations_block_start_idx != -1 and explanations_block_end_idx != -1:
+            explanations = llm_full_response[
+                explanations_block_start_idx + len(EXPLANATIONS_DELIMITER_START) : explanations_block_end_idx
             ].strip()
         else:
-            print("Warning: Could not find modified code delimiters in LLM response.")
-            # Fallback: assume the whole response is code if delimiters are missing
-            if EXPLANATIONS_DELIMITER_START not in llm_full_response:
+            print("Warning: Could not find delimiters for explanations block.")
+
+        # Final safety net: if absolutely no delimiters were found and response exists
+        if not modified_code and not explanations and llm_full_response:
+            all_delimiters_missing = all(
+                delim not in llm_full_response
+                for delim in [
+                    MODIFIED_CODE_DELIMITER_START,
+                    MODIFIED_CODE_DELIMITER_END,
+                    EXPLANATIONS_DELIMITER_START,
+                    EXPLANATIONS_DELIMITER_END,
+                ]
+            )
+            if all_delimiters_missing:
+                print(
+                    "Critical Warning: No delimiters found anywhere in the LLM response. "
+                    "Treating entire response as modified code. This is likely incorrect."
+                )
                 modified_code = llm_full_response.strip()
 
-        # Extract explanations
-        start_expl_idx = llm_full_response.find(EXPLANATIONS_DELIMITER_START)
-        end_expl_idx = llm_full_response.find(EXPLANATIONS_DELIMITER_END)
-        if start_expl_idx != -1 and end_expl_idx != -1 and start_expl_idx < end_expl_idx:
-            explanations = llm_full_response[start_expl_idx + len(EXPLANATIONS_DELIMITER_START) : end_expl_idx].strip()
-        else:
-            print("Warning: Could not find explanations delimiters in LLM response.")
-
-        if not modified_code and not explanations and llm_full_response:
-            print("Warning: Could not parse LLM response using delimiters. Treating entire response as modified code.")
-            modified_code = llm_full_response.strip()
-
     except Exception as e:
-        print(f"Error parsing LLM response: {e}")
+        print(f"Error during LLM response parsing: {e}")
 
     return modified_code, explanations
 
@@ -167,7 +218,7 @@ def get_ai_suggestion(api_key: str, model_name: str, prompt: str) -> tuple[str |
         # --- TEMPORARY DEBUGGING: Print raw LLM response ---
         print("\n" + "=" * 20 + " RAW LLM RESPONSE " + "=" * 20)
         print(full_llm_output)
-        print("=" * 58 + "\n")
+        print("=" * (40 + len(" RAW LLM RESPONSE ")) + "\n")  # Adjusted length for better formatting
         # --- END TEMPORARY DEBUGGING ---
 
         return parse_llm_response(full_llm_output)
@@ -205,7 +256,7 @@ def generate_and_write_diff(
         print(f"No textual changes detected.")
         if explanations:
             try:
-                with open(diff_file_path, "w", encoding="utf-8") as f:  # CORRECTED ENCODING
+                with open(diff_file_path, "w", encoding="utf-8") as f:
                     f.write(f"# AI Explanations for file: {original_filename}\n")
                     f.write("# No textual code changes were proposed by the AI.\n")
                     f.write("# However, the AI provided the following comments/explanations:\n")
@@ -221,7 +272,7 @@ def generate_and_write_diff(
         return True
 
     try:
-        with open(diff_file_path, "w", encoding="utf-8") as f:  # CORRECTED ENCODING
+        with open(diff_file_path, "w", encoding="utf-8") as f:
             f.write(f"# Diff for {original_filename} (AI Suggested Changes)\n")
             f.write("# Generated by auto_gemini_styleguide.py\n")
             f.write("-" * 30 + " GIT-STYLE UNIFIED DIFF " + "-" * 30 + "\n")
@@ -302,26 +353,38 @@ def main():
 
     modified_code, explanations = get_ai_suggestion(api_key, args.model, prompt)
 
-    if modified_code is not None:
+    if modified_code is not None:  # Check if modified_code is not None (even if empty string)
         print("\n--- AI Suggestion Received ---")
 
-        generate_and_write_diff(original_code_content, modified_code, args.target_file_path, explanations)
+        # Only generate diff and write file if modified_code is actually different
+        # or if there are explanations (even for no code change).
+        if modified_code.strip() != original_code_content.strip() or explanations:
+            generate_and_write_diff(original_code_content, modified_code, args.target_file_path, explanations)
 
-        if args.no_modify:
-            print(f"Original file '{args.target_file_path}' was NOT modified due to --no-modify flag.")
-        elif modified_code.strip() == original_code_content.strip():
-            print("AI returned identical code content. No changes made to the original file.")
-        else:
-            print(f"Attempting to write AI modified code back to '{args.target_file_path}'...")
-            print("IMPORTANT: Please review the changes carefully after the script finishes.")
-            if write_file_content(args.target_file_path, modified_code):
-                print("Original file successfully updated with AI suggestions.")
+            if args.no_modify:
+                print(f"Original file '{args.target_file_path}' was NOT modified due to --no-modify flag.")
+            elif modified_code.strip() == original_code_content.strip():
+                # This case might be hit if only explanations were provided for an identical code.
+                print("AI returned identical code content. No changes made to the original file based on code.")
             else:
-                print("Failed to write modified code to the original file.")
-                return 1
+                print(f"Attempting to write AI modified code back to '{args.target_file_path}'...")
+                print("IMPORTANT: Please review the changes carefully after the script finishes.")
+                if write_file_content(args.target_file_path, modified_code):
+                    print("Original file successfully updated with AI suggestions.")
+                else:
+                    print("Failed to write modified code to the original file.")
+                    return 1
+        else:
+            print("AI returned identical code content and no explanations. No changes made, no diff generated.")
         print("Process completed.")
     else:
-        print("Failed to get a valid suggestion from the AI. No changes made to the file. No diff generated.")
+        # This means get_ai_suggestion returned (None, explanations) or (None, None)
+        print("Failed to get a valid modified code block from the AI. No changes made to the file. No diff generated.")
+        if explanations:  # If explanations were returned but code was None
+            print("AI provided explanations, but no valid code block was parsed:")
+            print("-" * 20 + " EXPLANATIONS " + "-" * 20)
+            print(explanations)
+            print("-" * (40 + len(" EXPLANATIONS ")) + "\n")
         return 1
 
     return 0
