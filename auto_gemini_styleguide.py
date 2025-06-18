@@ -24,7 +24,14 @@ EXPLANATIONS_DELIMITER_END = "---EXPLANATIONS_END---"
 
 
 def load_api_key(env_file_path: str) -> str | None:
-    """Loads the Google API key from .env file or environment variables."""
+    """Loads the Google API key from .env file or environment variables.
+
+    Args:
+        env_file_path (str): The path to the .env file.
+
+    Returns:
+        str | None: The API key if found, otherwise None.
+    """
     if pathlib.Path(env_file_path).is_file():
         logging.info(f"Sourcing environment variables from '{env_file_path}'...")
         load_dotenv(dotenv_path=env_file_path, override=True)
