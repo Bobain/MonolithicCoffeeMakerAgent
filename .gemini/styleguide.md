@@ -29,6 +29,7 @@ preferences within our team.
     * Local application/library specific imports
 * **Absolute imports:** Always use absolute imports for clarity.
 * **Import order within groups:**  Sort alphabetically.
+* remove unused imports
 
 ## Naming Conventions
 
@@ -82,9 +83,15 @@ preferences within our team.
 * **Handle exceptions gracefully:** Provide informative error messages and avoid crashing the program.
 * **Use `try...except` blocks:**  Isolate code that might raise exceptions.
 
+# Miscellaneous
+* remove unused variables
+* consider all the code in this repo when making a change : try not to break anything, tests can never test everything
+
 # Tooling
 * **Code formatter:**  [Specify formatter, e.g., Black] - Enforces consistent formatting automatically.
 * **Linter:**  [Specify linter, e.g., Flake8, Pylint] - Identifies potential issues and style violations.
+
+
 
 # Example
 ```python
@@ -142,3 +149,4 @@ def authenticate_user(username: str, password: str) -> bool:
   except Exception as e:
       LOGGER.error("An error occurred during authentication: %s", e)
       return False
+```
