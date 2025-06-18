@@ -79,7 +79,7 @@ Provide ONLY the fully modified code. Do not include any explanations, apologies
 End this part with the delimiter "{MODIFIED_CODE_DELIMITER_END}" on a new line.
 
 Part 2: Explanations for Changes
-Begin this part with the delimiter "{EXPLANATIONS_DELIMITER_START}" on a new line.
+Begin this part with the delimiter "{EXPLANations_DELIMITER_START}" on a new line.
 List the significant changes you made to the code and briefly explain why each change was made, referencing the "STYLE GUIDE" rules where applicable.
 If no changes were made, state "No changes were necessary."
 End this part with the delimiter "{EXPLANATIONS_DELIMITER_END}" on a new line.
@@ -109,73 +109,105 @@ Now, provide your response following the structure above.
 
 
 def parse_llm_response(llm_full_response: str) -> tuple[str | None, str | None]:
-    """Parses the LLM's response to extract modified code and explanations using a split-based approach."""
+    """Parses the LLM's response to extract modified code and explanations."""
     modified_code = None
     explanations = None
-
-    # For debugging, let's see the representation of the first few chars
-    # print(f"DEBUG: Start of llm_full_response (repr): {repr(llm_full_response[:200])}")
+    print(f"DEBUG PARSER: Received LLM response length: {len(llm_full_response)}")
 
     try:
-        # Attempt to split the response into code and explanation sections
-        if EXPLANATIONS_DELIMITER_START in llm_full_response:
-            parts = llm_full_response.split(EXPLANATIONS_DELIMITER_START, 1)
-            potential_code_section = parts[
-                0
-            ]  # This should contain MODIFIED_CODE_START ... AI_CODE ... MODIFIED_CODE_END
+        # Find the start of the AI's code block and explanation block
+        idx_actual_code_payload_start = -1
+        idx_actual_code_payload_end = -1
+        idx_explanation_payload_start = -1
 
-            # Extract code after MODIFIED_CODE_DELIMITER_START
-            if MODIFIED_CODE_DELIMITER_START in potential_code_section:
-                actual_code_with_its_end_delimiter = potential_code_section.split(MODIFIED_CODE_DELIMITER_START, 1)[-1]
-            else:
-                # AI might have forgotten MODIFIED_CODE_DELIMITER_START but included EXPLANATIONS_DELIMITER_START
-                print(f"Warning: '{MODIFIED_CODE_DELIMITER_START}' not found before '{EXPLANATIONS_DELIMITER_START}'.")
-                actual_code_with_its_end_delimiter = potential_code_section  # Treat the whole first part as code
+        idx_code_start_delim = llm_full_response.find(MODIFIED_CODE_DELIMITER_START)
+        idx_expl_start_delim = llm_full_response.find(EXPLANATIONS_DELIMITER_START)
 
-            # Extract code before MODIFIED_CODE_DELIMITER_END using rsplit
-            if MODIFIED_CODE_DELIMITER_END in actual_code_with_its_end_delimiter:
-                modified_code_parts = actual_code_with_its_end_delimiter.rsplit(MODIFIED_CODE_DELIMITER_END, 1)
-                modified_code = modified_code_parts[0].strip()
-            else:
-                # AI might have forgotten MODIFIED_CODE_DELIMITER_END
-                print(f"Warning: '{MODIFIED_CODE_DELIMITER_END}' not found in the identified code section.")
-                modified_code = actual_code_with_its_end_delimiter.strip()  # Take the whole segment
-
-            # Extract explanations
-            if len(parts) > 1:
-                potential_explanation_section = parts[1]  # This should contain EXPLANATIONS ... EXPLANATIONS_END
-                if EXPLANATIONS_DELIMITER_END in potential_explanation_section:
-                    explanation_parts = potential_explanation_section.split(EXPLANATIONS_DELIMITER_END, 1)
-                    explanations = explanation_parts[0].strip()
-                else:
-                    # AI might have forgotten EXPLANATIONS_DELIMITER_END
-                    print(f"Warning: '{EXPLANATIONS_DELIMITER_END}' not found after explanations start.")
-                    explanations = potential_explanation_section.strip()
+        if idx_code_start_delim != -1:
+            idx_actual_code_payload_start = idx_code_start_delim + len(MODIFIED_CODE_DELIMITER_START)
         else:
-            # No EXPLANATIONS_DELIMITER_START found, implies the structure is significantly broken
-            # or the AI only provided code.
-            print(
-                f"Warning: '{EXPLANATIONS_DELIMITER_START}' not found in LLM response. Attempting to parse code block only."
-            )
-            if MODIFIED_CODE_DELIMITER_START in llm_full_response:
-                temp_code_section = llm_full_response.split(MODIFIED_CODE_DELIMITER_START, 1)[-1]
-                if MODIFIED_CODE_DELIMITER_END in temp_code_section:
-                    modified_code = temp_code_section.split(MODIFIED_CODE_DELIMITER_END, 1)[0].strip()
-                else:
-                    print(f"Warning: Found '{MODIFIED_CODE_DELIMITER_START}' but no '{MODIFIED_CODE_DELIMITER_END}'.")
-                    modified_code = temp_code_section.strip()  # Take what's after start
+            print(f"Warning PARSER: '{MODIFIED_CODE_DELIMITER_START}' not found.")
+
+        if idx_expl_start_delim != -1:
+            idx_explanation_payload_start = idx_expl_start_delim + len(EXPLANATIONS_DELIMITER_START)
+            # The AI's code block should end before the explanations start
+            idx_actual_code_payload_end = idx_expl_start_delim
+        else:
+            print(f"Warning PARSER: '{EXPLANATIONS_DELIMITER_START}' not found.")
+            # If no explanation start, the code block might go to the end of the response,
+            # so we'd look for MODIFIED_CODE_DELIMITER_END there.
+            if idx_actual_code_payload_start != -1:  # Only if code block started
+                idx_actual_code_payload_end = llm_full_response.rfind(
+                    MODIFIED_CODE_DELIMITER_END, idx_actual_code_payload_start
+                )
+                if idx_actual_code_payload_end == -1:  # MODIFIED_CODE_DELIMITER_END not found after start
+                    idx_actual_code_payload_end = len(llm_full_response)  # Assume code goes to end
+                    print(
+                        f"Warning PARSER: No explanation start and '{MODIFIED_CODE_DELIMITER_END}' not found after code start. Assuming code to end of response."
+                    )
+
+        # Extract Explanations
+        if idx_explanation_payload_start != -1:
+            idx_expl_end_delim = llm_full_response.find(EXPLANATIONS_DELIMITER_END, idx_explanation_payload_start)
+            if idx_expl_end_delim != -1:
+                explanations = llm_full_response[idx_explanation_payload_start:idx_expl_end_delim].strip()
             else:
-                # No primary delimiters found at all
                 print(
-                    "Critical Warning: No primary delimiters found. Treating entire response as modified code. This is likely incorrect."
+                    f"Warning PARSER: '{EXPLANATIONS_DELIMITER_END}' not found after explanations start. Taking rest as explanation."
+                )
+                explanations = llm_full_response[idx_explanation_payload_start:].strip()
+
+        # Extract Modified Code
+        if (
+            idx_actual_code_payload_start != -1
+            and idx_actual_code_payload_end != -1
+            and idx_actual_code_payload_start < idx_actual_code_payload_end
+        ):
+            # This segment contains the AI's code AND its intended MODIFIED_CODE_DELIMITER_END
+            code_segment_with_its_end_delimiter = llm_full_response[
+                idx_actual_code_payload_start:idx_actual_code_payload_end
+            ]
+
+            # Now, remove the AI's *actual* MODIFIED_CODE_DELIMITER_END from the end of this segment
+            if code_segment_with_its_end_delimiter.rstrip().endswith(MODIFIED_CODE_DELIMITER_END):
+                # rstrip() handles potential newlines before the delimiter
+                modified_code = code_segment_with_its_end_delimiter.rstrip()[
+                    : -len(MODIFIED_CODE_DELIMITER_END)
+                ].strip()
+            else:
+                # The AI might have forgotten its MODIFIED_CODE_DELIMITER_END
+                print(
+                    f"Warning PARSER: AI's code segment did not end with '{MODIFIED_CODE_DELIMITER_END}'. Using segment as is."
+                )
+                modified_code = code_segment_with_its_end_delimiter.strip()
+        elif idx_actual_code_payload_start != -1 and idx_expl_start_delim == -1 and idx_actual_code_payload_end == -1:
+            # This case means MODIFIED_CODE_START was found, but no EXPLANATION_START and no MODIFIED_CODE_END after it.
+            # This implies the AI might have only sent the code start and then the code.
+            print(f"Warning PARSER: Only found '{MODIFIED_CODE_DELIMITER_START}'. Assuming rest of response is code.")
+            modified_code = llm_full_response[idx_actual_code_payload_start:].strip()
+
+        # Fallback if everything else failed but we have some response
+        if modified_code is None and not explanations and llm_full_response:
+            all_delimiters_missing = all(
+                delim not in llm_full_response
+                for delim in [
+                    MODIFIED_CODE_DELIMITER_START,
+                    MODIFIED_CODE_DELIMITER_END,
+                    EXPLANATIONS_DELIMITER_START,
+                    EXPLANATIONS_DELIMITER_END,
+                ]
+            )
+            if all_delimiters_missing:
+                print(
+                    "Critical Warning PARSER: No delimiters found anywhere. Treating entire response as modified code."
                 )
                 modified_code = llm_full_response.strip()
 
     except Exception as e:
         print(f"Error during LLM response parsing: {e}")
 
-    # print(f"DEBUG: Parsed modified_code (first 100 chars): {repr(modified_code[:100]) if modified_code else 'None'}")
-    # print(f"DEBUG: Parsed explanations (first 100 chars): {repr(explanations[:100]) if explanations else 'None'}")
+    print(f"DEBUG PARSER: Final modified_code (first 100): {repr(modified_code[:100]) if modified_code else 'None'}")
+    print(f"DEBUG PARSER: Final explanations (first 100): {repr(explanations[:100]) if explanations else 'None'}")
     return modified_code, explanations
 
 
@@ -186,7 +218,6 @@ def get_ai_suggestion(api_key: str, model_name: str, prompt: str) -> tuple[str |
         model = genai.GenerativeModel(model_name)
         print(f"Sending request to Gemini model '{model_name}'...")
 
-        # Corrected variable name here (single underscore)
         generation_config = genai.types.GenerationConfig(candidate_count=1, temperature=0.1)
 
         response = model.generate_content(prompt, generation_config=generation_config)
@@ -202,9 +233,6 @@ def get_ai_suggestion(api_key: str, model_name: str, prompt: str) -> tuple[str |
         # --- TEMPORARY DEBUGGING: Print raw LLM response ---
         print("\n" + "=" * 20 + " RAW LLM RESPONSE " + "=" * 20)
         print(full_llm_output)  # Print the full raw response
-        # For more detailed debugging of potential hidden characters:
-        # print("Representation of RAW LLM response (first 500 chars):")
-        # print(repr(full_llm_output[:500]))
         print("=" * (40 + len(" RAW LLM RESPONSE ")) + "\n")
         # --- END TEMPORARY DEBUGGING ---
 
