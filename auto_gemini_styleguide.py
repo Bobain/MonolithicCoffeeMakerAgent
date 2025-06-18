@@ -186,7 +186,8 @@ def get_ai_suggestion(api_key: str, model_name: str, prompt: str) -> tuple[str |
         model = genai.GenerativeModel(model_name)
         print(f"Sending request to Gemini model '{model_name}'...")
 
-        generation__config = genai.types.GenerationConfig(candidate_count=1, temperature=0.1)
+        # Corrected variable name here (single underscore)
+        generation_config = genai.types.GenerationConfig(candidate_count=1, temperature=0.1)
 
         response = model.generate_content(prompt, generation_config=generation_config)
 
