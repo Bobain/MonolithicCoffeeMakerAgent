@@ -5,6 +5,7 @@ import logging
 import os
 import pathlib
 
+import google
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -234,8 +235,16 @@ def get_ai_suggestion(api_key: str, model_name: str, prompt: str) -> tuple[str |
 
         return parse_llm_response(full_llm_output)
 
+    except google.generativeai.types.BlockedPromptException as bpe:
+        logging.error(f"Gemini API Error: Prompt was blocked. {bpe}")
+        # Potentially log bpe.response.prompt_feedback if available and relevant
+        return None, None
+    except google.api_core.exceptions.GoogleAPICallError as api_error:
+        logging.error(f"Google API Call Error: {api_error}")
+        # api_error often has structured details like api_error.code() or api_error.message
+        return None, None
     except Exception as e:
-        logging.exception(f"Error calling Gemini API: {e}")
+        logging.exception(f"Unexpected error calling Gemini API: {e}")
         if hasattr(e, "response") and e.response:
             logging.error(f"API Response Status: {e.response.status_code}")
             logging.error(f"API Response Body: {e.response.text}")
@@ -307,6 +316,7 @@ def generate_and_write_diff(
 
 
 def main():
+    """Main function to autocorrect a file using Google AI and generate a diff."""
     # Configure logging at the beginning of main or at module level
     logging.basicConfig(
         level=logging.DEBUG,  # Set to DEBUG to see all parser logs
@@ -404,5 +414,7 @@ def main():
 
 
 if __name__ == "__main__":
+    import sys
+
     exit_code = main()
-    exit(exit_code)
+    sys.exit(exit_code)
