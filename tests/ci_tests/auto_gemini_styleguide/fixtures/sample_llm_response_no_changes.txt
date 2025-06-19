@@ -1,0 +1,11 @@
+    ---MODIFIED_CODE_START---
+    # A simple function
+    def hello(name):
+      print(f"Hello, {name}!")
+
+    # Unused variable
+    unused_var = 10
+    ---MODIFIED_CODE_END---
+    ---EXPLANATIONS_START---
+    No changes were necessary.
+    ---EXPLANATIONS_END---

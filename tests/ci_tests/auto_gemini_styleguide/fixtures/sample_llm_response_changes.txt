@@ -1,0 +1,11 @@
+    ---MODIFIED_CODE_START---
+    # A simple function
+    def hello(name: str) -> None:
+        """Greets the user."""
+        logging.info(f"Hello, {name}!")
+    ---MODIFIED_CODE_END---
+    ---EXPLANATIONS_START---
+    - Added type hints to `hello` function.
+    - Replaced `print` with `logging.info`.
+    - Removed `unused_var`.
+    ---EXPLANATIONS_END---
