@@ -6,8 +6,8 @@ def test_feature_not_implemented_yet() -> None:
     """This test checks for a feature that is known to be missing or a bug that is expected. It's marked as xfail."""
     try:
         raise NotImplementedError("Oups, this is not yet implemented")
-    except:
-        call_unimplemented_function()
+    except NotImplementedError:  # Specify the expected exception
+        call_unimplemented_function()  # This will raise a NameError : this is another exemple of something not yet implemented
 
 
 @pytest.mark.xfail(strict=True, reason="Known bug #XYZ: Division by zero under specific conditions.")
@@ -16,5 +16,5 @@ def test_known_bug_expected_to_fail_strictly() -> None:
     This helps to identify when a bug marked as xfail has been fixed.
     """
     numerator = 10
-    denominator_from_buggy_code = 0  # This would cause a ZeroDivisionError
-    numerator / denominator_from_buggy_code
+    denominator_from_buggy_code = 0
+    numerator / denominator_from_buggy_code  # This would cause a ZeroDivisionError
