@@ -88,7 +88,7 @@ preferences within our team.
 # Tooling
 * **Code formatter:**  [Specify formatter, e.g., Black] - Enforces consistent formatting automatically.
 * **Linter:**  [Specify linter, e.g., Flake8, Pylint] - Identifies potential issues and style violations.
-
+* **Have a look at .pre-commit-config.yaml** to see what is advised to use as pre-commit tools
 
 
 # Example
