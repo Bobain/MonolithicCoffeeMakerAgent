@@ -108,6 +108,9 @@ STYLE GUIDE:
 {style_guide_content}
 ---
 
+As an additional rule to STYLE GUIDE :
+- Never ever add blank lines or spaces whatever the reason
+
 ORIGINAL CODE from '{file_name}':
 ---
 {code_to_modify}
