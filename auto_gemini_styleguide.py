@@ -304,11 +304,6 @@ def generate_and_write_diff(
 
 def main():
     """Main function to autocorrect a file using Google AI and generate a diff."""
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s",
-    )
-
     parser = argparse.ArgumentParser(
         description="Autocorrects a file using Google AI according to a style guide and generates a diff with explanations.",
         formatter_class=argparse.RawTextHelpFormatter,
@@ -335,8 +330,15 @@ def main():
     parser.add_argument(
         "--no-modify", action="store_true", help="Do not modify the original file. Only generate the .diff file."
     )
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging for more verbose output.")
 
     args = parser.parse_args()
+
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    logging.basicConfig(level=log_level, format="%(asctime)s - %(levelname)s - %(message)s")
+
+    logging.info(f"Logging level set to: {logging.getLevelName(log_level)}")
+
     logging.info("--- AI Code Style Corrector & Differ ---")
     api_key = load_api_key(args.envfile)
     if not api_key:
