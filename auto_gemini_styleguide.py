@@ -5,7 +5,6 @@ import logging
 import os
 import pathlib
 
-import google
 import google.generativeai as genai
 from dotenv import load_dotenv
 
