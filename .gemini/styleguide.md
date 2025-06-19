@@ -15,7 +15,7 @@ preferences within our team.
 # Deviations from PEP 8
 
 ## Line Length
-* **Maximum line length:** 120 characters (instead of PEP 8's 79). But in the same cases as Black formatter would do, it is acceptable to have lines exceeding 120 characters. Just do like Black would do
+* **Maximum line length:** 120 characters (instead of PEP 8's 79). This rule should be strictly enforced about docstrings or comments. But in the some other cases just do like Black Formatter would do, it might be acceptable to have lines exceeding 120 characters in some specific cases.
 
 ## Indentation
 * **Use 4 spaces per indentation level.** (PEP 8 recommendation)
