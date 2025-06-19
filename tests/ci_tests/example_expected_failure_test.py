@@ -7,7 +7,8 @@ def test_feature_not_implemented_yet() -> None:
     try:
         raise NotImplementedError("Oups, this is not yet implemented")
     except NotImplementedError:  # Specify the expected exception
-        call_unimplemented_function()  # This will raise a NameError : this is another exemple of something not yet implemented
+        # This will raise a NameError : this is just another exemple of something not yet implemented
+        call_unimplemented_function()
 
 
 @pytest.mark.xfail(strict=True, reason="Known bug #XYZ: Division by zero under specific conditions.")
