@@ -15,7 +15,7 @@ preferences within our team.
 # Deviations from PEP 8
 
 ## Line Length
-* **Maximum line length:** 120 characters (instead of PEP 8's 79). But in the same cases as Black formatter would do, it is acceptable to have lines exceeding 120 characters. Just let Black decide
+* **Maximum line length:** 120 characters (instead of PEP 8's 79). But in the same cases as Black formatter would do, it is acceptable to have lines exceeding 120 characters. Just do like Black would do
 
 ## Indentation
 * **Use 4 spaces per indentation level.** (PEP 8 recommendation)
@@ -82,8 +82,8 @@ preferences within our team.
 * **Use `try...except` blocks:**  Isolate code that might raise exceptions.
 
 # Miscellaneous
-* remove unused variables
-* consider all the code in this repo when making a change : try not to break anything, tests can never test everything
+* Remove unused variables
+* Consider all the code in this repo when making a change : try not to break anything, tests can never test everything
 
 # Tooling
 * **Code formatter:**  [Specify formatter, e.g., Black] - Enforces consistent formatting automatically.
