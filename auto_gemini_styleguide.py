@@ -347,7 +347,7 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="gemini-1.5-flash-latest",
+        default="gemini-2.0-flash-lite",
         help="The Gemini model to use (e.g., 'gemini-1.5-flash-latest', 'gemini-pro', 'gemini-1.0-pro-latest').",
     )
     parser.add_argument(
