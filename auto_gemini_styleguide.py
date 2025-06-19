@@ -5,9 +5,9 @@ import logging
 import os
 import pathlib
 
+from dotenv import load_dotenv
 import google
 import google.generativeai as genai
-from dotenv import load_dotenv
 
 # --- Configuration ---
 # Relative path to the style guide from the script's location or project root
