@@ -15,9 +15,7 @@ preferences within our team.
 # Deviations from PEP 8
 
 ## Line Length
-* **Maximum line length:** 120 characters (instead of PEP 8's 79).
-    * Modern screens allow for wider lines, improving code readability in many cases.
-    * Many common patterns in our codebase, like long strings or URLs, often exceed 79 characters.
+* **Maximum line length:** 120 characters (instead of PEP 8's 79). This rule should be strictly enforced about docstrings or comments. But in the some other cases just do like Black Formatter would do, it might be acceptable to have lines exceeding 120 characters in some specific cases.
 
 ## Indentation
 * **Use 4 spaces per indentation level.** (PEP 8 recommendation)
@@ -29,6 +27,7 @@ preferences within our team.
     * Local application/library specific imports
 * **Absolute imports:** Always use absolute imports for clarity.
 * **Import order within groups:**  Sort alphabetically.
+* remove unused imports
 
 ## Naming Conventions
 
@@ -78,13 +77,19 @@ preferences within our team.
 * **Provide context:** Include relevant information in log messages to aid debugging.
 
 ## Error Handling
-* **Use specific exceptions:** Avoid using broad exceptions like `Exception` when possible (do not over-engineer by trying to catch every specific Exceptions the code is still no mature enough to know what errors it can encounter).
+* **Use specific exceptions:** Avoid using broad exceptions like `Exception` when possible (@gemini-code-assist / reviewer bots: do not over-engineer by trying to catch every specific Exceptions the code is still no mature enough to know what errors it can encounter).
 * **Handle exceptions gracefully:** Provide informative error messages and avoid crashing the program.
 * **Use `try...except` blocks:**  Isolate code that might raise exceptions.
+
+# Miscellaneous
+* Remove unused variables
+* Consider all the code in this repo when making a change : try not to break anything, tests can never test everything
 
 # Tooling
 * **Code formatter:**  [Specify formatter, e.g., Black] - Enforces consistent formatting automatically.
 * **Linter:**  [Specify linter, e.g., Flake8, Pylint] - Identifies potential issues and style violations.
+* **Have a look at .pre-commit-config.yaml** to see what is advised to use as pre-commit tools
+
 
 # Example
 ```python
@@ -142,3 +147,4 @@ def authenticate_user(username: str, password: str) -> bool:
   except Exception as e:
       LOGGER.error("An error occurred during authentication: %s", e)
       return False
+```
