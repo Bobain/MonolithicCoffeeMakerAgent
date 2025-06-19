@@ -78,7 +78,7 @@ def write_file_content(file_path: str, content: str) -> bool:
 def construct_llm_prompt(style_guide_content: str, code_to_modify: str, file_name: str) -> str:
     """Constructs the prompt for the LLM, asking for modified code and explanations."""
     prompt = f"""You are an expert code formatting and styling assistant.
-Your task is to take the provided code snippet and reformat/restyle it to strictly adhere to the rules outlined in the "STYLE GUIDE" below.
+Your task is to take the provided code snippet and reformat/restyle it to adhere (with minimal changes : don't change the code logic) to the rules outlined in the "STYLE GUIDE" below.
 The code is from the file named '{file_name}'.
 
 Your response MUST be structured in two parts, using the exact delimiters provided:
