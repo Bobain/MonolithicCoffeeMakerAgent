@@ -109,7 +109,7 @@ STYLE GUIDE:
 ---
 
 As an additional rule to STYLE GUIDE :
-- Never ever add blank lines or spaces whatever the reason
+- Never ever add or remove blank lines or spaces whatever the reason
 
 ORIGINAL CODE from '{file_name}':
 ---
