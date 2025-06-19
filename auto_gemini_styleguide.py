@@ -131,7 +131,6 @@ def parse_llm_response(llm_full_response: str) -> tuple[str | None, str | None]:
         idx_explanation_end_delimiter = llm_full_response.find(EXPLANATIONS_DELIMITER_END)
 
         # --- Extract Explanations First ---
-        # This is often more straightforward if the AI terminates it correctly.
         if (
             idx_explanation_start_delimiter != -1
             and idx_explanation_end_delimiter != -1
@@ -139,13 +138,13 @@ def parse_llm_response(llm_full_response: str) -> tuple[str | None, str | None]:
         ):
             start_of_explanation_payload = idx_explanation_start_delimiter + len(EXPLANATIONS_DELIMITER_START)
             explanations = llm_full_response[start_of_explanation_payload:idx_explanation_end_delimiter].strip()
-        elif idx_explanation_start_delimiter != -1:  # Start found, but no end
+        elif idx_explanation_start_delimiter != -1:
             logging.warning(
                 f"PARSER: Found '{EXPLANATIONS_DELIMITER_START}' but no matching '{EXPLANATIONS_DELIMITER_END}'. Explanation block might be unterminated."
             )
             explanations = llm_full_response[
                 idx_explanation_start_delimiter + len(EXPLANATIONS_DELIMITER_START) :
-            ].strip()  # Take to end
+            ].strip()
         else:
             logging.warning(
                 f"PARSER: Could not find explanation block delimiters ('{EXPLANATIONS_DELIMITER_START}', '{EXPLANATIONS_DELIMITER_END}')."
@@ -154,31 +153,22 @@ def parse_llm_response(llm_full_response: str) -> tuple[str | None, str | None]:
         # --- Extract Modified Code ---
         if idx_code_start_delimiter != -1:
             start_of_code_payload = idx_code_start_delimiter + len(MODIFIED_CODE_DELIMITER_START)
-
-            # Determine the end of the AI's code block.
-            # It should be before EXPLANATIONS_DELIMITER_START if that exists,
-            # otherwise, we look for MODIFIED_CODE_DELIMITER_END globally after the code start.
             end_of_ai_code_block_boundary = -1
+
             if idx_explanation_start_delimiter != -1 and idx_explanation_start_delimiter > start_of_code_payload:
                 end_of_ai_code_block_boundary = idx_explanation_start_delimiter
             else:
-                # No explanation block, or it's before the code block (malformed response)
-                # Try to find the MODIFIED_CODE_DELIMITER_END after the code started
                 end_of_ai_code_block_boundary = llm_full_response.rfind(
                     MODIFIED_CODE_DELIMITER_END, start_of_code_payload
                 )
-                if end_of_ai_code_block_boundary == -1:  # MCE not found after MCS
-                    end_of_ai_code_block_boundary = len(llm_full_response)  # Assume code goes to end of response
+                if end_of_ai_code_block_boundary == -1:
+                    end_of_ai_code_block_boundary = len(llm_full_response)
                     logging.warning(
                         f"PARSER: No '{EXPLANATIONS_DELIMITER_START}' found after code, and no '{MODIFIED_CODE_DELIMITER_END}' found. Assuming code extends to end of response."
                     )
 
             if start_of_code_payload < end_of_ai_code_block_boundary:
-                # This segment is what the AI considers its code output, ending with its own MODIFIED_CODE_DELIMITER_END
                 ai_code_output_segment = llm_full_response[start_of_code_payload:end_of_ai_code_block_boundary]
-
-                # Now, remove the AI's *actual* MODIFIED_CODE_DELIMITER_END from the end of this segment
-                # Use rstrip() to handle potential newlines/whitespace before the AI's delimiter
                 stripped_ai_code_segment = ai_code_output_segment.rstrip()
 
                 if stripped_ai_code_segment.endswith(MODIFIED_CODE_DELIMITER_END):
@@ -188,19 +178,17 @@ def parse_llm_response(llm_full_response: str) -> tuple[str | None, str | None]:
                         f"PARSER: AI's code output segment (len {len(stripped_ai_code_segment)}) did not end with '{MODIFIED_CODE_DELIMITER_END}'. "
                         f"Segment tail (last 50 chars): '{repr(stripped_ai_code_segment[-50:])}'. Using segment as is (after stripping)."
                     )
-                    modified_code = stripped_ai_code_segment.strip()  # Use the segment as is, but stripped
+                    modified_code = stripped_ai_code_segment.strip()
             else:
                 logging.warning(
                     f"PARSER: Code start payload index ({start_of_code_payload}) not before code end boundary ({end_of_ai_code_block_boundary}). Cannot extract code."
                 )
-
-        else:  # MODIFIED_CODE_DELIMITER_START not found
+        else:
             logging.warning(f"PARSER: '{MODIFIED_CODE_DELIMITER_START}' not found. Cannot extract modified code.")
-            if not explanations and llm_full_response.strip():  # No code, no explanations, but response exists
+            if not explanations and llm_full_response.strip():
                 logging.warning(
                     "PARSER: No delimiters found, but response exists. Treating as malformed, no code/explanation extracted."
                 )
-
     except Exception as e:
         logging.exception(f"PARSER: Error during LLM response parsing: {e}")
 
@@ -217,7 +205,6 @@ def get_ai_suggestion(api_key: str, model_name: str, prompt: str) -> tuple[str |
         logging.info(f"Sending request to Gemini model '{model_name}'...")
 
         generation_config = genai.types.GenerationConfig(candidate_count=1, temperature=0.1)
-
         response = model.generate_content(prompt, generation_config=generation_config)
 
         if not response.candidates or not response.candidates[0].content.parts:
@@ -227,28 +214,17 @@ def get_ai_suggestion(api_key: str, model_name: str, prompt: str) -> tuple[str |
             return None, None
 
         full_llm_output = response.text
-
-        # --- DEBUGGING: Print raw LLM response ---
         logging.debug("\n" + "=" * 20 + " RAW LLM RESPONSE " + "=" * 20)
         logging.debug(f"Raw LLM Output Length: {len(full_llm_output)}")
-        # logging.debug(full_llm_output) # Uncomment to see the full raw output if needed
-        # For very detailed inspection of potential hidden characters:
-        # logging.debug("Representation of RAW LLM response (first 500 chars):")
-        # logging.debug(repr(full_llm_output[:500]))
-        # logging.debug("Representation of RAW LLM response (last 500 chars):")
-        # logging.debug(repr(full_llm_output[-500:]))
+        # logging.debug(full_llm_output) # Uncomment for full raw output
         logging.debug("=" * (40 + len(" RAW LLM RESPONSE ")) + "\n")
-        # --- END DEBUGGING ---
-
         return parse_llm_response(full_llm_output)
 
     except google.generativeai.types.BlockedPromptException as bpe:
         logging.error(f"Gemini API Error: Prompt was blocked. {bpe}")
-        # Potentially log bpe.response.prompt_feedback if available and relevant
         return None, None
     except google.api_core.exceptions.GoogleAPICallError as api_error:
         logging.error(f"Google API Call Error: {api_error}")
-        # api_error often has structured details like api_error.code() or api_error.message
         return None, None
     except Exception as e:
         logging.exception(f"Unexpected error calling Gemini API: {e}")
@@ -261,11 +237,27 @@ def get_ai_suggestion(api_key: str, model_name: str, prompt: str) -> tuple[str |
 def generate_and_write_diff(
     original_content: str, modified_content: str, target_file_path: str, explanations: str | None
 ) -> bool:
-    """Generates a diff and writes it to a .diff.<filename> file, including explanations."""
+    """
+    Generates a diff and writes it to a .diff.<filename> file if actual code changes exist.
+    Explanations are included in the diff file if changes were made, or logged if no code changes.
+    """
     original_filename = os.path.basename(target_file_path)
     diff_filename = f".diff.{original_filename}"
     diff_file_path = os.path.join(os.path.dirname(target_file_path), diff_filename)
 
+    # Primary condition: Only create a diff file if code content has actually changed.
+    if original_content.strip() == modified_content.strip():
+        logging.info("Code content is identical to the original after stripping whitespace.")
+        if explanations:
+            # Log explanations, but do not create the diff file for the code.
+            logging.info(f"AI provided explanations for no code change:\n{explanations}")
+        else:
+            logging.info("No explanations provided for identical code.")
+        logging.info(f"Diff file '{diff_file_path}' will NOT be created as there are no actual code changes.")
+        return True  # Operation considered successful, but no diff file generated for code.
+
+    # If we reach here, original_content.strip() != modified_content.strip(), so there are changes.
+    logging.info("Code content has changed. Generating diff file.")
     original_lines = original_content.splitlines(keepends=True)
     modified_lines = modified_content.splitlines(keepends=True)
 
@@ -276,37 +268,22 @@ def generate_and_write_diff(
         tofile=f"b/{original_filename}",
         lineterm="",
     )
-
     diff_content_list = list(diff_generator)
-
-    if not diff_content_list and original_content.strip() == modified_content.strip():
-        logging.info(f"No textual changes detected.")
-        if explanations:
-            try:
-                with open(diff_file_path, "w", encoding="utf-8") as f:
-                    f.write(f"# AI Explanations for file: {original_filename}\n")
-                    f.write("# No textual code changes were proposed by the AI.\n")
-                    f.write("# However, the AI provided the following comments/explanations:\n")
-                    f.write("-" * 30 + "\n")
-                    f.write(explanations + "\n")
-                logging.info(f"Wrote AI explanations (no code changes) to '{diff_file_path}'.")
-                return True
-            except Exception as e:
-                logging.exception(f"Error writing explanations (no code changes) to diff file '{diff_file_path}': {e}")
-                return False
-        else:
-            logging.info(
-                f"Diff file '{diff_file_path}' will not be created as there are no changes and no explanations."
-            )
-        return True
 
     try:
         with open(diff_file_path, "w", encoding="utf-8") as f:
             f.write(f"# Diff for {original_filename} (AI Suggested Changes)\n")
             f.write("# Generated by auto_gemini_styleguide.py\n")
             f.write("-" * 30 + " GIT-STYLE UNIFIED DIFF " + "-" * 30 + "\n")
-            for line in diff_content_list:
-                f.write(line)
+
+            if not diff_content_list:
+                logging.warning(
+                    "Difflib generated an empty diff list, but content comparison (strip) indicated a difference. This is unusual."
+                )
+                f.write("--- Difflib reported no changes, but content comparison (strip) differed. ---\n")
+            else:
+                for line in diff_content_list:
+                    f.write(line)
 
             if explanations:
                 f.write("\n\n" + "-" * 30 + " AI EXPLANATIONS FOR CHANGES " + "-" * 30 + "\n")
@@ -324,9 +301,8 @@ def generate_and_write_diff(
 
 def main():
     """Main function to autocorrect a file using Google AI and generate a diff."""
-    # Configure logging at the beginning of main or at module level
     logging.basicConfig(
-        level=logging.DEBUG,  # Set to DEBUG to see all parser logs
+        level=logging.DEBUG,
         format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s",
     )
 
@@ -347,8 +323,8 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="gemini-2.0-flash-lite",
-        help="The Gemini model to use (e.g., 'gemini-1.5-flash-latest', 'gemini-pro', 'gemini-1.0-pro-latest').",
+        default="gemini-1.5-flash-latest",  # Changed back to 1.5 as 2.0-flash-lite might not exist
+        help="The Gemini model to use (e.g., 'gemini-1.5-flash-latest', 'gemini-pro').",
     )
     parser.add_argument(
         "--backup", action="store_true", help="Create a backup of the original file (as .bak) before overwriting."
@@ -358,9 +334,7 @@ def main():
     )
 
     args = parser.parse_args()
-
     logging.info("--- AI Code Style Corrector & Differ ---")
-
     api_key = load_api_key(args.envfile)
     if not api_key:
         return 1
@@ -382,13 +356,14 @@ def main():
             logging.warning("Warning: Failed to create backup. Proceeding cautiously.")
 
     prompt = construct_llm_prompt(style_guide_content, original_code_content, pathlib.Path(args.target_file_path).name)
-
     modified_code, explanations = get_ai_suggestion(api_key, args.model, prompt)
 
     if modified_code is not None:
-        logging.info("--- AI Suggestion Received ---")  # Changed from print to logging.info
+        logging.info("--- AI Suggestion Received ---")
+        should_process_changes = modified_code.strip() != original_code_content.strip() or bool(explanations)
 
-        if modified_code.strip() != original_code_content.strip() or explanations:
+        if should_process_changes:
+            # generate_and_write_diff will now internally decide if a diff FILE is created
             generate_and_write_diff(original_code_content, modified_code, args.target_file_path, explanations)
 
             if args.no_modify:
@@ -410,13 +385,12 @@ def main():
         logging.error(
             "Failed to get a valid modified code block from the AI. No changes made to the file. No diff generated."
         )
-        if explanations:  # This means modified_code was None, but explanations might exist
+        if explanations:
             logging.info("AI provided explanations, but no valid code block was parsed:")
             logging.info("-" * 20 + " EXPLANATIONS " + "-" * 20)
-            logging.info(explanations)  # Log the explanations
+            logging.info(explanations)
             logging.info("-" * (40 + len(" EXPLANATIONS ")) + "\n")
         return 1
-
     return 0
 
 
