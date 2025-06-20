@@ -25,11 +25,13 @@ EXPLANATIONS_DELIMITER_START = "---EXPLANATIONS_START---"
 EXPLANATIONS_DELIMITER_END = "---EXPLANATIONS_END---"
 
 
-def load_api_key(env_file_path: str) -> str | None:
+def load_api_key(env_file_path: str, let_load_dotenv_search: bool = True) -> str | None:
     """Loads the Google API key from .env file or environment variables.
 
     Args:
         env_file_path (str): The path to the .env file.
+        let_load_dotenv_search (bool) : In case the .env does not contain hat is needed then use load_dot_env
+                                        without any path
 
     Returns:
         str | None: The API key if found, otherwise None.
@@ -46,7 +48,7 @@ def load_api_key(env_file_path: str) -> str | None:
         logging.critical(f"Error: API key not found in {env_file_path} environment variable")
         logging.info(f"You can get an API key from Google AI Studio (https://aistudio.google.com/app/apikey).")
 
-    if load_dotenv():
+    if let_load_dotenv_search and load_dotenv():
         api_key = os.getenv(API_KEY_ENV_VAR)
         if not api_key:
             logging.error("We tried load_dotenv without specifying the env_file_path but caould not find anything")
