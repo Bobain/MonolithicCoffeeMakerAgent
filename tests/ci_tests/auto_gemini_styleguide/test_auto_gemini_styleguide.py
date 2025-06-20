@@ -49,14 +49,18 @@ def test_load_api_key_from_file(temp_env_file_with_key, monkeypatch):
 
 def test_load_api_key_not_found(monkeypatch, caplog):
     """Test behavior when API key is not found in env or file."""
-    caplog.set_level(logging.CRITICAL)  # Ensure CRITICAL messages are captured
+    caplog.set_level(logging.WARNING)  # Changed to WARNING
     monkeypatch.delenv(ags.API_KEY_ENV_VAR, raising=False)
     monkeypatch.setattr(pathlib.Path, "is_file", lambda self: False)  # No .env file
 
     dummy_env_file_path = "dummy.env"
     assert ags.load_api_key(dummy_env_file_path, let_load_dotenv_search=False) is None
-    # Corrected assertion to match the actual CRITICAL log message
-    assert f"Error: API key not found in {dummy_env_file_path} environment variable" in caplog.text
+    # Corrected assertion to match the actual WARNING log message from the script
+    expected_log_message = (
+        f"Error: API key not found. Please set the {ags.API_KEY_ENV_VAR} environment variable "
+        f"or provide it in '{dummy_env_file_path}'."
+    )
+    assert expected_log_message in caplog.text
 
 
 # --- Tests for read_file_content & write_file_content ---

@@ -16,7 +16,7 @@ DEFAULT_STYLEGUIDE_PATH = ".gemini/styleguide.md"
 # Relative path to the .env file
 DEFAULT_ENV_FILE_PATH = ".env"
 # Environment variable name for the API key
-API_KEY_ENV_VAR = "GEMINI_API_KEY"  # As per your preference
+API_KEY_ENV_VAR = "COFFEE_MAKER_GEMINI_API_KEY"  # As per your preference
 
 # Delimiters for parsing LLM response
 MODIFIED_CODE_DELIMITER_START = "---MODIFIED_CODE_START---"
@@ -45,7 +45,10 @@ def load_api_key(env_file_path: str, let_load_dotenv_search: bool = True) -> str
 
     api_key = os.getenv(API_KEY_ENV_VAR)
     if not api_key:
-        logging.critical(f"Error: API key not found in {env_file_path} environment variable")
+        logging.warning(
+            f"Error: API key not found. Please set the {API_KEY_ENV_VAR} environment variable "
+            f"or provide it in '{env_file_path}'."
+        )
         logging.info(f"You can get an API key from Google AI Studio (https://aistudio.google.com/app/apikey).")
 
     if let_load_dotenv_search and load_dotenv():
@@ -53,6 +56,8 @@ def load_api_key(env_file_path: str, let_load_dotenv_search: bool = True) -> str
         if not api_key:
             logging.error("We tried load_dotenv without specifying the env_file_path but caould not find anything")
             return None
+        else:
+            logging.info(f"{API_KEY_ENV_VAR} was found by load_dotenv.")
 
     return api_key
 
