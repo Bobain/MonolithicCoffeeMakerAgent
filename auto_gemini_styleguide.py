@@ -377,8 +377,8 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="gemini-1.5-flash-latest",  # Changed back to 1.5 as 2.0-flash-lite might not exist or be preferred
-        help="The Gemini model to use (e.g., 'gemini-1.5-flash-latest', 'gemini-pro').",
+        default="gemini-2.0-flash-lite",
+        help="The Gemini model to use (e.g., 'gemini-2.0-flash-lite', 'gemini-1.5-flash-latest', 'gemini-pro').",
     )
     parser.add_argument(
         "--backup", action="store_true", help="Create a backup of the original file (as .bak) before overwriting."
