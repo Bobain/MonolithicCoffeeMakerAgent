@@ -30,8 +30,8 @@ def load_api_key(env_file_path: str, let_load_dotenv_search: bool = True) -> str
 
     Args:
         env_file_path (str): The path to the .env file.
-        let_load_dotenv_search (bool): If true and the API key is not found via `env_file_path` or system variables, 
-                                        `load_dotenv()` will be called to search default locations.
+        let_load_dotenv_search (bool): If True, and key not found via `env_file_path` or system vars,
+                                        `load_dotenv()` will search default locations.
 
     Returns:
         str | None: The API key if found, otherwise None.
