@@ -12,9 +12,9 @@ from dotenv import load_dotenv
 
 # --- Configuration ---
 # Relative path to the style guide from the script's location or project root
-DEFAULT_STYLEGUIDE_PATH = "../.gemini/styleguide.md"
+DEFAULT_STYLEGUIDE_PATH = ".gemini/styleguide.md"
 # Relative path to the .env file
-DEFAULT_ENV_FILE_PATH = "../.env"
+DEFAULT_ENV_FILE_PATH = ".env"
 # Environment variable name for the API key
 API_KEY_ENV_VAR = "GEMINI_API_KEY"  # As per your preference
 
@@ -43,12 +43,15 @@ def load_api_key(env_file_path: str) -> str | None:
 
     api_key = os.getenv(API_KEY_ENV_VAR)
     if not api_key:
-        logging.error(
-            f"Error: API key not found. Please set the {API_KEY_ENV_VAR} environment variable "
-            f"or provide it in '{env_file_path}'."
-        )
+        logging.critical(f"Error: API key not found in {env_file_path} environment variable")
         logging.info(f"You can get an API key from Google AI Studio (https://aistudio.google.com/app/apikey).")
-        return None
+
+    if load_dotenv():
+        api_key = os.getenv(API_KEY_ENV_VAR)
+        if not api_key:
+            logging.error("We tried load_dotenv without specifying the env_file_path but caould not find anything")
+            return None
+
     return api_key
 
 

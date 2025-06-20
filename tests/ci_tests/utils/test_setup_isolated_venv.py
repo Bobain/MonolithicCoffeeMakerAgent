@@ -92,7 +92,14 @@ def test_setup_uv_pip_new_venv_success(mock_path_exists, mock_subprocess_run, te
 
     for package in TEST_PACKAGES:
         install_call = mock.call(
-            ["uv", "pip", "install", "--python", str(expected_python_exe_path), package],
+            [
+                "uv",
+                "pip",
+                "install",
+                "--python",
+                str(expected_python_exe_path),
+                package,
+            ],
             check=True,
             capture_output=True,
             text=True,
@@ -232,10 +239,19 @@ def test_setup_uv_pip_venv_creation_fails(mock_subprocess_run, temp_venv_dir, ca
     mock_subprocess_run.side_effect = subprocess.CalledProcessError(
         returncode=1, cmd=["uv", "venv"], stderr="uv venv failed"
     )
-    with mock.patch("coffee_maker.utils.setup_isolated_venv.pathlib.Path.exists", return_value=False, autospec=True):
-        with pytest.raises(RuntimeError, match=f"Failed to set up or update virtual environment '{temp_venv_dir}'."):
+    with mock.patch(
+        "coffee_maker.utils.setup_isolated_venv.pathlib.Path.exists",
+        return_value=False,
+        autospec=True,
+    ):
+        with pytest.raises(
+            RuntimeError,
+            match=f"Failed to set up or update virtual environment '{temp_venv_dir}'.",
+        ):
             siv.setup_uv_pip(
-                venv_dir_path=temp_venv_dir, packages_to_install=TEST_PACKAGES, python_version=TEST_PYTHON_VERSION
+                venv_dir_path=temp_venv_dir,
+                packages_to_install=TEST_PACKAGES,
+                python_version=TEST_PYTHON_VERSION,
             )
     assert "Error during virtual environment operation" in caplog.text
     assert "uv venv failed" in caplog.text
@@ -266,9 +282,14 @@ def test_setup_uv_pip_package_install_fails(mock_path_exists, mock_subprocess_ru
 
     mock_path_exists.side_effect = path_exists_side_effect
 
-    with pytest.raises(RuntimeError, match=f"Failed to set up or update virtual environment '{temp_venv_dir}'."):
+    with pytest.raises(
+        RuntimeError,
+        match=f"Failed to set up or update virtual environment '{temp_venv_dir}'.",
+    ):
         siv.setup_uv_pip(
-            venv_dir_path=temp_venv_dir, packages_to_install=["failing_package"], python_version=TEST_PYTHON_VERSION
+            venv_dir_path=temp_venv_dir,
+            packages_to_install=["failing_package"],
+            python_version=TEST_PYTHON_VERSION,
         )
     assert "Error during virtual environment operation" in caplog.text
     assert "pip install failed" in caplog.text
@@ -278,14 +299,19 @@ def test_setup_uv_pip_uv_not_found(temp_venv_dir, caplog):
     """Test handling when 'uv' command is not found."""
     caplog.set_level(logging.ERROR)
     with mock.patch(
-        "coffee_maker.utils.setup_isolated_venv.subprocess.run", side_effect=FileNotFoundError("uv not found")
+        "coffee_maker.utils.setup_isolated_venv.subprocess.run",
+        side_effect=FileNotFoundError("uv not found"),
     ):
         with mock.patch(
-            "coffee_maker.utils.setup_isolated_venv.pathlib.Path.exists", return_value=False, autospec=True
+            "coffee_maker.utils.setup_isolated_venv.pathlib.Path.exists",
+            return_value=False,
+            autospec=True,
         ):
             with pytest.raises(FileNotFoundError, match="uv not found"):
                 siv.setup_uv_pip(
-                    venv_dir_path=temp_venv_dir, packages_to_install=TEST_PACKAGES, python_version=TEST_PYTHON_VERSION
+                    venv_dir_path=temp_venv_dir,
+                    packages_to_install=TEST_PACKAGES,
+                    python_version=TEST_PYTHON_VERSION,
                 )
     assert "`uv` command not found" in caplog.text
 
@@ -356,7 +382,10 @@ def test_setup_uv_pip_python_exe_missing_before_install(mock_path_exists, mock_s
 
     mock_path_exists.side_effect = specific_path_exists_side_effect
 
-    with pytest.raises(RuntimeError, match=f"Venv Python executable not found at '{str(expected_python_exe_path)}'."):
+    with pytest.raises(
+        RuntimeError,
+        match=f"Venv Python executable not found at '{str(expected_python_exe_path)}'.",
+    ):
         siv.setup_uv_pip(
             venv_dir_path=temp_venv_dir,
             packages_to_install=["some_package"],
