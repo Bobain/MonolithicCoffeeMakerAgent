@@ -54,7 +54,7 @@ def load_api_key(env_file_path: str, let_load_dotenv_search: bool = True) -> str
     if let_load_dotenv_search and load_dotenv():
         api_key = os.getenv(API_KEY_ENV_VAR)
         if not api_key:
-            logging.error("We tried load_dotenv without specifying the env_file_path but could not find anything")
+            logging.error("We tried load_dotenv() (which searches default locations like .env) without specifying env_file_path, but could not find the API key.")
             return None
         else:
             logging.info(f"{API_KEY_ENV_VAR} was found by load_dotenv.")
