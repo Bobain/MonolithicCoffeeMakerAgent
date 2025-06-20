@@ -18,7 +18,8 @@ def test_load_api_key_from_env_var(monkeypatch):
     monkeypatch.setenv(ags.API_KEY_ENV_VAR, "test_api_key_from_env")
     # Mock pathlib.Path.is_file to return False so it doesn't try to load from a file
     monkeypatch.setattr(pathlib.Path, "is_file", lambda self: False)
-    assert ags.load_api_key("dummy_env_path.env") == "test_api_key_from_env"
+    # Ensure the second load_dotenv call is not problematic for this test
+    assert ags.load_api_key("dummy_env_path.env", let_load_dotenv_search=False) == "test_api_key_from_env"
 
 
 def test_load_api_key_from_file(temp_env_file_with_key, monkeypatch):
@@ -40,16 +41,26 @@ def test_load_api_key_from_file(temp_env_file_with_key, monkeypatch):
     # Patch the os.getenv function within the ags module (where it's imported)
     monkeypatch.setattr(ags.os, "getenv", mock_getenv_after_load)
 
-    assert ags.load_api_key(str(temp_env_file_with_key)) == "test_api_key_from_file"
+    # Call with let_load_dotenv_search=False to isolate the file loading part
+    assert ags.load_api_key(str(temp_env_file_with_key), let_load_dotenv_search=False) == "test_api_key_from_file"
+    # Now assert_called_once_with should pass
     mock_load_dotenv.assert_called_once_with(dotenv_path=str(temp_env_file_with_key), override=True)
 
 
 def test_load_api_key_not_found(monkeypatch, caplog):
     """Test behavior when API key is not found in env or file."""
+    caplog.set_level(logging.WARNING)  # Changed to WARNING
     monkeypatch.delenv(ags.API_KEY_ENV_VAR, raising=False)
     monkeypatch.setattr(pathlib.Path, "is_file", lambda self: False)  # No .env file
-    assert ags.load_api_key("dummy.env") is None
-    assert f"Error: API key not found. Please set the {ags.API_KEY_ENV_VAR}" in caplog.text
+
+    dummy_env_file_path = "dummy.env"
+    assert ags.load_api_key(dummy_env_file_path, let_load_dotenv_search=False) is None
+    # Corrected assertion to match the actual WARNING log message from the script
+    expected_log_message = (
+        f"Error: API key not found. Please set the {ags.API_KEY_ENV_VAR} environment variable "
+        f"or provide it in '{dummy_env_file_path}'."
+    )
+    assert expected_log_message in caplog.text
 
 
 # --- Tests for read_file_content & write_file_content ---

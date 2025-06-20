@@ -45,7 +45,7 @@ def llm_response_malformed_content() -> str:
 @pytest.fixture
 def temp_env_file_with_key(tmp_path: pathlib.Path, monkeypatch) -> pathlib.Path:
     env_file = tmp_path / ".env"
-    env_file.write_text("GEMINI_API_KEY=test_api_key_from_file\n")
+    env_file.write_text("COFFEE_MAKER_GEMINI_API_KEY=test_api_key_from_file\n")
     # Ensure load_dotenv uses this temp file if it's called
     monkeypatch.setattr(pathlib.Path, "is_file", lambda self: self == env_file)
     return env_file
