@@ -12,9 +12,9 @@ from dotenv import load_dotenv
 
 # --- Configuration ---
 # Relative path to the style guide from the script's location or project root
-DEFAULT_STYLEGUIDE_PATH = "./.gemini/styleguide.md"
+DEFAULT_STYLEGUIDE_PATH = "../.gemini/styleguide.md"
 # Relative path to the .env file
-DEFAULT_ENV_FILE_PATH = "./.env"
+DEFAULT_ENV_FILE_PATH = "../.env"
 # Environment variable name for the API key
 API_KEY_ENV_VAR = "GEMINI_API_KEY"  # As per your preference
 
