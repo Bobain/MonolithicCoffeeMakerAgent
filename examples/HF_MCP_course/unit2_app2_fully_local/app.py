@@ -19,9 +19,9 @@
 # ==============================================================================
 
 import asyncio
+from functools import partial
 import logging
 import sys
-from functools import partial
 from typing import AsyncGenerator
 import gradio as gr
 from llama_index.core import Settings
