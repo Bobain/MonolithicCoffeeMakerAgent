@@ -1,10 +1,12 @@
 # app.py
 # co-author : Gemini 2.5 Pro Preview
 
-# --- Prerequisites ---
 # 1. Start Ollama server in a terminal:
 #    ollama serve
 #
+# 2. Make sure you have a capable model. 1B models struggle with ReAct.
+#    RECOMMENDED: ollama pull deepseek-r1:1.5b
+#    (or phi3, qwen2, etc.)
 # 2. Make sure you have the model:
 #    ollama pull llama3:8b
 #
@@ -23,37 +25,24 @@ from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
 from dummy_mcp_server_tools import PORT
 
 # --- Configuration ---
-OLLAMA_MODEL = "llama3:8b"
+OLLAMA_MODEL = "deepseek-r1:1.5b"
 MCP_SERVER_TOOL_URL = f"http://127.0.0.1:{PORT}/sse"
 
-# FIX: A high-quality, "few-shot" prompt demonstrating the full reasoning cycle.
-# This is the most effective way to guide the model.
+# This prompt is now focused only on getting the model to use tools correctly.
 SYSTEM_PROMPT = """
-You are an expert assistant that answers questions by using tools.
-You have access to a `get_weather` tool.
-Here is an example of how you should work:
----
-USER: What is the weather like in Toronto?
-ASSISTANT:
-Thought: I need to find the weather in Toronto. I will use the get_weather tool for this.
+You are an expert assistant that uses tools to answer questions.
+When you need to use a tool, you MUST respond in this format, and nothing else:
+Thought: I should use the get_weather tool to find the weather for the user's requested city.
 Action: get_weather
-Action Input: {"location": "Toronto"}
-
-Observation: Weather in Toronto: Cloudy, 5°C
-
-Thought: I have the weather information for Toronto. I will now provide the final answer to the user in a friendly, conversational way.
-Answer: The weather in Toronto is currently cloudy with a temperature of 5°C.
----
-
-Now, begin the conversation with the user.
+Action Input: {"location": "the user's requested city"}
 """
 
 
-async def get_agent(tools_spec: McpToolSpec) -> ReActAgent:
-    """Creates and configures the ReActAgent."""
+# We now need to pass the LLM instance along with the agent.
+async def get_agent_and_llm(tools_spec: McpToolSpec) -> tuple[ReActAgent, Ollama]:
+    """Creates and configures the ReActAgent and the LLM instance."""
     print("Fetching tools from MCP server...")
     tool_list = await tools_spec.to_tool_list_async()
-    # The agent gets the tool descriptions from the `from_tools` constructor.
     print(f"Tools fetched: {[tool.metadata.name for tool in tool_list]}")
 
     print("Initializing LLM and Agent...")
@@ -64,35 +53,72 @@ async def get_agent(tools_spec: McpToolSpec) -> ReActAgent:
         tools=tool_list,
         llm=llm,
         system_prompt=SYSTEM_PROMPT,
-        max_iterations=5,  # Keep a reasonable limit to prevent infinite loops
+        max_iterations=5,  # Keep a reasonable limit
         verbose=True
     )
     print("ReActAgent created.")
-    return agent
+    return agent, llm
 
 
-async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent):
+async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent, llm: Ollama):
     """
-    Runs the agent and streams the entire chain of thought and final answer.
+    Runs the agent to get tool output, then manually prompts the LLM for a final answer
+    if the agent fails to synthesize one.
     """
-    print(f"Streaming response for message: '{message}'")
+    print(f"--- Running Agent for message: '{message}' ---")
 
+    # === STAGE 1: Let the Agent use its tools ===
     response_stream = agent.stream_chat(message)
 
-    # We will build the full response, including thoughts and final answer,
-    # and stream it progressively.
-    full_response = ""
+    thinking_log = ""
+    if response_stream.source_nodes:
+        thinking_log = "🤔 **Thinking Process & Tool Calls:**\n\n```\n"
+        for node in response_stream.source_nodes:
+            tool_name = node.raw_input.get("tool_name", "unknown_tool")
+            tool_output_str = str(node.raw_output).strip()
+            thinking_log += f"Tool: {tool_name}\nResult: {tool_output_str}\n---\n"
+        thinking_log += "```\n\n"
+        yield thinking_log
 
-    # The 'thinking' part is now captured within the main token stream for ReActAgent
-    # We will stream out every token the agent produces.
-    async for token in response_stream.async_response_gen():
-        full_response += token
-        yield full_response
+    # === STAGE 2: Synthesize the Final Answer ===
+    final_answer = ""
+    llm_final_response = response_stream.response
 
-    # Fallback in case the stream ends but the final response attribute has content
-    # (can happen if the final step doesn't stream for some reason).
-    if not full_response and response_stream.response:
-        yield response_stream.response
+    # Check if the agent's final synthesized response is empty, BUT tools were used
+    if not llm_final_response and response_stream.source_nodes:
+        print("Agent used tools but failed to synthesize a final answer. Manually prompting LLM for summarization.")
+        last_observation = response_stream.source_nodes[-1].raw_output.content
+
+        # Construct a new, simple prompt for the final answer
+        final_prompt = (
+            f"The user originally asked: '{message}'.\n"
+            f"You have already gathered the following information: '{last_observation}'.\n"
+            f"Based on this information, please provide a direct, friendly, and complete answer to the user's original question. "
+            f"If the original question was in a different language, answer in that language. "
+            f"If unit conversions are needed (e.g., Fahrenheit to Celsius), perform them."
+        )
+
+        print(f"--- Manually prompting LLM with: '{final_prompt}' ---")
+
+        # Use the LLM directly for the final streaming response
+        response_generator = await llm.astream_complete(final_prompt)
+        async for token in response_generator:
+            final_answer += token.delta
+            yield thinking_log + final_answer
+
+    elif llm_final_response:
+        # The agent worked perfectly, including the final answer. Stream it.
+        print("Agent successfully generated a final answer.")
+        final_answer = llm_final_response
+        current_response = thinking_log
+        for char in str(final_answer):
+            current_response += char
+            yield current_response
+            await asyncio.sleep(0.02)
+    else:
+        # True failure case - no tool use and no response
+        print("Agent did not use tools and did not provide a response.")
+        yield thinking_log + "I'm sorry, I was unable to process your request."
 
 
 async def main():
@@ -101,23 +127,19 @@ async def main():
     try:
         mcp_client = BasicMCPClient(MCP_SERVER_TOOL_URL)
         mcp_tools_spec = McpToolSpec(mcp_client)
-        agent = await get_agent(mcp_tools_spec)
+        # Get both the agent and the llm object
+        agent, llm = await get_agent_and_llm(mcp_tools_spec)
 
-        agent_fn_with_context = partial(run_agent_chat_stream, agent=agent)
+        # Use partial to pass both agent and llm to our Gradio function
+        agent_fn_with_context = partial(run_agent_chat_stream, agent=agent, llm=llm)
 
         demo = gr.ChatInterface(
             fn=agent_fn_with_context,
-            chatbot=gr.Chatbot(
-                label="Agent Chat",
-                height=600,
-                show_copy_button=True,
-                # Use Markdown rendering to properly display "Thinking" logs if they appear
-                render_markdown=True
-            ),
+            chatbot=gr.Chatbot(label="Agent Chat", height=600, show_copy_button=True, render_markdown=True),
             textbox=gr.Textbox(placeholder="Ask me something...", label="Your Message"),
             examples=["Quel temps fait il à Paris?"],
-            title="Agent with MCP Tools (ReAct)",
-            description="This agent uses an Ollama model and tools to provide answers.",
+            title="Agent with MCP Tools (ReAct + Manual Summary)",
+            description="This agent uses an Ollama model and can use tools via MCP.",
         )
 
         print("Launching Gradio interface...")
