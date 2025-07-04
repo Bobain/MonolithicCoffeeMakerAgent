@@ -12,20 +12,28 @@
 #    python dummy_mcp_server_tools.py
 
 import asyncio
+from functools import partial
+
 import gradio as gr
-from functools import partial  # FIX: Import partial
+# Assuming dummy_mcp_server_tools.py defines PORT
+from dummy_mcp_server_tools import PORT
 from llama_index.core import Settings
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.ollama import Ollama
 from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
 
-# Assuming dummy_mcp_server_tools.py defines PORT
-from dummy_mcp_server_tools import PORT
-
 # --- Configuration ---
 OLLAMA_MODEL = "llama3.2:1b"
 MCP_SERVER_TOOL_URL = f"http://127.0.0.1:{PORT}/sse"
-SYSTEM_PROMPT = "You are a helpful assistant. Be concise and use the tools provided when necessary to answer questions."
+
+# FIX 2: Improved System Prompt with a clear example of the Action Input format
+SYSTEM_PROMPT = """
+You are a helpful assistant.
+When you use a tool, you must format your response as follows:
+Thought: The user wants to know the weather. I should use the get_weather tool.
+Action: get_weather
+Action Input: {"location": "San Francisco"}
+"""
 
 
 async def get_agent(tools_spec: McpToolSpec) -> ReActAgent:
@@ -36,14 +44,9 @@ async def get_agent(tools_spec: McpToolSpec) -> ReActAgent:
 
     print("Initializing LLM and Agent...")
     llm = Ollama(model=OLLAMA_MODEL, request_timeout=120.0)
-    Settings.llm = llm  # Set the LLM in global settings for LlamaIndex
+    Settings.llm = llm
 
-    agent = ReActAgent.from_tools(
-        tools=tool_list,
-        llm=llm,
-        system_prompt=SYSTEM_PROMPT,
-        verbose=True
-    )
+    agent = ReActAgent.from_tools(tools=tool_list, llm=llm, system_prompt=SYSTEM_PROMPT, verbose=True)
     print("ReActAgent created.")
     return agent
 
@@ -51,11 +54,10 @@ async def get_agent(tools_spec: McpToolSpec) -> ReActAgent:
 async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent):
     """
     Runs the agent using stream_chat and yields the response token by token.
-    This function is a generator, which is what Gradio needs for streaming.
     """
     print(f"Streaming response for message: '{message}'")
 
-    response_stream = await agent.stream_chat(message)
+    response_stream = agent.stream_chat(message)
 
     thinking_log = ""
     if response_stream.source_nodes:
@@ -68,22 +70,20 @@ async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent):
         yield thinking_log
 
     response_text = ""
-    async for token in response_stream.async_response_gen:
+    # FIX 1: Call the async_response_gen method with parentheses
+    async for token in response_stream.async_response_gen():
         response_text += token
-        yield thinking_log + response_text  # Yield the updated full string
+        yield thinking_log + response_text
 
 
 async def main():
     """Initializes resources and launches the Gradio application."""
-    mcp_client = None  # Initialize for the finally block
+    mcp_client = None
     try:
         mcp_client = BasicMCPClient(MCP_SERVER_TOOL_URL)
         mcp_tools_spec = McpToolSpec(mcp_client)
         agent = await get_agent(mcp_tools_spec)
 
-        # FIX: Use functools.partial to pre-fill the 'agent' argument.
-        # This gives Gradio a callable that it can pass 'message' and 'history' to,
-        # and that callable *is* our async generator.
         agent_fn_with_context = partial(run_agent_chat_stream, agent=agent)
 
         demo = gr.ChatInterface(
@@ -101,6 +101,7 @@ async def main():
     except Exception as e:
         print(f"An error occurred in main: {e}")
         import traceback
+
         traceback.print_exc()
     finally:
         print("Application cleanup (no explicit MCP disconnect needed for BasicMCPClient).")
