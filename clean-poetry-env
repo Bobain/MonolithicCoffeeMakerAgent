@@ -1,4 +1,6 @@
 #!/usr/bin/env zsh
+# I AM AFRAID this script is a big piece of shit and : "poetry lock --sync" would do the trick
+
 # co-author : Gemini 2.5 Pro Preview
 # Script to fully clean and reinstall a Poetry environment.
 # Uses pyenv (installing if needed) and a temporary 'python' symlink for robust Poetry operation.
