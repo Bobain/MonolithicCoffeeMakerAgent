@@ -24,15 +24,15 @@ import sys
 from functools import partial
 
 import gradio as gr
-
-# Assuming dummy_mcp_server_tools.py defines PORT
-from dummy_mcp_server_tools import PORT
 from llama_index.core import Settings
 from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.callbacks import CallbackManager, LlamaDebugHandler
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.llms.ollama import Ollama
 from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
+
+# Assuming dummy_mcp_server_tools.py defines PORT
+from dummy_mcp_server_tools import PORT
 
 # --- Logging Configuration ---
 # Set up a logger to provide detailed, timestamped output to the console.
