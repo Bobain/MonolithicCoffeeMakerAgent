@@ -85,7 +85,8 @@ class PackageTester:
                         frameworks.append("unittest")
                     elif "import nose" in content or "from nose" in content:
                         frameworks.append("nose")
-            except Exception:
+            except Exception as e:
+                print(f"Warning: Could not read or parse {test_file}: {e}", file=sys.stderr)
                 continue
 
         return list(set(frameworks)) or ["pytest"]  # Default to pytest
