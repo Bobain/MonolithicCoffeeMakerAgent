@@ -55,7 +55,14 @@ Action Input: {"location": "the user's requested city"}
 
 
 async def get_agent_and_llm(tools_spec: McpToolSpec) -> tuple[ReActAgent, Ollama]:
-    """Creates and configures the ReActAgent and the LLM instance."""
+    """Creates and configures the ReActAgent and the LLM instance.
+
+    Args:
+        tools_spec (McpToolSpec): The MCP tool specification to provide to the agent.
+
+    Returns:
+        tuple[ReActAgent, Ollama]: A tuple containing the configured agent and LLM instance.
+    """
     log.info("--- Step: Initializing Agent and LLM ---")
 
     # LlamaDebugHandler will print all LLM inputs/outputs and other events.
