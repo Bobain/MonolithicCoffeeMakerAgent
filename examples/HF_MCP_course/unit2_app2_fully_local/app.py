@@ -114,7 +114,7 @@ async def main():
         mcp_tools_spec = McpToolSpec(mcp_client)
         agent, llm = await get_agent_and_llm(mcp_tools_spec)
 
-        agent_fn_with_context = partial(run_agent_chat_stream, agent=agent, llm=llm)
+        agent_fn_with_context = partial(run_agent_chat_stream, agent=agent)
 
         demo = gr.ChatInterface(
             fn=agent_fn_with_context,
