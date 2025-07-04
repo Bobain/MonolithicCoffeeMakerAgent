@@ -2,7 +2,15 @@
 # co-author : Gemini 2.5 Pro Preview
 
 # --- Prerequisites ---
-# (Same as before)
+# 1. Start Ollama server in a terminal:
+#    ollama serve
+#
+# 2. Make sure you have a capable model. 1B models struggle with ReAct.
+#    RECOMMENDED: ollama pull llama3:8b
+#    (or phi3, qwen2, etc.)
+#
+# 3. Start the dummy MCP server in another terminal:
+#    python dummy_mcp_server_tools.py
 
 import asyncio
 import gradio as gr
@@ -12,26 +20,23 @@ from llama_index.core.agent import ReActAgent
 from llama_index.llms.ollama import Ollama
 from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
 
-# Assuming dummy_mcp_server_tools.py defines PORT
 from dummy_mcp_server_tools import PORT
 
 # --- Configuration ---
-OLLAMA_MODEL = "llama3.2:1b"
+# FIX 1: Use a more capable model for reliable tool use
+OLLAMA_MODEL = "llama3:8b"  # Changed from llama3.2:1b
 MCP_SERVER_TOOL_URL = f"http://127.0.0.1:{PORT}/sse"
 
-# FIX 2: A much more explicit ReAct prompt showing a full conversation turn
+# FIX 2: Even more direct and simple prompt. We removed the <tools> placeholder
+# as from_tools() often injects tool descriptions automatically.
 SYSTEM_PROMPT = """
-You are a helpful assistant. You have access to the following tools:
-<tools>
-To use a tool, you must use the following format:
-Thought: The user is asking for the weather. I need to use the 'get_weather' tool.
+You are a helpful assistant who can get the weather.
+To use the get_weather tool, you MUST respond in this format:
+Thought: I need to use the get_weather tool.
 Action: get_weather
-Action Input: {"location": "Paris"}
+Action Input: {"location": "the user's requested location"}
 
-After you get the observation from the tool, you must use it to answer the question.
-Your final answer should be in the following format:
-Thought: I have the weather information. I can now answer the user's question.
-Answer: The weather in Paris is Sunny, 72°F.
+After you get the observation from the tool, you MUST answer the user's question.
 """
 
 
@@ -42,13 +47,15 @@ async def get_agent(tools_spec: McpToolSpec) -> ReActAgent:
     print(f"Tools fetched: {[tool.metadata.name for tool in tool_list]}")
 
     print("Initializing LLM and Agent...")
+    # Increase max_iterations to give the agent more chances to self-correct if needed
     llm = Ollama(model=OLLAMA_MODEL, request_timeout=120.0)
     Settings.llm = llm
 
     agent = ReActAgent.from_tools(
         tools=tool_list,
         llm=llm,
-        system_prompt=SYSTEM_PROMPT,  # Using the new, more detailed prompt
+        system_prompt=SYSTEM_PROMPT,
+        max_iterations=10,  # Give it a few more tries
         verbose=True
     )
     print("ReActAgent created.")
@@ -58,7 +65,6 @@ async def get_agent(tools_spec: McpToolSpec) -> ReActAgent:
 async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent):
     """
     Runs the agent using stream_chat and yields the response token by token.
-    This version is more robust and handles empty final responses.
     """
     print(f"Streaming response for message: '{message}'")
 
@@ -74,22 +80,17 @@ async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent):
         thinking_log += "```\n\n"
         yield thinking_log
 
-    # FIX 1: Make the streaming loop more robust
     response_text = ""
-    token_found = False
-    # Use the corrected async_response_gen() call
     async for token in response_stream.async_response_gen():
         response_text += token
-        token_found = True
         yield thinking_log + response_text
 
-    # If the generator was empty (no final 'Answer:' from the LLM),
-    # construct a fallback response from the last observation.
-    if not token_found and response_stream.source_nodes:
+    # Fallback logic if the generator was empty
+    if not response_text and response_stream.source_nodes:
         last_observation = response_stream.source_nodes[-1].raw_output
         fallback_response = f"I found some information but couldn't formulate a final answer. Here is the raw tool output:\n\n`{str(last_observation)}`"
         yield thinking_log + fallback_response
-    elif not token_found:
+    elif not response_text:
         fallback_response = "I was unable to process the request or find an answer."
         yield thinking_log + fallback_response
 
