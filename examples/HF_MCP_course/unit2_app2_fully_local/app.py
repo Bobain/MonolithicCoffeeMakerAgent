@@ -22,7 +22,7 @@ import asyncio
 import logging
 import sys
 from functools import partial
-
+from typing import AsyncGenerator
 import gradio as gr
 from llama_index.core import Settings
 from llama_index.core.agent.workflow import ReActAgent
@@ -81,22 +81,24 @@ async def get_agent_and_llm(tools_spec: McpToolSpec) -> tuple[ReActAgent, Ollama
     log.info(
         f"Creating ReActAgent with the following system prompt:\n---PROMPT START---\n{SYSTEM_PROMPT}\n---PROMPT END---"
     )
-    # agent = ReActAgent.from_tools(
-    #     tools=tool_list,
-    #     llm=llm,
-    #     system_prompt=SYSTEM_PROMPT,
-    #     max_iterations=5,
-    #     verbose=True  # Keep verbose for LlamaIndex's own detailed prints
-    # )
     memory = ChatMemoryBuffer.from_defaults(token_limit=3000)
     agent = ReActAgent(tools=tool_list, llm=llm, memory=memory, system_prompt=SYSTEM_PROMPT, verbose=True)
     log.info("ReActAgent created successfully.")
     return agent, llm
 
 
-async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent, llm: Ollama):
-    """
-    Runs the agent
+async def run_agent_chat_stream(
+    message: str, history: list, agent: ReActAgent, llm: Ollama
+) -> AsyncGenerator[str, None]:
+    """Runs the agent for a given message and streams the response.
+
+    Args:
+        message (str): The user's input message.
+        _history (list): The chat history from the Gradio interface (currently unused).
+        agent (ReActAgent): The agent instance to run the query.
+        _llm (Ollama): The LLM instance (currently unused).
+    Yields:
+        str: The agent's response as a string.
     """
     log.info(f"--- Running Agent for user message: '{message}' ---")
     response = await agent.run(message)
