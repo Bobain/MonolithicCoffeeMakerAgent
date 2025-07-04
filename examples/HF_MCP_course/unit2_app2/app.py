@@ -2,37 +2,36 @@
 # co-author : Gemini 2.5 Pro Preview
 
 # --- Prerequisites ---
-# 1. Start Ollama server in a terminal:
-#    ollama serve
-#
-# 2. Make sure you have the model:
-#    ollama pull llama3.2:1b
-#
-# 3. Start the dummy MCP server in another terminal:
-#    python dummy_mcp_server_tools.py
+# (Same as before)
 
 import asyncio
-from functools import partial
-
 import gradio as gr
-# Assuming dummy_mcp_server_tools.py defines PORT
-from dummy_mcp_server_tools import PORT
+from functools import partial
 from llama_index.core import Settings
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.ollama import Ollama
 from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
 
+# Assuming dummy_mcp_server_tools.py defines PORT
+from dummy_mcp_server_tools import PORT
+
 # --- Configuration ---
 OLLAMA_MODEL = "llama3.2:1b"
 MCP_SERVER_TOOL_URL = f"http://127.0.0.1:{PORT}/sse"
 
-# FIX 2: Improved System Prompt with a clear example of the Action Input format
+# FIX 2: A much more explicit ReAct prompt showing a full conversation turn
 SYSTEM_PROMPT = """
-You are a helpful assistant.
-When you use a tool, you must format your response as follows:
-Thought: The user wants to know the weather. I should use the get_weather tool.
+You are a helpful assistant. You have access to the following tools:
+<tools>
+To use a tool, you must use the following format:
+Thought: The user is asking for the weather. I need to use the 'get_weather' tool.
 Action: get_weather
-Action Input: {"location": "San Francisco"}
+Action Input: {"location": "Paris"}
+
+After you get the observation from the tool, you must use it to answer the question.
+Your final answer should be in the following format:
+Thought: I have the weather information. I can now answer the user's question.
+Answer: The weather in Paris is Sunny, 72°F.
 """
 
 
@@ -46,7 +45,12 @@ async def get_agent(tools_spec: McpToolSpec) -> ReActAgent:
     llm = Ollama(model=OLLAMA_MODEL, request_timeout=120.0)
     Settings.llm = llm
 
-    agent = ReActAgent.from_tools(tools=tool_list, llm=llm, system_prompt=SYSTEM_PROMPT, verbose=True)
+    agent = ReActAgent.from_tools(
+        tools=tool_list,
+        llm=llm,
+        system_prompt=SYSTEM_PROMPT,  # Using the new, more detailed prompt
+        verbose=True
+    )
     print("ReActAgent created.")
     return agent
 
@@ -54,6 +58,7 @@ async def get_agent(tools_spec: McpToolSpec) -> ReActAgent:
 async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent):
     """
     Runs the agent using stream_chat and yields the response token by token.
+    This version is more robust and handles empty final responses.
     """
     print(f"Streaming response for message: '{message}'")
 
@@ -69,11 +74,24 @@ async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent):
         thinking_log += "```\n\n"
         yield thinking_log
 
+    # FIX 1: Make the streaming loop more robust
     response_text = ""
-    # FIX 1: Call the async_response_gen method with parentheses
+    token_found = False
+    # Use the corrected async_response_gen() call
     async for token in response_stream.async_response_gen():
         response_text += token
+        token_found = True
         yield thinking_log + response_text
+
+    # If the generator was empty (no final 'Answer:' from the LLM),
+    # construct a fallback response from the last observation.
+    if not token_found and response_stream.source_nodes:
+        last_observation = response_stream.source_nodes[-1].raw_output
+        fallback_response = f"I found some information but couldn't formulate a final answer. Here is the raw tool output:\n\n`{str(last_observation)}`"
+        yield thinking_log + fallback_response
+    elif not token_found:
+        fallback_response = "I was unable to process the request or find an answer."
+        yield thinking_log + fallback_response
 
 
 async def main():
@@ -101,7 +119,6 @@ async def main():
     except Exception as e:
         print(f"An error occurred in main: {e}")
         import traceback
-
         traceback.print_exc()
     finally:
         print("Application cleanup (no explicit MCP disconnect needed for BasicMCPClient).")
