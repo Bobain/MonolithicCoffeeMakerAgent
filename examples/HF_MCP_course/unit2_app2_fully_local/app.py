@@ -122,8 +122,8 @@ async def main():
             ),
             textbox=gr.Textbox(placeholder="Ask me something...", label="Your Message"),
             examples=["Quel temps fait il à Paris?"],
-            title="Agent with MCP Tools (ReAct + Manual Summary)",
-            description="This agent uses an Ollama model and can use tools via MCP.",
+            title="Agent with MCP Tools",
+            description="This agent uses an Ollama model and can use tools (dummy weather questions) via MCP.",
         )
 
         LOGGER.info("Launching Gradio interface...")
