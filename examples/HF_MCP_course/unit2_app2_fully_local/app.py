@@ -63,33 +63,31 @@ async def get_agent_and_llm(tools_spec: McpToolSpec) -> tuple[ReActAgent, Ollama
     Returns:
         tuple[ReActAgent, Ollama]: A tuple containing the configured agent and LLM instance.
     """
-    log.info("--- Step: Initializing Agent and LLM ---")
+    LOGGER.info("--- Step: Initializing Agent and LLM ---")
 
     # LlamaDebugHandler will print all LLM inputs/outputs and other events.
     llama_debug_handler = LlamaDebugHandler(print_trace_on_end=True)
     callback_manager = CallbackManager([llama_debug_handler])
     Settings.callback_manager = callback_manager
 
-    log.info("Fetching tools from MCP server...")
+    LOGGER.info("Fetching tools from MCP server...")
     tool_list = await tools_spec.to_tool_list_async()
-    log.info(f"Tools fetched: {[tool.metadata.name for tool in tool_list]}")
+    LOGGER.info(f"Tools fetched: {[tool.metadata.name for tool in tool_list]}")
 
-    log.info("Initializing LLM...")
+    LOGGER.info("Initializing LLM...")
     llm = Ollama(model=OLLAMA_MODEL, request_timeout=300)
     Settings.llm = llm
 
-    log.info(
+    LOGGER.info(
         f"Creating ReActAgent with the following system prompt:\n---PROMPT START---\n{SYSTEM_PROMPT}\n---PROMPT END---"
     )
     memory = ChatMemoryBuffer.from_defaults(token_limit=3000)
     agent = ReActAgent(tools=tool_list, llm=llm, memory=memory, system_prompt=SYSTEM_PROMPT, verbose=True)
-    log.info("ReActAgent created successfully.")
+    LOGGER.info("ReActAgent created successfully.")
     return agent, llm
 
 
-async def run_agent_chat_stream(
-    message: str, history: list, agent: ReActAgent, llm: Ollama
-) -> AsyncGenerator[str, None]:
+async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent) -> AsyncGenerator[str, None]:
     """Runs the agent for a given message and streams the response.
 
     Args:
@@ -100,9 +98,9 @@ async def run_agent_chat_stream(
     Yields:
         str: The agent's response as a string.
     """
-    log.info(f"--- Running Agent for user message: '{message}' ---")
+    LOGGER.info(f"--- Running Agent for user message: '{message}' ---")
     response = await agent.run(message)
-    log.info(f"Agent response: {response}")
+    LOGGER.info(f"Agent response: {response}")
     yield str(response)
 
 
@@ -128,13 +126,13 @@ async def main():
             description="This agent uses an Ollama model and can use tools via MCP.",
         )
 
-        log.info("Launching Gradio interface...")
+        LOGGER.info("Launching Gradio interface...")
         demo.launch()
 
     except Exception as e:
-        log.critical(f"A critical error occurred in main: {e}", exc_info=True)
+        LOGGER.critical(f"A critical error occurred in main: {e}", exc_info=True)
     finally:
-        log.info("Application cleanup (no explicit MCP disconnect needed for BasicMCPClient).")
+        LOGGER.info("Application cleanup (no explicit MCP disconnect needed for BasicMCPClient).")
 
 
 if __name__ == "__main__":
