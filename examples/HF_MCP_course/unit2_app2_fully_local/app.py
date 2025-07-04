@@ -37,7 +37,7 @@ from dummy_mcp_server_tools import PORT
 # --- Logging Configuration ---
 # Set up a logger to provide detailed, timestamped output to the console.
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-log = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 # --- Configuration ---
 OLLAMA_MODEL = "llama3:8b"
