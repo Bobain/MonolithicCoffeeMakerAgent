@@ -10,7 +10,7 @@ try:
     mcp_client = MCPClient({"url": "https://abidlabs-mcp-tool-http.hf.space/gradio_api/mcp/sse"})
     tools = mcp_client.get_tools()
 
-    model = InferenceClientModel(token=os.getenv("HUGGINGFACE_API_TOKEN"))
+    model = InferenceClientModel(token=os.getenv("HUGGING_FACE_HUB_TOKEN"))
     agent = CodeAgent(tools=[*tools], model=model, additional_authorized_imports=["json", "ast", "urllib", "base64"])
 
     demo = gr.ChatInterface(
