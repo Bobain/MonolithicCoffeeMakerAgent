@@ -5,9 +5,8 @@
 # 1. Start Ollama server in a terminal:
 #    ollama serve
 #
-# 2. Make sure you have a capable model. 1B models struggle with ReAct.
-#    RECOMMENDED: ollama pull llama3:8b
-#    (or phi3, qwen2, etc.)
+# 2. Make sure you have the model:
+#    ollama pull llama3:8b
 #
 # 3. Start the dummy MCP server in another terminal:
 #    python dummy_mcp_server_tools.py
@@ -20,23 +19,33 @@ from llama_index.core.agent import ReActAgent
 from llama_index.llms.ollama import Ollama
 from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
 
+# Assuming dummy_mcp_server_tools.py defines PORT
 from dummy_mcp_server_tools import PORT
 
 # --- Configuration ---
-# FIX 1: Use a more capable model for reliable tool use
-OLLAMA_MODEL = "llama3:8b"  # Changed from llama3.2:1b
+OLLAMA_MODEL = "llama3:8b"
 MCP_SERVER_TOOL_URL = f"http://127.0.0.1:{PORT}/sse"
 
-# FIX 2: Even more direct and simple prompt. We removed the <tools> placeholder
-# as from_tools() often injects tool descriptions automatically.
+# FIX: A high-quality, "few-shot" prompt demonstrating the full reasoning cycle.
+# This is the most effective way to guide the model.
 SYSTEM_PROMPT = """
-You are a helpful assistant who can get the weather.
-To use the get_weather tool, you MUST respond in this format:
-Thought: I need to use the get_weather tool.
+You are an expert assistant that answers questions by using tools.
+You have access to a `get_weather` tool.
+Here is an example of how you should work:
+---
+USER: What is the weather like in Toronto?
+ASSISTANT:
+Thought: I need to find the weather in Toronto. I will use the get_weather tool for this.
 Action: get_weather
-Action Input: {"location": "the user's requested location"}
+Action Input: {"location": "Toronto"}
 
-After you get the observation from the tool, you MUST answer the user's question.
+Observation: Weather in Toronto: Cloudy, 5°C
+
+Thought: I have the weather information for Toronto. I will now provide the final answer to the user in a friendly, conversational way.
+Answer: The weather in Toronto is currently cloudy with a temperature of 5°C.
+---
+
+Now, begin the conversation with the user.
 """
 
 
@@ -44,10 +53,10 @@ async def get_agent(tools_spec: McpToolSpec) -> ReActAgent:
     """Creates and configures the ReActAgent."""
     print("Fetching tools from MCP server...")
     tool_list = await tools_spec.to_tool_list_async()
+    # The agent gets the tool descriptions from the `from_tools` constructor.
     print(f"Tools fetched: {[tool.metadata.name for tool in tool_list]}")
 
     print("Initializing LLM and Agent...")
-    # Increase max_iterations to give the agent more chances to self-correct if needed
     llm = Ollama(model=OLLAMA_MODEL, request_timeout=120.0)
     Settings.llm = llm
 
@@ -55,7 +64,7 @@ async def get_agent(tools_spec: McpToolSpec) -> ReActAgent:
         tools=tool_list,
         llm=llm,
         system_prompt=SYSTEM_PROMPT,
-        max_iterations=10,  # Give it a few more tries
+        max_iterations=5,  # Keep a reasonable limit to prevent infinite loops
         verbose=True
     )
     print("ReActAgent created.")
@@ -64,35 +73,26 @@ async def get_agent(tools_spec: McpToolSpec) -> ReActAgent:
 
 async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent):
     """
-    Runs the agent using stream_chat and yields the response token by token.
+    Runs the agent and streams the entire chain of thought and final answer.
     """
     print(f"Streaming response for message: '{message}'")
 
     response_stream = agent.stream_chat(message)
 
-    thinking_log = ""
-    if response_stream.source_nodes:
-        thinking_log = "🤔 **Thinking Process & Tool Calls:**\n\n```\n"
-        for node in response_stream.source_nodes:
-            tool_name = node.raw_input.get("tool_name", "unknown_tool")
-            tool_output_str = str(node.raw_output).strip()
-            thinking_log += f"Tool: {tool_name}\nResult: {tool_output_str}\n---\n"
-        thinking_log += "```\n\n"
-        yield thinking_log
+    # We will build the full response, including thoughts and final answer,
+    # and stream it progressively.
+    full_response = ""
 
-    response_text = ""
+    # The 'thinking' part is now captured within the main token stream for ReActAgent
+    # We will stream out every token the agent produces.
     async for token in response_stream.async_response_gen():
-        response_text += token
-        yield thinking_log + response_text
+        full_response += token
+        yield full_response
 
-    # Fallback logic if the generator was empty
-    if not response_text and response_stream.source_nodes:
-        last_observation = response_stream.source_nodes[-1].raw_output
-        fallback_response = f"I found some information but couldn't formulate a final answer. Here is the raw tool output:\n\n`{str(last_observation)}`"
-        yield thinking_log + fallback_response
-    elif not response_text:
-        fallback_response = "I was unable to process the request or find an answer."
-        yield thinking_log + fallback_response
+    # Fallback in case the stream ends but the final response attribute has content
+    # (can happen if the final step doesn't stream for some reason).
+    if not full_response and response_stream.response:
+        yield response_stream.response
 
 
 async def main():
@@ -107,11 +107,17 @@ async def main():
 
         demo = gr.ChatInterface(
             fn=agent_fn_with_context,
-            chatbot=gr.Chatbot(label="Agent Chat", height=600, show_copy_button=True),
+            chatbot=gr.Chatbot(
+                label="Agent Chat",
+                height=600,
+                show_copy_button=True,
+                # Use Markdown rendering to properly display "Thinking" logs if they appear
+                render_markdown=True
+            ),
             textbox=gr.Textbox(placeholder="Ask me something...", label="Your Message"),
-            examples=["What is the weather in Paris?"],
+            examples=["Quel temps fait il à Paris?"],
             title="Agent with MCP Tools (ReAct)",
-            description="This agent uses an Ollama model and can use tools via MCP.",
+            description="This agent uses an Ollama model and tools to provide answers.",
         )
 
         print("Launching Gradio interface...")
