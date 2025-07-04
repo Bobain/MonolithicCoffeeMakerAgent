@@ -94,7 +94,6 @@ async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent) 
         message (str): The user's input message.
         _history (list): The chat history from the Gradio interface (currently unused).
         agent (ReActAgent): The agent instance to run the query.
-        _llm (Ollama): The LLM instance (currently unused).
     Yields:
         str: The agent's response as a string.
     """
