@@ -103,7 +103,7 @@ def find_process_on_port(port: int) -> Optional[psutil.Process]:
     return None  # No process found on the specified port
 
 
-class DeamonProcessOnPortHandler:
+class DaemonProcessOnPortHandler:
     def __init__(self, port: int, function_to_run: callable):
         self.port = port
         self.function_to_run = function_to_run
