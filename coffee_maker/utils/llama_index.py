@@ -80,9 +80,11 @@ async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent) 
     yield str(response)
 
 
-async def get_agent_func_with_context(mcp_server_tool_url: str) -> callable:
+async def get_agent_func_with_context(
+    mcp_server_tool_url: str, ollama_model: str = OLLAMA_MODEL, request_timeout: int = REQUEST_TIMEOUT
+) -> callable:
     mcp_client = BasicMCPClient(mcp_server_tool_url)
     mcp_tools_spec = McpToolSpec(mcp_client)
-    agent, llm = await get_agent_and_llm(mcp_tools_spec)
+    agent, llm = await get_agent_and_llm(mcp_tools_spec, ollama_model=ollama_model, request_timeout=request_timeout)
 
     return partial(run_agent_chat_stream, agent=agent)
