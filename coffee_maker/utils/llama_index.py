@@ -80,9 +80,26 @@ async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent) 
     yield str(response)
 
 
-async def get_agent_func_with_context(mcp_server_tool_url: str) -> callable:
+async def get_agent_func_with_context(
+    mcp_server_tool_url: str, ollama_model: str = OLLAMA_MODEL, request_timeout: int = REQUEST_TIMEOUT
+) -> callable:
+    """Creates a partially configured agent chat function.
+
+    This function initializes an MCP client and tools, creates a ReActAgent,
+    and then returns a `run_agent_chat_stream` function with the agent
+    instance pre-filled.
+
+    Args:
+        mcp_server_tool_url (str): The URL for the MCP server providing tools.
+        ollama_model (str): The name of the Ollama model to use.
+        request_timeout (int): The timeout in seconds for requests to the LLM.
+
+    Returns:
+        callable: A function that can be called with a message and history
+            to start a chat stream with the agent.
+    """
     mcp_client = BasicMCPClient(mcp_server_tool_url)
     mcp_tools_spec = McpToolSpec(mcp_client)
-    agent, llm = await get_agent_and_llm(mcp_tools_spec)
+    agent, llm = await get_agent_and_llm(mcp_tools_spec, ollama_model=ollama_model, request_timeout=request_timeout)
 
     return partial(run_agent_chat_stream, agent=agent)
