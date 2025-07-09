@@ -32,7 +32,7 @@ from llama_index.llms.ollama import Ollama
 from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
 
 # Assuming dummy_mcp_server_tools.py defines PORT
-from dummy_mcp_server_tools import PORT
+from coffee_maker.examples.llama_index.dummy_mcp_server_tools import PORT
 
 # --- Logging Configuration ---
 # Set up a logger to provide detailed, timestamped output to the console.
