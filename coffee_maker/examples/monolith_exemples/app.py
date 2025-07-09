@@ -42,6 +42,7 @@ LOGGER = logging.getLogger(__name__)
 # --- Configuration ---
 OLLAMA_MODEL = "llama3:8b"
 MCP_SERVER_TOOL_URL = f"http://127.0.0.1:{PORT}/sse"
+REQUEST_TIMEOUT = 600
 
 # This prompt is focused ONLY on getting the model to call the tool correctly.
 # The final summarization step will be handled by a separate, simpler prompt.
@@ -76,7 +77,7 @@ async def get_agent_and_llm(tools_spec: McpToolSpec) -> ReActAgent:
     LOGGER.info(f"Tools fetched: {[tool.metadata.name for tool in tool_list]}")
 
     LOGGER.info("Initializing LLM...")
-    llm = Ollama(model=OLLAMA_MODEL, request_timeout=300)
+    llm = Ollama(model=OLLAMA_MODEL, request_timeout=REQUEST_TIMEOUT)
     Settings.llm = llm
 
     LOGGER.info(
@@ -129,7 +130,7 @@ async def main():
         LOGGER.info("Launching Gradio interface...")
         demo.launch()
 
-    except Exception as e:
+    except (OSError, ValueError) as e:
         LOGGER.critical(f"A critical error occurred in main: {e}", exc_info=True)
     finally:
         LOGGER.info("Application cleanup (no explicit MCP disconnect needed for BasicMCPClient).")
