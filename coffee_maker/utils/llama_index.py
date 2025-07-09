@@ -30,7 +30,7 @@ LOGGER = logging.getLogger(__name__)
 
 async def get_agent_and_llm(
     tools_spec: McpToolSpec, ollama_model: str = OLLAMA_MODEL, request_timeout: int = REQUEST_TIMEOUT
-) -> ReActAgent:
+) -> tuple[ReActAgent, Ollama]:
     """Creates and configures the ReActAgent and the LLM instance.
 
     Args:
