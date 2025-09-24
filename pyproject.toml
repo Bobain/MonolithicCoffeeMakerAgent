@@ -7,16 +7,20 @@ license = "Apache 2.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<3.14"
 mcp = {extras = ["cli"], version = "^1.9.0"}
-smolagents = {extras = ["mcp"], version = "^1.16.1"}
 gradio = {extras = ["mcp"], version = "^5.31.0"}
 python-dotenv = "^1.1.0"
-google-generativeai = "^0.8.5"
 llama-index = "^0.12.44"
 llama-index-llms-ollama = "^0.6.2"
 llama-index-tools-mcp = "^0.2.5"
 psutil = "^7.0.0"
+gitpython = "^3.1.45"
+crewai = "^0.193.2"
+crewai-tools = "^0.73.1"
+langchain-google-genai = "^2.1.12"
+langfuse = {version = "^3.5.0", extras = ["crewai", "langchain"]}
+pygithub = "^2.8.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
