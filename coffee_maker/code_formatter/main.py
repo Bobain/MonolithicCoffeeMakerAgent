@@ -6,6 +6,9 @@ from langfuse.langchain import CallbackHandler
 from coffee_maker.code_formatter.tasks import create_review_task, create_refactor_task
 from github import Github
 from dotenv import load_dotenv
+from langfuse import Langfuse
+
+langfuse = Langfuse()
 
 load_dotenv()
 
