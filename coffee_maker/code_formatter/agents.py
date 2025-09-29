@@ -3,8 +3,10 @@
 import langfuse
 from crewai import Agent
 from langchain_google_genai import ChatGoogleGenerativeAI
-
 from coffee_maker.code_formatter.tools import post_suggestion
+from dotenv import load_dotenv
+
+load_dotenv()
 
 try:
     llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro-latest")

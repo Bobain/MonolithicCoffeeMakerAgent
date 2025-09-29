@@ -1,16 +1,22 @@
 # coffee_maker/code_formatter/main.py
 import os
-from dotenv import load_dotenv
 from crewai import Crew, Process
+from dotenv import load_dotenv
 from langfuse.langchain import CallbackHandler
 from coffee_maker.code_formatter.tasks import create_review_task, create_refactor_task
 from github import Github
-from dotenv import load_dotenv
 from langfuse import Langfuse
 
-langfuse = Langfuse()
-
-load_dotenv()
+try:
+    # --- CORRECT INITIALIZATION PATTERN (FROM YOUR SNIPPET) ---
+    # Create an explicit Langfuse client instance.
+    langfuse_client = Langfuse(
+        secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+        public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+        host=os.getenv("LANGFUSE_HOST"),
+    )
+except Exception as e:
+    print(f"ERROR: main:Langfuse could not be initialized. Check environment variables. Details: {e}")
 
 
 # HELPER FUNCTION: Moved here from tasks.py, as data fetching is an orchestration concern.
@@ -36,14 +42,15 @@ def run_code_formatter(repo_full_name, pr_number, files_to_review, run_metadata=
     """
     Initializes and runs the crew to refactor and post suggestions for each file in a PR.
     """
-    load_dotenv()
 
     try:
-        handler = CallbackHandler()
+        # Pass the client instance and metadata to the handler.
+        handler = CallbackHandler(
+            langfuse=langfuse_client, session_id=f"{repo_full_name}-pr-{pr_number}", metadata=run_metadata
+        )
         handler.session.update(metadata=run_metadata)
-        langfuse.init()
     except Exception as e:
-        print(f"ERROR: Langfuse could not be initialized. Check environment variables. Details: {e}")
+        print(f"ERROR: Problem with Callback handler. Details: {e}")
         return
 
     all_tasks = []
@@ -82,9 +89,10 @@ def run_code_formatter(repo_full_name, pr_number, files_to_review, run_metadata=
 
 # ... (if __name__ == '__main__' block remains the same for testing)
 if __name__ == "__main__":
-    REPO_NAME = "crewai/crewai"
-    PR_NUM = 123
-    FILES_IN_PR = ["src/crewai/agent.py"]
+    load_dotenv()
+    REPO_NAME = "Bobain/MonolithicCoffeeMakerAgent"
+    PR_NUM = 108
+    FILES_IN_PR = ["coffee_maker/code_formatter/main.py"]
 
     metadata = {"repo": REPO_NAME, "pr_number": PR_NUM, "run_trigger": "manual_test"}
 
