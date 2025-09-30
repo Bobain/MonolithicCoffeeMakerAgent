@@ -73,23 +73,22 @@ def run_code_formatter(repo_full_name, pr_number, files_to_review, run_metadata=
         if file_content is None:
             continue
 
-        # --- Create & execute refactor task ---
+        # --- Create refactor task ---
         refactor_task_instance = create_refactor_task(
             agent=agents["senior_engineer"],
             langfuse_client=langfuse_client,
             file_path=file_path,
             file_content=file_content,
         )
-        reformatted_file_content = refactor_task_instance.run()  # <-- Execute to get the output
 
-        # --- Create review task using the reformatted content ---
+        # --- Create review task that depends on refactor task ---
         review_task_instance = create_review_task(
             agent=agents["pull_request_reviewer"],
             langfuse_client=langfuse_client,
             repo_full_name=repo_full_name,
             pr_number=pr_number,
             file_path=file_path,
-            reformatted_file_content=reformatted_file_content,
+            reformatted_file_content=refactor_task_instance,  # <-- pass Task object
         )
 
         all_tasks.extend([refactor_task_instance, review_task_instance])
@@ -99,15 +98,14 @@ def run_code_formatter(repo_full_name, pr_number, files_to_review, run_metadata=
         langfuse_client.flush()
         return
 
+    agents_list = list(agents.values())
     code_formatter_crew = Crew(
-        agents=agents, tasks=all_tasks, process=Process.sequential, callbacks=[handler], verbose=2, llm=llm
+        agents=agents_list, tasks=all_tasks, process=Process.sequential, callbacks=[handler], verbose=True, llm=llm
     )
 
     print("\n--- Kicking off Crew Execution ---")
-    with observe(name=f"pr-review-{repo_full_name}-{pr_number}", metadata=run_metadata) as trace:
-        langfuse_client.update_current_trace(session_id=f"pr-review-{repo_full_name}-{pr_number}")
-        result = code_formatter_crew.kickoff()
-
+    langfuse_client.update_current_trace(session_id=f"pr-review-{repo_full_name}-{pr_number}")
+    result = code_formatter_crew.kickoff()
     print("\n--- Crew Execution Finished ---")
     print("Result:")
     print(result)
