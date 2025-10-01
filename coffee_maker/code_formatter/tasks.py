@@ -11,7 +11,15 @@ class RefactorAgent(Protocol):
     """Protocol describing the callable used for refactoring code."""
 
     def __call__(self, file_path: str, original_code: str) -> str:
-        """Return the refactored version of ``original_code`` for ``file_path``."""
+        """Return the refactored version of code.
+
+        Args:
+            file_path (str): The path to the file being refactored.
+            original_code (str): The original source code.
+
+        Returns:
+            str: The refactored code.
+        """
 
 
 class ReviewAgent(Protocol):
