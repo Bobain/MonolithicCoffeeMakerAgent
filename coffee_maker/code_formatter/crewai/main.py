@@ -15,8 +15,8 @@ from langfuse import observe
 from langfuse.langchain import CallbackHandler
 
 # Absolute imports from the project's source root 'coffee_maker'
-from coffee_maker.code_formatter.agents import create_code_formatter_agents, create_pr_reviewer_agent, llm
-from coffee_maker.code_formatter.tasks import create_review_task, create_refactor_task
+from coffee_maker.code_formatter.crewai.agents import create_code_formatter_agents, create_pr_reviewer_agent, llm
+from coffee_maker.code_formatter.crewai.tasks import create_review_task, create_refactor_task
 
 # --- 2. Initialize the global Langfuse client ---
 try:
@@ -120,7 +120,7 @@ def run_code_formatter(repo_full_name, pr_number, files_to_review, run_metadata=
 # --- SCRIPT ENTRY POINT ---
 if __name__ == "__main__":
     REPO_NAME = "Bobain/MonolithicCoffeeMakerAgent"
-    PR_NUM = 108
+    PR_NUM = 110
     FILES_IN_PR = ["coffee_maker/code_formatter/main.py"]
     metadata = {"repo": REPO_NAME, "pr_number": PR_NUM, "run_trigger": "manual_test"}
     run_code_formatter(repo_full_name=REPO_NAME, pr_number=PR_NUM, files_to_review=FILES_IN_PR, run_metadata=metadata)

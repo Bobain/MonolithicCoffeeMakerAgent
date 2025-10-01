@@ -3,7 +3,7 @@
 from crewai import Agent
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langfuse import Langfuse
-from coffee_maker.code_formatter.tools import PostSuggestionToolLangAI
+from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
 
 
 # --- LLM Configuration ---
