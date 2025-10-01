@@ -52,7 +52,19 @@ class FormatterTask:
     context: Sequence["FormatterTask"] = field(default_factory=tuple)
 
     def run(self, state: MutableMapping[str, Any], results: Mapping[str, TaskRunResult]) -> TaskRunResult:
-        """Execute the task ensuring its dependencies are satisfied."""
+        """Execute the task ensuring its dependencies are satisfied.
+
+        Args:
+            state: A mutable mapping representing the shared state of the flow.
+            results: A mapping of task names to their run results for completed tasks.
+
+        Returns:
+            TaskRunResult: The result of running this task.
+
+        Raises:
+            RuntimeError: If any of the task's dependencies have not been run yet.
+            TypeError: If the task's runner does not return a mapping.
+        """
 
         missing_dependencies: list[str] = [dep.name for dep in self.depends_on if dep.name not in results]
         if missing_dependencies:
