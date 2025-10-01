@@ -203,7 +203,7 @@ def create_review_task(
 
     def runner(state: MutableMapping[str, Any], context: Mapping[str, TaskRunResult]) -> Mapping[str, Any]:
         refactor_payload = context[refactor_task_instance.name].payload
-        original_code = refactor_payload.get("original_code", state.get("original_code", ""))
+        original_code = refactor_payload["original_code"]
         refactored_code = refactor_payload["refactored_code"]
 
         review_payload = reviewer(file_path, original_code, refactored_code)
