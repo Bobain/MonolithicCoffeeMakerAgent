@@ -88,8 +88,11 @@ def run_code_formatter(repo_full_name, pr_number, files_to_review, run_metadata=
             repo_full_name=repo_full_name,
             pr_number=pr_number,
             file_path=file_path,
-            reformatted_file_content=refactor_task_instance,  # <-- pass Task object
+            refactor_task=refactor_task_instance,
         )
+
+        # ✅ CRITICAL: Set the context dependency
+        review_task_instance.context = [refactor_task_instance]
 
         all_tasks.extend([refactor_task_instance, review_task_instance])
 

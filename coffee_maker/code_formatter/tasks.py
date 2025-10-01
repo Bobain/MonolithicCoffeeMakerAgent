@@ -36,7 +36,7 @@ def create_refactor_task(agent, langfuse_client, file_path, file_content):
     )
 
 
-def create_review_task(agent, langfuse_client, file_path, reformatted_file_content, repo_full_name, pr_number):
+def create_review_task(agent, langfuse_client, file_path, repo_full_name, pr_number, refactor_task):
     """
     Creates the task for posting the review suggestion on GitHub.
     (No changes needed in this function's logic)
@@ -46,7 +46,7 @@ def create_review_task(agent, langfuse_client, file_path, reformatted_file_conte
         filename=file_path,
         repo_full_name=repo_full_name,
         pr_number=pr_number,
-        refactored_code=reformatted_file_content,
+        refactored_code=refactor_task.output,
         MODIFIED_CODE_DELIMITER_START=MODIFIED_CODE_DELIMITER_START,
         MODIFIED_CODE_DELIMITER_END=MODIFIED_CODE_DELIMITER_END,
         EXPLANATIONS_DELIMITER_START=EXPLANATIONS_DELIMITER_START,
