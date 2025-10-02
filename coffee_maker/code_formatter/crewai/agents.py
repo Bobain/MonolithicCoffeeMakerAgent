@@ -103,13 +103,25 @@ def create_pr_reviewer_agent(langfuse_client: Langfuse):
         environment variable to be set with appropriate permissions.
     """
     logger.debug("Creating PR reviewer agent")
+    tool = PostSuggestionToolLangAI()
     agent = {
         "pull_request_reviewer": Agent(
             role="GitHub Code Reviewer",
-            goal="""Take as input a string formatted in a given STRUCTURE,
-            and post suggestions in a commit in github to reflect these suggested changes""",
+            goal=f"""Take as input a string formatted in a given STRUCTURE,
+            and post suggestions in a commit in github to reflect these suggested changes.
+
+            To post suggestions in a github review you are equipped with a tool that works this way :
+            ---
+            {tool._run.__doc__}
+            ---
+
+            The structure of your input is the same as the output of another agent which was told to output a string with this STRUCTURE:
+            ---
+            {langfuse_client.get_prompt("reformatted_code_file_template")}
+            ---
+            """,
             backstory="",
-            tools=[PostSuggestionToolLangAI()],  # ✅ CrewAI BaseTool instance
+            tools=[tool],
             allow_delegation=False,
             verbose=True,
         )
