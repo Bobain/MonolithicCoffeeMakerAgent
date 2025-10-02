@@ -265,3 +265,15 @@ if __name__ == "__main__":
         suggestion_body="Do not commit this suggestion! This is a test from the corrected script!",
         comment_text="This is a test from the corrected script!",
     )
+
+    tool_instance.run(
+        **{
+            "repo_full_name": "bobain/MonolithicCoffeeMakerAgent",
+            "pr_number": 111,
+            "file_path": "coffee_maker/code_formatter/crewai/__init__.py",
+            "start_line": 4,
+            "end_line": 4,
+            "suggestion_body": "import hashlib\nimport logging\nimport os\n\nfrom bobains_crew.db import user_database",
+            "comment_text": "Lines 4-4: Grouped imports with correct order and style according to styleguide.md: # Group imports and use absolute imports for clarity.",
+        }
+    )

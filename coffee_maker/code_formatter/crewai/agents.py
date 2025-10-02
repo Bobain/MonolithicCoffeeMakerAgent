@@ -103,7 +103,7 @@ def create_pr_reviewer_agent(langfuse_client: Langfuse):
         environment variable to be set with appropriate permissions.
     """
     logger.debug("Creating PR reviewer agent")
-    tool = PostSuggestionToolLangAI()
+    tool = observe(PostSuggestionToolLangAI())
     agent = {
         "pull_request_reviewer": Agent(
             role="GitHub Code Reviewer",
