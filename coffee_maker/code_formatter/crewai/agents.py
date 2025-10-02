@@ -16,8 +16,7 @@ Functions:
 import logging
 import os
 
-from crewai import Agent
-from crewai.llm import LLM
+from crewai import Agent, LLM
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -41,10 +40,12 @@ def _resolve_gemini_api_key() -> str:
 
 
 _GEMINI_API_KEY = _resolve_gemini_api_key()
+_GEMINI_MODEL = os.getenv("COFFEE_MAKER_CODE_FORMATTER_GEMINI_MODEL", "gemini-2.5-pro-preview-05-06")
 
 
 # --- LLM Configuration ---
-llm = LLM(model="gemini/gemini-1.5-pro-latest", api_key=_GEMINI_API_KEY)
+
+llm = LLM(model=_GEMINI_MODEL, api_key=_GEMINI_API_KEY)
 
 
 @observe
@@ -86,7 +87,7 @@ def create_code_formatter_agents(langfuse_client: Langfuse) -> dict[str, Agent]:
         tools=[],  # no tools for this agent
         allow_delegation=False,
         verbose=True,
-        llm=llm,  # Explicitly set LLM for better tracing
+        llm=llm,
     )
     logger.debug(f"Created senior_engineer_agent: {senior_engineer_agent}")
     logger.info(f"Senior engineer agent created with goal: {goal_prompt.prompt[:100]}...")
@@ -145,7 +146,7 @@ def create_pr_reviewer_agent(langfuse_client: Langfuse) -> dict[str, Agent]:
             tools=[tool],
             allow_delegation=False,
             verbose=True,
-            llm=llm,  # Explicitly set LLM for better tracing
+            llm=llm,
         )
     }
     logger.debug("Created PR reviewer agent")
