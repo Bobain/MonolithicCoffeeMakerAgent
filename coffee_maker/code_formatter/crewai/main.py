@@ -226,8 +226,34 @@ def run_code_formatter(repo_full_name, pr_number):
     )
 
     logger.info("--- Kicking off Crew Execution ---")
-    langfuse_client.update_current_trace(session_id=f"pr-review-{repo_full_name}-{pr_number}")
+    langfuse_client.update_current_trace(
+        session_id=f"pr-review-{repo_full_name}-{pr_number}",
+        metadata={
+            "repo": repo_full_name,
+            "pr_number": pr_number,
+            "files_count": len(files_to_review),
+            "tasks_count": len(all_tasks),
+        },
+    )
+
+    # Wrap crew kickoff to capture task I/O
     result = code_formatter_crew.kickoff()
+
+    # Log task outputs to Langfuse
+    for i, task in enumerate(all_tasks):
+        task_type = "refactor" if i % 2 == 0 else "review"
+        file_idx = i // 2
+        langfuse_client.generation(
+            name=f"{task_type}_task_{files_to_review[file_idx] if file_idx < len(files_to_review) else 'unknown'}",
+            input=task.description[:500] if hasattr(task, "description") else "N/A",
+            output=str(task.output)[:1000] if hasattr(task, "output") and task.output else "N/A",
+            metadata={
+                "task_type": task_type,
+                "file_path": files_to_review[file_idx] if file_idx < len(files_to_review) else "unknown",
+                "expected_output": task.expected_output[:200] if hasattr(task, "expected_output") else "N/A",
+            },
+        )
+
     logger.info("--- Crew Execution Finished ---")
     logger.info(f"Result: {result}")
 

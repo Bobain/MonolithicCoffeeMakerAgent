@@ -62,7 +62,7 @@ def create_refactor_task(agent, langfuse_client, file_path, file_content):
     """
     logger.debug(f"Creating refactor task for {file_path}")
     prompt = langfuse_client.get_prompt("code_formatter_main_llm_entry")
-    prompt = prompt.compile(
+    compiled_prompt = prompt.compile(
         filename=file_path,
         file_content=file_content,
         MODIFIED_CODE_DELIMITER_START=MODIFIED_CODE_DELIMITER_START,
@@ -71,13 +71,14 @@ def create_refactor_task(agent, langfuse_client, file_path, file_content):
         EXPLANATIONS_DELIMITER_END=EXPLANATIONS_DELIMITER_END,
     )
     task = Task(
-        description=prompt,
+        description=compiled_prompt,
         expected_output="A string containing the code given as input with some formatting suggestions "
         "annotated in code blocks (with given delimiters as explained in YOUR RESPONSE STRUCUTURE), "
         "as well as short explanation for each",
         agent=agent,
+        name=f"refactor_{file_path}",  # Add task name for better tracing
     )
-    logger.debug(f"Created refactor task for {file_path}")
+    logger.info(f"Created refactor task for {file_path} with {len(file_content)} bytes of content")
     return task
 
 
@@ -120,25 +121,25 @@ def create_review_task(agent, langfuse_client, file_path, repo_full_name, pr_num
         be set in the orchestration code.
     """
     logger.debug(f"Creating review task for {file_path}")
-    logger.debug(f"Refactor task output for {file_path}: {refactor_task.output}")
     prompt = langfuse_client.get_prompt("pr_reviewer_task")
-    prompt = prompt.compile(
+    compiled_prompt = prompt.compile(
         filename=file_path,
         repo_full_name=repo_full_name,
         pr_number=pr_number,
-        refactored_code=refactor_task.output,
+        refactored_code="{refactor_task_output}",  # Placeholder - will be filled at runtime by CrewAI
         MODIFIED_CODE_DELIMITER_START=MODIFIED_CODE_DELIMITER_START,
         MODIFIED_CODE_DELIMITER_END=MODIFIED_CODE_DELIMITER_END,
         EXPLANATIONS_DELIMITER_START=EXPLANATIONS_DELIMITER_START,
         EXPLANATIONS_DELIMITER_END=EXPLANATIONS_DELIMITER_END,
     )
     task = Task(
-        description=prompt,
+        description=compiled_prompt,
         expected_output=f"A confirmation message stating that each suggestions for {file_path} "
         f"has been successfully posted to GitHub : 'OK'. "
         f"Or : 'KO\n#... explanations about what went wrong ...",
         agent=agent,
         context=[refactor_task],  # Ensure the review task has access to refactor output
+        name=f"review_{file_path}",  # Add task name for better tracing
     )
-    logger.debug(f"Created review task for {file_path}")
+    logger.info(f"Created review task for {file_path} targeting {repo_full_name} PR#{pr_number}")
     return task

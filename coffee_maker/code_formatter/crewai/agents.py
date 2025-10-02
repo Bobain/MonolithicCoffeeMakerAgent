@@ -70,8 +70,10 @@ def create_code_formatter_agents(langfuse_client: Langfuse):
         tools=[],  # no tools for this agent
         allow_delegation=False,
         verbose=True,
+        llm=llm,  # Explicitly set LLM for better tracing
     )
     logger.debug(f"Created senior_engineer_agent: {senior_engineer_agent}")
+    logger.info(f"Senior engineer agent created with goal: {goal_prompt.prompt[:100]}...")
     return {"senior_engineer": senior_engineer_agent}
 
 
@@ -103,7 +105,10 @@ def create_pr_reviewer_agent(langfuse_client: Langfuse):
         environment variable to be set with appropriate permissions.
     """
     logger.debug("Creating PR reviewer agent")
-    tool = observe(PostSuggestionToolLangAI())
+    tool = PostSuggestionToolLangAI()
+
+    langfuse_client.get_prompt("reformatted_code_file_template")
+
     agent = {
         "pull_request_reviewer": Agent(
             role="GitHub Code Reviewer",
@@ -124,7 +129,9 @@ def create_pr_reviewer_agent(langfuse_client: Langfuse):
             tools=[tool],
             allow_delegation=False,
             verbose=True,
+            llm=llm,  # Explicitly set LLM for better tracing
         )
     }
     logger.debug("Created PR reviewer agent")
+    logger.info(f"PR reviewer agent created with {len(agent['pull_request_reviewer'].tools)} tools")
     return agent
