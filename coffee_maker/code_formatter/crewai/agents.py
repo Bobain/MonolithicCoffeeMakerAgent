@@ -134,7 +134,7 @@ def create_pr_reviewer_agent(
             and post suggestions in a commit in github to reflect these suggested changes.
 
             To post suggestions in a github review you are equipped with a tool
-            {tool.__name__}
+            {tool._run.__name__}
             that works this way :
             ---
             {tool._run.__doc__}
