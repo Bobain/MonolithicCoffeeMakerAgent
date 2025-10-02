@@ -40,11 +40,10 @@ def _resolve_gemini_api_key() -> str:
 
 
 _GEMINI_API_KEY = _resolve_gemini_api_key()
-_GEMINI_MODEL = os.getenv("COFFEE_MAKER_CODE_FORMATTER_GEMINI_MODEL", "gemini-2.5-pro-preview-05-06")
+_GEMINI_MODEL = "gemini/gemini-2.0-flash-lite"
 
 
 # --- LLM Configuration ---
-
 llm = LLM(model=_GEMINI_MODEL, api_key=_GEMINI_API_KEY)
 
 

@@ -206,13 +206,18 @@ if __name__ == "__main__":
 
     refactor_task_instance = create_refactor_task(formatter_agent, langfuse_client, "src/main.py", snippet)
     create_review_task(
-        reviewer_agent, langfuse_client, "src/main.py", "owner/repo", 123, refactor_task=refactor_task_instance
+        reviewer_agent,
+        langfuse_client,
+        "coffe_maker/code_formatter/main.py",
+        "Bobain/MonolithicCoffeeMakerAgent",
+        110,
+        refactor_task=refactor_task_instance,
     )
 
     formatter_result = formatter_agent.kickoff(snippet)
     print("=== Formatter Agent Output ===")
-    print(f"{formatter_result.output=}")
+    print(f"{formatter_result.raw=}")
 
-    reviewer_result = reviewer_agent.kickoff(formatter_result.output)
+    reviewer_result = reviewer_agent.kickoff(formatter_result.raw)
     print("=== Reviewer Agent Output ===")
-    print(f"{reviewer_result.output=}")
+    print(f"{reviewer_result.raw=}")
