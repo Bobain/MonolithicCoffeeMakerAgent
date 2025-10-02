@@ -122,4 +122,4 @@ async def get_agent_func_with_context(
     mcp_tools_spec = McpToolSpec(mcp_client)
     agent, llm = await get_agent_and_llm(mcp_tools_spec, ollama_model=ollama_model, request_timeout=request_timeout)
 
-    return partial(run_agent_chat, agent=agent)
+    return partial(run_agent_chat_stream, agent=agent)
