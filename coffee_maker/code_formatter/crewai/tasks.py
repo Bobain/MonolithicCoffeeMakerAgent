@@ -204,7 +204,9 @@ if __name__ == "__main__":
     formatter_agent = create_code_formatter_agents(langfuse_client)["senior_engineer"]
     reviewer_agent = create_pr_reviewer_agent(langfuse_client)["pull_request_reviewer"]
 
-    refactor_task_instance = create_refactor_task(formatter_agent, langfuse_client, "src/main.py", snippet)
+    refactor_task_instance = create_refactor_task(
+        formatter_agent, langfuse_client, "coffe_maker/code_formatter/main.py", snippet
+    )
     create_review_task(
         reviewer_agent,
         langfuse_client,
