@@ -1,3 +1,42 @@
+"""
+Main Orchestration Module for Code Formatter CrewAI System.
+
+This module serves as the entry point for the automated code formatting and review
+system. It orchestrates the entire workflow from fetching PR files to posting
+review suggestions on GitHub.
+
+Workflow:
+    1. Fetch list of modified files from the specified GitHub PR
+    2. For each file, fetch its content from the PR's head commit
+    3. Create a refactor task to analyze and suggest improvements
+    4. Create a review task to post suggestions as GitHub PR comments
+    5. Execute all tasks using CrewAI's sequential process
+    6. Track execution in Langfuse for observability
+
+Environment Variables Required:
+    GITHUB_TOKEN: GitHub personal access token with repo permissions
+    LANGFUSE_SECRET_KEY: Langfuse secret key for authentication
+    LANGFUSE_PUBLIC_KEY: Langfuse public key for authentication
+    LANGFUSE_HOST: Langfuse host URL (e.g., https://cloud.langfuse.com)
+    GOOGLE_API_KEY: Google API key for Gemini LLM (set via langchain_google_genai)
+
+Module-level Variables:
+    langfuse_client: Global Langfuse client instance for observability
+
+Functions:
+    _get_pr_modified_files: Fetches list of modified files from a PR
+    _get_pr_file_content: Fetches content of a specific file from a PR
+    run_code_formatter: Main orchestration function for the entire workflow
+
+Usage:
+    Command line:
+        python -m coffee_maker.code_formatter.crewai.main --repo owner/repo --pr 123
+
+    Programmatic:
+        from coffee_maker.code_formatter.crewai.main import run_code_formatter
+        result = run_code_formatter("owner/repo", 123)
+"""
+
 import logging
 import os
 
@@ -50,6 +89,7 @@ def _get_pr_modified_files(repo_full_name, pr_number):
     Returns:
         List of file paths that were modified in the PR, or empty list if fetch fails
     """
+    logger.info(f"Fetching modified files from PR #{pr_number} in {repo_full_name}")
     try:
         token = os.getenv("GITHUB_TOKEN")
         if not token:
@@ -60,7 +100,9 @@ def _get_pr_modified_files(repo_full_name, pr_number):
         repo = g.get_repo(repo_full_name)
         pull_request = repo.get_pull(pr_number)
         files = pull_request.get_files()
-        return [f.filename for f in files]
+        file_list = [f.filename for f in files]
+        logger.info(f"Found {len(file_list)} modified files in PR #{pr_number}")
+        return file_list
     except Exception:
         logger.error(f"Could not fetch modified files from PR #{pr_number}.", exc_info=True)
         return []
@@ -80,6 +122,7 @@ def _get_pr_file_content(repo_full_name, pr_number, file_path):
     Returns:
         File content as string, or None if fetch fails
     """
+    logger.info(f"Fetching content for '{file_path}' from PR #{pr_number}")
     try:
         token = os.getenv("GITHUB_TOKEN")
         if not token:
@@ -90,7 +133,9 @@ def _get_pr_file_content(repo_full_name, pr_number, file_path):
         repo = g.get_repo(repo_full_name)
         pull_request = repo.get_pull(pr_number)
         contents = repo.get_contents(file_path, ref=pull_request.head.sha)
-        return contents.decoded_content.decode("utf-8")
+        content = contents.decoded_content.decode("utf-8")
+        logger.info(f"Successfully fetched {len(content)} bytes from '{file_path}'")
+        return content
     except Exception:
         logger.error(f"Could not fetch content for '{file_path}' from GitHub.", exc_info=True)
         return None
@@ -127,18 +172,23 @@ def run_code_formatter(repo_full_name, pr_number):
         return None
 
     # Initialize agents
+    logger.info("Initializing agents")
     agents = create_code_formatter_agents(langfuse_client)
     agents.update(create_pr_reviewer_agent(langfuse_client))
+    logger.info(f"Created {len(agents)} agents: {list(agents.keys())}")
 
     all_tasks = []
 
     for file_path in files_to_review:
+        logger.info(f"Processing file: {file_path}")
         # --- Fetch original content ---
         file_content = _get_pr_file_content(repo_full_name, pr_number, file_path)
         if file_content is None:
+            logger.warning(f"Skipping {file_path} - could not fetch content")
             continue
 
         # --- Create refactor task ---
+        logger.debug(f"Creating refactor task for {file_path}")
         refactor_task_instance = create_refactor_task(
             agent=agents["senior_engineer"],
             langfuse_client=langfuse_client,
@@ -147,6 +197,7 @@ def run_code_formatter(repo_full_name, pr_number):
         )
 
         # --- Create review task that depends on refactor task ---
+        logger.debug(f"Creating review task for {file_path}")
         review_task_instance = create_review_task(
             agent=agents["pull_request_reviewer"],
             langfuse_client=langfuse_client,
@@ -158,14 +209,17 @@ def run_code_formatter(repo_full_name, pr_number):
 
         # ✅ CRITICAL: Set the context dependency
         review_task_instance.context = [refactor_task_instance]
+        logger.debug(f"Set context dependency for review task on {file_path}")
 
         all_tasks.extend([refactor_task_instance, review_task_instance])
+        logger.info(f"Added 2 tasks for {file_path} (total: {len(all_tasks)} tasks)")
 
     if not all_tasks:
         logger.warning("No tasks were created. Aborting crew kickoff.")
         langfuse_client.flush()
         return None
 
+    logger.info(f"Creating crew with {len(agents)} agents and {len(all_tasks)} tasks")
     agents_list = list(agents.values())
     code_formatter_crew = Crew(
         agents=agents_list, tasks=all_tasks, process=Process.sequential, callbacks=[handler], verbose=True, llm=llm

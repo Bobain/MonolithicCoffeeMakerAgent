@@ -1,4 +1,37 @@
-# coffee_maker/code_formatter/crewai/tools.py
+"""
+Custom CrewAI Tools for GitHub PR Review Integration.
+
+This module provides custom tools for the CrewAI framework that enable agents to
+interact with GitHub pull requests, specifically for posting code review suggestions.
+
+The tools integrate with:
+    - GitHub API (via PyGithub) for creating review comments
+    - Langfuse for observability and tracing
+    - Pydantic for input validation
+
+Classes:
+    PostSuggestionInput: Pydantic model defining input schema for the suggestion tool
+    PostSuggestionToolLangAI: CrewAI tool for posting multi-line code suggestions
+
+Environment Variables Required:
+    GITHUB_TOKEN: GitHub personal access token with repo permissions
+    LANGFUSE_SECRET_KEY: For Langfuse tracing (loaded via main module)
+    LANGFUSE_PUBLIC_KEY: For Langfuse tracing (loaded via main module)
+    LANGFUSE_HOST: For Langfuse tracing (loaded via main module)
+
+Example:
+    >>> from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
+    >>> tool = PostSuggestionToolLangAI()
+    >>> result = tool._run(
+    ...     repo_full_name="owner/repo",
+    ...     pr_number=123,
+    ...     file_path="src/main.py",
+    ...     start_line=10,
+    ...     end_line=15,
+    ...     suggestion_body="def improved_function():\\n    pass",
+    ...     comment_text="This is a better implementation"
+    ... )
+"""
 
 from crewai.tools import BaseTool as CrewBaseTool
 from pydantic import BaseModel, Field
@@ -6,10 +39,9 @@ from langfuse import observe
 import os
 from github import Github, Auth
 import logging
-from dotenv import load_dotenv  # <-- REQUIRED IMPORT
+from dotenv import load_dotenv
 
-# --- FIX #1: Load environment variables at the very top of the script ---
-# This ensures that both GITHUB_TOKEN and Langfuse keys are available for all functions.
+# Load environment variables to ensure GITHUB_TOKEN is available
 load_dotenv()
 
 logger = logging.getLogger(__name__)

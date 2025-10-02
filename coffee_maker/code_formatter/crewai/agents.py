@@ -1,4 +1,17 @@
-# coffee_maker/code_formatter/agents.py
+"""
+Agent Definitions for Code Formatter CrewAI System.
+
+This module defines the AI agents used in the code formatting and review workflow.
+Each agent has a specific role and capabilities, working together to analyze and
+improve code quality in pull requests.
+
+Module-level Variables:
+    llm: Google Gemini LLM instance used by all agents
+
+Functions:
+    create_code_formatter_agents: Creates the senior engineer agent for code refactoring
+    create_pr_reviewer_agent: Creates the GitHub reviewer agent for posting suggestions
+"""
 
 from crewai import Agent
 import logging
@@ -22,6 +35,26 @@ except Exception as e:
 def create_code_formatter_agents(langfuse_client: Langfuse):
     """
     Creates the agent responsible for analyzing and refactoring code.
+
+    This function creates a senior engineer agent that analyzes code files and
+    suggests improvements based on best practices and style guidelines. The agent's
+    goal and backstory are fetched from Langfuse prompts for easy version control
+    and experimentation.
+
+    Args:
+        langfuse_client (Langfuse): Initialized Langfuse client for fetching prompts
+
+    Returns:
+        dict: Dictionary with key "senior_engineer" mapping to the Agent instance
+
+    Raises:
+        Exception: If prompts cannot be fetched from Langfuse
+
+    Example:
+        >>> from langfuse import Langfuse
+        >>> langfuse = Langfuse(...)
+        >>> agents = create_code_formatter_agents(langfuse)
+        >>> senior_agent = agents["senior_engineer"]
     """
     try:
         goal_prompt = langfuse_client.get_prompt("refactor_agent/goal_prompt")
@@ -42,11 +75,35 @@ def create_code_formatter_agents(langfuse_client: Langfuse):
     return {"senior_engineer": senior_engineer_agent}
 
 
+@observe
 def create_pr_reviewer_agent(langfuse_client: Langfuse):
     """
     Creates the agent responsible for posting review suggestions on GitHub.
+
+    This function creates a GitHub code reviewer agent that takes refactored code
+    suggestions and posts them as review comments on pull requests using GitHub's
+    suggestion feature. The agent uses the PostSuggestionToolLangAI tool to
+    interact with the GitHub API.
+
+    Args:
+        langfuse_client (Langfuse): Initialized Langfuse client (not currently used
+            but kept for consistency with create_code_formatter_agents)
+
+    Returns:
+        dict: Dictionary with key "pull_request_reviewer" mapping to the Agent instance
+
+    Example:
+        >>> from langfuse import Langfuse
+        >>> langfuse = Langfuse(...)
+        >>> agents = create_pr_reviewer_agent(langfuse)
+        >>> reviewer = agents["pull_request_reviewer"]
+
+    Note:
+        The agent has access to PostSuggestionToolLangAI which requires GITHUB_TOKEN
+        environment variable to be set with appropriate permissions.
     """
-    return {
+    logger.debug("Creating PR reviewer agent")
+    agent = {
         "pull_request_reviewer": Agent(
             role="GitHub Code Reviewer",
             goal=(
@@ -62,3 +119,5 @@ def create_pr_reviewer_agent(langfuse_client: Langfuse):
             verbose=True,
         )
     }
+    logger.debug("Created PR reviewer agent")
+    return agent
