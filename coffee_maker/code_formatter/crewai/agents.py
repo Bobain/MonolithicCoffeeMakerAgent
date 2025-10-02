@@ -94,7 +94,9 @@ def create_code_formatter_agents(langfuse_client: Langfuse) -> dict[str, Agent]:
 
 
 @observe
-def create_pr_reviewer_agent(langfuse_client: Langfuse) -> dict[str, Agent]:
+def create_pr_reviewer_agent(
+    langfuse_client: Langfuse, pr_number: int, repo_full_name: str, file_path: str
+) -> dict[str, Agent]:
     """
     Creates the agent responsible for posting review suggestions on GitHub.
 
@@ -131,10 +133,17 @@ def create_pr_reviewer_agent(langfuse_client: Langfuse) -> dict[str, Agent]:
             goal=f"""Take as input a string formatted in a given STRUCTURE,
             and post suggestions in a commit in github to reflect these suggested changes.
 
-            To post suggestions in a github review you are equipped with a tool that works this way :
+            To post suggestions in a github review you are equipped with a tool
+            {tool.__name__}
+            that works this way :
             ---
             {tool._run.__doc__}
             ---
+
+            in our specific case we have :
+            repo_full_name = {repo_full_name},
+            pr_number = {pr_number},
+            file_path: str = {file_path},
 
             The structure of your input is the same as the output of another agent which was told to output a string with this STRUCTURE:
             ---
