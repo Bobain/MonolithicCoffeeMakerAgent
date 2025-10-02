@@ -13,26 +13,42 @@ Functions:
     create_pr_reviewer_agent: Creates the GitHub reviewer agent for posting suggestions
 """
 
-from crewai import Agent
 import logging
+import os
+
+from crewai import Agent
+from crewai.llm import LLM
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langfuse import Langfuse, observe
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
 
 
+def _resolve_gemini_api_key() -> str:
+    """Locate a Gemini-compatible API key and expose it for LiteLLM calls."""
+
+    for env_name in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "COFFEE_MAKER_GEMINI_API_KEY"):
+        key = os.getenv(env_name)
+        if key:
+            os.environ.setdefault("GEMINI_API_KEY", key)
+            return key
+
+    raise RuntimeError("Gemini API key missing: set GEMINI_API_KEY, GOOGLE_API_KEY, or COFFEE_MAKER_GEMINI_API_KEY.")
+
+
+_GEMINI_API_KEY = _resolve_gemini_api_key()
+
+
 # --- LLM Configuration ---
-try:
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro-latest")
-except Exception as e:
-    print(f"ERROR: Failed to initialize Google Gemini LLM. Is the GOOGLE_API_KEY set? Details: {e}")
-    raise
+llm = LLM(model="gemini/gemini-1.5-pro-latest", api_key=_GEMINI_API_KEY)
 
 
 @observe
-def create_code_formatter_agents(langfuse_client: Langfuse):
+def create_code_formatter_agents(langfuse_client: Langfuse) -> dict[str, Agent]:
     """
     Creates the agent responsible for analyzing and refactoring code.
 
@@ -78,7 +94,7 @@ def create_code_formatter_agents(langfuse_client: Langfuse):
 
 
 @observe
-def create_pr_reviewer_agent(langfuse_client: Langfuse):
+def create_pr_reviewer_agent(langfuse_client: Langfuse) -> dict[str, Agent]:
     """
     Creates the agent responsible for posting review suggestions on GitHub.
 

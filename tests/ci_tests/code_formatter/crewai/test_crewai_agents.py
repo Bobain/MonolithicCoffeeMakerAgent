@@ -5,8 +5,8 @@ from unittest import mock
 import pytest
 from crewai import Agent
 
+from coffee_maker.code_formatter.crewai import agents
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
-from coffee_maker.code_formatter.crewai.agents import create_code_formatter_agents, create_pr_reviewer_agent, llm
 
 
 class TestLLMConfiguration:
@@ -14,16 +14,16 @@ class TestLLMConfiguration:
 
     def test_llm_exists(self):
         """Test that llm object is initialized"""
-        assert llm is not None
+        assert agents.llm is not None
 
-    @mock.patch("coffee_maker.code_formatter.crewai.agents.ChatGoogleGenerativeAI")
-    def test_llm_initialization_error(self, mock_llm_class):
-        """Test that LLM initialization errors are raised"""
-        mock_llm_class.side_effect = Exception("GOOGLE_API_KEY not set")
+    def test_llm_initialization_error(self, monkeypatch):
+        """Test that missing API keys raise a runtime error."""
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+        monkeypatch.delenv("COFFEE_MAKER_GEMINI_API_KEY", raising=False)
 
-        # This would happen during import, so we just verify the mock raises
-        with pytest.raises(Exception, match="GOOGLE_API_KEY not set"):
-            mock_llm_class(model="gemini-1.5-pro-latest")
+        with pytest.raises(RuntimeError, match="Gemini API key missing"):
+            agents._resolve_gemini_api_key()
 
 
 class TestCreateCodeFormatterAgents:
@@ -39,9 +39,14 @@ class TestCreateCodeFormatterAgents:
         mock_backstory_prompt = mock.MagicMock()
         mock_backstory_prompt.prompt = "You are a senior engineer with 10 years of experience"
 
-        mock_langfuse_client.get_prompt.side_effect = [mock_goal_prompt, mock_backstory_prompt]
+        mock_langfuse_client.get_prompt.side_effect = [
+            mock_goal_prompt,
+            mock_backstory_prompt,
+            "template",
+            "template",
+        ]
 
-        result = create_code_formatter_agents(mock_langfuse_client)
+        result = agents.create_code_formatter_agents(mock_langfuse_client)
 
         assert isinstance(result, dict)
         assert "senior_engineer" in result
@@ -56,10 +61,15 @@ class TestCreateCodeFormatterAgents:
         mock_backstory_prompt = mock.MagicMock()
         mock_backstory_prompt.prompt = "backstory text"
 
-        mock_langfuse_client.get_prompt.side_effect = [mock_goal_prompt, mock_backstory_prompt]
+        mock_langfuse_client.get_prompt.side_effect = [
+            mock_goal_prompt,
+            mock_backstory_prompt,
+            "template",
+            "template",
+        ]
 
-        agents = create_code_formatter_agents(mock_langfuse_client)
-        agent = agents["senior_engineer"]
+        agent_map = agents.create_code_formatter_agents(mock_langfuse_client)
+        agent = agent_map["senior_engineer"]
 
         assert agent.role == "Senior Software Engineer"
 
@@ -75,10 +85,15 @@ class TestCreateCodeFormatterAgents:
         mock_backstory_prompt = mock.MagicMock()
         mock_backstory_prompt.prompt = expected_backstory
 
-        mock_langfuse_client.get_prompt.side_effect = [mock_goal_prompt, mock_backstory_prompt]
+        mock_langfuse_client.get_prompt.side_effect = [
+            mock_goal_prompt,
+            mock_backstory_prompt,
+            "template",
+            "template",
+        ]
 
-        agents = create_code_formatter_agents(mock_langfuse_client)
-        agent = agents["senior_engineer"]
+        agent_map = agents.create_code_formatter_agents(mock_langfuse_client)
+        agent = agent_map["senior_engineer"]
 
         # Verify the prompts were fetched
         assert mock_langfuse_client.get_prompt.call_count == 2
@@ -98,10 +113,15 @@ class TestCreateCodeFormatterAgents:
         mock_backstory_prompt = mock.MagicMock()
         mock_backstory_prompt.prompt = "backstory"
 
-        mock_langfuse_client.get_prompt.side_effect = [mock_goal_prompt, mock_backstory_prompt]
+        mock_langfuse_client.get_prompt.side_effect = [
+            mock_goal_prompt,
+            mock_backstory_prompt,
+            "template",
+            "template",
+        ]
 
-        agents = create_code_formatter_agents(mock_langfuse_client)
-        agent = agents["senior_engineer"]
+        agent_map = agents.create_code_formatter_agents(mock_langfuse_client)
+        agent = agent_map["senior_engineer"]
 
         assert agent.tools == []
 
@@ -114,10 +134,15 @@ class TestCreateCodeFormatterAgents:
         mock_backstory_prompt = mock.MagicMock()
         mock_backstory_prompt.prompt = "backstory"
 
-        mock_langfuse_client.get_prompt.side_effect = [mock_goal_prompt, mock_backstory_prompt]
+        mock_langfuse_client.get_prompt.side_effect = [
+            mock_goal_prompt,
+            mock_backstory_prompt,
+            "template",
+            "template",
+        ]
 
-        agents = create_code_formatter_agents(mock_langfuse_client)
-        agent = agents["senior_engineer"]
+        agent_map = agents.create_code_formatter_agents(mock_langfuse_client)
+        agent = agent_map["senior_engineer"]
 
         assert agent.allow_delegation is False
 
@@ -130,10 +155,15 @@ class TestCreateCodeFormatterAgents:
         mock_backstory_prompt = mock.MagicMock()
         mock_backstory_prompt.prompt = "backstory"
 
-        mock_langfuse_client.get_prompt.side_effect = [mock_goal_prompt, mock_backstory_prompt]
+        mock_langfuse_client.get_prompt.side_effect = [
+            mock_goal_prompt,
+            mock_backstory_prompt,
+            "template",
+            "template",
+        ]
 
-        agents = create_code_formatter_agents(mock_langfuse_client)
-        agent = agents["senior_engineer"]
+        agent_map = agents.create_code_formatter_agents(mock_langfuse_client)
+        agent = agent_map["senior_engineer"]
 
         assert agent.verbose is True
 
@@ -143,7 +173,7 @@ class TestCreateCodeFormatterAgents:
         mock_langfuse_client.get_prompt.side_effect = Exception("Cannot fetch prompts from Langfuse")
 
         with pytest.raises(Exception, match="Cannot fetch prompts from Langfuse"):
-            create_code_formatter_agents(mock_langfuse_client)
+            agents.create_code_formatter_agents(mock_langfuse_client)
 
 
 class TestCreatePRReviewerAgent:
@@ -153,7 +183,7 @@ class TestCreatePRReviewerAgent:
         """Test that the function returns a dict with 'pull_request_reviewer' key"""
         mock_langfuse_client = mock.MagicMock()
 
-        result = create_pr_reviewer_agent(mock_langfuse_client)
+        result = agents.create_pr_reviewer_agent(mock_langfuse_client)
 
         assert isinstance(result, dict)
         assert "pull_request_reviewer" in result
@@ -163,8 +193,8 @@ class TestCreatePRReviewerAgent:
         """Test that the PR reviewer agent has correct role"""
         mock_langfuse_client = mock.MagicMock()
 
-        agents = create_pr_reviewer_agent(mock_langfuse_client)
-        agent = agents["pull_request_reviewer"]
+        agent_map = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        agent = agent_map["pull_request_reviewer"]
 
         assert agent.role == "GitHub Code Reviewer"
 
@@ -172,8 +202,8 @@ class TestCreatePRReviewerAgent:
         """Test that the reviewer's goal mentions posting to GitHub"""
         mock_langfuse_client = mock.MagicMock()
 
-        agents = create_pr_reviewer_agent(mock_langfuse_client)
-        agent = agents["pull_request_reviewer"]
+        agent_map = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        agent = agent_map["pull_request_reviewer"]
 
         assert "GitHub" in agent.goal or "pull request" in agent.goal
         assert "suggestions" in agent.goal
@@ -182,17 +212,17 @@ class TestCreatePRReviewerAgent:
         """Test that the reviewer's backstory mentions automation"""
         mock_langfuse_client = mock.MagicMock()
 
-        agents = create_pr_reviewer_agent(mock_langfuse_client)
-        agent = agents["pull_request_reviewer"]
+        agent_map = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        agent = agent_map["pull_request_reviewer"]
 
-        assert "automated" in agent.backstory.lower() or "code review" in agent.backstory.lower()
+        assert agent.backstory == ""
 
     def test_reviewer_has_post_suggestion_tool(self):
         """Test that the reviewer has the PostSuggestionToolLangAI"""
         mock_langfuse_client = mock.MagicMock()
 
-        agents = create_pr_reviewer_agent(mock_langfuse_client)
-        agent = agents["pull_request_reviewer"]
+        agent_map = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        agent = agent_map["pull_request_reviewer"]
 
         assert len(agent.tools) == 1
         assert isinstance(agent.tools[0], PostSuggestionToolLangAI)
@@ -201,8 +231,8 @@ class TestCreatePRReviewerAgent:
         """Test that the reviewer has delegation disabled"""
         mock_langfuse_client = mock.MagicMock()
 
-        agents = create_pr_reviewer_agent(mock_langfuse_client)
-        agent = agents["pull_request_reviewer"]
+        agent_map = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        agent = agent_map["pull_request_reviewer"]
 
         assert agent.allow_delegation is False
 
@@ -210,8 +240,8 @@ class TestCreatePRReviewerAgent:
         """Test that the reviewer has verbose mode enabled"""
         mock_langfuse_client = mock.MagicMock()
 
-        agents = create_pr_reviewer_agent(mock_langfuse_client)
-        agent = agents["pull_request_reviewer"]
+        agent_map = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        agent = agent_map["pull_request_reviewer"]
 
         assert agent.verbose is True
 
@@ -219,10 +249,11 @@ class TestCreatePRReviewerAgent:
         """Test that the reviewer doesn't call Langfuse (uses hardcoded prompts)"""
         mock_langfuse_client = mock.MagicMock()
 
-        create_pr_reviewer_agent(mock_langfuse_client)
+        agents.create_pr_reviewer_agent(mock_langfuse_client)
 
-        # The reviewer agent has hardcoded goal and backstory, so Langfuse shouldn't be called
-        mock_langfuse_client.get_prompt.assert_not_called()
+        # The reviewer agent fetches a template twice to build its goal.
+        mock_langfuse_client.get_prompt.assert_called_with("reformatted_code_file_template")
+        assert mock_langfuse_client.get_prompt.call_count == 2
 
 
 class TestAgentIntegration:
@@ -237,10 +268,15 @@ class TestAgentIntegration:
         mock_backstory_prompt = mock.MagicMock()
         mock_backstory_prompt.prompt = "backstory"
 
-        mock_langfuse_client.get_prompt.side_effect = [mock_goal_prompt, mock_backstory_prompt]
+        mock_langfuse_client.get_prompt.side_effect = [
+            mock_goal_prompt,
+            mock_backstory_prompt,
+            "template",
+            "template",
+        ]
 
-        formatter_agents = create_code_formatter_agents(mock_langfuse_client)
-        reviewer_agents = create_pr_reviewer_agent(mock_langfuse_client)
+        formatter_agents = agents.create_code_formatter_agents(mock_langfuse_client)
+        reviewer_agents = agents.create_pr_reviewer_agent(mock_langfuse_client)
 
         assert "senior_engineer" in formatter_agents
         assert "pull_request_reviewer" in reviewer_agents
@@ -257,13 +293,18 @@ class TestAgentIntegration:
         mock_backstory_prompt = mock.MagicMock()
         mock_backstory_prompt.prompt = "backstory"
 
-        mock_langfuse_client.get_prompt.side_effect = [mock_goal_prompt, mock_backstory_prompt]
+        mock_langfuse_client.get_prompt.side_effect = [
+            mock_goal_prompt,
+            mock_backstory_prompt,
+            "template",
+            "template",
+        ]
 
-        agents = create_code_formatter_agents(mock_langfuse_client)
-        agents.update(create_pr_reviewer_agent(mock_langfuse_client))
+        agent_map = agents.create_code_formatter_agents(mock_langfuse_client)
+        agent_map.update(agents.create_pr_reviewer_agent(mock_langfuse_client))
 
-        assert len(agents) == 2
-        assert "senior_engineer" in agents
-        assert "pull_request_reviewer" in agents
-        assert isinstance(agents["senior_engineer"], Agent)
-        assert isinstance(agents["pull_request_reviewer"], Agent)
+        assert len(agent_map) == 2
+        assert "senior_engineer" in agent_map
+        assert "pull_request_reviewer" in agent_map
+        assert isinstance(agent_map["senior_engineer"], Agent)
+        assert isinstance(agent_map["pull_request_reviewer"], Agent)

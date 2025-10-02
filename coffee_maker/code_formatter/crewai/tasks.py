@@ -19,6 +19,9 @@ Functions:
 from crewai import Task
 import logging
 from langfuse import observe
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -143,3 +146,73 @@ def create_review_task(agent, langfuse_client, file_path, repo_full_name, pr_num
     )
     logger.info(f"Created review task for {file_path} targeting {repo_full_name} PR#{pr_number}")
     return task
+
+
+if __name__ == "__main__":
+    import os
+    from langfuse import Langfuse
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run formatter and reviewer agents on a code snippet")
+    parser.add_argument(
+        "--path",
+        help="Optional path to a file containing the snippet to process",
+    )
+    parser.add_argument(
+        "--text",
+        help="Snippet to process in-line; overrides --path when provided",
+    )
+    args = parser.parse_args()
+
+    snippet: str | None = None
+    if args.text:
+        snippet = args.text
+    elif args.path:
+        from pathlib import Path
+
+        snippet = Path(args.path).read_text(encoding="utf-8")
+
+    if snippet is None:
+        snippet = """
+import os
+import sys
+import datetime
+import pandas as pd
+
+print(datetime.datetime.now())
+
+sys.exit(0)
+
+def report():
+    print(datetime.datetime.now())
+    df = pd.DataFrame()
+    print(df)
+
+
+if __name__ == "__main__":
+    report()
+"""
+
+    langfuse_client = Langfuse(
+        secret_key=os.environ["LANGFUSE_SECRET_KEY"],
+        public_key=os.environ["LANGFUSE_PUBLIC_KEY"],
+        host=os.environ["LANGFUSE_HOST"],
+    )
+
+    from agents import create_code_formatter_agents, create_pr_reviewer_agent
+
+    formatter_agent = create_code_formatter_agents(langfuse_client)["senior_engineer"]
+    reviewer_agent = create_pr_reviewer_agent(langfuse_client)["pull_request_reviewer"]
+
+    refactor_task_instance = create_refactor_task(formatter_agent, langfuse_client, "src/main.py", snippet)
+    create_review_task(
+        reviewer_agent, langfuse_client, "src/main.py", "owner/repo", 123, refactor_task=refactor_task_instance
+    )
+
+    formatter_result = formatter_agent.kickoff(snippet)
+    print("=== Formatter Agent Output ===")
+    print(f"{formatter_result.output=}")
+
+    reviewer_result = reviewer_agent.kickoff(formatter_result.output)
+    print("=== Reviewer Agent Output ===")
+    print(f"{reviewer_result.output=}")
