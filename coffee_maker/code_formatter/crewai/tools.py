@@ -37,7 +37,7 @@ from crewai.tools import BaseTool as CrewBaseTool
 from pydantic import BaseModel, Field
 from langfuse import observe
 import os
-from github import Github, Auth
+from github import Github, Auth, GithubException
 import logging
 from dotenv import load_dotenv
 
@@ -45,6 +45,39 @@ from dotenv import load_dotenv
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+
+def _is_pending_review_conflict(exc: GithubException) -> bool:
+    """Return True if exception indicates an existing pending review blocks new comments."""
+
+    message = (exc.data or {}).get("message", "") if isinstance(exc.data, dict) else ""
+    if "pending review" in message.lower():
+        return True
+
+    errors = (exc.data or {}).get("errors", []) if isinstance(exc.data, dict) else []
+    for error in errors:
+        if isinstance(error, dict) and "pending review" in error.get("message", "").lower():
+            return True
+
+    return "pending review" in str(exc).lower()
+
+
+def _clear_pending_review(pr, login: str) -> bool:
+    """Delete any pending review authored by the provided login.
+
+    Returns True when a review was removed, False otherwise.
+    """
+
+    try:
+        for review in pr.get_reviews():
+            if getattr(review, "state", "").upper() == "PENDING" and getattr(review.user, "login", None) == login:
+                logger.info("Found existing pending review for %s. Deleting before retrying comment.", login)
+                review.delete()
+                return True
+    except Exception as cleanup_error:  # pragma: no cover - defensive logging
+        logger.warning("Unable to clear pending review: %s", cleanup_error)
+
+    return False
 
 
 class PostSuggestionInput(BaseModel):
@@ -215,6 +248,7 @@ class PostSuggestionToolLangAI(CrewBaseTool):
 
             auth = Auth.Token(token)
             g = Github(auth=auth)
+            current_user_login = g.get_user().login
 
             try:
                 repo = g.get_repo(repo_full_name)
@@ -236,14 +270,31 @@ class PostSuggestionToolLangAI(CrewBaseTool):
 
             # Use the reliable SHA string for the 'commit'.
             logger.info("PR review : posting a review commit suggestion")
-            pr.create_review_comment(
-                body=f"{comment_text}\n{formatted_suggestion}",
-                commit=latest_commit_sha,  # <-- Pass the reliable SHA here
-                path=file_path,
-                start_line=start_line,
-                line=end_line,
-                side="RIGHT",
-            )
+            try:
+                pr.create_review_comment(
+                    body=f"{comment_text}\n{formatted_suggestion}",
+                    commit=latest_commit_sha,
+                    path=file_path,
+                    start_line=start_line,
+                    line=end_line,
+                    side="RIGHT",
+                )
+            except GithubException as github_exc:
+                if github_exc.status == 422 and _is_pending_review_conflict(github_exc):
+                    logger.info("Encountered pending review conflict. Attempting cleanup and retry.")
+                    if _clear_pending_review(pr, current_user_login):
+                        pr.create_review_comment(
+                            body=f"{comment_text}\n{formatted_suggestion}",
+                            commit=latest_commit_sha,
+                            path=file_path,
+                            start_line=start_line,
+                            line=end_line,
+                            side="RIGHT",
+                        )
+                    else:
+                        raise
+                else:
+                    raise
             logger.info("PR review : Successfully posted a review commit suggestion")
             return f"Successfully posted suggestion for {file_path} in PR #{pr_number}"
 

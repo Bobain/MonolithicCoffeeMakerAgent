@@ -5,6 +5,8 @@ from unittest import mock
 import pytest
 from pydantic import ValidationError
 
+from github import GithubException
+
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionInput, PostSuggestionToolLangAI
 
 
@@ -195,3 +197,68 @@ class TestPostSuggestionToolLangAI:
         assert "```suggestion" in call_kwargs["body"]
         assert multiline_code in call_kwargs["body"]
         assert "Improved function signature" in call_kwargs["body"]
+
+    @mock.patch("coffee_maker.code_formatter.crewai.tools.Auth")
+    @mock.patch("coffee_maker.code_formatter.crewai.tools.Github")
+    def test_run_clears_pending_review_conflict(self, mock_github_class, mock_auth_class, monkeypatch):
+        """Ensure the tool deletes an existing pending review and retries the comment."""
+
+        monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
+
+        mock_auth_instance = mock.MagicMock()
+        mock_auth_class.Token.return_value = mock_auth_instance
+
+        pending_review = mock.MagicMock()
+        pending_review.user.login = "bot"
+        pending_review.state = "PENDING"
+
+        conflict_exc = GithubException(
+            status=422,
+            data={
+                "message": "Validation Failed",
+                "errors": [
+                    {
+                        "resource": "PullRequestReview",
+                        "code": "custom",
+                        "field": "user_id",
+                        "message": "user_id can only have one pending review per pull request",
+                    }
+                ],
+            },
+            headers=None,
+        )
+
+        mock_head = mock.MagicMock()
+        mock_head.sha = "def456"
+
+        mock_pr = mock.MagicMock()
+        mock_pr.head = mock_head
+        mock_pr.get_reviews.return_value = [pending_review]
+        mock_pr.create_review_comment.side_effect = [conflict_exc, None]
+
+        mock_repo = mock.MagicMock()
+        mock_repo.get_pull.return_value = mock_pr
+
+        mock_user = mock.MagicMock()
+        mock_user.login = "bot"
+
+        mock_github_instance = mock.MagicMock()
+        mock_github_instance.get_repo.return_value = mock_repo
+        mock_github_instance.get_user.return_value = mock_user
+        mock_github_class.return_value = mock_github_instance
+
+        tool = PostSuggestionToolLangAI()
+
+        result = tool._run(
+            repo_full_name="test/repo",
+            pr_number=789,
+            file_path="app/utils.py",
+            start_line=5,
+            end_line=6,
+            suggestion_body="print('hello')",
+            comment_text="Add logging",
+        )
+
+        assert result == "Successfully posted suggestion for app/utils.py in PR #789"
+        pending_review.delete.assert_called_once()
+        assert mock_pr.create_review_comment.call_count == 2

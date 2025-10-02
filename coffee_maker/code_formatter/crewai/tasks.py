@@ -129,7 +129,7 @@ def create_review_task(agent, langfuse_client, file_path, repo_full_name, pr_num
         filename=file_path,
         repo_full_name=repo_full_name,
         pr_number=pr_number,
-        refactored_code="{refactor_task_output}",
+        refactored_code=refactor_task.raw,
         MODIFIED_CODE_DELIMITER_START=MODIFIED_CODE_DELIMITER_START,
         MODIFIED_CODE_DELIMITER_END=MODIFIED_CODE_DELIMITER_END,
         EXPLANATIONS_DELIMITER_START=EXPLANATIONS_DELIMITER_START,
@@ -201,8 +201,8 @@ if __name__ == "__main__":
 
     from agents import create_code_formatter_agents, create_pr_reviewer_agent
 
-    file_path = ("coffe_maker/code_formatter/main.py",)
-    repo_full_name = ("Bobain/MonolithicCoffeeMakerAgent",)
+    file_path = "coffe_maker/code_formatter/main.py"
+    repo_full_name = "Bobain/MonolithicCoffeeMakerAgent"
     pr_number = 110
 
     formatter_agent = create_code_formatter_agents(langfuse_client)["senior_engineer"]
