@@ -92,9 +92,9 @@ class PostSuggestionToolLangAI(CrewBaseTool):
 
     Example:
         >>> tool = PostSuggestionToolLangAI()
-        >>> result = tool._run(
+        >>> result = tool.run(
         ...     repo_full_name="owner/repo",
-        ...     pr_number=123,
+        ...     pr_number=110,
         ...     file_path="src/main.py",
         ...     start_line=10,
         ...     end_line=15,
@@ -108,7 +108,7 @@ class PostSuggestionToolLangAI(CrewBaseTool):
     args_schema: type[BaseModel] = PostSuggestionInput
 
     @observe
-    def _run(
+    def run(
         self,
         repo_full_name: str,
         pr_number: int,
