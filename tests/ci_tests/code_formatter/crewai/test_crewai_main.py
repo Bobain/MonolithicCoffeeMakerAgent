@@ -105,10 +105,12 @@ class TestRunCodeFormatter:
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_pr_reviewer_agent")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_agents")
     @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_file_content")
+    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
     @mock.patch("coffee_maker.code_formatter.crewai.main.CallbackHandler")
     def test_successful_run_single_file(
         self,
         mock_callback_handler,
+        mock_get_modified_files,
         mock_get_content,
         mock_create_formatter,
         mock_create_reviewer,
@@ -122,6 +124,9 @@ class TestRunCodeFormatter:
         # Mock the callback handler
         mock_handler = mock.MagicMock()
         mock_callback_handler.return_value = mock_handler
+
+        # Mock PR modified files retrieval
+        mock_get_modified_files.return_value = ["src/test.py"]
 
         # Mock file content retrieval
         mock_get_content.return_value = "def test():\n    pass"
@@ -145,15 +150,13 @@ class TestRunCodeFormatter:
         mock_create_refactor_task.return_value = mock_refactor_task_instance
         mock_create_review_task.return_value = mock_review_task_instance
 
-        result = run_code_formatter(
-            repo_full_name="owner/repo",
-            pr_number=123,
-            files_to_review=["src/test.py"],
-            run_metadata={"key": "value"},
-        )
+        result = run_code_formatter(repo_full_name="owner/repo", pr_number=123)
 
         # Verify the result
         assert result == "Success"
+
+        # Verify modified files were fetched
+        mock_get_modified_files.assert_called_once_with("owner/repo", 123)
 
         # Verify file content was fetched
         mock_get_content.assert_called_once_with("owner/repo", 123, "src/test.py")
@@ -169,10 +172,12 @@ class TestRunCodeFormatter:
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_pr_reviewer_agent")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_agents")
     @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_file_content")
+    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
     @mock.patch("coffee_maker.code_formatter.crewai.main.CallbackHandler")
     def test_run_multiple_files(
         self,
         mock_callback_handler,
+        mock_get_modified_files,
         mock_get_content,
         mock_create_formatter,
         mock_create_reviewer,
@@ -184,6 +189,10 @@ class TestRunCodeFormatter:
     ):
         """Test execution with multiple files creates multiple task pairs"""
         mock_callback_handler.return_value = mock.MagicMock()
+
+        # Mock PR modified files
+        file_list = ["src/file1.py", "src/file2.py", "src/file3.py"]
+        mock_get_modified_files.return_value = file_list
 
         # Mock file content retrieval for multiple files
         file_contents = {
@@ -210,9 +219,10 @@ class TestRunCodeFormatter:
         mock_create_refactor_task.return_value = mock_refactor_task_instance
         mock_create_review_task.return_value = mock_review_task_instance
 
-        run_code_formatter(
-            repo_full_name="owner/repo", pr_number=456, files_to_review=list(file_contents.keys()), run_metadata={}
-        )
+        run_code_formatter(repo_full_name="owner/repo", pr_number=456)
+
+        # Verify modified files were fetched
+        mock_get_modified_files.assert_called_once_with("owner/repo", 456)
 
         # Verify all files were fetched
         assert mock_get_content.call_count == 3
@@ -228,10 +238,12 @@ class TestRunCodeFormatter:
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_pr_reviewer_agent")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_agents")
     @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_file_content")
+    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
     @mock.patch("coffee_maker.code_formatter.crewai.main.CallbackHandler")
     def test_skip_files_with_no_content(
         self,
         mock_callback_handler,
+        mock_get_modified_files,
         mock_get_content,
         mock_create_formatter,
         mock_create_reviewer,
@@ -243,6 +255,9 @@ class TestRunCodeFormatter:
     ):
         """Test that files that can't be fetched are skipped"""
         mock_callback_handler.return_value = mock.MagicMock()
+
+        # Mock PR modified files
+        mock_get_modified_files.return_value = ["src/missing.py", "src/existing.py"]
 
         # Mock some files returning None (fetch failed)
         def get_content_side_effect(repo, pr, path):
@@ -272,12 +287,10 @@ class TestRunCodeFormatter:
             mock_langfuse.flush.return_value = None
             mock_langfuse.update_current_trace.return_value = None
 
-            run_code_formatter(
-                repo_full_name="owner/repo",
-                pr_number=123,
-                files_to_review=["src/missing.py", "src/existing.py"],
-                run_metadata={},
-            )
+            run_code_formatter(repo_full_name="owner/repo", pr_number=123)
+
+        # Verify modified files were fetched
+        mock_get_modified_files.assert_called_once_with("owner/repo", 123)
 
         # Should have tried to fetch both files
         assert mock_get_content.call_count == 2
@@ -288,10 +301,12 @@ class TestRunCodeFormatter:
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_pr_reviewer_agent")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_agents")
     @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_file_content")
+    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
     @mock.patch("coffee_maker.code_formatter.crewai.main.CallbackHandler")
     def test_no_tasks_created(
         self,
         mock_callback_handler,
+        mock_get_modified_files,
         mock_get_content,
         mock_create_formatter,
         mock_create_reviewer,
@@ -303,6 +318,7 @@ class TestRunCodeFormatter:
     ):
         """Test handling when no tasks can be created (all files failed to fetch)"""
         mock_callback_handler.return_value = mock.MagicMock()
+        mock_get_modified_files.return_value = ["src/missing.py"]
         mock_get_content.return_value = None  # All fetches fail
 
         # Mock agents
@@ -313,24 +329,22 @@ class TestRunCodeFormatter:
         with mock.patch("coffee_maker.code_formatter.crewai.main.langfuse_client") as mock_langfuse:
             mock_langfuse.flush.return_value = None
 
-            result = run_code_formatter(
-                repo_full_name="owner/repo", pr_number=123, files_to_review=["src/missing.py"], run_metadata={}
-            )
+            result = run_code_formatter(repo_full_name="owner/repo", pr_number=123)
 
         assert result is None
         captured = capsys.readouterr()
         assert "No tasks were created" in captured.out
 
+    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
     @mock.patch("coffee_maker.code_formatter.crewai.main.CallbackHandler")
-    def test_callback_handler_error(self, mock_callback_handler, capsys):
+    def test_callback_handler_error(self, mock_callback_handler, mock_get_modified_files, capsys):
         """Test handling of CallbackHandler initialization errors"""
         mock_callback_handler.side_effect = Exception("Langfuse connection error")
+        mock_get_modified_files.return_value = ["file.py"]
 
         # Mock Langfuse
         with mock.patch("coffee_maker.code_formatter.crewai.main.langfuse_client"):
-            result = run_code_formatter(
-                repo_full_name="owner/repo", pr_number=123, files_to_review=["file.py"], run_metadata={}
-            )
+            result = run_code_formatter(repo_full_name="owner/repo", pr_number=123)
 
         assert result is None
         captured = capsys.readouterr()
@@ -343,10 +357,12 @@ class TestRunCodeFormatter:
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_pr_reviewer_agent")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_agents")
     @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_file_content")
+    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
     @mock.patch("coffee_maker.code_formatter.crewai.main.CallbackHandler")
     def test_task_context_dependency_set(
         self,
         mock_callback_handler,
+        mock_get_modified_files,
         mock_get_content,
         mock_create_formatter,
         mock_create_reviewer,
@@ -358,6 +374,7 @@ class TestRunCodeFormatter:
     ):
         """Test that review task has refactor task in its context"""
         mock_callback_handler.return_value = mock.MagicMock()
+        mock_get_modified_files.return_value = ["file.py"]
         mock_get_content.return_value = "code"
 
         mock_create_formatter.return_value = {"senior_engineer": mock_agents["senior_engineer"]}
@@ -375,7 +392,7 @@ class TestRunCodeFormatter:
         mock_create_refactor_task.return_value = mock_refactor_task_instance
         mock_create_review_task.return_value = mock_review_task_instance
 
-        run_code_formatter(repo_full_name="owner/repo", pr_number=123, files_to_review=["file.py"], run_metadata={})
+        run_code_formatter(repo_full_name="owner/repo", pr_number=123)
 
         # Get the tasks that were passed to Crew
         crew_call_kwargs = mock_crew_class.call_args[1]
@@ -396,10 +413,12 @@ class TestRunCodeFormatter:
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_pr_reviewer_agent")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_agents")
     @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_file_content")
+    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
     @mock.patch("coffee_maker.code_formatter.crewai.main.CallbackHandler")
     def test_langfuse_session_id_set(
         self,
         mock_callback_handler,
+        mock_get_modified_files,
         mock_get_content,
         mock_create_formatter,
         mock_create_reviewer,
@@ -411,6 +430,7 @@ class TestRunCodeFormatter:
     ):
         """Test that Langfuse session ID is set correctly"""
         mock_callback_handler.return_value = mock.MagicMock()
+        mock_get_modified_files.return_value = ["file.py"]
         mock_get_content.return_value = "code"
 
         mock_create_formatter.return_value = {"senior_engineer": mock_agents["senior_engineer"]}
@@ -425,7 +445,7 @@ class TestRunCodeFormatter:
         mock_create_refactor_task.return_value = mock_refactor_task_instance
         mock_create_review_task.return_value = mock_review_task_instance
 
-        run_code_formatter(repo_full_name="test/repo", pr_number=999, files_to_review=["file.py"], run_metadata={})
+        run_code_formatter(repo_full_name="test/repo", pr_number=999)
 
         # Verify the session ID was set
         mock_langfuse_client.update_current_trace.assert_called_once_with(session_id="pr-review-test/repo-999")

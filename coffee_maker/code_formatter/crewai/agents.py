@@ -1,8 +1,12 @@
 # coffee_maker/code_formatter/agents.py
 
 from crewai import Agent
+import logging
+
+logger = logging.getLogger(__name__)
+
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langfuse import Langfuse
+from langfuse import Langfuse, observe
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
 
 
@@ -14,6 +18,7 @@ except Exception as e:
     raise
 
 
+@observe
 def create_code_formatter_agents(langfuse_client: Langfuse):
     """
     Creates the agent responsible for analyzing and refactoring code.
@@ -33,6 +38,7 @@ def create_code_formatter_agents(langfuse_client: Langfuse):
         allow_delegation=False,
         verbose=True,
     )
+    logger.debug(f"Created senior_engineer_agent: {senior_engineer_agent}")
     return {"senior_engineer": senior_engineer_agent}
 
 

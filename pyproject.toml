@@ -37,6 +37,11 @@ pdoc = "^15.0.4"
 "Bug Tracker" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent/issues"
 
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

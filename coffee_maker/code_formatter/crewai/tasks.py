@@ -1,5 +1,10 @@
 # coffee_maker/code_formatter/tasks.py
 from crewai import Task
+from crewai import Task
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 # Delimiters for parsing LLM response
 MODIFIED_CODE_DELIMITER_START = "---MODIFIED_CODE_START---"
@@ -41,6 +46,7 @@ def create_review_task(agent, langfuse_client, file_path, repo_full_name, pr_num
     Creates the task for posting the review suggestion on GitHub.
     (No changes needed in this function's logic)
     """
+    logger.debug(f"Refactor task output for {file_path}: {refactor_task.output}")
     prompt = langfuse_client.get_prompt("code_formatter_main_llm_entry")
     prompt = prompt.compile(
         filename=file_path,

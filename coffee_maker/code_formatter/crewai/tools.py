@@ -16,14 +16,29 @@ logger = logging.getLogger(__name__)
 
 
 class PostSuggestionInput(BaseModel):
-    # This class is correct, no changes needed.
-    repo_full_name: str = Field(...)
-    pr_number: int = Field(...)
-    file_path: str = Field(...)
-    start_line: int = Field(...)
-    end_line: int = Field(...)
-    suggestion_body: str = Field(...)
-    comment_text: str = Field(...)
+    """
+    Input schema for the PostSuggestionToolLangAI tool.
+
+    This model defines the required parameters for posting a code suggestion
+    as a review comment on a GitHub pull request.
+
+    Attributes:
+        repo_full_name: Full repository name in the format 'owner/repo' (e.g., 'Bobain/MonolithicCoffeeMakerAgent')
+        pr_number: Pull request number (integer) to post the suggestion to
+        file_path: Path to the file in the repository where the suggestion should be posted (e.g., 'src/main.py')
+        start_line: Starting line number for the suggestion (1-indexed)
+        end_line: Ending line number for the suggestion (1-indexed, must be >= start_line)
+        suggestion_body: The suggested code to replace the current code (without markdown backticks)
+        comment_text: Additional comment text to accompany the suggestion
+    """
+
+    repo_full_name: str = Field(..., description="Full repository name (owner/repo)")
+    pr_number: int = Field(..., description="Pull request number", gt=0)
+    file_path: str = Field(..., description="File path in the repository")
+    start_line: int = Field(..., description="Starting line number", ge=1)
+    end_line: int = Field(..., description="Ending line number", ge=1)
+    suggestion_body: str = Field(..., description="Suggested code content")
+    comment_text: str = Field(..., description="Comment text accompanying the suggestion")
 
 
 class PostSuggestionToolLangAI(CrewBaseTool):
