@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 
 from dotenv import load_dotenv
 
@@ -35,7 +34,7 @@ try:
     )
 except Exception:
     logger.critical("Langfuse client could not be initialized. Check environment variables.", exc_info=True)
-    sys.exit(1)
+    raise
 
 
 # --- HELPER FUNCTION for fetching modified files from PR ---

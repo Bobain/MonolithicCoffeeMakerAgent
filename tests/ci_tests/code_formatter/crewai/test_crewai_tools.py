@@ -55,33 +55,37 @@ class TestPostSuggestionToolLangAI:
         assert tool.args_schema == PostSuggestionInput
 
     def test_run_missing_github_token(self, monkeypatch):
-        """Test that missing GITHUB_TOKEN returns error"""
+        """Test that missing GITHUB_TOKEN raises ValueError"""
         monkeypatch.delenv("GITHUB_TOKEN", raising=False)
         tool = PostSuggestionToolLangAI()
 
-        result = tool._run(
-            repo_full_name="owner/repo",
-            pr_number=123,
-            file_path="src/test.py",
-            start_line=10,
-            end_line=15,
-            suggestion_body="improved code",
-            comment_text="Consider this",
-        )
+        with pytest.raises(ValueError, match="GITHUB_TOKEN not defined"):
+            tool._run(
+                repo_full_name="owner/repo",
+                pr_number=123,
+                file_path="src/test.py",
+                start_line=10,
+                end_line=15,
+                suggestion_body="improved code",
+                comment_text="Consider this",
+            )
 
-        assert result == "Error: GITHUB_TOKEN env var not set"
-
+    @mock.patch("coffee_maker.code_formatter.crewai.tools.Auth")
     @mock.patch("coffee_maker.code_formatter.crewai.tools.Github")
-    def test_run_success(self, mock_github_class, monkeypatch):
+    def test_run_success(self, mock_github_class, mock_auth_class, monkeypatch):
         """Test successful posting of a suggestion"""
         monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
 
-        # Mock GitHub API objects
-        mock_commit = mock.MagicMock()
-        mock_commit.sha = "abc123"
+        # Mock Auth.Token
+        mock_auth_instance = mock.MagicMock()
+        mock_auth_class.Token.return_value = mock_auth_instance
+
+        # Mock GitHub API objects - use pr.head.sha instead of get_commits()
+        mock_head = mock.MagicMock()
+        mock_head.sha = "abc123"
 
         mock_pr = mock.MagicMock()
-        mock_pr.get_commits.return_value = [mock_commit]
+        mock_pr.head = mock_head
         mock_pr.create_review_comment.return_value = None
 
         mock_repo = mock.MagicMock()
@@ -106,17 +110,17 @@ class TestPostSuggestionToolLangAI:
         # Verify the result
         assert result == "Successfully posted suggestion for src/test.py in PR #123"
 
-        # Verify API calls
-        mock_github_class.assert_called_once_with("fake_token")
+        # Verify API calls - now using Auth.Token and auth parameter
+        mock_auth_class.Token.assert_called_once_with("fake_token")
+        mock_github_class.assert_called_once_with(auth=mock_auth_instance)
         mock_github_instance.get_repo.assert_called_once_with("owner/repo")
         mock_repo.get_pull.assert_called_once_with(123)
-        mock_pr.get_commits.assert_called_once()
 
         # Verify the review comment was created with correct formatting
         expected_body = "Consider this improvement\n```suggestion\nimproved code\n```"
         mock_pr.create_review_comment.assert_called_once_with(
             body=expected_body,
-            commit_id="abc123",
+            commit="abc123",  # Changed from commit_id to commit
             path="src/test.py",
             start_line=10,
             line=15,
@@ -147,16 +151,22 @@ class TestPostSuggestionToolLangAI:
                 comment_text="Consider this",
             )
 
+    @mock.patch("coffee_maker.code_formatter.crewai.tools.Auth")
     @mock.patch("coffee_maker.code_formatter.crewai.tools.Github")
-    def test_run_multiline_suggestion(self, mock_github_class, monkeypatch):
+    def test_run_multiline_suggestion(self, mock_github_class, mock_auth_class, monkeypatch):
         """Test posting a multi-line code suggestion"""
         monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
 
-        mock_commit = mock.MagicMock()
-        mock_commit.sha = "def456"
+        # Mock Auth.Token
+        mock_auth_instance = mock.MagicMock()
+        mock_auth_class.Token.return_value = mock_auth_instance
+
+        # Use pr.head.sha instead of get_commits()
+        mock_head = mock.MagicMock()
+        mock_head.sha = "def456"
 
         mock_pr = mock.MagicMock()
-        mock_pr.get_commits.return_value = [mock_commit]
+        mock_pr.head = mock_head
 
         mock_repo = mock.MagicMock()
         mock_repo.get_pull.return_value = mock_pr

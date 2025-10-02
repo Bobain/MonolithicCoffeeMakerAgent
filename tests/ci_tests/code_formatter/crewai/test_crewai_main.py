@@ -20,20 +20,24 @@ def mock_agents():
 class TestGetPRFileContent:
     """Tests for _get_pr_file_content helper function"""
 
-    def test_missing_github_token(self, monkeypatch, capsys):
+    def test_missing_github_token(self, monkeypatch, caplog):
         """Test that missing GITHUB_TOKEN is handled"""
         monkeypatch.delenv("GITHUB_TOKEN", raising=False)
 
         result = _get_pr_file_content("owner/repo", 123, "src/file.py")
 
         assert result is None
-        captured = capsys.readouterr()
-        assert "GITHUB_TOKEN environment variable is not set" in captured.out
+        assert "GITHUB_TOKEN environment variable is not set" in caplog.text
 
+    @mock.patch("coffee_maker.code_formatter.crewai.main.Auth")
     @mock.patch("coffee_maker.code_formatter.crewai.main.Github")
-    def test_successful_file_fetch(self, mock_github_class, monkeypatch):
+    def test_successful_file_fetch(self, mock_github_class, mock_auth_class, monkeypatch):
         """Test successful fetching of file content from GitHub"""
         monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
+
+        # Mock Auth.Token
+        mock_auth_instance = mock.MagicMock()
+        mock_auth_class.Token.return_value = mock_auth_instance
 
         # Mock the GitHub API chain
         mock_contents = mock.MagicMock()
@@ -54,13 +58,14 @@ class TestGetPRFileContent:
         result = _get_pr_file_content("owner/repo", 123, "src/test.py")
 
         assert result == "def hello():\n    print('hello')"
-        mock_github_class.assert_called_once_with("fake_token")
+        mock_auth_class.Token.assert_called_once_with("fake_token")
+        mock_github_class.assert_called_once_with(auth=mock_auth_instance)
         mock_github_instance.get_repo.assert_called_once_with("owner/repo")
         mock_repo.get_pull.assert_called_once_with(123)
         mock_repo.get_contents.assert_called_once_with("src/test.py", ref="abc123")
 
     @mock.patch("coffee_maker.code_formatter.crewai.main.Github")
-    def test_github_api_error(self, mock_github_class, monkeypatch, capsys):
+    def test_github_api_error(self, mock_github_class, monkeypatch, caplog):
         """Test handling of GitHub API errors"""
         monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
 
@@ -71,12 +76,11 @@ class TestGetPRFileContent:
         result = _get_pr_file_content("owner/nonexistent", 123, "file.py")
 
         assert result is None
-        captured = capsys.readouterr()
-        assert "Could not fetch content" in captured.out
-        assert "file.py" in captured.out
+        assert "Could not fetch content" in caplog.text
+        assert "file.py" in caplog.text
 
     @mock.patch("coffee_maker.code_formatter.crewai.main.Github")
-    def test_file_not_found(self, mock_github_class, monkeypatch, capsys):
+    def test_file_not_found(self, mock_github_class, monkeypatch, caplog):
         """Test handling when file doesn't exist in PR"""
         monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
 
@@ -91,8 +95,7 @@ class TestGetPRFileContent:
         result = _get_pr_file_content("owner/repo", 123, "nonexistent.py")
 
         assert result is None
-        captured = capsys.readouterr()
-        assert "Could not fetch content" in captured.out
+        assert "Could not fetch content" in caplog.text
 
 
 class TestRunCodeFormatter:
@@ -313,7 +316,7 @@ class TestRunCodeFormatter:
         mock_crew_class,
         mock_create_refactor_task,
         mock_create_review_task,
-        capsys,
+        caplog,
         mock_agents,
     ):
         """Test handling when no tasks can be created (all files failed to fetch)"""
@@ -332,12 +335,11 @@ class TestRunCodeFormatter:
             result = run_code_formatter(repo_full_name="owner/repo", pr_number=123)
 
         assert result is None
-        captured = capsys.readouterr()
-        assert "No tasks were created" in captured.out
+        assert "No tasks were created" in caplog.text
 
     @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
     @mock.patch("coffee_maker.code_formatter.crewai.main.CallbackHandler")
-    def test_callback_handler_error(self, mock_callback_handler, mock_get_modified_files, capsys):
+    def test_callback_handler_error(self, mock_callback_handler, mock_get_modified_files, caplog):
         """Test handling of CallbackHandler initialization errors"""
         mock_callback_handler.side_effect = Exception("Langfuse connection error")
         mock_get_modified_files.return_value = ["file.py"]
@@ -347,8 +349,7 @@ class TestRunCodeFormatter:
             result = run_code_formatter(repo_full_name="owner/repo", pr_number=123)
 
         assert result is None
-        captured = capsys.readouterr()
-        assert "Langfuse Callback handler could not be created" in captured.out
+        assert "Langfuse Callback handler could not be created" in caplog.text
 
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_review_task")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_refactor_task")
