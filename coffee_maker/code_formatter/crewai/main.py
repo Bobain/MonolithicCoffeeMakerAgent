@@ -174,7 +174,6 @@ def run_code_formatter(repo_full_name, pr_number):
     # Initialize agents
     logger.info("Initializing agents")
     agents = create_code_formatter_agents(langfuse_client)
-    agents.update(create_pr_reviewer_agent(langfuse_client))
     logger.info(f"Created {len(agents)} agents: {list(agents.keys())}")
 
     all_tasks = []
@@ -189,6 +188,9 @@ def run_code_formatter(repo_full_name, pr_number):
 
         # --- Create refactor task ---
         logger.debug(f"Creating refactor task for {file_path}")
+
+        pr_reviewer_agent = create_pr_reviewer_agent(langfuse_client, repo_full_name, pr_number, file_path)
+        agents.update(pr_reviewer_agent)
         refactor_task_instance = create_refactor_task(
             agent=agents["senior_engineer"],
             langfuse_client=langfuse_client,
