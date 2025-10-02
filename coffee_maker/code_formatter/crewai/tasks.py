@@ -121,7 +121,7 @@ def create_review_task(agent, langfuse_client, file_path, repo_full_name, pr_num
     """
     logger.debug(f"Creating review task for {file_path}")
     logger.debug(f"Refactor task output for {file_path}: {refactor_task.output}")
-    prompt = langfuse_client.get_prompt("code_formatter_main_llm_entry")
+    prompt = langfuse_client.get_prompt("pr_reviewer_task")
     prompt = prompt.compile(
         filename=file_path,
         repo_full_name=repo_full_name,
@@ -138,6 +138,7 @@ def create_review_task(agent, langfuse_client, file_path, repo_full_name, pr_num
         f"has been successfully posted to GitHub : 'OK'. "
         f"Or : 'KO\n#... explanations about what went wrong ...",
         agent=agent,
+        context=[refactor_task],  # Ensure the review task has access to refactor output
     )
     logger.debug(f"Created review task for {file_path}")
     return task

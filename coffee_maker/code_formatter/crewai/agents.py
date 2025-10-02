@@ -106,14 +106,9 @@ def create_pr_reviewer_agent(langfuse_client: Langfuse):
     agent = {
         "pull_request_reviewer": Agent(
             role="GitHub Code Reviewer",
-            goal=(
-                "Post the refactored code as actionable suggestions directly on the "
-                "relevant lines of the files in the GitHub pull request."
-            ),
-            backstory="""You are an automated code review assistant. Your purpose is to
-            review code submitted in pull requests and provide concrete, multi-line suggestions
-            for improvement based on the company's style guide. You only offer suggestions
-            to help the original author improve their work.""",
+            goal="""Take as input a string formatted in a given STRUCTURE,
+            and post suggestions in a commit in github to reflect these suggested changes""",
+            backstory="",
             tools=[PostSuggestionToolLangAI()],  # ✅ CrewAI BaseTool instance
             allow_delegation=False,
             verbose=True,

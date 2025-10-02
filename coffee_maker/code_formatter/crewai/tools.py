@@ -92,7 +92,7 @@ class PostSuggestionToolLangAI(CrewBaseTool):
 
     Example:
         >>> tool = PostSuggestionToolLangAI()
-        >>> result = tool.run(
+        >>> result = tool._run(
         ...     repo_full_name="owner/repo",
         ...     pr_number=110,
         ...     file_path="src/main.py",
@@ -108,15 +108,16 @@ class PostSuggestionToolLangAI(CrewBaseTool):
     args_schema: type[BaseModel] = PostSuggestionInput
 
     @observe
-    def run(
+    def _run(
         self,
-        repo_full_name: str,
-        pr_number: int,
-        file_path: str,
-        start_line: int,
-        end_line: int,
-        suggestion_body: str,
-        comment_text: str,
+        repo_full_name: str = None,
+        pr_number: int = None,
+        file_path: str = None,
+        start_line: int = None,
+        end_line: int = None,
+        suggestion_body: str = None,
+        comment_text: str = None,
+        **kwargs,
     ) -> str:
         """
         Post a code suggestion as a review comment on a GitHub pull request.
@@ -174,15 +175,55 @@ class PostSuggestionToolLangAI(CrewBaseTool):
             >>> print(result)
             Successfully posted suggestion for coffee_maker/code_formatter/crewai/main.py in PR #111
         """
+        # Handle both direct parameters and kwargs-wrapped parameters
+        # Some LLM agents wrap parameters in kwargs
+        if kwargs and not repo_full_name:
+            repo_full_name = kwargs.get("repo_full_name")
+            pr_number = kwargs.get("pr_number")
+            file_path = kwargs.get("file_path")
+            start_line = kwargs.get("start_line")
+            end_line = kwargs.get("end_line")
+            suggestion_body = kwargs.get("suggestion_body")
+            comment_text = kwargs.get("comment_text")
+
+        # Validate required parameters
+        if not all([repo_full_name, pr_number, file_path, start_line, end_line, suggestion_body, comment_text]):
+            missing = [
+                k
+                for k, v in {
+                    "repo_full_name": repo_full_name,
+                    "pr_number": pr_number,
+                    "file_path": file_path,
+                    "start_line": start_line,
+                    "end_line": end_line,
+                    "suggestion_body": suggestion_body,
+                    "comment_text": comment_text,
+                }.items()
+                if v is None
+            ]
+            raise ValueError(f"Missing required parameters: {', '.join(missing)}")
+
         try:
             token = os.getenv("GITHUB_TOKEN")
             if not token:
                 logger.critical("Error: GITHUB_TOKEN environment variable is not set.")
                 raise ValueError("Credentials for Github needed: GITHUB_TOKEN not defined.")
 
+            logger.info(
+                f"Attempting to post suggestion to repo: {repo_full_name}, PR: {pr_number}, file: {file_path}, lines: {start_line}-{end_line}"
+            )
+
             auth = Auth.Token(token)
             g = Github(auth=auth)
-            repo = g.get_repo(repo_full_name)
+
+            try:
+                repo = g.get_repo(repo_full_name)
+            except Exception as repo_error:
+                logger.error(f"Failed to access repository '{repo_full_name}': {repo_error}")
+                logger.error(f"Make sure the repository name is in format 'owner/repo' and exists")
+                raise ValueError(
+                    f"Repository '{repo_full_name}' not found. Check the repository name format (should be 'owner/repo'). Error: {repo_error}"
+                )
             pr = repo.get_pull(pr_number)
 
             # --- FIX #2: THE CRITICAL CHANGE ---
