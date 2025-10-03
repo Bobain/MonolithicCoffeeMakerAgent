@@ -94,7 +94,9 @@ def create_code_formatter_agents(langfuse_client: Langfuse) -> dict[str, Agent]:
 
 
 @observe
-def create_pr_reviewer_agent(langfuse_client: Langfuse) -> dict[str, Agent]:
+def create_pr_reviewer_agent(
+    langfuse_client: Langfuse, pr_number: int, repo_full_name: str, file_path: str
+) -> dict[str, Agent]:
     """
     Creates the agent responsible for posting review suggestions on GitHub.
 
@@ -136,6 +138,25 @@ def create_pr_reviewer_agent(langfuse_client: Langfuse) -> dict[str, Agent]:
             ---
             {langfuse_client.get_prompt("reformatted_code_file_template")}
             ---
+
+            To post suggested changes to:
+            you are equipped with a tool to post suggestions commits with a comment that explains the change.
+            This tool should be used with the following inputs:
+            ---
+            repo_full_name: {repo_full_name}
+            pr_number: {pr_number}
+            file_path: {file_path}
+            ---
+
+            for each code change (suggestion in github given in your input string) you should post a suggestion
+            commit in the Pull Request review with a comment that match the explanation (given in your input string)
+
+            By parsing the Input string you will find the other inputs needed to use your tool:
+            start_line:int      The line at which the suggested commit should start (see in EXPLANATIONS block of your input string)
+            "end_line":         The line at which the suggested commit should end (see in EXPLANATIONS block of your input string)
+            "suggestion_body"   The suggested code (see in the CODE_MODIFIED block of your input string)
+            "comment_text":     The explanations for code change (see in EXPLANATIONS block of your input string)
+
             """,
             backstory="",
             tools=[tool],

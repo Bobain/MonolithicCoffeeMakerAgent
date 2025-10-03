@@ -211,30 +211,13 @@ class PostSuggestionToolLangAI(CrewBaseTool):
         # Handle both direct parameters and kwargs-wrapped parameters
         # Some LLM agents wrap parameters in kwargs
         if kwargs and not repo_full_name:
-            repo_full_name = kwargs.get("repo_full_name")
-            pr_number = kwargs.get("pr_number")
-            file_path = kwargs.get("file_path")
-            start_line = kwargs.get("start_line")
-            end_line = kwargs.get("end_line")
-            suggestion_body = kwargs.get("suggestion_body")
-            comment_text = kwargs.get("comment_text")
-
-        # Validate required parameters
-        if not all([repo_full_name, pr_number, file_path, start_line, end_line, suggestion_body, comment_text]):
-            missing = [
-                k
-                for k, v in {
-                    "repo_full_name": repo_full_name,
-                    "pr_number": pr_number,
-                    "file_path": file_path,
-                    "start_line": start_line,
-                    "end_line": end_line,
-                    "suggestion_body": suggestion_body,
-                    "comment_text": comment_text,
-                }.items()
-                if v is None
-            ]
-            raise ValueError(f"Missing required parameters: {', '.join(missing)}")
+            repo_full_name = kwargs["repo_full_name"]
+            pr_number = kwargs["pr_number"]
+            file_path = kwargs["file_path"]
+            start_line = kwargs["start_line"]
+            end_line = kwargs["end_line"]
+            suggestion_body = kwargs["suggestion_body"]
+            comment_text = kwargs["comment_text"]
 
         try:
             token = os.getenv("GITHUB_TOKEN")
@@ -317,14 +300,25 @@ if __name__ == "__main__":
         comment_text="This is a test from the corrected script!",
     )
 
-    tool_instance.run(
-        **{
-            "repo_full_name": "bobain/MonolithicCoffeeMakerAgent",
-            "pr_number": 111,
-            "file_path": "coffee_maker/code_formatter/crewai/__init__.py",
-            "start_line": 4,
-            "end_line": 4,
-            "suggestion_body": "import hashlib\nimport logging\nimport os\n\nfrom bobains_crew.db import user_database",
-            "comment_text": "Lines 4-4: Grouped imports with correct order and style according to styleguide.md: # Group imports and use absolute imports for clarity.",
-        }
+    # current call from agent : the file_path is wrong
+    kwargs = dict(
+        repo_full_name="Bobain/MonolithicCoffeeMakerAgent",
+        pr_number=110,
+        file_path="coffee_maker/code_formatter/main.py",
+        start_line=17,
+        end_line=20,
+        suggestion_body="",
+        comment_text="Removed redundant print statement and the unreachable sys.exit() call.",
     )
+
+    kwargs = dict(
+        repo_full_name="Bobain/MonolithicCoffeeMakerAgent",
+        pr_number=110,
+        file_path="coffee_maker/code_formatter/crewai/main.pyy",
+        start_line=17,
+        end_line=20,
+        suggestion_body="",
+        comment_text="Removed redundant print statement and the unreachable sys.exit() call.",
+    )
+
+    tool_instance._run(**kwargs)

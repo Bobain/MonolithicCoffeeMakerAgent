@@ -79,8 +79,7 @@ def create_reformat_task(agent, langfuse_client, file_path: str, file_content: s
         "annotated in code blocks (with given delimiters as explained in YOUR RESPONSE STRUCUTURE), "
         "as well as short explanation for each",
         agent=agent,
-        name=f"reformat_{file_path}",  # Add task name for better tracing
-        output="raw",
+        name=f"reformat_{file_path}",
     )
     logger.info(f"Created refactor task for {file_path} with {len(file_content)} bytes of content")
     return task
@@ -88,7 +87,7 @@ def create_reformat_task(agent, langfuse_client, file_path: str, file_content: s
 
 @observe
 def create_review_task(
-    agent, langfuse_client, file_path: str, repo_full_name: str, pr_number: str, reformat_task_instance: Task
+    agent, langfuse_client, file_path: str, repo_full_name: str, pr_number: int, refactor_task: Task
 ) -> Task:
     """
     Creates the task for posting the review suggestion on GitHub.
@@ -118,7 +117,7 @@ def create_review_task(
         >>> langfuse = Langfuse(...)
         >>> refactor_task = create_reformat_task(...)
         >>> review_task = create_review_task(
-        ...     agent, langfuse, "src/main.py", "Bobain/MonolithicCoffeeMakerAgent", 110, reformat_task
+        ...     agent, langfuse, "src/main.py", "Bobain/MonolithicCoffeeMakerAgent", 110, refactor_task
         ... )
 
     Note:
@@ -132,7 +131,6 @@ def create_review_task(
         file_path=file_path,
         repo_full_name=repo_full_name,
         pr_number=pr_number,
-        refactored_code=reformat_task_instance.str,
         MODIFIED_CODE_DELIMITER_START=MODIFIED_CODE_DELIMITER_START,
         MODIFIED_CODE_DELIMITER_END=MODIFIED_CODE_DELIMITER_END,
         EXPLANATIONS_DELIMITER_START=EXPLANATIONS_DELIMITER_START,
@@ -144,7 +142,7 @@ def create_review_task(
         f"has been successfully posted to GitHub : 'OK'. "
         f"Or : 'KO\n#... explanations about what went wrong ...",
         agent=agent,
-        context=[reformat_task_instance.str],  # Ensure the review task has access to refactor output
+        context=[refactor_task],
         name=f"review_{file_path}",  # Add task name for better tracing
     )
     logger.info(f"Created review task for {file_path} targeting {repo_full_name} PR#{pr_number}")
@@ -204,30 +202,34 @@ if __name__ == "__main__":
 
     from agents import create_code_formatter_agents, create_pr_reviewer_agent
 
-    file_path = "coffe_maker/code_formatter/main.py"
+    file_path = "coffee_maker/code_formatter/main.py"
     repo_full_name = "Bobain/MonolithicCoffeeMakerAgent"
     pr_number = 110
 
     formatter_agent = create_code_formatter_agents(langfuse_client)["senior_engineer"]
-    reviewer_agent = create_pr_reviewer_agent(langfuse_client)["pull_request_reviewer"]
+    reviewer_agent = create_pr_reviewer_agent(langfuse_client, pr_number, repo_full_name, file_path)[
+        "pull_request_reviewer"
+    ]
 
-    reformat_task_instance = create_reformat_task(
-        formatter_agent, langfuse_client, "coffe_maker/code_formatter/main.py", file_content=snippet
+    refactor_task_instance = create_reformat_task(
+        formatter_agent,
+        langfuse_client,
+        file_path,
+        file_content=snippet,
     )
-    create_review_task(
+    review_task_instance = create_review_task(
         reviewer_agent,
         langfuse_client,
-        "coffe_maker/code_formatter/main.py",
-        "Bobain/MonolithicCoffeeMakerAgent",
-        110,
-        reformat_task_output=reformat_task_instance,
+        file_path,
+        repo_full_name,
+        pr_number,
+        refactor_task_instance,
     )
 
     formatter_result = formatter_agent.kickoff(snippet)
-
-    reviewer_result = reviewer_agent.kickoff(formatter_result)
-
     print("=== Formatter Agent Output ===")
-    print(f"{formatter_result.str=}")
+    print(formatter_result.raw)
+
+    reviewer_result = reviewer_agent.kickoff(formatter_result.raw)
     print("=== Reviewer Agent Output ===")
-    print(f"{reviewer_result.str=}")
+    print(reviewer_result.raw)
