@@ -8,9 +8,8 @@ review suggestions on GitHub.
 Workflow:
     1. Fetch list of modified files from the specified GitHub PR
     2. For each file, fetch its content from the PR's head commit
-    3. Create a refactor task to analyze and suggest improvements
-    4. Create a review task to post suggestions as GitHub PR comments
-    5. Execute all tasks using CrewAI's sequential process
+    3. Spin up a formatting flow that analyzes code and posts review suggestions
+    4. Execute each flow sequentially so the reviewer tool can publish comments
     6. Track execution in Langfuse for observability
 
 Environment Variables Required:
@@ -44,16 +43,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from crewai import Crew, Process
 from github import Github, Auth
 
 # --- CORRECT LANGFUSE IMPORTS ---
 from langfuse import Langfuse, observe
-from langfuse.langchain import CallbackHandler
 
 # Absolute imports from the project's source root 'coffee_maker'
-from coffee_maker.code_formatter.crewai.agents import create_code_formatter_agents, create_pr_reviewer_agent, llm
-from coffee_maker.code_formatter.crewai.tasks import create_reformat_task, create_review_task
+from coffee_maker.code_formatter.crewai.agents import create_code_formatter_agents, create_pr_reviewer_agent
+from coffee_maker.code_formatter.crewai.flow import create_code_formatter_flow
 
 # --- Logging Configuration ---
 logging.basicConfig(
@@ -161,24 +158,39 @@ def run_code_formatter(repo_full_name, pr_number):
         logger.warning(f"No modified files found in PR #{pr_number}. Aborting.")
         return None
 
-    logger.info(f"Found {len(files_to_review)} modified files in PR #{pr_number}:")
-    for file_path in files_to_review:
-        logger.info(f"  - {file_path}")
+    python_files = [path for path in files_to_review if path.endswith(".py")]
 
-    try:
-        handler = CallbackHandler()
-    except Exception:
-        logger.error("Langfuse Callback handler could not be created.", exc_info=True)
+    if not python_files:
+        logger.warning("No Python files to process in this PR.")
         return None
+
+    logger.info(f"Found {len(python_files)} Python files in PR #{pr_number}:")
+    for file_path in python_files:
+        logger.info(f"  - {file_path}")
 
     # Initialize agents
     logger.info("Initializing agents")
     agents = create_code_formatter_agents(langfuse_client)
     logger.info(f"Created {len(agents)} agents: {list(agents.keys())}")
 
-    all_tasks = []
+    formatter_agent = agents.get("senior_engineer")
+    if formatter_agent is None:
+        logger.error("Senior engineer agent could not be initialized.")
+        return None
 
-    for file_path in files_to_review:
+    langfuse_client.update_current_trace(
+        session_id=f"pr-review-{repo_full_name}-{pr_number}",
+        metadata={
+            "repo": repo_full_name,
+            "pr_number": pr_number,
+            "files_count": len(python_files),
+        },
+    )
+
+    flow_results: list[dict[str, str | None]] = []
+    processed_files = 0
+
+    for file_path in python_files:
         logger.info(f"Processing file: {file_path}")
         # --- Fetch original content ---
         file_content = _get_pr_file_content(repo_full_name, pr_number, file_path)
@@ -186,81 +198,67 @@ def run_code_formatter(repo_full_name, pr_number):
             logger.warning(f"Skipping {file_path} - could not fetch content")
             continue
 
-        # --- Create refactor task ---
-        logger.debug(f"Creating refactor task for {file_path}")
+        pr_reviewer_agent = create_pr_reviewer_agent(langfuse_client, pr_number, repo_full_name, file_path)
+        reviewer_agent = pr_reviewer_agent.get("pull_request_reviewer")
+        if reviewer_agent is None:
+            logger.warning("Skipping %s - reviewer agent could not be initialized", file_path)
+            continue
 
-        pr_reviewer_agent = create_pr_reviewer_agent(langfuse_client, repo_full_name, pr_number, file_path)
-        agents.update(pr_reviewer_agent)
-        refactor_task_instance = create_reformat_task(
-            agent=agents["senior_engineer"],
+        flow = create_code_formatter_flow(
+            formatter_agent=formatter_agent,
+            reviewer_agent=reviewer_agent,
             langfuse_client=langfuse_client,
             file_path=file_path,
+            repo_full_name=repo_full_name,
+            pr_number=pr_number,
             file_content=file_content,
         )
 
-        # --- Create review task that depends on refactor task ---
-        logger.debug(f"Creating review task for {file_path}")
-        review_task_instance = create_review_task(
-            agent=agents["pull_request_reviewer"],
-            langfuse_client=langfuse_client,
-            repo_full_name=repo_full_name,
-            pr_number=pr_number,
-            file_path=file_path,
-            refactor_task=refactor_task_instance,
-        )
+        logger.info("Launching formatting flow for %s", file_path)
+        try:
+            flow.kickoff()
+            processed_files += 1
+            flow_results.append(
+                {
+                    "file_path": file_path,
+                    "reformat_result": flow.state.reformat_result,
+                    "review_result": flow.state.review_result,
+                }
+            )
+            langfuse_client.trace(
+                name=f"code_formatter_flow_{file_path}",
+                input=(flow.state.reformat_prompt or "")[:500],
+                output=(flow.state.review_result or "")[:1000],
+                metadata={
+                    "file_path": file_path,
+                    "flow_type": "formatter_review",
+                    "success": True,
+                },
+            )
+        except Exception as exc:  # pragma: no cover - runtime failures
+            logger.error("Flow execution failed for %s", file_path, exc_info=True)
+            flow_results.append({"file_path": file_path, "error": str(exc)})
+            langfuse_client.trace(
+                name=f"code_formatter_flow_{file_path}",
+                input=file_content[:500],
+                output=str(exc)[:1000],
+                metadata={
+                    "file_path": file_path,
+                    "flow_type": "formatter_review",
+                    "success": False,
+                },
+            )
 
-        # ✅ CRITICAL: Set the context dependency
-        review_task_instance.context = [refactor_task_instance]
-        logger.debug(f"Set context dependency for review task on {file_path}")
-
-        all_tasks.extend([refactor_task_instance, review_task_instance])
-        logger.info(f"Added 2 tasks for {file_path} (total: {len(all_tasks)} tasks)")
-
-    if not all_tasks:
-        logger.warning("No tasks were created. Aborting crew kickoff.")
+    if processed_files == 0:
+        logger.warning("No flows were executed. Aborting.")
         langfuse_client.flush()
         return None
 
-    logger.info(f"Creating crew with {len(agents)} agents and {len(all_tasks)} tasks")
-    agents_list = list(agents.values())
-    code_formatter_crew = Crew(
-        agents=agents_list, tasks=all_tasks, process=Process.sequential, callbacks=[handler], verbose=True, llm=llm
-    )
-
-    logger.info("--- Kicking off Crew Execution ---")
-    langfuse_client.update_current_trace(
-        session_id=f"pr-review-{repo_full_name}-{pr_number}",
-        metadata={
-            "repo": repo_full_name,
-            "pr_number": pr_number,
-            "files_count": len(files_to_review),
-            "tasks_count": len(all_tasks),
-        },
-    )
-
-    # Wrap crew kickoff to capture task I/O
-    result = code_formatter_crew.kickoff()
-
-    # Log task outputs to Langfuse
-    for i, task in enumerate(all_tasks):
-        task_type = "refactor" if i % 2 == 0 else "review"
-        file_idx = i // 2
-        langfuse_client.generation(
-            name=f"{task_type}_task_{files_to_review[file_idx] if file_idx < len(files_to_review) else 'unknown'}",
-            input=task.description[:500] if hasattr(task, "description") else "N/A",
-            output=str(task.output)[:1000] if hasattr(task, "output") and task.output else "N/A",
-            metadata={
-                "task_type": task_type,
-                "file_path": files_to_review[file_idx] if file_idx < len(files_to_review) else "unknown",
-                "expected_output": task.expected_output[:200] if hasattr(task, "expected_output") else "N/A",
-            },
-        )
-
-    logger.info("--- Crew Execution Finished ---")
-    logger.info(f"Result: {result}")
+    logger.info("--- Flow Execution Finished ---")
+    logger.info("Processed %s file(s)", processed_files)
 
     langfuse_client.flush()
-    return result
+    return flow_results
 
 
 # --- SCRIPT ENTRY POINT ---

@@ -110,7 +110,8 @@ class TestCodeFormatterFlow:
         reviewer_agent.kickoff.assert_called_once()
         messages = reviewer_agent.kickoff.call_args.args[0]
         assert messages[0]["content"] == "compiled reviewer prompt"
-        assert messages[1]["content"] == "formatted output"
+        assert "Target file_path: src/example.py" in messages[1]["content"]
+        assert "formatted output" in messages[1]["content"]
 
         assert flow.state.reformat_prompt == "compiled formatter prompt"
         assert flow.state.reformat_result == "formatted output"

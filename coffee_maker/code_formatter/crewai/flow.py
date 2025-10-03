@@ -155,9 +155,18 @@ class CodeFormatterFlow(Flow[CodeFormatterFlowState]):
         self.state.review_prompt = compiled_prompt
         self.state.review_expected_output = expected_output
 
+        user_message = (
+            "You must post review suggestions for the file shown below.\n"
+            f"Repository: {self.state.repo_full_name}\n"
+            f"Pull Request: {self.state.pr_number}\n"
+            f"Target file_path: {self.state.file_path}\n"
+            "Always preserve this file_path when calling tools.\n\n"
+            "Refactor suggestions from the formatter:\n"
+            f"{refactor_output}"
+        )
         messages = [
             {"role": "system", "content": compiled_prompt},
-            {"role": "user", "content": refactor_output},
+            {"role": "user", "content": user_message},
         ]
         try:
             result = self.reviewer_agent.kickoff(messages)
