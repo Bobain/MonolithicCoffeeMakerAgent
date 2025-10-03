@@ -15,6 +15,7 @@ from coffee_maker.code_formatter.crewai.flow import (
     create_code_formatter_flow,
     kickoff_code_formatter_flow,
 )
+from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
 
 
 @pytest.fixture
@@ -30,6 +31,7 @@ def reviewer_agent():
     """Mocked reviewer agent"""
     agent = mock.create_autospec(Agent, instance=True)
     agent.kickoff.return_value = mock.Mock(raw="review output")
+    agent.tools = []
     return agent
 
 
@@ -114,6 +116,7 @@ class TestCodeFormatterFlow:
         assert flow.state.reformat_result == "formatted output"
         assert flow.state.review_prompt == "compiled reviewer prompt"
         assert flow.state.review_result == "review output"
+        assert any(isinstance(tool, PostSuggestionToolLangAI) for tool in flow.reviewer_agent.tools)
 
     def test_flow_factory_helper(self, formatter_agent, reviewer_agent, langfuse_client):
         flow = create_code_formatter_flow(

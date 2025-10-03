@@ -24,6 +24,8 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
+
 MODIFIED_CODE_DELIMITER_START = "---MODIFIED_CODE_START---"
 MODIFIED_CODE_DELIMITER_END = "---MODIFIED_CODE_END---"
 EXPLANATIONS_DELIMITER_START = "---EXPLANATIONS_START---"
@@ -78,6 +80,16 @@ class CodeFormatterFlow(Flow[CodeFormatterFlowState]):
         self.reviewer_agent = reviewer_agent
         self.langfuse_client = langfuse_client
         self.raise_on_reviewer_failure = raise_on_reviewer_failure
+        self._ensure_reviewer_tool()
+
+    def _ensure_reviewer_tool(self) -> None:
+        """Attach GitHub suggestion tool to reviewer agent when missing."""
+        tools = list(self.reviewer_agent.tools or [])
+        for tool in tools:
+            if isinstance(tool, PostSuggestionToolLangAI):
+                return
+        tools.append(PostSuggestionToolLangAI())
+        self.reviewer_agent.tools = tools
 
     @start()
     @observe
