@@ -66,6 +66,7 @@ class CodeFormatterFlow(Flow[CodeFormatterFlowState]):
         repo_full_name: str,
         pr_number: int,
         file_content: str,
+        raise_on_reviewer_failure: bool = True,
     ) -> None:
         super().__init__(
             file_path=file_path,
@@ -76,6 +77,7 @@ class CodeFormatterFlow(Flow[CodeFormatterFlowState]):
         self.formatter_agent = formatter_agent
         self.reviewer_agent = reviewer_agent
         self.langfuse_client = langfuse_client
+        self.raise_on_reviewer_failure = raise_on_reviewer_failure
 
     @start()
     @observe
@@ -128,7 +130,6 @@ class CodeFormatterFlow(Flow[CodeFormatterFlowState]):
             file_path=self.state.file_path,
             repo_full_name=self.state.repo_full_name,
             pr_number=self.state.pr_number,
-            refactored_code=refactor_output,
             MODIFIED_CODE_DELIMITER_START=MODIFIED_CODE_DELIMITER_START,
             MODIFIED_CODE_DELIMITER_END=MODIFIED_CODE_DELIMITER_END,
             EXPLANATIONS_DELIMITER_START=EXPLANATIONS_DELIMITER_START,
@@ -146,7 +147,15 @@ class CodeFormatterFlow(Flow[CodeFormatterFlowState]):
             {"role": "system", "content": compiled_prompt},
             {"role": "user", "content": refactor_output},
         ]
-        result = self.reviewer_agent.kickoff(messages)
+        try:
+            result = self.reviewer_agent.kickoff(messages)
+        except Exception as exc:  # pragma: no cover - network/tool failures
+            logger.error("Reviewer agent execution failed", exc_info=True)
+            error_msg = f"Reviewer agent failed: {exc}"
+            self.state.review_result = error_msg
+            if self.raise_on_reviewer_failure:
+                raise
+            return error_msg
         raw_output = getattr(result, "raw", result)
         if not isinstance(raw_output, str):
             raw_output = str(raw_output)
@@ -164,6 +173,7 @@ def create_code_formatter_flow(
     repo_full_name: str,
     pr_number: int,
     file_content: str,
+    raise_on_reviewer_failure: bool = True,
 ) -> CodeFormatterFlow:
     """Helper factory mirroring the task module helpers but returning a Flow."""
     return CodeFormatterFlow(
@@ -174,6 +184,7 @@ def create_code_formatter_flow(
         repo_full_name=repo_full_name,
         pr_number=pr_number,
         file_content=file_content,
+        raise_on_reviewer_failure=raise_on_reviewer_failure,
     )
 
 
@@ -186,6 +197,7 @@ def kickoff_code_formatter_flow(
     repo_full_name: str,
     pr_number: int,
     file_content: str,
+    raise_on_reviewer_failure: bool = True,
 ) -> CodeFormatterFlow:
     """Convenience helper that creates and immediately runs the flow."""
     flow = create_code_formatter_flow(
@@ -196,6 +208,7 @@ def kickoff_code_formatter_flow(
         repo_full_name=repo_full_name,
         pr_number=pr_number,
         file_content=file_content,
+        raise_on_reviewer_failure=raise_on_reviewer_failure,
     )
     flow.kickoff()
     return flow
@@ -259,7 +272,7 @@ if __name__ == "__main__":
         missing = exc.args[0]
         raise RuntimeError(f"Missing environment variable required for Langfuse: {missing}") from exc
 
-    file_path = "coffee_maker/code_formatter/main.py"
+    file_path = "coffee_maker/code_formatter/crewai/main.py"
     repo_full_name = "Bobain/MonolithicCoffeeMakerAgent"
     pr_number = 110
 
@@ -276,6 +289,7 @@ if __name__ == "__main__":
         repo_full_name=repo_full_name,
         pr_number=pr_number,
         file_content=snippet,
+        raise_on_reviewer_failure=False,
     )
 
     reviewer_output = flow.kickoff()
