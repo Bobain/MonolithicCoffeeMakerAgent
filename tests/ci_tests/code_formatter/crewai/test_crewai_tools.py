@@ -89,6 +89,7 @@ class TestPostSuggestionToolLangAI:
         mock_pr = mock.MagicMock()
         mock_pr.head = mock_head
         mock_pr.create_review_comment.return_value = None
+        mock_pr.get_files.return_value = [mock.MagicMock(filename="src/test.py")]
 
         mock_repo = mock.MagicMock()
         mock_repo.get_pull.return_value = mock_pr
@@ -169,6 +170,7 @@ class TestPostSuggestionToolLangAI:
 
         mock_pr = mock.MagicMock()
         mock_pr.head = mock_head
+        mock_pr.get_files.return_value = [mock.MagicMock(filename="app/main.py")]
 
         mock_repo = mock.MagicMock()
         mock_repo.get_pull.return_value = mock_pr
@@ -235,6 +237,7 @@ class TestPostSuggestionToolLangAI:
         mock_pr.head = mock_head
         mock_pr.get_reviews.return_value = [pending_review]
         mock_pr.create_review_comment.side_effect = [conflict_exc, None]
+        mock_pr.get_files.return_value = [mock.MagicMock(filename="app/utils.py")]
 
         mock_repo = mock.MagicMock()
         mock_repo.get_pull.return_value = mock_pr
@@ -262,3 +265,41 @@ class TestPostSuggestionToolLangAI:
         assert result == "Successfully posted suggestion for app/utils.py in PR #789"
         pending_review.delete.assert_called_once()
         assert mock_pr.create_review_comment.call_count == 2
+
+    @mock.patch("coffee_maker.code_formatter.crewai.tools.Auth")
+    @mock.patch("coffee_maker.code_formatter.crewai.tools.Github")
+    def test_run_invalid_path_error(self, mock_github_class, mock_auth_class, monkeypatch):
+        """Ensure a clear error surfaces when the target file is not part of the PR."""
+
+        monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
+
+        mock_auth_instance = mock.MagicMock()
+        mock_auth_class.Token.return_value = mock_auth_instance
+
+        mock_head = mock.MagicMock()
+        mock_head.sha = "abc123"
+
+        mock_pr = mock.MagicMock()
+        mock_pr.head = mock_head
+        mock_pr.get_reviews.return_value = []
+        mock_pr.get_files.return_value = [mock.MagicMock(filename="another/path.py")]
+
+        mock_repo = mock.MagicMock()
+        mock_repo.get_pull.return_value = mock_pr
+
+        mock_github_instance = mock.MagicMock()
+        mock_github_instance.get_repo.return_value = mock_repo
+        mock_github_class.return_value = mock_github_instance
+
+        tool = PostSuggestionToolLangAI()
+
+        with pytest.raises(ValueError, match="not found in PR #789"):
+            tool._run(
+                repo_full_name="test/repo",
+                pr_number=789,
+                file_path="missing/file.py",
+                start_line=1,
+                end_line=2,
+                suggestion_body="print('hello')",
+                comment_text="Add output",
+            )

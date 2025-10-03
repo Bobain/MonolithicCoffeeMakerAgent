@@ -253,6 +253,12 @@ class PostSuggestionToolLangAI(CrewBaseTool):
 
             # Use the reliable SHA string for the 'commit'.
             logger.info("PR review : posting a review commit suggestion")
+            valid_paths = {pull_file.filename for pull_file in pr.get_files()}
+            if file_path not in valid_paths:
+                raise ValueError(
+                    f"File path '{file_path}' not found in PR #{pr_number}. Available paths: {sorted(valid_paths)}"
+                )
+
             try:
                 pr.create_review_comment(
                     body=f"{comment_text}\n{formatted_suggestion}",
@@ -288,17 +294,52 @@ class PostSuggestionToolLangAI(CrewBaseTool):
 
 
 if __name__ == "__main__":
-    # This test block will now run correctly with the fixes above.
-    tool_instance = PostSuggestionToolLangAI()
-    tool_instance._run(
-        repo_full_name="Bobain/MonolithicCoffeeMakerAgent",
-        pr_number=111,
-        file_path="coffee_maker/code_formatter/crewai/main.py",
-        start_line=1,
-        end_line=1,
-        suggestion_body="Do not commit this suggestion! This is a test from the corrected script!",
-        comment_text="This is a test from the corrected script!",
+    #   python coffee_maker/code_formatter/crewai/tools.py \
+    #     --repo Bobain/MonolithicCoffeeMakerAgent \
+    #     --pr 110 \
+    #     --file coffee_maker/code_formatter/crewai/main.py \
+    #     --start 17 \
+    #     --end 20 \
+    #     --suggestion "" \
+    #     --comment "Removed redundant print statement and the unreachable sys.exit() call."
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(
+        description="Invoke PostSuggestionToolLangAI once from the CLI.",
+        epilog="Example: python -m coffee_maker.code_formatter.crewai.tools --repo owner/repo --pr 42 "
+        "--file path/to/file.py --start 10 --end 12 --suggestion 'print(\"hi\")' --comment 'Add logging'",
     )
+    parser.add_argument("--repo", required=True, help="Full repository name, e.g. owner/repo")
+    parser.add_argument("--pr", type=int, required=True, help="Pull request number")
+    parser.add_argument("--file", required=True, help="File path relative to the repository root")
+    parser.add_argument("--start", type=int, required=True, help="Starting line number (1-indexed)")
+    parser.add_argument("--end", type=int, required=True, help="Ending line number (1-indexed)")
+    parser.add_argument("--suggestion", required=True, help="Suggested code body without markdown fences")
+    parser.add_argument("--comment", required=True, help="Comment text to accompany the suggestion")
+
+    try:
+        args = parser.parse_args()
+    except SystemExit as exc:
+        # argparse already printed a helpful message.
+        raise SystemExit(exc.code) from None
+
+    tool_instance = PostSuggestionToolLangAI()
+    try:
+        result = tool_instance._run(
+            repo_full_name=args.repo,
+            pr_number=args.pr,
+            file_path=args.file,
+            start_line=args.start,
+            end_line=args.end,
+            suggestion_body=args.suggestion,
+            comment_text=args.comment,
+        )
+    except GithubException as github_exc:  # pragma: no cover - manual invocation helper
+        print(f"GitHub API error: {github_exc}", file=sys.stderr)
+        raise SystemExit(1) from github_exc
+
+    print(result)
 
     # current call from agent : the file_path is wrong
     kwargs = dict(
@@ -314,7 +355,7 @@ if __name__ == "__main__":
     kwargs = dict(
         repo_full_name="Bobain/MonolithicCoffeeMakerAgent",
         pr_number=110,
-        file_path="coffee_maker/code_formatter/crewai/main.pyy",
+        file_path="coffee_maker/code_formatter/crewai/main.py",
         start_line=17,
         end_line=20,
         suggestion_body="",
