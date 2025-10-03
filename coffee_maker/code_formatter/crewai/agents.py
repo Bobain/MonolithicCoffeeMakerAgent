@@ -26,6 +26,8 @@ logger = logging.getLogger(__name__)
 from langfuse import Langfuse, observe
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
 
+Agent = observe(Agent)
+
 
 def _resolve_gemini_api_key() -> str:
     """Locate a Gemini-compatible API key and expose it for LiteLLM calls."""
