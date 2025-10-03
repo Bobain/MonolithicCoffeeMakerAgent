@@ -10,7 +10,7 @@ from coffee_maker.code_formatter.crewai.tasks import (
     EXPLANATIONS_DELIMITER_START,
     MODIFIED_CODE_DELIMITER_END,
     MODIFIED_CODE_DELIMITER_START,
-    create_refactor_task,
+    create_reformat_task,
     create_review_task,
 )
 
@@ -47,7 +47,7 @@ class TestCreateRefactorTask:
         file_path = "src/test.py"
         file_content = "def hello():\n    print('hello')"
 
-        task = create_refactor_task(mock_agent, mock_langfuse_client, file_path, file_content)
+        task = create_reformat_task(mock_agent, mock_langfuse_client, file_path, file_content)
 
         # Verify it returns a Task
         assert isinstance(task, Task)
@@ -73,7 +73,7 @@ class TestCreateRefactorTask:
         mock_prompt.compile.return_value = compiled_text
         mock_langfuse_client.get_prompt.return_value = mock_prompt
 
-        task = create_refactor_task(mock_agent, mock_langfuse_client, "file.py", "code content")
+        task = create_reformat_task(mock_agent, mock_langfuse_client, "file.py", "code content")
 
         assert task.description == compiled_text
 
@@ -85,7 +85,7 @@ class TestCreateRefactorTask:
         mock_prompt.compile.return_value = "prompt"
         mock_langfuse_client.get_prompt.return_value = mock_prompt
 
-        task = create_refactor_task(mock_agent, mock_langfuse_client, "file.py", "code")
+        task = create_reformat_task(mock_agent, mock_langfuse_client, "file.py", "code")
 
         assert "code given as input" in task.expected_output
         assert "formatting suggestions" in task.expected_output
@@ -99,7 +99,7 @@ class TestCreateRefactorTask:
         mock_langfuse_client.get_prompt.side_effect = Exception("Langfuse connection error")
 
         with pytest.raises(Exception, match="Langfuse connection error"):
-            create_refactor_task(mock_agent, mock_langfuse_client, "file.py", "code")
+            create_reformat_task(mock_agent, mock_langfuse_client, "file.py", "code")
 
 
 class TestCreateReviewTask:

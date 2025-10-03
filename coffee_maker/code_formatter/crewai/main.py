@@ -53,7 +53,7 @@ from langfuse.langchain import CallbackHandler
 
 # Absolute imports from the project's source root 'coffee_maker'
 from coffee_maker.code_formatter.crewai.agents import create_code_formatter_agents, create_pr_reviewer_agent, llm
-from coffee_maker.code_formatter.crewai.tasks import create_refactor_task, create_review_task
+from coffee_maker.code_formatter.crewai.tasks import create_reformat_task, create_review_task
 
 # --- Logging Configuration ---
 logging.basicConfig(
@@ -191,7 +191,7 @@ def run_code_formatter(repo_full_name, pr_number):
 
         pr_reviewer_agent = create_pr_reviewer_agent(langfuse_client, repo_full_name, pr_number, file_path)
         agents.update(pr_reviewer_agent)
-        refactor_task_instance = create_refactor_task(
+        refactor_task_instance = create_reformat_task(
             agent=agents["senior_engineer"],
             langfuse_client=langfuse_client,
             file_path=file_path,
@@ -269,7 +269,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run code formatter on a GitHub PR")
     parser.add_argument("--repo", default="Bobain/MonolithicCoffeeMakerAgent", help="Full repository name (owner/repo)")
-    parser.add_argument("--pr", type=int, default=111, help="Pull request number")
+    parser.add_argument("--pr", type=int, default=110, help="Pull request number")
     args = parser.parse_args()
 
     run_code_formatter(repo_full_name=args.repo, pr_number=args.pr)
