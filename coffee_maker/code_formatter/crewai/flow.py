@@ -45,6 +45,7 @@ class CodeFormatterFlowState(BaseModel):
     repo_full_name: str = Field(default="", description="GitHub repository full name")
     pr_number: int = Field(default=0, description="Pull request number associated with the run")
     file_content: str = Field(default="", description="Original content of the file under review")
+    patch: str | None = Field(default=None, description="Unified diff patch from the PR for context")
 
     reformat_prompt: str | None = Field(default=None, description="Compiled prompt for the formatter agent")
     reformat_expected_output: str | None = Field(default=None, description="Expected formatter output description")
@@ -68,6 +69,7 @@ class CodeFormatterFlow(Flow[CodeFormatterFlowState]):
         repo_full_name: str,
         pr_number: int,
         file_content: str,
+        patch: str | None,
         raise_on_reviewer_failure: bool = True,
     ) -> None:
         super().__init__(
@@ -75,6 +77,7 @@ class CodeFormatterFlow(Flow[CodeFormatterFlowState]):
             repo_full_name=repo_full_name,
             pr_number=pr_number,
             file_content=file_content,
+            patch=patch,
         )
         self.formatter_agent = formatter_agent
         self.reviewer_agent = reviewer_agent
@@ -155,15 +158,18 @@ class CodeFormatterFlow(Flow[CodeFormatterFlowState]):
         self.state.review_prompt = compiled_prompt
         self.state.review_expected_output = expected_output
 
-        user_message = (
-            "You must post review suggestions for the file shown below.\n"
-            f"Repository: {self.state.repo_full_name}\n"
-            f"Pull Request: {self.state.pr_number}\n"
-            f"Target file_path: {self.state.file_path}\n"
-            "Always preserve this file_path when calling tools.\n\n"
-            "Refactor suggestions from the formatter:\n"
-            f"{refactor_output}"
-        )
+        message_parts = [
+            "You must post review suggestions for the file shown below.\n",
+            f"Repository: {self.state.repo_full_name}\n",
+            f"Pull Request: {self.state.pr_number}\n",
+            f"Target file_path: {self.state.file_path}\n",
+            "Always preserve this file_path when calling tools.\n\n",
+        ]
+        if self.state.patch:
+            message_parts.append(f"Unified diff patch for context:\n{self.state.patch}\n\n")
+        message_parts.append("Refactor suggestions from the formatter:\n")
+        message_parts.append(refactor_output)
+        user_message = "".join(message_parts)
         messages = [
             {"role": "system", "content": compiled_prompt},
             {"role": "user", "content": user_message},
@@ -194,6 +200,7 @@ def create_code_formatter_flow(
     repo_full_name: str,
     pr_number: int,
     file_content: str,
+    patch: str | None = None,
     raise_on_reviewer_failure: bool = True,
 ) -> CodeFormatterFlow:
     """Helper factory mirroring the task module helpers but returning a Flow."""
@@ -205,6 +212,7 @@ def create_code_formatter_flow(
         repo_full_name=repo_full_name,
         pr_number=pr_number,
         file_content=file_content,
+        patch=patch,
         raise_on_reviewer_failure=raise_on_reviewer_failure,
     )
 
@@ -218,6 +226,7 @@ def kickoff_code_formatter_flow(
     repo_full_name: str,
     pr_number: int,
     file_content: str,
+    patch: str | None = None,
     raise_on_reviewer_failure: bool = True,
 ) -> CodeFormatterFlow:
     """Convenience helper that creates and immediately runs the flow."""
@@ -229,6 +238,7 @@ def kickoff_code_formatter_flow(
         repo_full_name=repo_full_name,
         pr_number=pr_number,
         file_content=file_content,
+        patch=patch,
         raise_on_reviewer_failure=raise_on_reviewer_failure,
     )
     flow.kickoff()

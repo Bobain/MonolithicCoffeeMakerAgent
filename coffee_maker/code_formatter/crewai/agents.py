@@ -1,172 +1,79 @@
-"""
-Agent Definitions for Code Formatter CrewAI System.
+"""CrewAI wrappers around the LangChain code formatter agents."""
 
-This module defines the AI agents used in the code formatting and review workflow.
-Each agent has a specific role and capabilities, working together to analyze and
-improve code quality in pull requests.
-
-Module-level Variables:
-    llm: Google Gemini LLM instance used by all agents
-
-Functions:
-    create_code_formatter_agents: Creates the senior engineer agent for code refactoring
-    create_pr_reviewer_agent: Creates the GitHub reviewer agent for posting suggestions
-"""
+from __future__ import annotations
 
 import logging
-import os
+from typing import Dict
 
 from crewai import Agent, LLM
 from dotenv import load_dotenv
+from langfuse import Langfuse, observe
+
+from coffee_maker.code_formatter import agents as lc_agents
+from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-from langfuse import Langfuse, observe
-from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
-
 Agent = observe(Agent)
 
 
-def _resolve_gemini_api_key() -> str:
-    """Locate a Gemini-compatible API key and expose it for LiteLLM calls."""
-
-    for env_name in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "COFFEE_MAKER_GEMINI_API_KEY"):
-        key = os.getenv(env_name)
-        if key:
-            os.environ.setdefault("GEMINI_API_KEY", key)
-            return key
-
-    raise RuntimeError("Gemini API key missing: set GEMINI_API_KEY, GOOGLE_API_KEY, or COFFEE_MAKER_GEMINI_API_KEY.")
+_CREWAI_MODEL = f"gemini/{lc_agents.GEMINI_MODEL}"
+llm = LLM(model=_CREWAI_MODEL, api_key=lc_agents.GEMINI_API_KEY)
 
 
-_GEMINI_API_KEY = _resolve_gemini_api_key()
-_GEMINI_MODEL = "gemini/gemini-2.0-flash-lite"
+def _wrap_langchain_agent(lc_agent: lc_agents.LangchainAgent) -> Agent:
+    """Convert a LangChain agent specification into a CrewAI agent instance."""
 
-
-# --- LLM Configuration ---
-llm = LLM(model=_GEMINI_MODEL, api_key=_GEMINI_API_KEY)
+    return Agent(
+        role=lc_agent.role,
+        goal=lc_agent.goal,
+        backstory=lc_agent.backstory,
+        tools=list(lc_agent.tools),
+        allow_delegation=lc_agent.allow_delegation,
+        verbose=lc_agent.verbose,
+        llm=llm,
+    )
 
 
 @observe
-def create_code_formatter_agents(langfuse_client: Langfuse) -> dict[str, Agent]:
-    """
-    Creates the agent responsible for analyzing and refactoring code.
+def create_code_formatter_agents(langfuse_client: Langfuse) -> Dict[str, Agent]:
+    """Return the CrewAI senior engineer agent."""
 
-    This function creates a senior engineer agent that analyzes code files and
-    suggests improvements based on best practices and style guidelines. The agent's
-    goal and backstory are fetched from Langfuse prompts for easy version control
-    and experimentation.
+    lc_agent = lc_agents.create_langchain_code_formatter_agent(langfuse_client)
+    crew_agent = _wrap_langchain_agent(lc_agent)
 
-    Args:
-        langfuse_client (Langfuse): Initialized Langfuse client for fetching prompts
-
-    Returns:
-        dict: Dictionary with key "senior_engineer" mapping to the Agent instance
-
-    Raises:
-        Exception: If prompts cannot be fetched from Langfuse
-
-    Example:
-        >>> from langfuse import Langfuse
-        >>> langfuse = Langfuse(...)
-        >>> agents = create_code_formatter_agents(langfuse)
-        >>> senior_agent = agents["senior_engineer"]
-    """
-    try:
-        goal_prompt = langfuse_client.get_prompt("refactor_agent/goal_prompt")
-        backstory_prompt = langfuse_client.get_prompt("refactor_agent/backstory_prompt")
-    except Exception as e:
-        print(f"ERROR: Could not fetch prompts from Langfuse. Details: {e}")
-        raise
-
-    senior_engineer_agent = Agent(
-        role="Senior Software Engineer",
-        goal=goal_prompt.prompt,
-        backstory=backstory_prompt.prompt,
-        tools=[],  # no tools for this agent
-        allow_delegation=False,
-        verbose=True,
-        llm=llm,
-    )
-    logger.debug(f"Created senior_engineer_agent: {senior_engineer_agent}")
-    logger.info(f"Senior engineer agent created with goal: {goal_prompt.prompt[:100]}...")
-    return {"senior_engineer": senior_engineer_agent}
+    logger.debug("Created senior_engineer_agent: %s", crew_agent)
+    logger.info("Senior engineer agent created with goal: %s...", lc_agent.goal[:100])
+    return {"senior_engineer": crew_agent}
 
 
 @observe
 def create_pr_reviewer_agent(
     langfuse_client: Langfuse, pr_number: int, repo_full_name: str, file_path: str
-) -> dict[str, Agent]:
-    """
-    Creates the agent responsible for posting review suggestions on GitHub.
+) -> Dict[str, Agent]:
+    """Return the CrewAI GitHub reviewer agent."""
 
-    This function creates a GitHub code reviewer agent that takes refactored code
-    suggestions and posts them as review comments on pull requests using GitHub's
-    suggestion feature. The agent uses the PostSuggestionToolLangAI tool to
-    interact with the GitHub API.
-
-    Args:
-        langfuse_client (Langfuse): Initialized Langfuse client (not currently used
-            but kept for consistency with create_code_formatter_agents)
-
-    Returns:
-        dict: Dictionary with key "pull_request_reviewer" mapping to the Agent instance
-
-    Example:
-        >>> from langfuse import Langfuse
-        >>> langfuse = Langfuse(...)
-        >>> agents = create_pr_reviewer_agent(langfuse)
-        >>> reviewer = agents["pull_request_reviewer"]
-
-    Note:
-        The agent has access to PostSuggestionToolLangAI which requires GITHUB_TOKEN
-        environment variable to be set with appropriate permissions.
-    """
     logger.debug("Creating PR reviewer agent")
-    tool = PostSuggestionToolLangAI()
+    tool_instance = PostSuggestionToolLangAI()
 
-    agent = {
-        "pull_request_reviewer": Agent(
-            role="GitHub Code Reviewer",
-            goal=f"""You will be given as input a string formatted in a given STRUCTURE which list and explains
-            changes that should be suggested on the pull request review,
-            you should post suggestions in a commit in github to reflect these suggested changes.
+    lc_agent = lc_agents.create_langchain_pr_reviewer_agent(
+        langfuse_client,
+        pr_number=pr_number,
+        repo_full_name=repo_full_name,
+        file_path=file_path,
+        tools=(tool_instance,),
+    )
 
-            Your input is a string which indicates which
-
-            The structure of your input is a string with this STRUCTURE:
-            ---
-            {langfuse_client.get_prompt("reformatted_code_file_template")}
-            ---
-
-            To post suggested changes to:
-            you are equipped with a tool to post suggestions commits with a comment that explains the change.
-            This tool should be used with the following inputs:
-            ---
-            repo_full_name: {repo_full_name}
-            pr_number: {pr_number}
-            file_path: {file_path}
-            ---
-
-            for each code change (suggestion in github given in your input string) you should post a suggestion
-            commit in the Pull Request review with a comment that match the explanation (given in your input string)
-
-            By parsing the Input string you will find the other inputs needed to use your tool:
-            start_line:int      The line at which the suggested commit should start (see in EXPLANATIONS block of your input string)
-            "end_line":         The line at which the suggested commit should end (see in EXPLANATIONS block of your input string)
-            "suggestion_body"   The suggested code (see in the CODE_MODIFIED block of your input string)
-            "comment_text":     The explanations for code change (see in EXPLANATIONS block of your input string)
-
-            """,
-            backstory="",
-            tools=[tool],
-            allow_delegation=False,
-            verbose=True,
-            llm=llm,
-        )
-    }
+    crew_agent = _wrap_langchain_agent(lc_agent)
     logger.debug("Created PR reviewer agent")
-    logger.info(f"PR reviewer agent created with {len(agent['pull_request_reviewer'].tools)} tools")
-    return agent
+    logger.info("PR reviewer agent created with %s tools", len(crew_agent.tools))
+    return {"pull_request_reviewer": crew_agent}
+
+
+__all__ = [
+    "create_code_formatter_agents",
+    "create_pr_reviewer_agent",
+    "llm",
+]

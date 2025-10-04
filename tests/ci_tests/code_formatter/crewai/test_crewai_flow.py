@@ -83,6 +83,7 @@ class TestCodeFormatterFlow:
             repo_full_name=repo_full_name,
             pr_number=pr_number,
             file_content=file_content,
+            patch="@@ -1,1 +1,1 @@",
         )
 
         flow.kickoff()
@@ -117,6 +118,7 @@ class TestCodeFormatterFlow:
         assert flow.state.reformat_result == "formatted output"
         assert flow.state.review_prompt == "compiled reviewer prompt"
         assert flow.state.review_result == "review output"
+        assert flow.state.patch == "@@ -1,1 +1,1 @@"
         assert any(isinstance(tool, PostSuggestionToolLangAI) for tool in flow.reviewer_agent.tools)
 
     def test_flow_factory_helper(self, formatter_agent, reviewer_agent, langfuse_client):
@@ -128,6 +130,7 @@ class TestCodeFormatterFlow:
             repo_full_name="owner/repo",
             pr_number=1,
             file_content="code",
+            patch=None,
         )
 
         assert isinstance(flow, CodeFormatterFlow)
@@ -145,6 +148,7 @@ class TestCodeFormatterFlow:
             repo_full_name="owner/repo",
             pr_number=7,
             file_content="code",
+            patch=None,
         )
 
         assert isinstance(flow, CodeFormatterFlow)

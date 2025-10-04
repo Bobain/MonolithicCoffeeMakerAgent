@@ -36,6 +36,7 @@ Usage:
         result = run_code_formatter("owner/repo", 123)
 """
 
+from datetime import datetime
 import logging
 import os
 
@@ -84,7 +85,8 @@ def _get_pr_modified_files(repo_full_name, pr_number):
         pr_number: Pull request number
 
     Returns:
-        List of file paths that were modified in the PR, or empty list if fetch fails
+        List of dictionaries containing file metadata (filename, patch, status)
+        for files modified in the PR, or empty list if fetch fails
     """
     logger.info(f"Fetching modified files from PR #{pr_number} in {repo_full_name}")
     try:
@@ -97,7 +99,15 @@ def _get_pr_modified_files(repo_full_name, pr_number):
         repo = g.get_repo(repo_full_name)
         pull_request = repo.get_pull(pr_number)
         files = pull_request.get_files()
-        file_list = [f.filename for f in files]
+        file_list = []
+        for file in files:
+            file_list.append(
+                {
+                    "filename": file.filename,
+                    "patch": getattr(file, "patch", None),
+                    "status": getattr(file, "status", None),
+                }
+            )
         logger.info(f"Found {len(file_list)} modified files in PR #{pr_number}")
         return file_list
     except Exception:
@@ -158,15 +168,15 @@ def run_code_formatter(repo_full_name, pr_number):
         logger.warning(f"No modified files found in PR #{pr_number}. Aborting.")
         return None
 
-    python_files = [path for path in files_to_review if path.endswith(".py")]
+    python_files = [file for file in files_to_review if file["filename"].endswith(".py")]
 
     if not python_files:
         logger.warning("No Python files to process in this PR.")
         return None
 
     logger.info(f"Found {len(python_files)} Python files in PR #{pr_number}:")
-    for file_path in python_files:
-        logger.info(f"  - {file_path}")
+    for file_info in python_files:
+        logger.info(f"  - {file_info['filename']}")
 
     # Initialize agents
     logger.info("Initializing agents")
@@ -179,7 +189,7 @@ def run_code_formatter(repo_full_name, pr_number):
         return None
 
     langfuse_client.update_current_trace(
-        session_id=f"pr-review-{repo_full_name}-{pr_number}",
+        session_id=f"pr-review-{repo_full_name}-{pr_number}-{datetime.now().isoformat()}",
         metadata={
             "repo": repo_full_name,
             "pr_number": pr_number,
@@ -190,12 +200,16 @@ def run_code_formatter(repo_full_name, pr_number):
     flow_results: list[dict[str, str | None]] = []
     processed_files = 0
 
-    for file_path in python_files:
+    for file_info in python_files:
+        file_path = file_info["filename"]
         logger.info(f"Processing file: {file_path}")
         # --- Fetch original content ---
         file_content = _get_pr_file_content(repo_full_name, pr_number, file_path)
         if file_content is None:
             logger.warning(f"Skipping {file_path} - could not fetch content")
+            continue
+        if not file_content.strip():
+            logger.info("Skipping %s - no substantive content in file", file_path)
             continue
 
         pr_reviewer_agent = create_pr_reviewer_agent(langfuse_client, pr_number, repo_full_name, file_path)
@@ -212,6 +226,7 @@ def run_code_formatter(repo_full_name, pr_number):
             repo_full_name=repo_full_name,
             pr_number=pr_number,
             file_content=file_content,
+            patch=file_info.get("patch"),
         )
 
         logger.info("Launching formatting flow for %s", file_path)
@@ -225,7 +240,7 @@ def run_code_formatter(repo_full_name, pr_number):
                     "review_result": flow.state.review_result,
                 }
             )
-            langfuse_client.trace(
+            langfuse_client.create_event(
                 name=f"code_formatter_flow_{file_path}",
                 input=(flow.state.reformat_prompt or "")[:500],
                 output=(flow.state.review_result or "")[:1000],
@@ -238,7 +253,7 @@ def run_code_formatter(repo_full_name, pr_number):
         except Exception as exc:  # pragma: no cover - runtime failures
             logger.error("Flow execution failed for %s", file_path, exc_info=True)
             flow_results.append({"file_path": file_path, "error": str(exc)})
-            langfuse_client.trace(
+            langfuse_client.create_event(
                 name=f"code_formatter_flow_{file_path}",
                 input=file_content[:500],
                 output=str(exc)[:1000],

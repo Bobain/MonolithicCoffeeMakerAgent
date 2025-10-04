@@ -108,8 +108,13 @@ class TestCreateReviewTask:
     def test_create_review_task_basic(self, mock_agent):
         """Test creating a basic review task"""
         mock_langfuse_client = mock.MagicMock()
-        mock_refactor_task = mock.MagicMock()
-        mock_refactor_task.output = "refactored code output"
+        refactor_task = Task(
+            description="Refactor",
+            expected_output="Output",
+            agent=mock_agent,
+            name="refactor_task",
+        )
+        refactor_task.output = "refactored code output"
 
         # Mock the prompt compilation
         mock_prompt = mock.MagicMock()
@@ -120,39 +125,40 @@ class TestCreateReviewTask:
         repo_full_name = "owner/repo"
         pr_number = 42
 
-        task = create_review_task(
-            mock_agent, mock_langfuse_client, file_path, repo_full_name, pr_number, mock_refactor_task
-        )
+        task = create_review_task(mock_agent, mock_langfuse_client, file_path, repo_full_name, pr_number, refactor_task)
 
         # Verify it returns a Task
         assert isinstance(task, Task)
         assert task.agent == mock_agent
 
         # Verify the prompt was compiled with correct parameters
-        mock_langfuse_client.get_prompt.assert_called_once_with("code_formatter_main_llm_entry")
-        mock_prompt.compile.assert_called_once_with(
-            filename=file_path,
-            repo_full_name=repo_full_name,
-            pr_number=pr_number,
-            refactored_code=mock_refactor_task.output,
-            MODIFIED_CODE_DELIMITER_START=MODIFIED_CODE_DELIMITER_START,
-            MODIFIED_CODE_DELIMITER_END=MODIFIED_CODE_DELIMITER_END,
-            EXPLANATIONS_DELIMITER_START=EXPLANATIONS_DELIMITER_START,
-            EXPLANATIONS_DELIMITER_END=EXPLANATIONS_DELIMITER_END,
-        )
+        mock_langfuse_client.get_prompt.assert_called_once_with("pr_reviewer_task")
+        mock_prompt.compile.assert_called_once()
+        compile_kwargs = mock_prompt.compile.call_args[1]
+        assert compile_kwargs["file_path"] == file_path
+        assert compile_kwargs["repo_full_name"] == repo_full_name
+        assert compile_kwargs["pr_number"] == pr_number
+        assert compile_kwargs["MODIFIED_CODE_DELIMITER_START"] == MODIFIED_CODE_DELIMITER_START
+        assert compile_kwargs["EXPLANATIONS_DELIMITER_END"] == EXPLANATIONS_DELIMITER_END
+        assert task.context == [refactor_task]
 
     def test_create_review_task_expected_output(self, mock_agent):
         """Test that the expected_output contains success/failure messages"""
         mock_langfuse_client = mock.MagicMock()
-        mock_refactor_task = mock.MagicMock()
-        mock_refactor_task.output = "output"
+        refactor_task = Task(
+            description="Refactor",
+            expected_output="Output",
+            agent=mock_agent,
+            name="refactor_task",
+        )
+        refactor_task.output = "output"
 
         mock_prompt = mock.MagicMock()
         mock_prompt.compile.return_value = "prompt"
         mock_langfuse_client.get_prompt.return_value = mock_prompt
 
         file_path = "src/test.py"
-        task = create_review_task(mock_agent, mock_langfuse_client, file_path, "repo", 1, mock_refactor_task)
+        task = create_review_task(mock_agent, mock_langfuse_client, file_path, "repo", 1, refactor_task)
 
         assert file_path in task.expected_output
         assert "confirmation message" in task.expected_output
@@ -163,38 +169,44 @@ class TestCreateReviewTask:
     def test_create_review_task_with_different_params(self, mock_agent):
         """Test creating review tasks with different parameters"""
         mock_langfuse_client = mock.MagicMock()
-        mock_refactor_task = mock.MagicMock()
-        mock_refactor_task.output = "different output"
+        refactor_task = Task(
+            description="Refactor",
+            expected_output="Output",
+            agent=mock_agent,
+            name="refactor_task",
+        )
+        refactor_task.output = "different output"
 
         mock_prompt = mock.MagicMock()
         mock_prompt.compile.return_value = "compiled"
         mock_langfuse_client.get_prompt.return_value = mock_prompt
 
         task = create_review_task(
-            mock_agent, mock_langfuse_client, "different/path.py", "test/repo", 999, mock_refactor_task
+            mock_agent, mock_langfuse_client, "different/path.py", "test/repo", 999, refactor_task
         )
 
         # Verify the compile was called with the different parameters
         compile_call_kwargs = mock_prompt.compile.call_args[1]
-        assert compile_call_kwargs["filename"] == "different/path.py"
+        assert compile_call_kwargs["file_path"] == "different/path.py"
         assert compile_call_kwargs["repo_full_name"] == "test/repo"
         assert compile_call_kwargs["pr_number"] == 999
-        assert compile_call_kwargs["refactored_code"] == "different output"
 
     def test_create_review_task_uses_refactor_output(self, mock_agent):
         """Test that review task uses refactor task output"""
         mock_langfuse_client = mock.MagicMock()
-        mock_refactor_task = mock.MagicMock()
-
+        refactor_task = Task(
+            description="Refactor",
+            expected_output="Output",
+            agent=mock_agent,
+            name="refactor_task",
+        )
         expected_output = "This is the refactored code from previous task"
-        mock_refactor_task.output = expected_output
+        refactor_task.output = expected_output
 
         mock_prompt = mock.MagicMock()
         mock_prompt.compile.return_value = "prompt"
         mock_langfuse_client.get_prompt.return_value = mock_prompt
 
-        create_review_task(mock_agent, mock_langfuse_client, "file.py", "repo", 1, mock_refactor_task)
+        task = create_review_task(mock_agent, mock_langfuse_client, "file.py", "repo", 1, refactor_task)
 
-        # Verify the refactored_code parameter was passed correctly
-        compile_kwargs = mock_prompt.compile.call_args[1]
-        assert compile_kwargs["refactored_code"] == expected_output
+        assert task.context == [refactor_task]

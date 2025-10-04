@@ -117,7 +117,10 @@ class TestRunCodeFormatter:
     ):
         """Flow executes once and returns formatter/reviewer outputs."""
 
-        mock_get_modified_files.return_value = ["src/test.py", "README.md"]
+        mock_get_modified_files.return_value = [
+            {"filename": "src/test.py", "patch": "@@ -1 +1 @@", "status": "modified"},
+            {"filename": "README.md", "patch": None, "status": "modified"},
+        ]
         mock_get_content.return_value = "def test():\n    pass"
         mock_create_formatter.return_value = {"senior_engineer": mock_agents["senior_engineer"]}
         mock_create_reviewer.return_value = {"pull_request_reviewer": mock_agents["pull_request_reviewer"]}
@@ -131,7 +134,7 @@ class TestRunCodeFormatter:
         mock_create_flow.return_value = mock_flow
 
         mock_langfuse_client.update_current_trace.return_value = None
-        mock_langfuse_client.trace.return_value = None
+        mock_langfuse_client.create_event.return_value = None
         mock_langfuse_client.flush.return_value = None
 
         result = run_code_formatter(repo_full_name="owner/repo", pr_number=123)
@@ -154,10 +157,11 @@ class TestRunCodeFormatter:
             repo_full_name="owner/repo",
             pr_number=123,
             file_content="def test():\n    pass",
+            patch="@@ -1 +1 @@",
         )
         mock_flow.kickoff.assert_called_once()
         mock_langfuse_client.update_current_trace.assert_called_once()
-        mock_langfuse_client.trace.assert_called_once()
+        assert mock_langfuse_client.create_event.call_count == 1
         mock_langfuse_client.flush.assert_called_once()
 
     @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
@@ -179,7 +183,9 @@ class TestRunCodeFormatter:
         """Multiple modified files trigger multiple flow executions."""
 
         file_list = ["src/file1.py", "src/file2.py"]
-        mock_get_modified_files.return_value = file_list + ["README.md"]
+        mock_get_modified_files.return_value = [
+            {"filename": name, "patch": f"patch-{i}", "status": "modified"} for i, name in enumerate(file_list, start=1)
+        ] + [{"filename": "README.md", "patch": None, "status": "modified"}]
         mock_get_content.side_effect = ["code1", "code2"]
         mock_create_formatter.return_value = {"senior_engineer": mock_agents["senior_engineer"]}
         mock_create_reviewer.return_value = {"pull_request_reviewer": mock_agents["pull_request_reviewer"]}
@@ -220,7 +226,11 @@ class TestRunCodeFormatter:
     ):
         """Files without content are skipped and do not execute flows."""
 
-        mock_get_modified_files.return_value = ["src/missing.py", "src/existing.py", "README.md"]
+        mock_get_modified_files.return_value = [
+            {"filename": "src/missing.py", "patch": "patch-missing", "status": "modified"},
+            {"filename": "src/existing.py", "patch": "patch-existing", "status": "modified"},
+            {"filename": "README.md", "patch": None, "status": "modified"},
+        ]
         mock_get_content.side_effect = [None, "code"]
         mock_create_formatter.return_value = {"senior_engineer": mock_agents["senior_engineer"]}
         mock_create_reviewer.return_value = {"pull_request_reviewer": mock_agents["pull_request_reviewer"]}
@@ -252,7 +262,10 @@ class TestRunCodeFormatter:
     ):
         """When all content fetches fail, the function returns None."""
 
-        mock_get_modified_files.return_value = ["src/missing.py", "README.md"]
+        mock_get_modified_files.return_value = [
+            {"filename": "src/missing.py", "patch": "patch-missing", "status": "modified"},
+            {"filename": "README.md", "patch": None, "status": "modified"},
+        ]
         mock_get_content.return_value = None
         mock_create_formatter.return_value = {"senior_engineer": mock_agents["senior_engineer"]}
         mock_create_reviewer.return_value = {"pull_request_reviewer": mock_agents["pull_request_reviewer"]}
@@ -282,7 +295,10 @@ class TestRunCodeFormatter:
     ):
         """If the formatter agent is missing, execution aborts."""
 
-        mock_get_modified_files.return_value = ["src/test.py", "README.md"]
+        mock_get_modified_files.return_value = [
+            {"filename": "src/test.py", "patch": "patch-test", "status": "modified"},
+            {"filename": "README.md", "patch": None, "status": "modified"},
+        ]
         mock_get_content.return_value = "code"
         mock_create_formatter.return_value = {}
 

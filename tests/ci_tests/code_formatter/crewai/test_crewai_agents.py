@@ -5,6 +5,7 @@ from unittest import mock
 import pytest
 from crewai import Agent
 
+from coffee_maker.code_formatter import agents as lc_agents
 from coffee_maker.code_formatter.crewai import agents
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
 
@@ -16,14 +17,10 @@ class TestLLMConfiguration:
         """Test that llm object is initialized"""
         assert agents.llm is not None
 
-    def test_llm_initialization_error(self, monkeypatch):
-        """Test that missing API keys raise a runtime error."""
-        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-        monkeypatch.delenv("COFFEE_MAKER_GEMINI_API_KEY", raising=False)
+    def test_llm_configuration_matches_langchain_defaults(self):
+        """CrewAI layer should mirror the LangChain agent configuration."""
 
-        with pytest.raises(RuntimeError, match="Gemini API key missing"):
-            agents._resolve_gemini_api_key()
+        assert agents.llm.model == f"gemini/{lc_agents.GEMINI_MODEL}"
 
 
 class TestCreateCodeFormatterAgents:
@@ -42,8 +39,6 @@ class TestCreateCodeFormatterAgents:
         mock_langfuse_client.get_prompt.side_effect = [
             mock_goal_prompt,
             mock_backstory_prompt,
-            "template",
-            "template",
         ]
 
         result = agents.create_code_formatter_agents(mock_langfuse_client)
@@ -64,8 +59,6 @@ class TestCreateCodeFormatterAgents:
         mock_langfuse_client.get_prompt.side_effect = [
             mock_goal_prompt,
             mock_backstory_prompt,
-            "template",
-            "template",
         ]
 
         agent_map = agents.create_code_formatter_agents(mock_langfuse_client)
@@ -88,8 +81,6 @@ class TestCreateCodeFormatterAgents:
         mock_langfuse_client.get_prompt.side_effect = [
             mock_goal_prompt,
             mock_backstory_prompt,
-            "template",
-            "template",
         ]
 
         agent_map = agents.create_code_formatter_agents(mock_langfuse_client)
@@ -116,8 +107,6 @@ class TestCreateCodeFormatterAgents:
         mock_langfuse_client.get_prompt.side_effect = [
             mock_goal_prompt,
             mock_backstory_prompt,
-            "template",
-            "template",
         ]
 
         agent_map = agents.create_code_formatter_agents(mock_langfuse_client)
@@ -183,7 +172,13 @@ class TestCreatePRReviewerAgent:
         """Test that the function returns a dict with 'pull_request_reviewer' key"""
         mock_langfuse_client = mock.MagicMock()
 
-        result = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        mock_template_prompt = mock.MagicMock()
+        mock_template_prompt.prompt = "TEMPLATE"
+        mock_langfuse_client.get_prompt.return_value = mock_template_prompt
+
+        result = agents.create_pr_reviewer_agent(
+            mock_langfuse_client, pr_number=1, repo_full_name="owner/repo", file_path="src/test.py"
+        )
 
         assert isinstance(result, dict)
         assert "pull_request_reviewer" in result
@@ -193,7 +188,13 @@ class TestCreatePRReviewerAgent:
         """Test that the PR reviewer agent has correct role"""
         mock_langfuse_client = mock.MagicMock()
 
-        agent_map = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        mock_template_prompt = mock.MagicMock()
+        mock_template_prompt.prompt = "TEMPLATE"
+        mock_langfuse_client.get_prompt.return_value = mock_template_prompt
+
+        agent_map = agents.create_pr_reviewer_agent(
+            mock_langfuse_client, pr_number=2, repo_full_name="owner/repo", file_path="src/test.py"
+        )
         agent = agent_map["pull_request_reviewer"]
 
         assert agent.role == "GitHub Code Reviewer"
@@ -202,7 +203,13 @@ class TestCreatePRReviewerAgent:
         """Test that the reviewer's goal mentions posting to GitHub"""
         mock_langfuse_client = mock.MagicMock()
 
-        agent_map = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        mock_template_prompt = mock.MagicMock()
+        mock_template_prompt.prompt = "TEMPLATE"
+        mock_langfuse_client.get_prompt.return_value = mock_template_prompt
+
+        agent_map = agents.create_pr_reviewer_agent(
+            mock_langfuse_client, pr_number=3, repo_full_name="owner/repo", file_path="src/test.py"
+        )
         agent = agent_map["pull_request_reviewer"]
 
         assert "GitHub" in agent.goal or "pull request" in agent.goal
@@ -212,16 +219,28 @@ class TestCreatePRReviewerAgent:
         """Test that the reviewer's backstory mentions automation"""
         mock_langfuse_client = mock.MagicMock()
 
-        agent_map = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        mock_template_prompt = mock.MagicMock()
+        mock_template_prompt.prompt = "TEMPLATE"
+        mock_langfuse_client.get_prompt.return_value = mock_template_prompt
+
+        agent_map = agents.create_pr_reviewer_agent(
+            mock_langfuse_client, pr_number=4, repo_full_name="owner/repo", file_path="src/test.py"
+        )
         agent = agent_map["pull_request_reviewer"]
 
-        assert agent.backstory == ""
+        assert "thorough GitHub reviewer" in agent.backstory
 
     def test_reviewer_has_post_suggestion_tool(self):
         """Test that the reviewer has the PostSuggestionToolLangAI"""
         mock_langfuse_client = mock.MagicMock()
 
-        agent_map = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        mock_template_prompt = mock.MagicMock()
+        mock_template_prompt.prompt = "TEMPLATE"
+        mock_langfuse_client.get_prompt.return_value = mock_template_prompt
+
+        agent_map = agents.create_pr_reviewer_agent(
+            mock_langfuse_client, pr_number=5, repo_full_name="owner/repo", file_path="src/test.py"
+        )
         agent = agent_map["pull_request_reviewer"]
 
         assert len(agent.tools) == 1
@@ -231,7 +250,13 @@ class TestCreatePRReviewerAgent:
         """Test that the reviewer has delegation disabled"""
         mock_langfuse_client = mock.MagicMock()
 
-        agent_map = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        mock_template_prompt = mock.MagicMock()
+        mock_template_prompt.prompt = "TEMPLATE"
+        mock_langfuse_client.get_prompt.return_value = mock_template_prompt
+
+        agent_map = agents.create_pr_reviewer_agent(
+            mock_langfuse_client, pr_number=6, repo_full_name="owner/repo", file_path="src/test.py"
+        )
         agent = agent_map["pull_request_reviewer"]
 
         assert agent.allow_delegation is False
@@ -240,7 +265,13 @@ class TestCreatePRReviewerAgent:
         """Test that the reviewer has verbose mode enabled"""
         mock_langfuse_client = mock.MagicMock()
 
-        agent_map = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        mock_template_prompt = mock.MagicMock()
+        mock_template_prompt.prompt = "TEMPLATE"
+        mock_langfuse_client.get_prompt.return_value = mock_template_prompt
+
+        agent_map = agents.create_pr_reviewer_agent(
+            mock_langfuse_client, pr_number=7, repo_full_name="owner/repo", file_path="src/test.py"
+        )
         agent = agent_map["pull_request_reviewer"]
 
         assert agent.verbose is True
@@ -249,11 +280,15 @@ class TestCreatePRReviewerAgent:
         """Test that the reviewer doesn't call Langfuse (uses hardcoded prompts)"""
         mock_langfuse_client = mock.MagicMock()
 
-        agents.create_pr_reviewer_agent(mock_langfuse_client)
+        mock_template_prompt = mock.MagicMock()
+        mock_template_prompt.prompt = "TEMPLATE"
+        mock_langfuse_client.get_prompt.return_value = mock_template_prompt
 
-        # The reviewer agent fetches a template twice to build its goal.
-        mock_langfuse_client.get_prompt.assert_called_with("reformatted_code_file_template")
-        assert mock_langfuse_client.get_prompt.call_count == 2
+        agents.create_pr_reviewer_agent(
+            mock_langfuse_client, pr_number=8, repo_full_name="owner/repo", file_path="src/test.py"
+        )
+
+        mock_langfuse_client.get_prompt.assert_called_once_with("reformatted_code_file_template")
 
 
 class TestAgentIntegration:
@@ -268,15 +303,18 @@ class TestAgentIntegration:
         mock_backstory_prompt = mock.MagicMock()
         mock_backstory_prompt.prompt = "backstory"
 
+        mock_template_prompt = mock.MagicMock()
+        mock_template_prompt.prompt = "TEMPLATE"
         mock_langfuse_client.get_prompt.side_effect = [
             mock_goal_prompt,
             mock_backstory_prompt,
-            "template",
-            "template",
+            mock_template_prompt,
         ]
 
         formatter_agents = agents.create_code_formatter_agents(mock_langfuse_client)
-        reviewer_agents = agents.create_pr_reviewer_agent(mock_langfuse_client)
+        reviewer_agents = agents.create_pr_reviewer_agent(
+            mock_langfuse_client, pr_number=9, repo_full_name="owner/repo", file_path="src/test.py"
+        )
 
         assert "senior_engineer" in formatter_agents
         assert "pull_request_reviewer" in reviewer_agents
@@ -293,15 +331,20 @@ class TestAgentIntegration:
         mock_backstory_prompt = mock.MagicMock()
         mock_backstory_prompt.prompt = "backstory"
 
+        mock_template_prompt = mock.MagicMock()
+        mock_template_prompt.prompt = "TEMPLATE"
         mock_langfuse_client.get_prompt.side_effect = [
             mock_goal_prompt,
             mock_backstory_prompt,
-            "template",
-            "template",
+            mock_template_prompt,
         ]
 
         agent_map = agents.create_code_formatter_agents(mock_langfuse_client)
-        agent_map.update(agents.create_pr_reviewer_agent(mock_langfuse_client))
+        agent_map.update(
+            agents.create_pr_reviewer_agent(
+                mock_langfuse_client, pr_number=10, repo_full_name="owner/repo", file_path="src/test.py"
+            )
+        )
 
         assert len(agent_map) == 2
         assert "senior_engineer" in agent_map
