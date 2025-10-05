@@ -39,7 +39,7 @@ def get_chat_llm(provider: str = "gemini", model: str = None):
             logger.warning(
                 f"ENVIRONMENT VARIABLE {api_key} not set, you asked {provider} with model {model} but it may not work"
             )
-        llm = Llm(model if model else default_model)
+        llm = langchain_core.language_models.LLM(Llm(model if model else default_model))
         langfuse.update_current_trace(
             metadata={
                 f"llm_config_{provider}_{model}_{datetime.datetime.now().isoformat()}": dict(

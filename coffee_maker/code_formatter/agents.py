@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional, Sequence
 
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langfuse import Langfuse
+import langfuse
 
 from coffee_maker.langchain_observe.llm import get_chat_llm, SUPPORTED_PROVIDERS
 
@@ -51,24 +51,17 @@ def _build_agent_config(
 
 
 def create_langchain_code_formatter_agent(
-    langfuse_client: Langfuse, *, llm_override: Optional[Any] = None
+    langfuse_client: langfuse.Langfuse, *, llm_override: Optional[Any] = None
 ) -> Dict[str, Any]:
     """Return the LangChain configuration for the formatter agent."""
 
     try:
-        goal_prompt = langfuse_client.get_prompt("refactor_agent/goal_prompt")
-        backstory_prompt = langfuse_client.get_prompt("refactor_agent/backstory_prompt")
+        system_prompt = langfuse_client.get_prompt("code_formatter_main_llm_entry")
     except Exception as exc:  # pragma: no cover - surfaced to callers/tests
         logger.exception("Failed to fetch formatter prompts", exc_info=exc)
         raise
 
-    goal = getattr(goal_prompt, "prompt", str(goal_prompt))
-    backstory = getattr(backstory_prompt, "prompt", str(backstory_prompt))
-
-    system_message = (
-        f"You are a meticulous Senior Software Engineer.\\n\\n" f"Goal: {goal}\\n\\n" f"Backstory: {backstory}"
-    )
-    prompt = _build_prompt(system_message)
+    prompt = _build_prompt(system_prompt)
 
     return _build_agent_config(
         role="Senior Software Engineer: python code formatter",
