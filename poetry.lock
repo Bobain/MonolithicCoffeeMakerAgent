@@ -2929,6 +2929,7 @@ files = [
 
 [package.dependencies]
 langchain-core = ">=0.3.72,<1.0.0"
+langchain-google-genai = {version = "*", optional = true, markers = "extra == \"google-genai\""}
 langchain-text-splitters = ">=0.3.9,<1.0.0"
 langsmith = ">=0.1.17"
 pydantic = ">=2.7.4,<3.0.0"
@@ -8244,4 +8245,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "774b0ff34742ff4ff5cf5f294f5cddd683a0205e17c1654c520fcfcf7c6f8468"
+content-hash = "0284c09170c0f82f0a8801c5fa313a43e5985f38bef3e1e77df227815e97dd0d"

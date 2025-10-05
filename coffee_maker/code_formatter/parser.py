@@ -93,10 +93,6 @@ def parse_reformatted_output(text: str) -> List[Dict[str, object]]:
         while idx < total and not lines[idx].strip():
             idx += 1
 
-        if idx >= total or not lines[idx].strip().startswith(EXPLANATIONS_DELIMITER_START):
-            LOGGER.debug("Missing explanations block after modified code; stopping parse")
-            break
-
         explanation_header = lines[idx].strip()
         exp_start, exp_end = _extract_line_span(explanation_header[len(EXPLANATIONS_DELIMITER_START) :])
         idx += 1
@@ -120,8 +116,8 @@ def parse_reformatted_output(text: str) -> List[Dict[str, object]]:
         end_line = comment_end or exp_end or end_line or start_line
 
         entry = {
-            "start_line": start_line,
-            "end_line": end_line,
+            "start_line": int(start_line),
+            "end_line": int(end_line),
             "suggestion_body": "\n".join(code_lines).rstrip("\n"),
             "comment_text": comment_text,
         }

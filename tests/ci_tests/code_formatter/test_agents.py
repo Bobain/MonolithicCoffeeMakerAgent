@@ -53,7 +53,9 @@ class TestLangchainCodeFormatterAgent:
 
         formatted = agent["prompt"].format_messages(input="hello")
         assert formatted[0].type == "system"
-        assert formatted[0].content == "a meticulous Senior Software Engineer"
+        assert "You are a meticulous Senior Software Engineer" in formatted[0].content
+        assert "Goal: Analyse" in formatted[0].content
+        assert "Backstory: Experienced" in formatted[0].content
         assert formatted[1].type == "human"
         assert formatted[1].content == "hello"
 

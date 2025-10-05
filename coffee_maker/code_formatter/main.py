@@ -69,7 +69,7 @@ except Exception:
 async def _process_single_file(
     agent_config: dict,
     file_path: str,
-    file_content: str,
+    get_file_content: callable,
     repo_full_name: str,
     pr_number: int,
 ) -> dict:
@@ -93,9 +93,10 @@ async def _process_single_file(
         prompt = agent_config["prompt"]
         llm = agent_config["llm"]
 
-        # Invoke the agent with file content
+        # Invoke the agent with file_path and file_content as separate inputs
         input_data = {
-            "input": f"File path: {file_path}\n\nFile content:\n{file_content}",
+            "file_path": file_path,
+            "file_content": get_file_content(),
         }
 
         logger.info(f"Invoking formatter agent for {file_path}")
@@ -206,44 +207,19 @@ async def run_code_formatter(
             logger.warning(f"File {file_path} has no content")
             return []
 
-        files_to_process = [{"filename": file_path, "content": file_content}]
+        files_to_process = [
+            {"filename": file_path, "content": get_pr_file_content(repo_full_name, pr_number, file_path)}
+        ]
 
     else:
-        # Fetch all modified files from the PR
         files_info = get_pr_modified_files(repo_full_name, pr_number)
+        files_to_process = [f["filename"] for f in files_info if f["filename"].endswith(".py")]
 
-        if not files_info:
-            logger.warning(f"No modified files found in PR #{pr_number}")
+        if not files_info or len(files_to_process) == 0:
+            logger.warning(f"No modified files .py files found in PR #{pr_number}")
             return []
 
-        # Filter for Python files
-        python_files = [f for f in files_info if f["filename"].endswith(".py")]
-
-        if not python_files:
-            logger.warning("No Python files to process in this PR")
-            return []
-
-        logger.info(f"Found {len(python_files)} Python files in PR #{pr_number}")
-
-        # Fetch content for each file
-        files_to_process = []
-        for file_info in python_files:
-            file_name = file_info["filename"]
-            content = get_pr_file_content(repo_full_name, pr_number, file_name)
-
-            if content is None:
-                logger.warning(f"Skipping {file_name} - could not fetch content")
-                continue
-
-            if not content.strip():
-                logger.info(f"Skipping {file_name} - no substantive content")
-                continue
-
-            files_to_process.append({"filename": file_name, "content": content})
-
-    if not files_to_process:
-        logger.warning("No files to process after filtering")
-        return []
+        logger.info(f"Found {len(files_to_process)} Python files in PR #{pr_number}")
 
     logger.info(f"Processing {len(files_to_process)} file(s)")
 
@@ -251,12 +227,12 @@ async def run_code_formatter(
     tasks = [
         _process_single_file(
             agent_config=agent_config,
-            file_path=file_data["filename"],
-            file_content=file_data["content"],
+            file_path=file_path,
+            get_file_content=lambda: get_pr_file_content(repo_full_name, pr_number, file_path),
             repo_full_name=repo_full_name,
             pr_number=pr_number,
         )
-        for file_data in files_to_process
+        for file_path in files_to_process
     ]
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -286,7 +262,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run code formatter on a GitHub PR")
     parser.add_argument("--repo", default="Bobain/MonolithicCoffeeMakerAgent", help="Full repository name (owner/repo)")
-    parser.add_argument("--pr", type=int, default=110, help="Pull request number")
+    parser.add_argument("--pr", type=int, default=111, help="Pull request number")
     parser.add_argument("--file", type=str, default=None, help="Optional: specific file path to process")
     args = parser.parse_args()
 

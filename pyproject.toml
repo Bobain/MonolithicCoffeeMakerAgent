@@ -20,7 +20,7 @@ pygithub = "^2.8.1"
 crewai = "^0.201.1"
 crewai-tools = "^0.75.0"
 langfuse = {version = "^3.5.2", extras = ["langchain"]}
-langchain-google-genai = "^2.1.12"
+langchain = {extras = ["google-genai"], version = "^0.3.27"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
