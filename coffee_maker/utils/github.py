@@ -6,6 +6,15 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
+def get_github_client_instance() -> Github:
+    token = os.getenv("GITHUB_TOKEN")
+    if not token or not len(token):
+        LOGGER.critical("Error: GITHUB_TOKEN environment variable is not set.")
+        raise ValueError("Credentials for Github needed: GITHUB_TOKEN not defined.")
+    auth = Auth.Token(token)
+    return Github(auth=auth)
+
+
 def _is_pending_review_conflict(exc: GithubException) -> bool:
     """Return True if exception indicates an existing pending review blocks new comments."""
 
@@ -39,15 +48,6 @@ def _clear_pending_review(pr, login: str) -> bool:
     return False
 
 
-def get_github_client_instance() -> Github:
-    token = os.getenv("GITHUB_TOKEN")
-    if not token or not len(token):
-        LOGGER.critical("Error: GITHUB_TOKEN environment variable is not set.")
-        raise ValueError("Credentials for Github needed: GITHUB_TOKEN not defined.")
-    auth = Auth.Token(token)
-    return Github(auth=auth)
-
-
 @observe
 def post_suggestion_in_pr_review(
     repo_full_name: str = None,
@@ -57,6 +57,7 @@ def post_suggestion_in_pr_review(
     end_line: int = None,
     suggestion_body: str = None,
     comment_text: str = None,
+    g=get_github_client_instance(),
 ) -> str:
     """
     Post a code suggestion as a review comment on a GitHub pull request.
@@ -118,7 +119,6 @@ def post_suggestion_in_pr_review(
         LOGGER.info(
             f"Attempting to post suggestion to repo: {repo_full_name}, PR: {pr_number}, file: {file_path}, lines: {start_line}-{end_line}"
         )
-        g = get_github_client_instance()
         current_user_login = g.get_user().login
 
         try:
@@ -178,7 +178,7 @@ def post_suggestion_in_pr_review(
 
 
 @observe
-def get_pr_modified_files(repo_full_name, pr_number):
+def get_pr_modified_files(repo_full_name, pr_number, g=get_github_client_instance()):
     """
     Fetches the list of modified files from a pull request.
 
@@ -192,7 +192,6 @@ def get_pr_modified_files(repo_full_name, pr_number):
     """
     LOGGER.info(f"Fetching modified files from PR #{pr_number} in {repo_full_name}")
     try:
-        g = get_github_client_instance()
         repo = g.get_repo(repo_full_name)
         pull_request = repo.get_pull(pr_number)
         files = pull_request.get_files()
@@ -213,7 +212,7 @@ def get_pr_modified_files(repo_full_name, pr_number):
 
 
 @observe
-def get_pr_file_content(repo_full_name, pr_number, file_path):
+def get_pr_file_content(repo_full_name, pr_number, file_path, g=get_github_client_instance()):
     """
     Fetches the content of a specific file from a PR's head commit.
 
@@ -227,7 +226,6 @@ def get_pr_file_content(repo_full_name, pr_number, file_path):
     """
     LOGGER.info(f"Fetching content for '{file_path}' from PR #{pr_number}")
     try:
-        g = get_github_client_instance()
         repo = g.get_repo(repo_full_name)
         pull_request = repo.get_pull(pr_number)
         contents = repo.get_contents(file_path, ref=pull_request.head.sha)
