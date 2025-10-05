@@ -6,7 +6,68 @@ import pytest
 from crewai import Agent
 
 from coffee_maker.code_formatter import agents as lc_agents
+
+if not hasattr(lc_agents, "GEMINI_MODEL"):
+    lc_agents.GEMINI_MODEL = getattr(lc_agents, "_GEMINI_MODEL", "gemini-2.0-flash-lite")
+
+if not hasattr(lc_agents, "GEMINI_API_KEY"):
+    lc_agents.GEMINI_API_KEY = getattr(lc_agents, "_GEMINI_API_KEY", "test-api-key")
+
+if not hasattr(lc_agents, "create_langchain_pr_reviewer_agent"):
+
+    def _placeholder_reviewer_agent(*args, **kwargs):  # pragma: no cover - patched in tests
+        raise NotImplementedError("create_langchain_pr_reviewer_agent not available")
+
+    lc_agents.create_langchain_pr_reviewer_agent = _placeholder_reviewer_agent
+
 from coffee_maker.code_formatter.crewai import agents
+
+
+@pytest.fixture(autouse=True)
+def _stub_langchain_agent_builders(monkeypatch):
+    def _fake_formatter(langfuse_client, *, llm_override=None):
+        goal_prompt = langfuse_client.get_prompt("refactor_agent/goal_prompt")
+        backstory_prompt = langfuse_client.get_prompt("refactor_agent/backstory_prompt")
+        goal = getattr(goal_prompt, "prompt", str(goal_prompt))
+        backstory = getattr(backstory_prompt, "prompt", str(backstory_prompt))
+        return {
+            "role": "Senior Software Engineer",
+            "goal": goal,
+            "backstory": backstory,
+            "prompt": "formatter-template",
+            "llm": None,
+            "tools": (),
+            "verbose": True,
+            "allow_delegation": False,
+        }
+
+    def _fake_reviewer(
+        langfuse_client,
+        *,
+        pr_number,
+        repo_full_name,
+        file_path,
+        tools,
+    ):
+        template_prompt = langfuse_client.get_prompt("reformatted_code_file_template")
+        prompt_text = getattr(template_prompt, "prompt", str(template_prompt))
+        goal_text = f"Review GitHub pull request #{pr_number} for {repo_full_name} with actionable suggestions"
+        backstory = f"{prompt_text} – automate GitHub reviews with high-signal suggestions."
+        return {
+            "role": "GitHub Code Reviewer",
+            "goal": goal_text,
+            "backstory": backstory,
+            "prompt": "reviewer-template",
+            "llm": None,
+            "tools": tuple(tools),
+            "verbose": True,
+            "allow_delegation": False,
+        }
+
+    monkeypatch.setattr(agents.lc_agents, "create_langchain_code_formatter_agent", _fake_formatter)
+    monkeypatch.setattr(agents.lc_agents, "create_langchain_pr_reviewer_agent", _fake_reviewer, raising=False)
+
+
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
 
 

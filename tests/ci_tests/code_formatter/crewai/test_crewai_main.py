@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 from crewai import Agent
 
-from coffee_maker.code_formatter.crewai.main import _get_pr_file_content, run_code_formatter
+from coffee_maker.code_formatter.crewai.main import run_code_formatter
 
 
 @pytest.fixture
@@ -18,89 +18,11 @@ def mock_agents():
     }
 
 
-class TestGetPRFileContent:
-    """Tests for _get_pr_file_content helper function"""
-
-    def test_missing_github_token(self, monkeypatch, caplog):
-        """Test that missing GITHUB_TOKEN is handled"""
-        monkeypatch.delenv("GITHUB_TOKEN", raising=False)
-
-        result = _get_pr_file_content("owner/repo", 123, "src/file.py")
-
-        assert result is None
-        assert "GITHUB_TOKEN environment variable is not set" in caplog.text
-
-    @mock.patch("coffee_maker.code_formatter.crewai.main.Auth")
-    @mock.patch("coffee_maker.code_formatter.crewai.main.Github")
-    def test_successful_file_fetch(self, mock_github_class, mock_auth_class, monkeypatch):
-        """Test successful fetching of file content from GitHub"""
-        monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
-
-        mock_auth_instance = mock.MagicMock()
-        mock_auth_class.Token.return_value = mock_auth_instance
-
-        mock_contents = mock.MagicMock()
-        mock_contents.decoded_content = b"def hello():\n    print('hello')"
-
-        mock_pr = mock.MagicMock()
-        mock_pr.head.sha = "abc123"
-
-        mock_repo = mock.MagicMock()
-        mock_repo.get_pull.return_value = mock_pr
-        mock_repo.get_contents.return_value = mock_contents
-
-        mock_github_instance = mock.MagicMock()
-        mock_github_instance.get_repo.return_value = mock_repo
-        mock_github_class.return_value = mock_github_instance
-
-        result = _get_pr_file_content("owner/repo", 123, "src/test.py")
-
-        assert result == "def hello():\n    print('hello')"
-        mock_auth_class.Token.assert_called_once_with("fake_token")
-        mock_github_class.assert_called_once_with(auth=mock_auth_instance)
-        mock_github_instance.get_repo.assert_called_once_with("owner/repo")
-        mock_repo.get_pull.assert_called_once_with(123)
-        mock_repo.get_contents.assert_called_once_with("src/test.py", ref="abc123")
-
-    @mock.patch("coffee_maker.code_formatter.crewai.main.Github")
-    def test_github_api_error(self, mock_github_class, monkeypatch, caplog):
-        """Test handling of GitHub API errors"""
-        monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
-
-        mock_github_instance = mock.MagicMock()
-        mock_github_instance.get_repo.side_effect = Exception("Repository not found")
-        mock_github_class.return_value = mock_github_instance
-
-        result = _get_pr_file_content("owner/nonexistent", 123, "file.py")
-
-        assert result is None
-        assert "Could not fetch content" in caplog.text
-        assert "file.py" in caplog.text
-
-    @mock.patch("coffee_maker.code_formatter.crewai.main.Github")
-    def test_file_not_found(self, mock_github_class, monkeypatch, caplog):
-        """Test handling when file doesn't exist in PR"""
-        monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
-
-        mock_repo = mock.MagicMock()
-        mock_repo.get_pull.return_value = mock.MagicMock(head=mock.MagicMock(sha="abc123"))
-        mock_repo.get_contents.side_effect = Exception("404: Not Found")
-
-        mock_github_instance = mock.MagicMock()
-        mock_github_instance.get_repo.return_value = mock_repo
-        mock_github_class.return_value = mock_github_instance
-
-        result = _get_pr_file_content("owner/repo", 123, "nonexistent.py")
-
-        assert result is None
-        assert "Could not fetch content" in caplog.text
-
-
 class TestRunCodeFormatter:
     """Tests for run_code_formatter orchestration function"""
 
-    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
-    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_file_content")
+    @mock.patch("coffee_maker.code_formatter.crewai.main.get_pr_modified_files")
+    @mock.patch("coffee_maker.code_formatter.crewai.main.get_pr_file_content")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_agents")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_pr_reviewer_agent")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_flow")
@@ -164,8 +86,8 @@ class TestRunCodeFormatter:
         assert mock_langfuse_client.create_event.call_count == 1
         mock_langfuse_client.flush.assert_called_once()
 
-    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
-    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_file_content")
+    @mock.patch("coffee_maker.code_formatter.crewai.main.get_pr_modified_files")
+    @mock.patch("coffee_maker.code_formatter.crewai.main.get_pr_file_content")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_agents")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_pr_reviewer_agent")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_flow")
@@ -208,8 +130,8 @@ class TestRunCodeFormatter:
         flow1.kickoff.assert_called_once()
         flow2.kickoff.assert_called_once()
 
-    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
-    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_file_content")
+    @mock.patch("coffee_maker.code_formatter.crewai.main.get_pr_modified_files")
+    @mock.patch("coffee_maker.code_formatter.crewai.main.get_pr_file_content")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_agents")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_pr_reviewer_agent")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_flow")
@@ -244,8 +166,8 @@ class TestRunCodeFormatter:
         assert result == [{"file_path": "src/existing.py", "reformat_result": "fmt", "review_result": "rev"}]
         mock_create_flow.assert_called_once()
 
-    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
-    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_file_content")
+    @mock.patch("coffee_maker.code_formatter.crewai.main.get_pr_modified_files")
+    @mock.patch("coffee_maker.code_formatter.crewai.main.get_pr_file_content")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_agents")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_pr_reviewer_agent")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_flow")
@@ -278,8 +200,8 @@ class TestRunCodeFormatter:
         mock_create_flow.assert_not_called()
         mock_langfuse_client.flush.assert_called_once()
 
-    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_modified_files")
-    @mock.patch("coffee_maker.code_formatter.crewai.main._get_pr_file_content")
+    @mock.patch("coffee_maker.code_formatter.crewai.main.get_pr_modified_files")
+    @mock.patch("coffee_maker.code_formatter.crewai.main.get_pr_file_content")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_agents")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_pr_reviewer_agent")
     @mock.patch("coffee_maker.code_formatter.crewai.main.create_code_formatter_flow")

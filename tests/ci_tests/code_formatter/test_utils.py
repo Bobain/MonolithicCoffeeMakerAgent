@@ -1,12 +1,13 @@
 """Tests for coffee_maker.code_formatter.utils."""
 
-from coffee_maker.code_formatter.utils import (
+from coffee_maker.code_formatter.agents import (
     EXPLANATIONS_DELIMITER_END,
     EXPLANATIONS_DELIMITER_START,
     MODIFIED_CODE_DELIMITER_END,
     MODIFIED_CODE_DELIMITER_START,
-    parse_reformatted_output,
 )
+
+from coffee_maker.code_formatter.parser import parse_reformatted_output
 
 
 def _wrap(blocks):

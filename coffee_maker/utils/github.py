@@ -17,6 +17,9 @@ def get_github_client_instance() -> Github:
     return Github(auth=auth)
 
 
+github_client_instance = get_github_client_instance()
+
+
 def _is_pending_review_conflict(exc: GithubException) -> bool:
     """Return True if exception indicates an existing pending review blocks new comments."""
 
@@ -59,7 +62,7 @@ def post_suggestion_in_pr_review(
     end_line: int = None,
     suggestion_body: str = None,
     comment_text: str = None,
-    g: Github = get_github_client_instance(),
+    g: Github = github_client_instance,
 ) -> str:
     """
     Post a code suggestion as a review comment on a GitHub pull request.
@@ -180,7 +183,7 @@ def post_suggestion_in_pr_review(
 
 
 @observe
-def get_pr_modified_files(repo_full_name, pr_number, g: Github = get_github_client_instance()):
+def get_pr_modified_files(repo_full_name, pr_number, g: Github = github_client_instance):
     """
     Fetches the list of modified files from a pull request.
 
@@ -214,7 +217,7 @@ def get_pr_modified_files(repo_full_name, pr_number, g: Github = get_github_clie
 
 
 @observe
-def get_pr_file_content(repo_full_name, pr_number, file_path, g: Github = get_github_client_instance()):
+def get_pr_file_content(repo_full_name, pr_number, file_path, g: Github = github_client_instance):
     """
     Fetches the content of a specific file from a PR's head commit.
 
@@ -243,7 +246,7 @@ class GitHubPRClient:
     """Convenience wrapper that reuses a persistent Github client for PR utilities."""
 
     def __init__(self, github_client: Optional[Github] = None) -> None:
-        self._client = github_client or get_github_client_instance()
+        self._client = github_client or github_client_instance
 
     @property
     def client(self) -> Github:
