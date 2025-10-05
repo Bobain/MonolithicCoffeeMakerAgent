@@ -57,7 +57,7 @@ def post_suggestion_in_pr_review(
     end_line: int = None,
     suggestion_body: str = None,
     comment_text: str = None,
-    g=get_github_client_instance(),
+    g: Github = get_github_client_instance(),
 ) -> str:
     """
     Post a code suggestion as a review comment on a GitHub pull request.
@@ -178,7 +178,7 @@ def post_suggestion_in_pr_review(
 
 
 @observe
-def get_pr_modified_files(repo_full_name, pr_number, g=get_github_client_instance()):
+def get_pr_modified_files(repo_full_name, pr_number, g: Github = get_github_client_instance()):
     """
     Fetches the list of modified files from a pull request.
 
@@ -212,7 +212,7 @@ def get_pr_modified_files(repo_full_name, pr_number, g=get_github_client_instanc
 
 
 @observe
-def get_pr_file_content(repo_full_name, pr_number, file_path, g=get_github_client_instance()):
+def get_pr_file_content(repo_full_name, pr_number, file_path, g: Github = get_github_client_instance()):
     """
     Fetches the content of a specific file from a PR's head commit.
 
