@@ -39,6 +39,15 @@ def _clear_pending_review(pr, login: str) -> bool:
     return False
 
 
+def get_github_client_instance() -> Github:
+    token = os.getenv("GITHUB_TOKEN")
+    if not token or not len(token):
+        LOGGER.critical("Error: GITHUB_TOKEN environment variable is not set.")
+        raise ValueError("Credentials for Github needed: GITHUB_TOKEN not defined.")
+    auth = Auth.Token(token)
+    return Github(auth=auth)
+
+
 @observe
 def post_suggestion_in_pr_review(
     repo_full_name: str = None,
@@ -106,17 +115,10 @@ def post_suggestion_in_pr_review(
     """
 
     try:
-        token = os.getenv("GITHUB_TOKEN")
-        if not token:
-            LOGGER.critical("Error: GITHUB_TOKEN environment variable is not set.")
-            raise ValueError("Credentials for Github needed: GITHUB_TOKEN not defined.")
-
         LOGGER.info(
             f"Attempting to post suggestion to repo: {repo_full_name}, PR: {pr_number}, file: {file_path}, lines: {start_line}-{end_line}"
         )
-
-        auth = Auth.Token(token)
-        g = Github(auth=auth)
+        g = get_github_client_instance()
         current_user_login = g.get_user().login
 
         try:
@@ -129,10 +131,6 @@ def post_suggestion_in_pr_review(
             )
         pr = repo.get_pull(pr_number)
 
-        # --- FIX #2: THE CRITICAL CHANGE ---
-        # Do NOT use `pr.get_commits()[-1]`. It is unreliable and causes the IndexError.
-        # INSTEAD, get the commit SHA directly from the pull request's 'head'.
-        # This is guaranteed to exist and is the correct reference for the PR's latest state.
         latest_commit_sha = pr.head.sha
 
         formatted_suggestion = f"```suggestion\n{suggestion_body}\n```"
@@ -194,12 +192,7 @@ def get_pr_modified_files(repo_full_name, pr_number):
     """
     LOGGER.info(f"Fetching modified files from PR #{pr_number} in {repo_full_name}")
     try:
-        token = os.getenv("GITHUB_TOKEN")
-        if not token:
-            LOGGER.error("GITHUB_TOKEN environment variable is not set.")
-            return []
-        auth = Auth.Token(token)
-        g = Github(auth=auth)
+        g = get_github_client_instance()
         repo = g.get_repo(repo_full_name)
         pull_request = repo.get_pull(pr_number)
         files = pull_request.get_files()
@@ -234,12 +227,7 @@ def get_pr_file_content(repo_full_name, pr_number, file_path):
     """
     LOGGER.info(f"Fetching content for '{file_path}' from PR #{pr_number}")
     try:
-        token = os.getenv("GITHUB_TOKEN")
-        if not token:
-            LOGGER.error("GITHUB_TOKEN environment variable is not set.")
-            return None
-        auth = Auth.Token(token)
-        g = Github(auth=auth)
+        g = get_github_client_instance()
         repo = g.get_repo(repo_full_name)
         pull_request = repo.get_pull(pr_number)
         contents = repo.get_contents(file_path, ref=pull_request.head.sha)
