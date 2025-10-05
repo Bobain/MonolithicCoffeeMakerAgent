@@ -1,3 +1,5 @@
+from typing import Optional
+
 from github import Github, Auth, GithubException
 from langfuse import observe
 import os
@@ -235,3 +237,48 @@ def get_pr_file_content(repo_full_name, pr_number, file_path, g: Github = get_gi
     except Exception:
         LOGGER.error(f"Could not fetch content for '{file_path}' from GitHub.", exc_info=True)
         return None
+
+
+class GitHubPRClient:
+    """Convenience wrapper that reuses a persistent Github client for PR utilities."""
+
+    def __init__(self, github_client: Optional[Github] = None) -> None:
+        self._client = github_client or get_github_client_instance()
+
+    @property
+    def client(self) -> Github:
+        """Expose the underlying Github client for advanced operations."""
+
+        return self._client
+
+    def post_suggestion_in_pr_review(
+        self,
+        repo_full_name: str,
+        pr_number: int,
+        file_path: str,
+        start_line: int,
+        end_line: int,
+        suggestion_body: str,
+        comment_text: str,
+    ) -> str:
+        return post_suggestion_in_pr_review(
+            repo_full_name=repo_full_name,
+            pr_number=pr_number,
+            file_path=file_path,
+            start_line=start_line,
+            end_line=end_line,
+            suggestion_body=suggestion_body,
+            comment_text=comment_text,
+            g=self._client,
+        )
+
+    def get_pr_modified_files(self, repo_full_name: str, pr_number: int):
+        return get_pr_modified_files(repo_full_name=repo_full_name, pr_number=pr_number, g=self._client)
+
+    def get_pr_file_content(self, repo_full_name: str, pr_number: int, file_path: str):
+        return get_pr_file_content(
+            repo_full_name=repo_full_name,
+            pr_number=pr_number,
+            file_path=file_path,
+            g=self._client,
+        )
