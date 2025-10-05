@@ -23,14 +23,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from coffee_maker.code_formatter.agents import (
+    MODIFIED_CODE_DELIMITER_START,
+    MODIFIED_CODE_DELIMITER_END,
+    EXPLANATIONS_DELIMITER_START,
+    EXPLANATIONS_DELIMITER_END,
+)
+
 logger = logging.getLogger(__name__)
-
-
-# Delimiters for parsing LLM response
-MODIFIED_CODE_DELIMITER_START = "---MODIFIED_CODE_START---"
-MODIFIED_CODE_DELIMITER_END = "---MODIFIED_CODE_END---"
-EXPLANATIONS_DELIMITER_START = "---EXPLANATIONS_START---"
-EXPLANATIONS_DELIMITER_END = "---EXPLANATIONS_END---"
 
 
 @observe

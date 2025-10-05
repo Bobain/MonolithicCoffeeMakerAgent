@@ -44,12 +44,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from github import Github, Auth
-
 # --- CORRECT LANGFUSE IMPORTS ---
 from langfuse import Langfuse, observe
 
 # Absolute imports from the project's source root 'coffee_maker'
+from coffee_maker.utils.github import get_pr_file_content, get_pr_modified_files
 from coffee_maker.code_formatter.crewai.agents import create_code_formatter_agents, create_pr_reviewer_agent
 from coffee_maker.code_formatter.crewai.flow import create_code_formatter_flow
 
@@ -74,80 +73,6 @@ except Exception:
     raise
 
 
-# --- HELPER FUNCTION for fetching modified files from PR ---
-@observe
-def _get_pr_modified_files(repo_full_name, pr_number):
-    """
-    Fetches the list of modified files from a pull request.
-
-    Args:
-        repo_full_name: Full repository name (e.g., 'owner/repo')
-        pr_number: Pull request number
-
-    Returns:
-        List of dictionaries containing file metadata (filename, patch, status)
-        for files modified in the PR, or empty list if fetch fails
-    """
-    logger.info(f"Fetching modified files from PR #{pr_number} in {repo_full_name}")
-    try:
-        token = os.getenv("GITHUB_TOKEN")
-        if not token:
-            logger.error("GITHUB_TOKEN environment variable is not set.")
-            return []
-        auth = Auth.Token(token)
-        g = Github(auth=auth)
-        repo = g.get_repo(repo_full_name)
-        pull_request = repo.get_pull(pr_number)
-        files = pull_request.get_files()
-        file_list = []
-        for file in files:
-            file_list.append(
-                {
-                    "filename": file.filename,
-                    "patch": getattr(file, "patch", None),
-                    "status": getattr(file, "status", None),
-                }
-            )
-        logger.info(f"Found {len(file_list)} modified files in PR #{pr_number}")
-        return file_list
-    except Exception:
-        logger.error(f"Could not fetch modified files from PR #{pr_number}.", exc_info=True)
-        return []
-
-
-# --- HELPER FUNCTION for fetching file content from GitHub ---
-@observe
-def _get_pr_file_content(repo_full_name, pr_number, file_path):
-    """
-    Fetches the content of a specific file from a PR's head commit.
-
-    Args:
-        repo_full_name: Full repository name (e.g., 'owner/repo')
-        pr_number: Pull request number
-        file_path: Path to the file in the repository
-
-    Returns:
-        File content as string, or None if fetch fails
-    """
-    logger.info(f"Fetching content for '{file_path}' from PR #{pr_number}")
-    try:
-        token = os.getenv("GITHUB_TOKEN")
-        if not token:
-            logger.error("GITHUB_TOKEN environment variable is not set.")
-            return None
-        auth = Auth.Token(token)
-        g = Github(auth=auth)
-        repo = g.get_repo(repo_full_name)
-        pull_request = repo.get_pull(pr_number)
-        contents = repo.get_contents(file_path, ref=pull_request.head.sha)
-        content = contents.decoded_content.decode("utf-8")
-        logger.info(f"Successfully fetched {len(content)} bytes from '{file_path}'")
-        return content
-    except Exception:
-        logger.error(f"Could not fetch content for '{file_path}' from GitHub.", exc_info=True)
-        return None
-
-
 # --- MAIN ORCHESTRATION FUNCTION ---
 @observe
 def run_code_formatter(repo_full_name, pr_number):
@@ -162,7 +87,7 @@ def run_code_formatter(repo_full_name, pr_number):
         Result from crew execution, or None if execution fails
     """
     # Fetch the list of modified files from the PR
-    files_to_review = _get_pr_modified_files(repo_full_name, pr_number)
+    files_to_review = get_pr_modified_files(repo_full_name, pr_number)
 
     if not files_to_review:
         logger.warning(f"No modified files found in PR #{pr_number}. Aborting.")
@@ -204,7 +129,7 @@ def run_code_formatter(repo_full_name, pr_number):
         file_path = file_info["filename"]
         logger.info(f"Processing file: {file_path}")
         # --- Fetch original content ---
-        file_content = _get_pr_file_content(repo_full_name, pr_number, file_path)
+        file_content = get_pr_file_content(repo_full_name, pr_number, file_path)
         if file_content is None:
             logger.warning(f"Skipping {file_path} - could not fetch content")
             continue

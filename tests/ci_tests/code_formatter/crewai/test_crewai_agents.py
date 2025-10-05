@@ -228,7 +228,7 @@ class TestCreatePRReviewerAgent:
         )
         agent = agent_map["pull_request_reviewer"]
 
-        assert "thorough GitHub reviewer" in agent.backstory
+        assert "automate GitHub reviews" in agent.backstory
 
     def test_reviewer_has_post_suggestion_tool(self):
         """Test that the reviewer has the PostSuggestionToolLangAI"""

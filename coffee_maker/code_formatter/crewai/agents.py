@@ -18,21 +18,20 @@ logger = logging.getLogger(__name__)
 
 Agent = observe(Agent)
 
-
 _CREWAI_MODEL = f"gemini/{lc_agents.GEMINI_MODEL}"
 llm = LLM(model=_CREWAI_MODEL, api_key=lc_agents.GEMINI_API_KEY)
 
 
-def _wrap_langchain_agent(lc_agent: lc_agents.LangchainAgent) -> Agent:
+def _wrap_langchain_agent(config: Dict[str, object]) -> Agent:
     """Convert a LangChain agent specification into a CrewAI agent instance."""
 
     return Agent(
-        role=lc_agent.role,
-        goal=lc_agent.goal,
-        backstory=lc_agent.backstory,
-        tools=list(lc_agent.tools),
-        allow_delegation=lc_agent.allow_delegation,
-        verbose=lc_agent.verbose,
+        role=config["role"],
+        goal=config["goal"],
+        backstory=config["backstory"],
+        tools=list(config.get("tools", ())),
+        allow_delegation=config.get("allow_delegation", False),
+        verbose=config.get("verbose", True),
         llm=llm,
     )
 
@@ -41,11 +40,11 @@ def _wrap_langchain_agent(lc_agent: lc_agents.LangchainAgent) -> Agent:
 def create_code_formatter_agents(langfuse_client: Langfuse) -> Dict[str, Agent]:
     """Return the CrewAI senior engineer agent."""
 
-    lc_agent = lc_agents.create_langchain_code_formatter_agent(langfuse_client)
-    crew_agent = _wrap_langchain_agent(lc_agent)
+    config = lc_agents.create_langchain_code_formatter_agent(langfuse_client)
+    crew_agent = _wrap_langchain_agent(config)
 
     logger.debug("Created senior_engineer_agent: %s", crew_agent)
-    logger.info("Senior engineer agent created with goal: %s...", lc_agent.goal[:100])
+    logger.info("Senior engineer agent created with goal: %s...", config["goal"][:100])
     return {"senior_engineer": crew_agent}
 
 
@@ -58,7 +57,7 @@ def create_pr_reviewer_agent(
     logger.debug("Creating PR reviewer agent")
     tool_instance = PostSuggestionToolLangAI()
 
-    lc_agent = lc_agents.create_langchain_pr_reviewer_agent(
+    config = lc_agents.create_langchain_pr_reviewer_agent(
         langfuse_client,
         pr_number=pr_number,
         repo_full_name=repo_full_name,
@@ -66,7 +65,7 @@ def create_pr_reviewer_agent(
         tools=(tool_instance,),
     )
 
-    crew_agent = _wrap_langchain_agent(lc_agent)
+    crew_agent = _wrap_langchain_agent(config)
     logger.debug("Created PR reviewer agent")
     logger.info("PR reviewer agent created with %s tools", len(crew_agent.tools))
     return {"pull_request_reviewer": crew_agent}
