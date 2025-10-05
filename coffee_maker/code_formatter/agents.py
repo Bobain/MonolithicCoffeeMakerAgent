@@ -1,31 +1,23 @@
-"""LangChain agent helpers for the code formatter domain.
-
-The functions in this module return light-weight dictionaries describing the
-agents that participate in the formatter workflow. They intentionally mirror
-the data the CrewAI wrappers expect (role/goal/backstory/tools/etc.) so we keep
-all prompt wiring in one place while avoiding duplication across integrations.
-"""
-
-from __future__ import annotations
+"""LangChain agent helpers for the code formatter domain."""
 
 import argparse
 import logging
 import sys
 import textwrap
 from types import SimpleNamespace
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langfuse import Langfuse
+from langfuse import Langfuse, observe
 
-from coffee_maker.langchain.llm import get_chat_llm
+from coffee_maker.langchain_observe.agents_wrapper import SUPPORTED_PROVIDERS, configure_llm, resolve_gemini_api_key
 
 load_dotenv()
 
 LOGGER = logging.getLogger(__name__)
 
-_GEMINI_MODEL = "gpt-5"  # "gemini-2.0-flash-lite"
+_GEMINI_MODEL = "gemini-2.0-flash-lite"
 DEFAULT_MODELS = {"gemini": _GEMINI_MODEL}
 
 MODIFIED_CODE_DELIMITER_START = "---MODIFIED_CODE_START---"
@@ -33,8 +25,14 @@ MODIFIED_CODE_DELIMITER_END = "---MODIFIED_CODE_END---"
 EXPLANATIONS_DELIMITER_START = "---EXPLANATIONS_START---"
 EXPLANATIONS_DELIMITER_END = "---EXPLANATIONS_END---"
 
-# Initialise the module-level LLM with a permissive configuration that allows tests to run without live keys.
-llm = get_chat_llm(llm_model="", llm_provider="openai")
+_resolve_gemini_api_key = resolve_gemini_api_key
+
+
+def _initialise_llm(*, strict: bool = False) -> Tuple[Any, str, Optional[str]]:
+    return observe(configure_llm(strict=strict, default_models=DEFAULT_MODELS))
+
+
+llm, llm_provider, llm_model = _initialise_llm(strict=False)
 
 
 def _escape_braces(value: str) -> str:
@@ -58,7 +56,7 @@ def _build_agent_config(
     goal: str,
     backstory: str,
     prompt: ChatPromptTemplate,
-    llm_override: Optional[Any] = llm,
+    llm_override: Optional[Any] = None,
     tools: Sequence[Any] = (),
     verbose: bool = True,
     allow_delegation: bool = False,
@@ -76,7 +74,7 @@ def _build_agent_config(
 
 
 def create_langchain_code_formatter_agent(
-    langfuse_client: Langfuse, *, llm_override: Optional[Any] = llm
+    langfuse_client: Langfuse, *, llm_override: Optional[Any] = None
 ) -> Dict[str, Any]:
     """Return the LangChain configuration for the formatter agent."""
 
@@ -106,9 +104,6 @@ def create_langchain_code_formatter_agent(
         llm_override=llm_override,
         tools=(),
     )
-
-
-# --- Demo utilities -----------------------------------------------------------------
 
 
 class _DemoLangfuseClient:
@@ -151,7 +146,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        new_llm = configure_llm(
+        new_llm, new_provider, new_model = configure_llm(
             provider=args.provider,
             model=args.model,
             strict=True,
@@ -162,9 +157,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"Formatter demo aborted. Configuration error: {exc}", file=sys.stderr)
         return 1
 
-    globals()["llm"] = new_llm
-    globals()["llm_provider"] = getattr(new_llm, "_coffee_maker_provider", llm_provider)
-    globals()["llm_model"] = getattr(new_llm, "_coffee_maker_model", llm_model)
+    globals()["llm"], globals()["llm_provider"], globals()["llm_model"] = new_llm, new_provider, new_model
 
     demo_client = _DemoLangfuseClient()
     agent_config = create_langchain_code_formatter_agent(demo_client)
@@ -203,6 +196,5 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     return 0
 
 
-# Allow running `python -m coffee_maker.code_formatter.agents` for a quick demo.
 if __name__ == "__main__":  # pragma: no cover - manual entry point
     raise SystemExit(main())
