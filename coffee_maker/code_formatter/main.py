@@ -37,12 +37,13 @@ import logging
 import os
 from datetime import datetime
 from typing import Optional
+import json
 
 from dotenv import load_dotenv
 from langfuse import Langfuse, observe
 
 from coffee_maker.code_formatter.agents import create_langchain_code_formatter_agent
-from coffee_maker.code_formatter.parser import parse_reformatted_output
+
 from coffee_maker.utils.github import get_pr_file_content, get_pr_modified_files, post_suggestion_in_pr_review
 
 # --- Logging Configuration ---
@@ -112,8 +113,8 @@ async def _process_single_file(
         logger.info(f"Agent output received for {file_path} ({len(agent_output)} chars)")
 
         # Parse the agent output
-        suggestions = parse_reformatted_output(agent_output)
-        logger.info(f"Parsed {len(suggestions)} suggestions for {file_path}")
+        suggestions = json.loads(agent_output)
+        logger.info(f"{len(suggestions)=} for {file_path} : {suggestions}")
 
         # Post each suggestion to GitHub
         posted_count = 0

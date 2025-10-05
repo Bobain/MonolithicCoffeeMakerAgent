@@ -1,168 +1,52 @@
 """Helpers for wiring LangChain chat models with Langfuse instrumentation."""
 
-from __future__ import annotations
-
 import logging
 import os
-from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple
+import datetime
+import langfuse
 
-from langchain_core.messages import AIMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langfuse import observe
+from coffee_maker.langchain_observe.utils import get_callers_modules
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+SUPPORTED_PROVIDERS = dict()
 
-SUPPORTED_PROVIDERS: Sequence[str] = ("gemini", "openai")
-_DEFAULT_PROVIDER_ENV = "COFFEE_MAKER_LLM_PROVIDER"
-_DEFAULT_MODEL_ENV = "COFFEE_MAKER_LLM_MODEL"
-_DEFAULT_MODELS: Mapping[str, Optional[str]] = {"gemini": "gemini-2.0-flash-lite"}
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
 
+    SUPPORTED_PROVIDERS.update("gemini", (ChatGoogleGenerativeAI, "GEMINI_API_KEY", "gemini-2.5"))
+except:
+    SUPPORTED_PROVIDERS.pop("gemini")
+    logger.warning("langchain_google_genai not installed. will not use google")
+try:
+    from langchain_openai import ChatOpenAI
 
-def instrument_llm(llm_instance: Any, *, methods: Iterable[str] = ("invoke", "ainvoke")) -> Any:
-    """Ensure the provided LLM exposes Langfuse spans on standard call methods."""
+    SUPPORTED_PROVIDERS.update("openai", (ChatOpenAI, "OPENAI_API_KEY", "gpt-5-codex"))
+    logger.warning("langchain_openai not installed. will not use openai")
+except:
+    pass
+try:
+    from langchain_anthropic import ChatAnthropic
 
-    if getattr(llm_instance, "_langfuse_instrumented", False):
-        return llm_instance
-
-    cls = llm_instance.__class__
-    already_instrumented = set(getattr(cls, "_langfuse_instrumented_methods", set()))
-
-    for method_name in methods:
-        if method_name in already_instrumented:
-            continue
-
-        func = getattr(cls, method_name, None)
-        if func is None or not callable(func):
-            continue
-
-        wrapped = observe(as_type="generation")(func)
-        setattr(cls, method_name, wrapped)
-        already_instrumented.add(method_name)
-
-    setattr(cls, "_langfuse_instrumented_methods", already_instrumented)
-    setattr(llm_instance, "_langfuse_instrumented", True)
-    return llm_instance
+    SUPPORTED_PROVIDERS.update("anthropic", (ChatAnthropic, "ANTHROPIC_API_KEY", "claude-opus-4-20250514"))
+except:
+    logger.warning("langchain_anthropic not installed. will not use anthropic")
 
 
-def resolve_gemini_api_key() -> str:
-    """Locate an API key compatible with Gemini models."""
-
-    for env_name in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "COFFEE_MAKER_GEMINI_API_KEY"):
-        key = os.getenv(env_name)
-        if key:
-            os.environ.setdefault("GEMINI_API_KEY", key)
-            return key
-
-    raise RuntimeError("Gemini API key missing: set GEMINI_API_KEY, GOOGLE_API_KEY, or COFFEE_MAKER_GEMINI_API_KEY.")
-
-
-def _build_stub_llm(provider: str, model: Optional[str], error: Exception) -> Any:
-    """Return a stub chat model that surfaces configuration issues to the caller."""
-
-    message = f"Stubbed response: failed to initialise provider '{provider}' with model '{model}'. " f"Details: {error}"
-
-    class _StubChatModel:
-        def __init__(self, description: str) -> None:
-            self.description = description
-            self.model = model
-            self.provider = provider
-
-        @observe
-        def invoke(self, *_: Any, **__: Any) -> AIMessage:
-            return AIMessage(content=self.description)
-
-        @observe
-        async def ainvoke(self, *_: Any, **__: Any) -> AIMessage:
-            return AIMessage(content=self.description)
-
-    return _StubChatModel(message)
-
-
-def _build_gemini_llm(model: Optional[str], **kwargs: Any) -> ChatGoogleGenerativeAI:
-    api_key = resolve_gemini_api_key()
-    target_model = model or _DEFAULT_MODELS.get("gemini")
-    return observe(
-        ChatGoogleGenerativeAI(
-            model=target_model,
-            google_api_key=api_key,
-            convert_system_message_to_human=True,
-            **kwargs,
+def get_chat_llm(provider: str = "gemini", model: str = None):
+    if provider in SUPPORTED_PROVIDERS.keys():
+        Llm, api_key, default_model = SUPPORTED_PROVIDERS[provider]
+        if not os.getenv(api_key):
+            logger.warning(
+                f"ENVIRONMENT VARIABLE {api_key} not set, you asked {provider} with model {model} but it may not work"
+            )
+        llm = Llm(model if model else default_model)
+        langfuse.update_current_trace(
+            metadata={
+                f"llm_config_{provider}_{model}_{datetime.datetime.now().isoformat()}": dict(
+                    caller="/n".join(get_callers_modules()), provider=provider, model=model
+                )
+            }
         )
-    )
-
-
-def _build_openai_llm(model: Optional[str], **kwargs: Any) -> Any:
-    try:
-        from langchain_openai import ChatOpenAI  # type: ignore
-    except ImportError as exc:  # pragma: no cover - optional dependency
-        raise RuntimeError("Install 'langchain-openai' to use the OpenAI provider.") from exc
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY environment variable is required for the OpenAI provider.")
-
-    target_model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-    return observe(ChatOpenAI(model=target_model, api_key=api_key, **kwargs))
-
-
-def _build_llm(provider: str, model: Optional[str], **kwargs: Any) -> Any:
-    provider_key = provider.lower()
-    if provider_key == "gemini":
-        return _build_gemini_llm(model, **kwargs)
-    if provider_key == "openai":
-        return _build_openai_llm(model, **kwargs)
-
-    raise ValueError(f"Unsupported LLM provider '{provider}'. Supported providers: {SUPPORTED_PROVIDERS}.")
-
-
-def _default_provider() -> str:
-    return os.getenv(_DEFAULT_PROVIDER_ENV, "gemini")
-
-
-def _default_model(provider: str, overrides: Optional[Mapping[str, Optional[str]]] = None) -> Optional[str]:
-    configured = os.getenv(_DEFAULT_MODEL_ENV)
-    if configured:
-        return configured
-
-    if overrides and provider in overrides:
-        return overrides[provider]
-
-    return _DEFAULT_MODELS.get(provider)
-
-
-def configure_llm(
-    provider: Optional[str] = None,
-    model: Optional[str] = None,
-    *,
-    strict: bool = True,
-    default_models: Optional[Mapping[str, Optional[str]]] = None,
-    methods: Iterable[str] = ("invoke", "ainvoke"),
-    **kwargs: Any,
-) -> Tuple[Any, str, Optional[str]]:
-    """Configure an LLM instance, optionally instrumented for Langfuse tracing."""
-
-    resolved_provider = (provider or _default_provider()).lower()
-    resolved_model = model or _default_model(resolved_provider, default_models)
-
-    try:
-        candidate_llm = _build_llm(resolved_provider, resolved_model, **kwargs)
-    except Exception as exc:  # pragma: no cover - configuration paths hit in integration flows
-        if strict:
-            raise
-        LOGGER.warning(
-            "Falling back to stubbed LLM for provider '%s' and model '%s': %s",
-            resolved_provider,
-            resolved_model,
-            exc,
-        )
-        candidate_llm = _build_stub_llm(resolved_provider, resolved_model, exc)
-
-    instrumented = instrument_llm(candidate_llm, methods=methods)
-    return instrumented, resolved_provider, resolved_model
-
-
-__all__ = [
-    "SUPPORTED_PROVIDERS",
-    "configure_llm",
-    "instrument_llm",
-]
+        return langfuse.observe(llm)
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")

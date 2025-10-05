@@ -5,40 +5,17 @@ import logging
 import sys
 import textwrap
 from types import SimpleNamespace
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Sequence
 
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langfuse import Langfuse, observe
+from langfuse import Langfuse
 
-from coffee_maker.langchain_observe.agents_wrapper import SUPPORTED_PROVIDERS, configure_llm, resolve_gemini_api_key
+from coffee_maker.langchain_observe.llm import get_chat_llm, SUPPORTED_PROVIDERS
 
 load_dotenv()
 
-LOGGER = logging.getLogger(__name__)
-
-_GEMINI_MODEL = "gemini-2.0-flash-lite"
-DEFAULT_MODELS = {"gemini": _GEMINI_MODEL}
-
-MODIFIED_CODE_DELIMITER_START = "---MODIFIED_CODE_START---"
-MODIFIED_CODE_DELIMITER_END = "---MODIFIED_CODE_END---"
-EXPLANATIONS_DELIMITER_START = "---EXPLANATIONS_START---"
-EXPLANATIONS_DELIMITER_END = "---EXPLANATIONS_END---"
-
-_resolve_gemini_api_key = resolve_gemini_api_key
-
-
-def _initialise_llm(*, strict: bool = False) -> Tuple[Any, str, Optional[str]]:
-    return observe(configure_llm(strict=strict, default_models=DEFAULT_MODELS))
-
-
-llm, llm_provider, llm_model = _initialise_llm(strict=False)
-
-
-def _escape_braces(value: str) -> str:
-    """Escape braces so ChatPromptTemplate does not treat them as placeholders."""
-
-    return value.replace("{", "{{").replace("}", "}}")
+logger = logging.getLogger(__name__)
 
 
 def _build_prompt(system_message: str) -> ChatPromptTemplate:
@@ -66,7 +43,7 @@ def _build_agent_config(
         "goal": goal,
         "backstory": backstory,
         "prompt": prompt,
-        "llm": llm_override or llm,
+        "llm": llm_override or get_chat_llm(),
         "tools": tuple(tools),
         "verbose": verbose,
         "allow_delegation": allow_delegation,
@@ -82,14 +59,11 @@ def create_langchain_code_formatter_agent(
         goal_prompt = langfuse_client.get_prompt("refactor_agent/goal_prompt")
         backstory_prompt = langfuse_client.get_prompt("refactor_agent/backstory_prompt")
     except Exception as exc:  # pragma: no cover - surfaced to callers/tests
-        LOGGER.exception("Failed to fetch formatter prompts", exc_info=exc)
+        logger.exception("Failed to fetch formatter prompts", exc_info=exc)
         raise
 
-    goal_raw = getattr(goal_prompt, "prompt", str(goal_prompt))
-    backstory_raw = getattr(backstory_prompt, "prompt", str(backstory_prompt))
-
-    goal = _escape_braces(goal_raw)
-    backstory = _escape_braces(backstory_raw)
+    goal = getattr(goal_prompt, "prompt", str(goal_prompt))
+    backstory = getattr(backstory_prompt, "prompt", str(backstory_prompt))
 
     system_message = (
         f"You are a meticulous Senior Software Engineer.\\n\\n" f"Goal: {goal}\\n\\n" f"Backstory: {backstory}"
@@ -98,8 +72,8 @@ def create_langchain_code_formatter_agent(
 
     return _build_agent_config(
         role="Senior Software Engineer: python code formatter",
-        goal=goal_raw,
-        backstory=backstory_raw,
+        goal=goal,
+        backstory=backstory,
         prompt=prompt,
         llm_override=llm_override,
         tools=(),
@@ -146,14 +120,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        new_llm, new_provider, new_model = configure_llm(
+        new_llm, new_provider, new_model = get_chat_llm(
             provider=args.provider,
             model=args.model,
-            strict=True,
-            default_models=DEFAULT_MODELS,
         )
     except Exception as exc:  # pragma: no cover - exercised in manual usage
-        LOGGER.error("Unable to initialise the LLM: %s", exc)
+        logger.error("Unable to initialise the LLM: %s", exc)
         print(f"Formatter demo aborted. Configuration error: {exc}", file=sys.stderr)
         return 1
 
@@ -187,7 +159,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         response = chain.invoke(payload)
     except Exception as exc:  # pragma: no cover - manual execution path
-        LOGGER.error("Formatter agent failed: %s", exc, exc_info=True)
+        logger.error("Formatter agent failed: %s", exc, exc_info=True)
         print(f"Formatter agent failed to run: {exc}", file=sys.stderr)
         return 1
 
