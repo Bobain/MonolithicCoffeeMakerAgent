@@ -7,7 +7,6 @@ import os
 from typing import Any, Iterable, Mapping, Optional, Tuple
 
 from langchain_core.messages import AIMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langfuse import observe
 
 from coffee_maker.langchain_observe.llm import get_chat_llm
@@ -67,25 +66,10 @@ def _build_stub_llm(provider: str, model: Optional[str], error: Exception) -> An
     return _StubChatModel(message)
 
 
-def _build_llm(provider: str = None, model=None, **kwargs: Any) -> ChatGoogleGenerativeAI:
-    if isinstance(model, str):
-        if isinstance(model, str):
-            model = get_chat_llm(provider=provider, model=model, **kwargs)
+def _build_llm(provider: str = None, model=None, **kwargs: Any):
+    if not isinstance(model, str):
+        model = get_chat_llm(provider=provider, model=model, **kwargs)
     return model
-
-
-def _build_openai_llm(model: Optional[str], **kwargs: Any) -> Any:
-    try:
-        from langchain_openai import ChatOpenAI  # type: ignore
-    except ImportError as exc:  # pragma: no cover - optional dependency
-        raise RuntimeError("Install 'langchain-openai' to use the OpenAI provider.") from exc
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY environment variable is required for the OpenAI provider.")
-
-    target_model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-    return ChatOpenAI(model=target_model, api_key=api_key, **kwargs)
 
 
 def configure_llm(

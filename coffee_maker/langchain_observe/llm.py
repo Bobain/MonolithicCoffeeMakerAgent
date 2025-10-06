@@ -37,15 +37,18 @@ def get_chat_llm(langfuse_client: langfuse.Langfuse = None, provider: str = "gem
     if provider is None:
         provider = DEFAULT_PROVIDER
         assert model is None, f"Please input a provider when you specify a specific model: {model}"
+    if model is None:
+        Llm, api_key, model = SUPPORTED_PROVIDERS[provider]
+    else:
+        Llm, api_key, _ = SUPPORTED_PROVIDERS[provider]
     if langfuse_client is None:
         langfuse_client = langfuse.get_client()
     if provider in SUPPORTED_PROVIDERS.keys():
-        Llm, api_key, default_model = SUPPORTED_PROVIDERS[provider]
         if not os.getenv(api_key):
             logger.warning(
                 f"ENVIRONMENT VARIABLE {api_key} not set, you asked {provider} with model {model} but it may not work"
             )
-        llm = Llm(model=model if model else default_model)
+        llm = Llm(model=model)
         langfuse_client.update_current_trace(
             metadata={
                 f"llm_config_{provider}_{model}_{datetime.datetime.now().isoformat()}": dict(
