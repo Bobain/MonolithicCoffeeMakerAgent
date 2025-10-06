@@ -63,11 +63,22 @@ def get_chat_llm(langfuse_client: langfuse.Langfuse = None, provider: str = None
             logger.warning(
                 f"ENVIRONMENT VARIABLE {api_key} not set, you asked {provider} with model {model} but it may not work"
             )
-        llm = Llm(model=model)
+        # Configure LLM with appropriate max_tokens for code formatting tasks
+        llm_kwargs = {"model": model}
+
+        # Set higher token limits for code formatting which requires longer outputs
+        if provider == "anthropic":
+            llm_kwargs["max_tokens"] = 8192  # Claude supports up to 8k output tokens
+        elif provider == "openai":
+            llm_kwargs["max_tokens"] = 4096  # GPT supports up to 4k output tokens
+        elif provider == "gemini":
+            llm_kwargs["max_output_tokens"] = 8192  # Gemini uses different parameter name
+
+        llm = Llm(**llm_kwargs)
         langfuse_client.update_current_trace(
             metadata={
                 f"llm_config_{provider}_{model}_{datetime.datetime.now().isoformat()}": dict(
-                    caller="/n".join(get_callers_modules()), provider=provider, model=model
+                    caller="/n".join(get_callers_modules()), provider=provider, model=model, **llm_kwargs
                 )
             }
         )
