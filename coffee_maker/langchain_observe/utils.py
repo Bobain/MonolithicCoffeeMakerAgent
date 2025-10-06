@@ -9,3 +9,4 @@ def get_callers_modules():
             callers_modules.append(calling_module.__name__)
         else:
             callers_modules.append(caller_frame_record.filename)
+    return callers_modules

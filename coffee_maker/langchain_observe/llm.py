@@ -5,7 +5,6 @@ import os
 import datetime
 
 import langfuse
-import langchain_core
 
 from coffee_maker.langchain_observe.utils import get_callers_modules
 
@@ -15,7 +14,7 @@ SUPPORTED_PROVIDERS = dict()
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
 
-    SUPPORTED_PROVIDERS.update({"gemini": (ChatGoogleGenerativeAI, "GEMINI_API_KEY", "gemini-2.5")})
+    SUPPORTED_PROVIDERS.update({"gemini": (ChatGoogleGenerativeAI, "GEMINI_API_KEY", "gemini-2.5-pro")})
 except:
     logger.warning("langchain_google_genai not installed. will not use google")
 try:
@@ -34,24 +33,26 @@ except:
 DEFAULT_PROVIDER = list(SUPPORTED_PROVIDERS.keys())[0]
 
 
-def get_chat_llm(provider: str = "gemini", model: str = None):
+def get_chat_llm(langfuse_client: langfuse.Langfuse = None, provider: str = "gemini", model: str = None):
     if provider is None:
         provider = DEFAULT_PROVIDER
         assert model is None, f"Please input a provider when you specify a specific model: {model}"
+    if langfuse_client is None:
+        langfuse_client = langfuse.get_client()
     if provider in SUPPORTED_PROVIDERS.keys():
         Llm, api_key, default_model = SUPPORTED_PROVIDERS[provider]
         if not os.getenv(api_key):
             logger.warning(
                 f"ENVIRONMENT VARIABLE {api_key} not set, you asked {provider} with model {model} but it may not work"
             )
-        llm = langchain_core.language_models.LLM(Llm(model if model else default_model))
-        langfuse.update_current_trace(
+        llm = Llm(model=model if model else default_model)
+        langfuse_client.update_current_trace(
             metadata={
                 f"llm_config_{provider}_{model}_{datetime.datetime.now().isoformat()}": dict(
                     caller="/n".join(get_callers_modules()), provider=provider, model=model
                 )
             }
         )
-        return langfuse.observe(llm)
+        return llm
     else:
         raise ValueError(f"Unsupported provider: {provider}")
