@@ -43,10 +43,10 @@ except:
     logger.warning("langchain_anthropic not installed. will not use anthropic")
 
 
-DEFAULT_PROVIDER = "claude" if "claude" in SUPPORTED_PROVIDERS.keys() else list(SUPPORTED_PROVIDERS.keys())[0]
+DEFAULT_PROVIDER = "anthropic" if "anthropic" in SUPPORTED_PROVIDERS.keys() else list(SUPPORTED_PROVIDERS.keys())[0]
 
 
-def get_chat_llm(langfuse_client: langfuse.Langfuse = None, provider: str = "claude", model: str = None):
+def get_chat_llm(langfuse_client: langfuse.Langfuse = None, provider: str = None, model: str = None):
     if provider is None:
         provider = DEFAULT_PROVIDER
         assert model is None, f"Please input a provider when you specify a specific model: {model}"
