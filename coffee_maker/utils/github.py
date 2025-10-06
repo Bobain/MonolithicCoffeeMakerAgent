@@ -148,27 +148,29 @@ def post_suggestion_in_pr_review(
                 f"File path '{file_path}' not found in PR #{pr_number}. Available paths: {sorted(valid_paths)}"
             )
 
-        try:
-            pr.create_review_comment(
-                body=f"{comment_text}\n{formatted_suggestion}",
-                commit=latest_commit_sha,
-                path=file_path,
-                start_line=start_line,
-                line=end_line,
-                side="RIGHT",
+        comment_kwargs = {
+            "body": f"{comment_text}\n{formatted_suggestion}",
+            "commit": latest_commit_sha,
+            "path": file_path,
+            "line": int(end_line),
+            "side": "RIGHT",
+        }
+
+        if start_line is not None and start_line != end_line:
+            comment_kwargs.update(
+                {
+                    "start_line": int(start_line),
+                    "start_side": "RIGHT",
+                }
             )
+
+        try:
+            pr.create_review_comment(**comment_kwargs)
         except GithubException as github_exc:
             if github_exc.status == 422 and _is_pending_review_conflict(github_exc):
                 LOGGER.info("Encountered pending review conflict. Attempting cleanup and retry.")
                 if _clear_pending_review(pr, current_user_login):
-                    pr.create_review_comment(
-                        body=f"{comment_text}\n{formatted_suggestion}",
-                        commit=latest_commit_sha,
-                        path=file_path,
-                        start_line=start_line,
-                        line=end_line,
-                        side="RIGHT",
-                    )
+                    pr.create_review_comment(**comment_kwargs)
                 else:
                     raise
             else:

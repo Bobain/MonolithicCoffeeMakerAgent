@@ -36,7 +36,8 @@ import asyncio
 import logging
 import os
 from datetime import datetime
-from typing import Optional
+from functools import partial
+from typing import Callable, Optional
 
 from dotenv import load_dotenv
 from langfuse import Langfuse, observe
@@ -69,11 +70,23 @@ except Exception:
 async def _process_single_file(
     agent_config: dict,
     file_path: str,
-    get_file_content: callable,
+    get_file_content: Callable[[], Optional[str]],
     repo_full_name: str,
     pr_number: int,
-    skip_empty_files=True,
+    skip_empty_files: bool = True,
+    semaphore: Optional[asyncio.Semaphore] = None,
 ) -> dict:
+    if semaphore is not None:
+        async with semaphore:
+            return await _process_single_file(
+                agent_config,
+                file_path,
+                get_file_content,
+                repo_full_name,
+                pr_number,
+                skip_empty_files=skip_empty_files,
+                semaphore=None,
+            )
     """
     Process a single file through the formatter agent and post suggestions.
 
@@ -92,40 +105,68 @@ async def _process_single_file(
     try:
         logger.info(f"Invoking formatter agent for {file_path}")
 
-        async def get_suggestions(file_path):
-            return agent_config["get_list_of_dict_from_llm"](
-                get_file_content(), file_path, skip_empty_files=skip_empty_files
-            )
+        file_content = await asyncio.to_thread(get_file_content)
 
-        suggestions = await get_suggestions(file_path)
+        if file_content is None:
+            logger.error("Formatter skipped %s: unable to fetch content", file_path)
+            return {"file_path": file_path, "error": "missing content", "success": False}
+
+        if skip_empty_files and not file_content.strip():
+            logger.info("Formatter skipped %s: empty file", file_path)
+            return {"file_path": file_path, "suggestions_count": 0, "posted_count": 0, "success": True}
+
+        suggestions = await asyncio.to_thread(
+            agent_config["get_list_of_dict_from_llm"], file_content, file_path, skip_empty_files=skip_empty_files
+        )
 
         logger.info(f"Agent outputs {len(suggestions)} modifications for {file_path}")
 
         # Post each suggestion to GitHub
-        posted_count = 0
-        for idx, suggestion in enumerate(suggestions, 1):
+        async def _post(idx: int, suggestion: dict) -> bool:
             try:
+                start_line_raw = suggestion.get("start_line")
+                end_line_raw = suggestion.get("end_line")
+                if end_line_raw is None:
+                    logger.error("Suggestion %s for %s missing end_line", idx, file_path)
+                    return False
+
+                start_line_int = int(start_line_raw) if start_line_raw is not None else None
+                end_line_int = int(end_line_raw)
+
                 logger.info(
-                    f"Posting suggestion {idx}/{len(suggestions)} for {file_path} "
-                    f"(lines {suggestion['start_line']}-{suggestion['end_line']})"
+                    "Posting suggestion %s/%s for %s (lines %s-%s)",
+                    idx,
+                    len(suggestions),
+                    file_path,
+                    start_line_int,
+                    end_line_int,
                 )
 
-                post_suggestion_in_pr_review(
-                    repo_full_name=repo_full_name,
-                    pr_number=pr_number,
-                    file_path=file_path,
-                    start_line=suggestion["start_line"],
-                    end_line=suggestion["end_line"],
-                    suggestion_body=suggestion["modified_code"],
-                    comment_text=suggestion["explanation"],
+                await asyncio.to_thread(
+                    post_suggestion_in_pr_review,
+                    repo_full_name,
+                    pr_number,
+                    file_path,
+                    start_line_int,
+                    end_line_int,
+                    str(suggestion.get("modified_code", "")),
+                    str(suggestion.get("explanation", "")),
                 )
-                posted_count += 1
-
+                return True
             except Exception as post_error:
                 logger.error(
-                    f"Failed to post suggestion {idx} for {file_path}: {post_error}",
+                    "Failed to post suggestion %s for %s: %s",
+                    idx,
+                    file_path,
+                    post_error,
                     exc_info=True,
                 )
+                return False
+
+        posted_count = 0
+        for idx, suggestion in enumerate(suggestions, 1):
+            if await _post(idx, suggestion):
+                posted_count += 1
 
         logger.info(f"Successfully posted {posted_count}/{len(suggestions)} suggestions for {file_path}")
 
@@ -181,43 +222,42 @@ async def run_code_formatter(
     if file_path:
         # Process only the specified file
         logger.info(f"Processing single file: {file_path}")
-        file_content = get_pr_file_content(repo_full_name, pr_number, file_path)
-
-        if file_content is None:
-            logger.error(f"Could not fetch content for {file_path}")
-            return []
-
-        if not file_content.strip():
-            logger.warning(f"File {file_path} has no content")
-            return []
-
-        files_to_process = [
-            {"filename": file_path, "content": get_pr_file_content(repo_full_name, pr_number, file_path)}
+        files_to_process: list[tuple[str, Callable[[], Optional[str]]]] = [
+            (file_path, partial(get_pr_file_content, repo_full_name, pr_number, file_path))
         ]
 
     else:
-        files_info = get_pr_modified_files(repo_full_name, pr_number)
-        files_to_process = [f["filename"] for f in files_info if f["filename"].endswith(".py")]
+        files_info = await asyncio.to_thread(get_pr_modified_files, repo_full_name, pr_number)
+        filenames = [f["filename"] for f in files_info if f["filename"].endswith(".py")]
 
-        if not files_info or len(files_to_process) == 0:
+        if not files_info or len(filenames) == 0:
             logger.warning(f"No modified files .py files found in PR #{pr_number}")
             return []
 
-        logger.info(f"Found {len(files_to_process)} Python files in PR #{pr_number}")
+        logger.info(f"Found {len(filenames)} Python files in PR #{pr_number}")
+
+        files_to_process = [
+            (filename, partial(get_pr_file_content, repo_full_name, pr_number, filename)) for filename in filenames
+        ]
 
     logger.info(f"Processing {len(files_to_process)} file(s)")
+
+    max_concurrency = int(os.getenv("COFFEE_MAKER_MAX_CONCURRENCY", "5"))
+    concurrency_limit = max(1, min(len(files_to_process), max_concurrency))
+    semaphore = asyncio.Semaphore(concurrency_limit)
 
     # Process files asynchronously
     tasks = [
         _process_single_file(
             agent_config=agent_config,
             file_path=file_path,
-            get_file_content=lambda: get_pr_file_content(repo_full_name, pr_number, file_path),
+            get_file_content=get_file_content,
             repo_full_name=repo_full_name,
             pr_number=pr_number,
             skip_empty_files=skip_empty_files,
+            semaphore=semaphore,
         )
-        for file_path in files_to_process
+        for file_path, get_file_content in files_to_process
     ]
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
