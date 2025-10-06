@@ -37,7 +37,6 @@ import logging
 import os
 from datetime import datetime
 from typing import Optional
-import json
 
 from dotenv import load_dotenv
 from langfuse import Langfuse, observe
@@ -73,6 +72,7 @@ async def _process_single_file(
     get_file_content: callable,
     repo_full_name: str,
     pr_number: int,
+    skip_empty_files=True,
 ) -> dict:
     """
     Process a single file through the formatter agent and post suggestions.
@@ -90,31 +90,16 @@ async def _process_single_file(
     logger.info(f"Processing file: {file_path}")
 
     try:
-        # Build the prompt for the agent
-        prompt = agent_config["prompt"]
-        llm = agent_config["llm"]
-
-        # Invoke the agent with file_path and file_content as separate inputs
-        input_data = {
-            "file_path": file_path,
-            "file_content": get_file_content(),
-        }
-
         logger.info(f"Invoking formatter agent for {file_path}")
-        chain = prompt | llm
-        response = await chain.ainvoke(input_data)
 
-        # Extract the content from the response
-        if hasattr(response, "content"):
-            agent_output = response.content
-        else:
-            agent_output = str(response)
+        async def get_suggestions(file_path):
+            return agent_config["get_list_of_dict_from_llm"](
+                get_file_content(), file_path, skip_empty_files=skip_empty_files
+            )
 
-        logger.info(f"Agent output received for {file_path} ({len(agent_output)} chars)")
+        suggestions = await get_suggestions(file_path)
 
-        # Parse the agent output
-        suggestions = json.loads(agent_output)
-        logger.info(f"{len(suggestions)=} for {file_path} : {suggestions}")
+        logger.info(f"Agent outputs {len(suggestions)} modifications for {file_path}")
 
         # Post each suggestion to GitHub
         posted_count = 0
@@ -131,8 +116,8 @@ async def _process_single_file(
                     file_path=file_path,
                     start_line=suggestion["start_line"],
                     end_line=suggestion["end_line"],
-                    suggestion_body=suggestion["suggestion_body"],
-                    comment_text=suggestion["comment_text"],
+                    suggestion_body=suggestion["modified_code"],
+                    comment_text=suggestion["explanation"],
                 )
                 posted_count += 1
 
@@ -162,9 +147,7 @@ async def _process_single_file(
 
 @observe
 async def run_code_formatter(
-    repo_full_name: str,
-    pr_number: int,
-    file_path: Optional[str] = None,
+    repo_full_name: str, pr_number: int, file_path: Optional[str] = None, skip_empty_files=True
 ) -> list[dict]:
     """
     Run the code formatter on files in a GitHub pull request.
@@ -232,6 +215,7 @@ async def run_code_formatter(
             get_file_content=lambda: get_pr_file_content(repo_full_name, pr_number, file_path),
             repo_full_name=repo_full_name,
             pr_number=pr_number,
+            skip_empty_files=skip_empty_files,
         )
         for file_path in files_to_process
     ]
@@ -268,4 +252,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Run the async function
-    asyncio.run(run_code_formatter(repo_full_name=args.repo, pr_number=args.pr, file_path=args.file))
+    asyncio.run(
+        run_code_formatter(repo_full_name=args.repo, pr_number=args.pr, file_path=args.file, skip_empty_files=True)
+    )

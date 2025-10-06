@@ -36,19 +36,27 @@ def create_langchain_code_formatter_agent(
 
     llm = llm_override or get_chat_llm()
 
-    def get_result_from_llm(code_to_reformat: str):
+    def get_result_from_llm(code_to_reformat: str, file_path: str, skip_empty_files=True):
+        if skip_empty_files and not len(code_to_reformat.strip()):
+            return ""
         chain = prompt | llm
         llm_result = chain.invoke(
-            input=dict(code_to_modify=code_to_reformat), config={"callbacks": [langfuse_callback_handler]}
+            input=dict(code_to_modify=code_to_reformat, file_path=file_path),
+            config={"callbacks": [langfuse_callback_handler]},
         )
+        logger.info(f"Raw output from agent: {llm_result.content}")
         return llm_result.content
 
-    def get_list_of_dict_from_llm(code_to_reformat: str):
-        content = get_result_from_llm(code_to_reformat)
+    def get_list_of_dict_from_llm(code_to_reformat: str, file_path: str, skip_empty_files=True):
+        if skip_empty_files and not len(code_to_reformat.strip()):
+            return []
+        content = get_result_from_llm(code_to_reformat, file_path)
         if content.startswith("```json"):
             content = content.replace("```json", "")
             content = content[:-3]
-        return json.loads(content)
+        result = json.loads(content)
+        logger.info(f"Json output from agent: {result}")
+        return result
 
     return dict(
         role="Senior Software Engineer: python code formatter",
