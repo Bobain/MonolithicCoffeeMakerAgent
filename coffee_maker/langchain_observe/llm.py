@@ -35,6 +35,9 @@ DEFAULT_PROVIDER = list(SUPPORTED_PROVIDERS.keys())[0]
 
 
 def get_chat_llm(provider: str = "gemini", model: str = None):
+    if provider is None:
+        provider = DEFAULT_PROVIDER
+        assert model is None, f"Please input a provider when you specify a specific model: {model}"
     if provider in SUPPORTED_PROVIDERS.keys():
         Llm, api_key, default_model = SUPPORTED_PROVIDERS[provider]
         if not os.getenv(api_key):
