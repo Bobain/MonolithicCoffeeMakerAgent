@@ -78,7 +78,7 @@ def get_chat_llm(langfuse_client: langfuse.Langfuse = None, provider: str = None
         langfuse_client.update_current_trace(
             metadata={
                 f"llm_config_{provider}_{model}_{datetime.datetime.now().isoformat()}": dict(
-                    caller="/n".join(get_callers_modules()), provider=provider, model=model, **llm_kwargs
+                    caller="/n".join(get_callers_modules()), provider=provider, **llm_kwargs
                 )
             }
         )

@@ -10,6 +10,7 @@ import textwrap
 from types import SimpleNamespace
 from typing import Any, Dict, Optional, Sequence, Tuple
 
+import langfuse
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 from langfuse import Langfuse
@@ -209,8 +210,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         default="demo/non_compliant.py",
         help="Logical path attached to the demo file contents.",
     )
+    parser.add_argument(
+        "--provider",
+        default=None,
+        help="LLM provider (e.g., anthropic, openai, gemini). Uses default if not specified.",
+    )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="Model name. Uses provider default if not specified.",
+    )
     args = parser.parse_args(argv)
-
+    langfuse_client = langfuse.get_client()
     try:
         new_llm, new_provider, new_model = configure_llm(
             provider=args.provider,
@@ -224,8 +235,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     globals()["llm"], globals()["llm_provider"], globals()["llm_model"] = new_llm, new_provider, new_model
 
-    demo_client = _DemoLangfuseClient()
-    agent_config = create_langchain_code_formatter_agent(demo_client, llm_override=new_llm)
+    agent_config = create_langchain_code_formatter_agent(langfuse_client=langfuse_client, llm_override=new_llm)
     chain = agent_config["prompt"] | agent_config["llm"]
 
     sample_code = textwrap.dedent(

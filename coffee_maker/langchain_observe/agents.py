@@ -6,7 +6,9 @@ import logging
 import os
 from typing import Any, Iterable, Mapping, Optional, Tuple
 
-from langchain_core.messages import AIMessage
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
 from langfuse import observe
 
 from coffee_maker.langchain_observe.llm import get_chat_llm
@@ -51,25 +53,50 @@ def resolve_gemini_api_key() -> str:
 def _build_stub_llm(provider: str, model: Optional[str], error: Exception) -> Any:
     message = f"Stubbed response: failed to initialise provider '{provider}' with model '{model}'. " f"Details: {error}"
 
-    class _StubChatModel:
+    class _StubChatModel(BaseChatModel):
+        """Stub chat model for testing when real LLM is unavailable."""
+
+        description: str
+        model_name: str = model or "stub"
+
         def __init__(self, description: str) -> None:
+            super().__init__()
             self.description = description
             self.model = model
             self.provider = provider
 
-        def invoke(self, *_: Any, **__: Any) -> AIMessage:
-            return AIMessage(content=self.description)
+        def _generate(
+            self,
+            messages: list[BaseMessage],
+            stop: Optional[list[str]] = None,
+            run_manager: Optional[Any] = None,
+            **kwargs: Any,
+        ) -> ChatResult:
+            """Generate stub response."""
+            message = AIMessage(content=self.description)
+            generation = ChatGeneration(message=message)
+            return ChatResult(generations=[generation])
 
-        async def ainvoke(self, *_: Any, **__: Any) -> AIMessage:
-            return AIMessage(content=self.description)
+        @property
+        def _llm_type(self) -> str:
+            """Return type of chat model."""
+            return "stub"
 
-    return _StubChatModel(message)
+    return _StubChatModel(description=message)
 
 
 def _build_llm(provider: str = None, model=None, **kwargs: Any):
-    if not isinstance(model, str):
-        model = get_chat_llm(provider=provider, model=model, **kwargs)
-    return model
+    """Build LLM instance from provider and model specification.
+
+    Args:
+        provider: LLM provider name (e.g., 'anthropic', 'openai', 'gemini')
+        model: Model name, or None to use default for provider
+        **kwargs: Additional arguments to pass to LLM constructor
+
+    Returns:
+        Configured LLM instance
+    """
+    return get_chat_llm(provider=provider, model=model, **kwargs)
 
 
 def configure_llm(
