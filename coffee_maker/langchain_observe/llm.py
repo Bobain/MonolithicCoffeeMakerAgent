@@ -4,6 +4,7 @@ import logging
 import os
 import datetime
 import langfuse
+import langchain_core
 
 from coffee_maker.langchain_observe.utils import get_callers_modules
 
@@ -15,15 +16,13 @@ try:
 
     SUPPORTED_PROVIDERS.update("gemini", (ChatGoogleGenerativeAI, "GEMINI_API_KEY", "gemini-2.5"))
 except:
-    SUPPORTED_PROVIDERS.pop("gemini")
     logger.warning("langchain_google_genai not installed. will not use google")
 try:
     from langchain_openai import ChatOpenAI
 
     SUPPORTED_PROVIDERS.update("openai", (ChatOpenAI, "OPENAI_API_KEY", "gpt-5-codex"))
-    logger.warning("langchain_openai not installed. will not use openai")
 except:
-    pass
+    logger.warning("langchain_openai not installed. will not use openai")
 try:
     from langchain_anthropic import ChatAnthropic
 
