@@ -65,8 +65,8 @@ def create_langchain_code_formatter_agent(
 
     return _build_agent_config(
         role="Senior Software Engineer: python code formatter",
-        goal=goal,
-        backstory=backstory,
+        goal="",
+        backstory="",
         prompt=prompt,
         llm_override=llm_override,
         tools=(),

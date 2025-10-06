@@ -3,6 +3,7 @@
 import logging
 import os
 import datetime
+
 import langfuse
 import langchain_core
 
@@ -14,21 +15,23 @@ SUPPORTED_PROVIDERS = dict()
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
 
-    SUPPORTED_PROVIDERS.update("gemini", (ChatGoogleGenerativeAI, "GEMINI_API_KEY", "gemini-2.5"))
+    SUPPORTED_PROVIDERS.update({"gemini": (ChatGoogleGenerativeAI, "GEMINI_API_KEY", "gemini-2.5")})
 except:
     logger.warning("langchain_google_genai not installed. will not use google")
 try:
     from langchain_openai import ChatOpenAI
 
-    SUPPORTED_PROVIDERS.update("openai", (ChatOpenAI, "OPENAI_API_KEY", "gpt-5-codex"))
+    SUPPORTED_PROVIDERS.update({"openai": (ChatOpenAI, "OPENAI_API_KEY", "gpt-5-codex")})
 except:
     logger.warning("langchain_openai not installed. will not use openai")
 try:
     from langchain_anthropic import ChatAnthropic
 
-    SUPPORTED_PROVIDERS.update("anthropic", (ChatAnthropic, "ANTHROPIC_API_KEY", "claude-opus-4-20250514"))
+    SUPPORTED_PROVIDERS.update({"anthropic": (ChatAnthropic, "ANTHROPIC_API_KEY", "claude-opus-4-20250514")})
 except:
     logger.warning("langchain_anthropic not installed. will not use anthropic")
+
+DEFAULT_PROVIDER = list(SUPPORTED_PROVIDERS.keys())[0]
 
 
 def get_chat_llm(provider: str = "gemini", model: str = None):
