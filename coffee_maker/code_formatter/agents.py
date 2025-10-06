@@ -80,44 +80,80 @@ def create_langchain_code_formatter_agent(
     """Return the LangChain configuration for the formatter agent."""
 
     try:
+        main_prompt = langfuse_client.get_prompt("code_formatter_main_llm_entry")
         goal_prompt = langfuse_client.get_prompt("refactor_agent/goal_prompt")
         backstory_prompt = langfuse_client.get_prompt("refactor_agent/backstory_prompt")
     except Exception as exc:  # pragma: no cover - surfaced to callers/tests
         logger.exception("Failed to fetch formatter prompts", exc_info=exc)
         raise
 
+    main_prompt_text = _extract_prompt_text(main_prompt)
     goal_raw = _extract_prompt_text(goal_prompt)
     backstory_raw = _extract_prompt_text(backstory_prompt)
 
-    goal = _escape_braces(goal_raw)
-    backstory = _escape_braces(backstory_raw)
+    # Use the main prompt which contains full instructions for JSON output
+    system_message = _escape_braces(main_prompt_text)
 
-    system_message = (
-        f"You are a meticulous Senior Software Engineer.\\n\\n" f"Goal: {goal}\\n\\n" f"Backstory: {backstory}"
+    # Build prompt with placeholders for file_path and code_to_modify
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_message),
+            ("user", ""),  # Empty user message since system prompt has all instructions
+        ]
     )
-    prompt = _build_prompt(system_message)
+
+    # Override the template to use the placeholders from Langfuse
+    prompt = ChatPromptTemplate.from_template(system_message)
 
     llm_instance = llm_override or llm
 
     def _invoke_formatter(file_content: str, file_path: str) -> str:
         chain = prompt | llm_instance
-        response = chain.invoke({"file_path": file_path, "file_content": file_content})
+        # Use variable names matching the Langfuse prompt template
+        response = chain.invoke({"file_path": file_path, "code_to_modify": file_content})
         if hasattr(response, "content"):
             return response.content
         return str(response)
 
     def _parse_formatter_output(raw_output: str) -> list[dict[str, Any]]:
+        """Parse LLM output, handling markdown code blocks and whitespace.
+
+        Args:
+            raw_output: Raw string output from the LLM
+
+        Returns:
+            List of dictionaries containing code suggestions
+
+        Raises:
+            json.JSONDecodeError: If the content is not valid JSON
+        """
         content = raw_output.strip()
+
+        # Remove markdown code block delimiters if present
         if content.startswith("```json"):
-            content = content[len("```json") :]
+            content = content[len("```json") :].strip()
+        elif content.startswith("```"):
+            content = content[len("```") :].strip()
+
         if content.endswith("```"):
-            content = content[:-3]
+            content = content[: -len("```")].strip()
+
+        # Handle empty content
+        if not content:
+            return []
+
         try:
-            json.loads(content)
-        except:
-            logger.critical(f"could not parse output : {raw_output}")
+            result = json.loads(content)
+            # Ensure result is a list
+            if not isinstance(result, list):
+                logger.warning(f"Expected list output, got {type(result)}. Wrapping in list.")
+                result = [result]
+            return result
+        except json.JSONDecodeError as exc:
+            logger.critical(
+                f"Could not parse JSON output. Error: {exc}\n" f"Raw output (first 500 chars): {raw_output[:500]}"
+            )
             raise
-        return
 
     def get_result_from_llm(file_content: str, file_path: str) -> str:
         return _invoke_formatter(file_content, file_path)

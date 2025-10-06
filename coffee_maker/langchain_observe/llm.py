@@ -15,7 +15,9 @@
 import logging
 import os
 import datetime
+from dotenv import load_dotenv
 
+load_dotenv()
 import langfuse
 
 from coffee_maker.langchain_observe.utils import get_callers_modules
