@@ -14,29 +14,15 @@ from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 from langfuse import Langfuse
 
-from coffee_maker.langchain.agents_wrapper import (
-    SUPPORTED_PROVIDERS,
-    configure_llm,
-    resolve_gemini_api_key,
-)
+from coffee_maker.langchain_observe.agents import configure_llm
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-_GEMINI_MODEL = "gemini-2.0-flash-lite"
-DEFAULT_MODELS = {"gemini": _GEMINI_MODEL}
-
-MODIFIED_CODE_DELIMITER_START = "---MODIFIED_CODE_START---"
-MODIFIED_CODE_DELIMITER_END = "---MODIFIED_CODE_END---"
-EXPLANATIONS_DELIMITER_START = "---EXPLANATIONS_START---"
-EXPLANATIONS_DELIMITER_END = "---EXPLANATIONS_END---"
-
-_resolve_gemini_api_key = resolve_gemini_api_key
-
 
 def _initialise_llm(*, strict: bool = False) -> Tuple[Any, str, Optional[str]]:
-    return configure_llm(strict=strict, default_models=DEFAULT_MODELS)
+    return configure_llm(strict=strict)
 
 
 llm, llm_provider, llm_model = _initialise_llm(strict=False)
@@ -183,15 +169,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     parser = argparse.ArgumentParser(description="Run the formatter agent demo")
     parser.add_argument(
-        "--provider",
-        choices=SUPPORTED_PROVIDERS,
-        help="LLM provider to use (defaults to environment or gemini)",
-    )
-    parser.add_argument(
-        "--model",
-        help="Model identifier to use. Defaults to provider-specific configuration.",
-    )
-    parser.add_argument(
         "--file-path",
         default="demo/non_compliant.py",
         help="Logical path attached to the demo file contents.",
@@ -203,7 +180,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             provider=args.provider,
             model=args.model,
             strict=True,
-            default_models=DEFAULT_MODELS,
         )
     except Exception as exc:  # pragma: no cover - exercised in manual usage
         logger.error("Unable to initialise the LLM: %s", exc)
