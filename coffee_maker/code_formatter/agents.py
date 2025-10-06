@@ -4,6 +4,7 @@ import argparse
 import logging
 import textwrap
 from typing import Any, Dict, Optional, Sequence
+import json
 
 from dotenv import load_dotenv
 
@@ -42,6 +43,13 @@ def create_langchain_code_formatter_agent(
         )
         return llm_result.content
 
+    def get_list_of_dict_from_llm(code_to_reformat: str):
+        content = get_result_from_llm(code_to_reformat)
+        if content.startswith("```json"):
+            content = content.replace("```json", "")
+            content = content[:-3]
+        return json.loads(content)
+
     return dict(
         role="Senior Software Engineer: python code formatter",
         goal="",
@@ -50,6 +58,7 @@ def create_langchain_code_formatter_agent(
         llm=llm,
         tools=(),
         get_result_from_llm=get_result_from_llm,
+        get_list_of_dict_from_llm=get_list_of_dict_from_llm,
     )
 
 
@@ -97,16 +106,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             """
         ).strip()
 
-        content = agent_config["get_result_from_llm"](sample_code)
+        content = agent_config["get_list_of_dict_from_llm"](sample_code)
 
         print("=== Demo input (non compliant) ===")
         print(sample_code)
         print()
         print("=== Formatter agent output ===")
+        print(content)
 
-        import json
-
-        print(json.dumps(json.loads(content)))
+        print()
         return 0
 
 
