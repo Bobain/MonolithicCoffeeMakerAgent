@@ -38,8 +38,16 @@ _MAIN_SCRIPTS = _discover_main_scripts()
     ids=lambda path: str(path.relative_to(_REPO_ROOT)),
 )
 def test_main_script_imports_without_running_main(script_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Import each script with a non-__main__ run_name to avoid executing its CLI."""
+    """Tests that a script with a main guard can be imported without executing its CLI.
 
+    This test uses runpy to import the script with a run_name other than `__main__`,
+    ensuring that the code under the `if __name__ == "__main__"` block is not run.
+    It also sets dummy environment variables that might be required at import time.
+
+    Args:
+        script_path (Path): The path to the script to test.
+        monkeypatch (pytest.MonkeyPatch): The pytest fixture for modifying environments.
+    """
     monkeypatch.setenv("COFFEE_MAKER_GEMINI_API_KEY", os.getenv("COFFEE_MAKER_GEMINI_API_KEY", "dummy"))
     monkeypatch.setenv("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", "dummy"))
     monkeypatch.setenv("GOOGLE_API_KEY", os.getenv("GOOGLE_API_KEY", "dummy"))
