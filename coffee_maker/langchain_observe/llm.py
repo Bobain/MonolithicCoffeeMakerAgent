@@ -45,19 +45,19 @@ try:
     #   Valid models for OpenAI class: gpt-3.5-turbo-instruct, davinci-002, babbage-002
     #
     #   Valid models for ChatOpenAI class: gpt-4, gpt-4-turbo, gpt-3.5-turbo, and their variants
-    SUPPORTED_PROVIDERS.update({"openai": (ChatOpenAI, "OPENAI_API_KEY", "gpt-5-codex", {"max_tokens": 4096})})
+    SUPPORTED_PROVIDERS.update({"openai": (ChatOpenAI, "OPENAI_API_KEY", "gpt-4", {"max_tokens": 4096})})
 
-    from langchain_core.prompts import PromptTemplate
-
-    prompt = PromptTemplate.from_template("How to say {input} in {output_language}:\n")
-
-    chain = prompt | llms.OpenAI()
-    chain.invoke(
-        {
-            "output_language": "German",
-            "input": "I love programming.",
-        }
-    )
+    # from langchain_core.prompts import PromptTemplate
+    #
+    # prompt = PromptTemplate.from_template("How to say {input} in {output_language}:\n")
+    #
+    # chain = prompt | ChatOpenAI()
+    # chain.invoke(
+    #     {
+    #         "output_language": "German",
+    #         "input": "I love programming.",
+    #     }
+    # )
 except:
     logger.warning("langchain_openai not installed. will not use openai")
 try:
