@@ -38,6 +38,14 @@ def _escape_braces(value: str) -> str:
     return value.replace("{", "{{").replace("}", "}}")
 
 
+def _extract_prompt_text(prompt_obj: Any) -> str:
+    for attr in ("prompt", "text", "template"):
+        value = getattr(prompt_obj, attr, None)
+        if isinstance(value, str):
+            return value
+    return str(prompt_obj)
+
+
 def _build_prompt(system_message: str) -> ChatPromptTemplate:
     return ChatPromptTemplate.from_messages(
         [
@@ -81,10 +89,15 @@ def create_langchain_code_formatter_agent(
         logger.exception("Failed to fetch formatter prompts", exc_info=exc)
         raise
 
+    main_prompt_text = _extract_prompt_text(main_prompt)
+
+    # Use the main prompt which contains full instructions for JSON output
+    system_message = _escape_braces(main_prompt_text)
+
     # Build prompt with placeholders for file_path and code_to_modify
     prompt = ChatPromptTemplate.from_messages(
         [
-            ("system", main_prompt),
+            ("system", system_message),
             (
                 "user",
                 """CODE TO MODIFY (file_path : {file_path}) (only the string between ------ delimiters):
