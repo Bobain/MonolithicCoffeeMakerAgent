@@ -27,8 +27,8 @@ SUPPORTED_PROVIDERS = dict()
 __DEFAULT_PROVIDER = "gemini"
 __DEFAULT_MODEL = "gemini-2.5-pro"
 
-# __DEFAULT_PROVIDER = "openai"
-# __DEFAULT_MODEL = "gpt-5-codex"
+__DEFAULT_PROVIDER = "openai"
+__DEFAULT_MODEL = "gpt-4"
 
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
@@ -40,9 +40,12 @@ except:
     logger.warning("langchain_google_genai not installed. will not use google")
 
 try:
-    from langchain_openai import llms
+    from langchain_openai import ChatOpenAI
 
-    SUPPORTED_PROVIDERS.update({"openai": (llms.OpenAI, "OPENAI_API_KEY", "gpt-5-codex", {"max_tokens": 4096})})
+    #   Valid models for OpenAI class: gpt-3.5-turbo-instruct, davinci-002, babbage-002
+    #
+    #   Valid models for ChatOpenAI class: gpt-4, gpt-4-turbo, gpt-3.5-turbo, and their variants
+    SUPPORTED_PROVIDERS.update({"openai": (ChatOpenAI, "OPENAI_API_KEY", "gpt-5-codex", {"max_tokens": 4096})})
 
     from langchain_core.prompts import PromptTemplate
 
