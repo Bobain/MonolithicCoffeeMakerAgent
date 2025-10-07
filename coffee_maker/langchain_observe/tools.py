@@ -11,9 +11,39 @@ from langchain_community.utilities.github import GitHubAPIWrapper
 
 
 def make_func_a_tool(name, func):
+    import json
+
     @observe
-    def _func(**kwargs):
-        return func(**kwargs)
+    def _func(tool_input):
+        # Handle both string and dict inputs from the agent
+        if isinstance(tool_input, str):
+            # Try to parse as JSON
+            try:
+                tool_input = json.loads(tool_input)
+            except json.JSONDecodeError:
+                # If parsing fails, check if it looks like JSON with code blocks
+                # Remove ```json and ``` markers that the LLM sometimes adds
+                cleaned = tool_input.strip()
+                if cleaned.startswith("```json"):
+                    cleaned = cleaned[7:]  # Remove ```json
+                if cleaned.startswith("```"):
+                    cleaned = cleaned[3:]  # Remove ```
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3]  # Remove trailing ```
+                cleaned = cleaned.strip()
+
+                try:
+                    tool_input = json.loads(cleaned)
+                except json.JSONDecodeError:
+                    # If it's still not JSON, pass it as-is
+                    pass
+
+        # If tool_input is a dict, expand it as kwargs
+        if isinstance(tool_input, dict):
+            return func(**tool_input)
+        else:
+            # Otherwise pass as single argument
+            return func(tool_input)
 
     _func.__doc__ = func.__doc__
 
