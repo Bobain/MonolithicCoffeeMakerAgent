@@ -92,25 +92,48 @@ def create_react_formatter_agent(langfuse_client: Langfuse, llm):
     # 2. Define the tools
     tools = github_tools + [get_pr_modified_files, get_pr_file_content, post_suggestion_in_pr_review]
 
-    langfuse_client.get_prompt("styleguide.md")
+    styleguide = langfuse_client.get_prompt("styleguide.md").prompt
+    from langchain.prompts import PromptTemplate
+
+    # ReAct agents require specific variables: tools, tool_names, input, agent_scratchpad
+    # Embed the styleguide directly in the template string
+    template_str = f"""You are a senior software Engineer with high Python development experience.
+You will be given some tasks that consists of reviewing a pull request and make of review of the code.
+You will be especially meticulous to reformat code that are in the pull request according to the styleguide.
+Use the tools at your disposal in order to post suggestions in the pull request.
+
+Here is the style guide (formatted in markdown):
+{styleguide}
+
+You have access to the following tools:
+
+{{tools}}
+
+Use the following format:
+
+Question: the input question you must answer
+Thought: you should always think about what to do
+Action: the action to take, should be one of [{{tool_names}}]
+Action Input: the input to the action
+Observation: the result of the action
+... (this Thought/Action/Action Input/Observation can repeat N times)
+Thought: I now know the final answer
+Final Answer: the final answer to the original input question
+
+Begin!
+
+Question: {{input}}
+Thought:{{agent_scratchpad}}"""
+
+    react_prompt = PromptTemplate.from_template(template_str)
 
     agent = create_react_agent(
         llm,
         tools=tools,
-        prompt="""You are a senior swoftware Engineer with high Python development experience.
-        You will be given some tasks that consists of reviewing a pull request and make of review of the code.
-        You will be especially meticulous to reformat code that are in the pull request according to the styleguide.
-        Use the tools at your disposal in order to post suggestions in the pull request.
-
-        You will work on the following PR:
-        Repository on github : {repo_name} (https://github.com/Bobain/MonolithicCoffeeMakerAgent)
-        Pull request number: {pr_number}
-
-        Here is the style guide (formatted in markdown):\n"""
-        + langfuse_client.get_prompt("styleguide.md"),
+        prompt=react_prompt,
     )
 
-    return agent
+    return agent, tools
 
 
 def create_langchain_code_formatter_agent(

@@ -297,13 +297,76 @@ if __name__ == "__main__":
 
     from langchain.agents import AgentExecutor
     from coffee_maker.langchain_observe.agents import get_llm
+    from langchain.callbacks.base import BaseCallbackHandler
 
-    react_agent = create_react_formatter_agent(langfuse_client, get_llm())
-    # Create an agent executor, which is the runtime for the agent
-    agent_executor = AgentExecutor(agent=react_agent, tools=react_agent.tools, verbose=True)
+    # Create a custom callback handler to display LLM outputs piece by piece
+    class StreamingCallbackHandler(BaseCallbackHandler):
+        """Callback handler to display LLM thinking process in real-time."""
 
-    # 4. Run the Agent
-    response = agent_executor.invoke({"input": dict(pr_number=args.pr, repo_name=args.repo)})
+        def on_llm_start(self, serialized: dict, prompts: list[str], **kwargs) -> None:
+            """Run when LLM starts running."""
+            logger.info("=" * 80)
+            logger.info("LLM started processing...")
+            logger.info("=" * 80)
+
+        def on_llm_new_token(self, token: str, **kwargs) -> None:
+            """Run on new LLM token. Only available when streaming is enabled."""
+            print(token, end="", flush=True)
+
+        def on_llm_end(self, response, **kwargs) -> None:
+            """Run when LLM ends running."""
+            print("\n")
+            logger.info("=" * 80)
+            logger.info("LLM finished processing")
+            logger.info("=" * 80)
+
+        def on_agent_action(self, action, **kwargs) -> None:
+            """Run on agent action."""
+            logger.info(f"\n[ACTION] Tool: {action.tool}")
+            logger.info(f"[ACTION] Input: {action.tool_input}")
+            logger.info("-" * 80)
+
+        def on_tool_start(self, serialized: dict, input_str: str, **kwargs) -> None:
+            """Run when tool starts running."""
+            logger.info(f"[TOOL START] {serialized.get('name', 'Unknown')}")
+
+        def on_tool_end(self, output: str, **kwargs) -> None:
+            """Run when tool ends running."""
+            logger.info(f"[TOOL OUTPUT] {output[:200]}..." if len(output) > 200 else f"[TOOL OUTPUT] {output}")
+            logger.info("-" * 80)
+
+        def on_tool_error(self, error: Exception, **kwargs) -> None:
+            """Run when tool errors."""
+            logger.error(f"[TOOL ERROR] {error}")
+
+        def on_agent_finish(self, finish, **kwargs) -> None:
+            """Run on agent end."""
+            logger.info("\n" + "=" * 80)
+            logger.info("[AGENT FINISHED]")
+            logger.info(f"Final Answer: {finish.return_values}")
+            logger.info("=" * 80)
+
+    # Get LLM with streaming enabled
+    llm_with_streaming = get_llm(streaming=True)
+    react_agent, tools = create_react_formatter_agent(langfuse_client, llm_with_streaming)
+
+    # Create an agent executor with streaming enabled
+    streaming_handler = StreamingCallbackHandler()
+    agent_executor = AgentExecutor(
+        agent=react_agent,
+        tools=tools,
+        verbose=True,
+        callbacks=[streaming_handler],
+        return_intermediate_steps=True,  # Return intermediate steps to see agent reasoning
+    )
+
+    # 4. Run the Agent asynchronously to allow streaming
+    logger.info(f"Starting ReAct agent for PR #{args.pr} in {args.repo}")
+    response = agent_executor.invoke(
+        {"input": f"Review PR #{args.pr} in repository {args.repo}"},
+        config={"callbacks": [streaming_handler]},
+    )
+    logger.info(f"\nAgent completed. Response: {response}")
 
     # # Run the async function:
     # agent = basic agent with complex prompt and strict expected outputs that are then parsed and used to call
