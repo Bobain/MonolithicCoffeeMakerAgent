@@ -292,6 +292,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Run the async function
+    langfuse_client.update_current_trace(
+        session_id=f"{datetime.now().isoformat()} code_formatter_main {args.repo=} {args.pr=} {args.file=}"
+    )
     asyncio.run(
         run_code_formatter(repo_full_name=args.repo, pr_number=args.pr, file_path=args.file, skip_empty_files=True)
     )

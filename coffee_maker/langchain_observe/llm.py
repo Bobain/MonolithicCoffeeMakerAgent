@@ -24,12 +24,15 @@ from coffee_maker.langchain_observe.utils import get_callers_modules
 
 logger = logging.getLogger(__name__)
 SUPPORTED_PROVIDERS = dict()
-__DEFAULT_PROVIDER = "gemini"
-__DEFAULT_MODEL = "gemini-2.5-pro"
 
 __DEFAULT_PROVIDER = "openai"
 __DEFAULT_MODEL = "gpt-4"
 __DEFAULT_MODEL = "gpt-5-codex"
+
+
+__DEFAULT_PROVIDER = "gemini"
+__DEFAULT_MODEL = "gemini-2.5-pro"
+
 
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
@@ -114,6 +117,7 @@ def get_llm(langfuse_client: langfuse.Langfuse = None, provider: str = None, mod
             logger.warning(
                 f"ENVIRONMENT VARIABLE {api_key} not set, you asked {provider} with model {model} but it may not work"
             )
+        logger.info(f"Instantiating LLM: {provider} {model} with kwargs: {final_kwargs}")
         llm = Llm(**final_kwargs)
         langfuse_client.update_current_trace(
             metadata={
