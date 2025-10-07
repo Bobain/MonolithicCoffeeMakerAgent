@@ -91,6 +91,7 @@ except:
 default_provider = (
     __DEFAULT_PROVIDER if __DEFAULT_PROVIDER in SUPPORTED_PROVIDERS.keys() else list(SUPPORTED_PROVIDERS.keys())[0]
 )
+logger.info(f"{default_provider=}")
 
 
 def get_llm(langfuse_client: langfuse.Langfuse = None, provider: str = None, model: str = None, **llm_kwargs):
