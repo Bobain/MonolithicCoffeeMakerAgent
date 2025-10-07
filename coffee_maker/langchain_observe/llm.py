@@ -24,8 +24,20 @@ from coffee_maker.langchain_observe.utils import get_callers_modules
 
 logger = logging.getLogger(__name__)
 SUPPORTED_PROVIDERS = dict()
-__DEFAULT_PROVIDER = "openai"
-__DEFAULT_MODEL = "gpt-5-codex"
+__DEFAULT_PROVIDER = "gemini"
+__DEFAULT_MODEL = "gemini-2.5-pro"
+
+# __DEFAULT_PROVIDER = "openai"
+# __DEFAULT_MODEL = "gpt-5-codex"
+
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+
+    SUPPORTED_PROVIDERS.update(
+        {"gemini": (ChatGoogleGenerativeAI, "GEMINI_API_KEY", "gemini-2.5-pro", {"max_tokens": 8192})}
+    )
+except:
+    logger.warning("langchain_google_genai not installed. will not use google")
 
 try:
     from langchain_openai import llms
