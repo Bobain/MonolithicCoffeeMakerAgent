@@ -9,12 +9,11 @@ import pytest
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionInput, PostSuggestionToolLangAI
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionInput, PostSuggestionToolLangAI
 
-
 class TestPostSuggestionInput:
-    """Tests for PostSuggestionInput Pydantic model"""
+    """Tests for PostSuggestionInput Pydantic model."""
 
-    def test_valid_input(self):
-        """Test creating PostSuggestionInput with valid data"""
+    def test_valid_input(self) -> None:
+        """Test creating PostSuggestionInput with valid data."""
         input_data = PostSuggestionInput(
             repo_full_name="owner/repo",
             pr_number=123,
@@ -32,12 +31,18 @@ class TestPostSuggestionInput:
         assert input_data.suggestion_body == "improved code here"
         assert input_data.comment_text == "Consider this improvement"
 
-    def test_missing_required_field(self):
-        """Test that missing required fields raise ValidationError"""
+    def test_missing_required_field(self) -> None:
+        """Test that missing required fields raise ValidationError."""
         with pytest.raises(ValidationError):
             PostSuggestionInput(
                 repo_full_name="owner/repo",
                 pr_number=123,
+                # missing file_path
+                start_line=10,
+                end_line=15,
+                suggestion_body="improved code",
+                comment_text="comment",
+            )
                 # missing file_path
                 start_line=10,
                 end_line=15,
