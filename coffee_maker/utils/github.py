@@ -1,9 +1,9 @@
+import logging
+import os
 from typing import Optional
 
-from github import Github, Auth, GithubException
+from github import Auth, Github, GithubException
 from langfuse import observe
-import os
-import logging
 
 LOGGER = logging.getLogger(__name__)
 
