@@ -287,7 +287,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run code formatter on a GitHub PR")
     parser.add_argument("--repo", default="Bobain/MonolithicCoffeeMakerAgent", help="Full repository name (owner/repo)")
-    parser.add_argument("--pr", type=int, default=111, help="Pull request number")
+    parser.add_argument("--pr", type=int, default=112, help="Pull request number")
     parser.add_argument("--file", type=str, default=None, help="Optional: specific file path to process")
     args = parser.parse_args()
 
