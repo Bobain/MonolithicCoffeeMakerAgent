@@ -18,6 +18,10 @@ from coffee_maker.langchain_observe.agents import configure_llm
 
 load_dotenv()
 
+from langfuse.langchain import CallbackHandler
+
+langfuse_callback_handler = CallbackHandler()
+
 logger = logging.getLogger(__name__)
 
 
@@ -110,7 +114,11 @@ def create_langchain_code_formatter_agent(
     def _invoke_formatter(file_content: str, file_path: str) -> str:
         chain = prompt | llm_instance
         # Use variable names matching the Langfuse prompt template
-        response = chain.invoke({"file_path": file_path, "code_to_modify": file_content})
+        # we pass the callback handler to the chain to trace the run in Langfuse
+        response = chain.invoke(
+            input={"file_path": file_path, "code_to_modify": file_content},
+            config={"callbacks": [langfuse_callback_handler]},
+        )
         if hasattr(response, "content"):
             return response.content
         return str(response)
