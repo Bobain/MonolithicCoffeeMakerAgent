@@ -45,24 +45,18 @@ class TestPostSuggestionInput:
             )
                 # missing file_path
                 start_line=10,
-                end_line=15,
-                suggestion_body="improved code",
-                comment_text="comment",
-            )
-
-
 class TestPostSuggestionToolLangAI:
-    """Tests for PostSuggestionToolLangAI CrewAI tool"""
+    """Tests for PostSuggestionToolLangAI CrewAI tool."""
 
-    def test_tool_attributes(self):
-        """Test that the tool has correct attributes"""
+    def test_tool_attributes(self) -> None:
+        """Test that the tool has correct attributes."""
         tool = PostSuggestionToolLangAI()
         assert tool.name == "Post PR Review Suggestion Tool"
         assert "Post multi-line code suggestions on GitHub PRs" in tool.description
         assert tool.args_schema == PostSuggestionInput
 
-    def test_run_missing_github_token(self, monkeypatch):
-        """Test that missing GITHUB_TOKEN raises ValueError"""
+    def test_run_missing_github_token(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that missing GITHUB_TOKEN raises ValueError."""
         monkeypatch.delenv("GITHUB_TOKEN", raising=False)
         mocked = mock.Mock(side_effect=ValueError("Credentials for Github needed: GITHUB_TOKEN not defined."))
         monkeypatch.setattr(
@@ -82,8 +76,8 @@ class TestPostSuggestionToolLangAI:
                 comment_text="Consider this",
             )
 
-    def test_run_success(self, monkeypatch):
-        """Test successful posting of a suggestion"""
+    def test_run_success(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test successful posting of a suggestion."""
         monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
         mocked = mock.Mock(return_value="Successfully posted suggestion for src/test.py in PR #123")
         monkeypatch.setattr(
@@ -115,8 +109,8 @@ class TestPostSuggestionToolLangAI:
             comment_text="Consider this improvement",
         )
 
-    def test_run_github_api_error(self, monkeypatch):
-        """Test handling of GitHub API errors"""
+    def test_run_github_api_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test handling of GitHub API errors."""
         monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
         mocked = mock.Mock(side_effect=GithubException(status=500, data={}, headers={}))
         monkeypatch.setattr(
@@ -137,8 +131,8 @@ class TestPostSuggestionToolLangAI:
                 comment_text="Consider this",
             )
 
-    def test_run_multiline_suggestion(self, monkeypatch):
-        """Test posting a multi-line code suggestion"""
+    def test_run_multiline_suggestion(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test posting a multi-line code suggestion."""
         monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
         mocked = mock.Mock(return_value="Successfully posted suggestion for app/main.py in PR #456")
         monkeypatch.setattr(
@@ -162,9 +156,8 @@ class TestPostSuggestionToolLangAI:
         assert result == "Successfully posted suggestion for app/main.py in PR #456"
         mocked.assert_called_once()
 
-    def test_run_invalid_path_error(self, monkeypatch):
+    def test_run_invalid_path_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Ensure a clear error surfaces when the target file is not part of the PR."""
-
         monkeypatch.setenv("GITHUB_TOKEN", "fake_token")
 
         mocked = mock.Mock(side_effect=ValueError("File path 'missing/file.py' not found in PR #789."))
@@ -184,4 +177,5 @@ class TestPostSuggestionToolLangAI:
                 end_line=2,
                 suggestion_body="print('hello')",
                 comment_text="Add output",
+            )
             )
