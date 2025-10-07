@@ -1,1 +1,1 @@
-"""Tests for coffee_maker/code_formatter module"""
+"""Tests for the `coffee_maker.code_formatter` module."""

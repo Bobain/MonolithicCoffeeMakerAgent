@@ -1,1 +1,1 @@
-"""Tests for coffee_maker/code_formatter/crewai module"""
+"""Tests for the crewai code formatter."""

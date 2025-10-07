@@ -16,8 +16,12 @@ os.environ.setdefault("OTEL_SDK_DISABLED", "true")
 
 
 @pytest.fixture
-def mock_langfuse_client():
-    """Provide a mock Langfuse client"""
+def mock_langfuse_client() -> mock.MagicMock:
+    """Provide a mock Langfuse client.
+
+    Returns:
+        mock.MagicMock: A mocked Langfuse client instance.
+    """
     client = mock.MagicMock()
     mock_prompt = mock.MagicMock()
     mock_prompt.compile.return_value = "Mocked prompt text"
