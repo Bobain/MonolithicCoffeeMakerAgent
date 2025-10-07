@@ -2,11 +2,11 @@
 
 from unittest import mock
 
-import pytest
-from pydantic import ValidationError
-
 from github import GithubException
+from pydantic import ValidationError
+import pytest
 
+from coffee_maker.code_formatter.crewai.tools import PostSuggestionInput, PostSuggestionToolLangAI
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionInput, PostSuggestionToolLangAI
 
 
