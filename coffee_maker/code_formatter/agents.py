@@ -7,7 +7,6 @@ import logging
 import sys
 import json
 import textwrap
-from types import SimpleNamespace
 from typing import Any, Dict, Optional, Sequence, Tuple
 
 import langfuse
@@ -128,17 +127,7 @@ def create_langchain_code_formatter_agent(
         Raises:
             json.JSONDecodeError: If the content is not valid JSON
         """
-        content = raw_output.strip()
-
-        # Remove markdown code block delimiters if present
-        if content.startswith("```json"):
-            content = content[len("```json") :].strip()
-        elif content.startswith("```"):
-            content = content[len("```") :].strip()
-
-        if content.endswith("```"):
-            content = content[: -len("```")].strip()
-
+        content = extract_brackets(raw_output)
         # Handle empty content
         if not content:
             return []
@@ -147,7 +136,7 @@ def create_langchain_code_formatter_agent(
             result = json.loads(content)
             # Ensure result is a list
             if not isinstance(result, list):
-                logger.warning(f"Expected list output, got {type(result)}. Wrapping in list.")
+                assert isinstance(result, dict), "Expected dictionnary or list of dictionaries"
                 result = [result]
             return result
         except json.JSONDecodeError as exc:
@@ -180,23 +169,15 @@ def create_langchain_code_formatter_agent(
     return agent
 
 
-class _DemoLangfuseClient:
-    """Minimal Langfuse stand-in for local demonstrations."""
+def extract_brackets(s: str):
+    # Remove any char surrounding the json list of dict
+    first_open = min((i for i in [s.find("["), s.find("{")] if i != -1), default=-1)
+    last_close = max((i for i in [s.rfind("]"), s.rfind("}")] if i != -1), default=-1)
 
-    def __init__(self) -> None:
-        self._prompts = {
-            "refactor_agent/goal_prompt": "Update code to comply with our Coffee Maker style guide.",
-            "refactor_agent/backstory_prompt": (
-                "You care deeply about clarity, type hints, and deterministic formatting."
-            ),
-        }
+    if first_open == -1 or last_close == -1:
+        return ""
 
-    def get_prompt(self, name: str) -> SimpleNamespace:
-        try:
-            text = self._prompts[name]
-        except KeyError as exc:  # pragma: no cover - defensive demo guard
-            raise KeyError(f"Demo prompt '{name}' not configured") from exc
-        return SimpleNamespace(prompt=text)
+    return s[first_open : last_close + 1]
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -210,12 +191,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     parser.add_argument(
         "--provider",
-        default=None,
+        default="openai",
         help="LLM provider (e.g., anthropic, openai, gemini). Uses default if not specified.",
     )
     parser.add_argument(
         "--model",
-        default=None,
+        default="gpt-4",
         help="Model name. Uses provider default if not specified.",
     )
     args = parser.parse_args(argv)
@@ -234,6 +215,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     globals()["llm"], globals()["llm_provider"], globals()["llm_model"] = new_llm, new_provider, new_model
 
     agent_config = create_langchain_code_formatter_agent(langfuse_client=langfuse_client, llm_override=new_llm)
+
     chain = agent_config["prompt"] | agent_config["llm"]
 
     sample_code = textwrap.dedent(
@@ -250,7 +232,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         """
     ).strip()
 
-    payload = {"file_path": args.file_path, "file_content": sample_code}
+    payload = {"file_path": args.file_path, "code_to_modify": sample_code}
 
     print("=== Demo input (non compliant) ===")
     print(sample_code)
