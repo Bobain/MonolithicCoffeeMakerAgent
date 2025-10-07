@@ -11,7 +11,7 @@ from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langfuse import observe
 
-from coffee_maker.langchain_observe.llm import get_chat_llm
+from coffee_maker.langchain_observe.llm import get_llm
 
 logger = logging.getLogger(__name__)
 
@@ -59,11 +59,10 @@ def _build_stub_llm(provider: str, model: Optional[str], error: Exception) -> An
         description: str
         model_name: str = model or "stub"
 
-        def __init__(self, description: str) -> None:
-            super().__init__()
-            self.description = description
-            self.model = model
-            self.provider = provider
+        class Config:
+            """Pydantic configuration."""
+
+            arbitrary_types_allowed = True
 
         def _generate(
             self,
@@ -73,8 +72,8 @@ def _build_stub_llm(provider: str, model: Optional[str], error: Exception) -> An
             **kwargs: Any,
         ) -> ChatResult:
             """Generate stub response."""
-            message = AIMessage(content=self.description)
-            generation = ChatGeneration(message=message)
+            msg = AIMessage(content=self.description)
+            generation = ChatGeneration(message=msg)
             return ChatResult(generations=[generation])
 
         @property
@@ -96,7 +95,7 @@ def _build_llm(provider: str = None, model=None, **kwargs: Any):
     Returns:
         Configured LLM instance
     """
-    return get_chat_llm(provider=provider, model=model, **kwargs)
+    return get_llm(provider=provider, model=model, **kwargs)
 
 
 def configure_llm(

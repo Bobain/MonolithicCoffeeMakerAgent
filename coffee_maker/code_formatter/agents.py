@@ -151,9 +151,7 @@ def create_langchain_code_formatter_agent(
                 result = [result]
             return result
         except json.JSONDecodeError as exc:
-            logger.critical(
-                f"Could not parse JSON output. Error: {exc}\n" f"Raw output (first 500 chars): {raw_output[:500]}"
-            )
+            logger.critical(f"Could not parse JSON output. Error: {exc}\n" f"Raw output : {raw_output}")
             raise
 
     def get_result_from_llm(file_content: str, file_path: str) -> str:
