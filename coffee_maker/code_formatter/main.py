@@ -42,7 +42,7 @@ from typing import Callable, Optional
 from dotenv import load_dotenv
 from langfuse import Langfuse, observe
 
-from coffee_maker.code_formatter.agents import create_langchain_code_formatter_agent
+from coffee_maker.code_formatter.agents import create_langchain_code_formatter_agent, create_react_formatter_agent
 
 from coffee_maker.utils.github import get_pr_file_content, get_pr_modified_files, post_suggestion_in_pr_review
 
@@ -291,10 +291,23 @@ if __name__ == "__main__":
     parser.add_argument("--file", type=str, default=None, help="Optional: specific file path to process")
     args = parser.parse_args()
 
-    # Run the async function
     langfuse_client.update_current_trace(
         session_id=f"{datetime.now().isoformat()} code_formatter_main {args.repo=} {args.pr=} {args.file=}"
     )
-    asyncio.run(
-        run_code_formatter(repo_full_name=args.repo, pr_number=args.pr, file_path=args.file, skip_empty_files=True)
-    )
+
+    from langchain.agents import AgentExecutor
+    from coffee_maker.langchain_observe.agents import get_llm
+
+    react_agent = create_react_formatter_agent(langfuse_client, get_llm())
+    # Create an agent executor, which is the runtime for the agent
+    agent_executor = AgentExecutor(agent=react_agent, tools=react_agent.tools, verbose=True)
+
+    # 4. Run the Agent
+    response = agent_executor.invoke({"input": dict(pr_number=args.pr, repo_name=args.repo)})
+
+    # # Run the async function:
+    # agent = basic agent with complex prompt and strict expected outputs that are then parsed and used to call
+    #           functions
+    # asyncio.run(
+    #     run_code_formatter(repo_full_name=args.repo, pr_number=args.pr, file_path=args.file, skip_empty_files=True)
+    # )

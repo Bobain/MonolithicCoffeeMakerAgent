@@ -20,7 +20,7 @@ pygithub = "^2.8.1"
 crewai = "^0.201.1"
 crewai-tools = "^0.75.0"
 langfuse = {version = "^3.5.2", extras = ["langchain"]}
-langchain = {extras = ["anthropic", "core", "google-genai", "openai"], version = "^0.3.27"}
+langchain = {extras = ["anthropic", "community", "core", "google-genai", "openai"], version = "^0.3.27"}
 langchain-core = "^0.3.78"
 google = "^3.0.0"
 

@@ -78,6 +78,41 @@ def _build_agent_config(
     }
 
 
+def create_react_formatter_agent(langfuse_client: Langfuse, llm):
+    # agent = ReAct agent with less complex and tools to use
+    from langchain.agents import create_react_agent
+
+    from coffee_maker.langchain_observe.tools import (
+        get_pr_modified_files,
+        get_pr_file_content,
+        post_suggestion_in_pr_review,
+        github_tools,
+    )
+
+    # 2. Define the tools
+    tools = github_tools + [get_pr_modified_files, get_pr_file_content, post_suggestion_in_pr_review]
+
+    langfuse_client.get_prompt("styleguide.md")
+
+    agent = create_react_agent(
+        llm,
+        tools=tools,
+        prompt="""You are a senior swoftware Engineer with high Python development experience.
+        You will be given some tasks that consists of reviewing a pull request and make of review of the code.
+        You will be especially meticulous to reformat code that are in the pull request according to the styleguide.
+        Use the tools at your disposal in order to post suggestions in the pull request.
+
+        You will work on the following PR:
+        Repository on github : {repo_name} (https://github.com/Bobain/MonolithicCoffeeMakerAgent)
+        Pull request number: {pr_number}
+
+        Here is the style guide (formatted in markdown):\n"""
+        + langfuse_client.get_prompt("styleguide.md"),
+    )
+
+    return agent
+
+
 def create_langchain_code_formatter_agent(
     langfuse_client: Langfuse, *, llm_override: Optional[Any] = None
 ) -> Dict[str, Any]:
