@@ -13,6 +13,11 @@ _COFFEE_MAKER_DIR = _REPO_ROOT / "coffee_maker"
 
 
 def _discover_main_scripts() -> list[Path]:
+    """Discovers all Python scripts in the coffee_maker directory with a __main__ guard.
+
+    Returns:
+        list[Path]: A list of paths to the discovered scripts.
+    """
     scripts: list[Path] = []
     for candidate in _COFFEE_MAKER_DIR.rglob("*.py"):
         try:
