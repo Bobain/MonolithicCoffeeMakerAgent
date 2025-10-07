@@ -85,15 +85,11 @@ def create_langchain_code_formatter_agent(
 
     try:
         main_prompt = langfuse_client.get_prompt("code_formatter_main_llm_entry")
-        goal_prompt = langfuse_client.get_prompt("refactor_agent/goal_prompt")
-        backstory_prompt = langfuse_client.get_prompt("refactor_agent/backstory_prompt")
     except Exception as exc:  # pragma: no cover - surfaced to callers/tests
         logger.exception("Failed to fetch formatter prompts", exc_info=exc)
         raise
 
     main_prompt_text = _extract_prompt_text(main_prompt)
-    goal_raw = _extract_prompt_text(goal_prompt)
-    backstory_raw = _extract_prompt_text(backstory_prompt)
 
     # Use the main prompt which contains full instructions for JSON output
     system_message = _escape_braces(main_prompt_text)
@@ -102,12 +98,15 @@ def create_langchain_code_formatter_agent(
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", system_message),
-            ("user", ""),  # Empty user message since system prompt has all instructions
+            (
+                "user",
+                """CODE TO MODIFY (file_path : {file_path}) (only the string between ------ delimiters):
+------
+{code_to_modify}
+------""",
+            ),
         ]
     )
-
-    # Override the template to use the placeholders from Langfuse
-    prompt = ChatPromptTemplate.from_template(system_message)
 
     llm_instance = llm_override or llm
 
@@ -164,8 +163,8 @@ def create_langchain_code_formatter_agent(
 
     agent = _build_agent_config(
         role="Senior Software Engineer: python code formatter",
-        goal=goal_raw,
-        backstory=backstory_raw,
+        goal="",
+        backstory="",
         prompt=prompt,
         llm_override=llm_override,
         tools=(),

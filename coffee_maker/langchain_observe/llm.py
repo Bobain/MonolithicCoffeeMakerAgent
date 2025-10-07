@@ -29,6 +29,7 @@ __DEFAULT_MODEL = "gemini-2.5-pro"
 
 __DEFAULT_PROVIDER = "openai"
 __DEFAULT_MODEL = "gpt-4"
+__DEFAULT_MODEL = "gpt-5-codex"
 
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
