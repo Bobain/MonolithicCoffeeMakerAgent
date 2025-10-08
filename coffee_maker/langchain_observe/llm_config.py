@@ -266,3 +266,22 @@ def get_model_context_length_from_name(full_model_name: str) -> int:
         raise ValueError(f"Unknown model: {model} for provider {provider}")
 
     return MODEL_CONFIGS[provider][model]["context_length"]
+
+
+def get_all_model_context_limits() -> dict:
+    """Get all model context limits as a flat dictionary.
+
+    Returns:
+        Dict mapping "provider/model" to context length
+
+    Example:
+        >>> limits = get_all_model_context_limits()
+        >>> limits["openai/gpt-4o-mini"]
+        128000
+    """
+    limits = {}
+    for provider, models in MODEL_CONFIGS.items():
+        for model, config in models.items():
+            full_name = f"{provider}/{model}"
+            limits[full_name] = config["context_length"]
+    return limits
