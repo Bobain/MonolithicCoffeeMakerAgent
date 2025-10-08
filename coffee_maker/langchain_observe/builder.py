@@ -1,8 +1,4 @@
-"""Builder pattern for constructing LLM instances with fluent API.
-
-This module provides a convenient builder interface for creating LLM instances
-with all the bells and whistles (scheduling, fallbacks, cost tracking, etc.).
-"""
+"""Builder pattern for constructing LLM instances with fluent API."""
 
 import logging
 from typing import List, Optional, Tuple
@@ -15,31 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class LLMBuilder:
-    """Fluent builder for creating LLM instances.
-
-    This builder makes it easy to construct complex LLM configurations with:
-    - Primary model + fallbacks
-    - Rate limiting (via tier)
-    - Cost tracking
-    - Context length management
-    - Smart fallback strategies
-
-    Example:
-        >>> from coffee_maker.langchain_observe.builder import LLMBuilder
-        >>> from coffee_maker.langchain_observe.cost_calculator import CostCalculator
-        >>>
-        >>> llm = (LLMBuilder()
-        ...     .with_tier("tier1")
-        ...     .with_primary("openai", "gpt-4o-mini")
-        ...     .with_fallback("gemini", "gemini-2.5-flash")
-        ...     .with_fallback("anthropic", "claude-3-5-haiku-20241022")
-        ...     .with_cost_tracking(CostCalculator())
-        ...     .with_smart_fallback()
-        ...     .build())
-    """
+    """Fluent builder for creating LLM instances with primary, fallbacks, and cost tracking."""
 
     def __init__(self):
-        """Initialize builder with default values."""
+        """Initialize builder."""
         self._tier: str = "tier1"
         self._primary_provider: Optional[str] = None
         self._primary_model: Optional[str] = None
@@ -53,66 +28,28 @@ class LLMBuilder:
         self._context_strategy: Optional[ContextStrategy] = None
 
     def with_tier(self, tier: str) -> "LLMBuilder":
-        """Set the API tier for rate limiting.
-
-        Args:
-            tier: Tier name (e.g., "tier1", "tier2")
-
-        Returns:
-            Self for chaining
-        """
+        """Set the API tier for rate limiting."""
         self._tier = tier
         return self
 
     def with_primary(self, provider: str, model: str) -> "LLMBuilder":
-        """Set the primary LLM.
-
-        Args:
-            provider: Provider name (e.g., "openai", "gemini", "anthropic")
-            model: Model name (e.g., "gpt-4o-mini")
-
-        Returns:
-            Self for chaining
-        """
+        """Set the primary LLM."""
         self._primary_provider = provider
         self._primary_model = model
         return self
 
     def with_fallback(self, provider: str, model: str) -> "LLMBuilder":
-        """Add a fallback LLM.
-
-        Args:
-            provider: Provider name
-            model: Model name
-
-        Returns:
-            Self for chaining
-        """
+        """Add a fallback LLM."""
         self._fallbacks.append((provider, model))
         return self
 
     def with_fallbacks(self, fallbacks: List[Tuple[str, str]]) -> "LLMBuilder":
-        """Add multiple fallbacks at once.
-
-        Args:
-            fallbacks: List of (provider, model) tuples
-
-        Returns:
-            Self for chaining
-        """
+        """Add multiple fallbacks at once."""
         self._fallbacks.extend(fallbacks)
         return self
 
     def with_cost_tracking(self, cost_calculator=None, langfuse_client=None) -> "LLMBuilder":
-        """Enable cost tracking.
-
-        Args:
-            cost_calculator: CostCalculator instance (will create if None)
-            langfuse_client: Langfuse client (will create if None)
-
-        Returns:
-            Self for chaining
-        """
+        """Enable cost tracking."""
         if cost_calculator is None:
             try:
                 from coffee_maker.langchain_observe.cost_calculator import CostCalculator
@@ -142,77 +79,37 @@ class LLMBuilder:
         return self
 
     def with_max_wait(self, seconds: float) -> "LLMBuilder":
-        """Set maximum wait time for rate limits.
-
-        Args:
-            seconds: Max wait in seconds
-
-        Returns:
-            Self for chaining
-        """
+        """Set maximum wait time for rate limits."""
         self._max_wait_seconds = seconds
         return self
 
     def with_context_fallback(self, enabled: bool = True) -> "LLMBuilder":
-        """Enable or disable automatic context length fallback.
-
-        Args:
-            enabled: Whether to enable context fallback
-
-        Returns:
-            Self for chaining
-        """
+        """Enable or disable automatic context length fallback."""
         self._enable_context_fallback = enabled
         return self
 
     def with_smart_fallback(self) -> "LLMBuilder":
-        """Use smart fallback strategy (error-type aware).
-
-        Returns:
-            Self for chaining
-        """
+        """Use smart fallback strategy (error-type aware)."""
         self._fallback_strategy_type = "smart"
         return self
 
     def with_cost_optimized_fallback(self) -> "LLMBuilder":
-        """Use cost-optimized fallback strategy (cheapest first).
-
-        Returns:
-            Self for chaining
-        """
+        """Use cost-optimized fallback strategy (cheapest first)."""
         self._fallback_strategy_type = "cost"
         return self
 
     def with_sequential_fallback(self) -> "LLMBuilder":
-        """Use sequential fallback strategy (default).
-
-        Returns:
-            Self for chaining
-        """
+        """Use sequential fallback strategy (default)."""
         self._fallback_strategy_type = "sequential"
         return self
 
     def with_custom_fallback_strategy(self, strategy: FallbackStrategy) -> "LLMBuilder":
-        """Use a custom fallback strategy.
-
-        Args:
-            strategy: Custom FallbackStrategy instance
-
-        Returns:
-            Self for chaining
-        """
+        """Use a custom fallback strategy."""
         self._fallback_strategy = strategy
         return self
 
     def build(self) -> AutoPickerLLMRefactored:
-        """Build the LLM instance.
-
-        Returns:
-            Configured AutoPickerLLMRefactored instance
-
-        Raises:
-            ValueError: If required configuration is missing
-        """
+        """Build the LLM instance."""
         # Validate
         if self._primary_provider is None or self._primary_model is None:
             raise ValueError("Primary model not set. Call with_primary() first.")
@@ -309,30 +206,7 @@ class LLMBuilder:
 
 
 class SmartLLM:
-    """Ultra-simple facade for creating LLMs with smart defaults.
-
-    This is the simplest way to get a production-ready LLM with all features:
-    - Automatic scheduling and rate limiting
-    - Smart fallbacks based on error type
-    - Cost tracking
-    - Context length management
-
-    Example:
-        >>> from coffee_maker.langchain_observe.builder import SmartLLM
-        >>>
-        >>> # Simplest: use tier defaults
-        >>> llm = SmartLLM.for_tier("tier1")
-        >>>
-        >>> # With custom primary
-        >>> llm = SmartLLM.for_tier("tier1", primary=("openai", "gpt-4o-mini"))
-        >>>
-        >>> # With custom fallbacks
-        >>> llm = SmartLLM.for_tier(
-        ...     "tier1",
-        ...     primary=("openai", "gpt-4o-mini"),
-        ...     fallbacks=[("gemini", "gemini-2.5-flash")]
-        ... )
-    """
+    """Simple facade for creating LLMs with smart defaults and automatic fallbacks."""
 
     @staticmethod
     def for_tier(
@@ -340,20 +214,7 @@ class SmartLLM:
         primary: Optional[Tuple[str, str]] = None,
         fallbacks: Optional[List[Tuple[str, str]]] = None,
     ) -> AutoPickerLLMRefactored:
-        """Create a smart LLM for a given tier.
-
-        Args:
-            tier: API tier (e.g., "tier1")
-            primary: Optional (provider, model) tuple
-            fallbacks: Optional list of (provider, model) tuples
-
-        Returns:
-            Configured LLM with smart defaults
-
-        Example:
-            >>> llm = SmartLLM.for_tier("tier1")
-            >>> llm = SmartLLM.for_tier("tier1", primary=("openai", "gpt-4o"))
-        """
+        """Create a smart LLM for a given tier."""
         builder = LLMBuilder().with_tier(tier)
 
         # Set primary (or use smart default)
@@ -381,34 +242,20 @@ class SmartLLM:
 
     @staticmethod
     def fast(tier: str = "tier1") -> AutoPickerLLMRefactored:
-        """Create a fast, cheap LLM optimized for speed and cost.
-
-        Args:
-            tier: API tier
-
-        Returns:
-            LLM optimized for speed/cost
-        """
+        """Create a fast, cheap LLM optimized for speed and cost."""
         return (
             LLMBuilder()
             .with_tier(tier)
             .with_primary("openai", "gpt-4o-mini")
             .with_fallback("gemini", "gemini-2.5-flash")
             .with_cost_tracking()
-            .with_cost_optimized_fallback()  # Prefer cheaper models
+            .with_cost_optimized_fallback()
             .build()
         )
 
     @staticmethod
     def powerful(tier: str = "tier1") -> AutoPickerLLMRefactored:
-        """Create a powerful LLM optimized for quality.
-
-        Args:
-            tier: API tier
-
-        Returns:
-            LLM optimized for quality
-        """
+        """Create a powerful LLM optimized for quality."""
         return (
             LLMBuilder()
             .with_tier(tier)
