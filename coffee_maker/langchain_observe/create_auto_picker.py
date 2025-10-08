@@ -1,10 +1,17 @@
-"""Helper functions to create AutoPickerLLM instances with sensible defaults."""
+"""Helper functions to create AutoPickerLLM instances with sensible defaults.
+
+DEPRECATED: This module uses the old AutoPickerLLM.
+Use coffee_maker.langchain_observe.builder.SmartLLM for new code.
+"""
 
 import logging
 
 import langfuse
 
-from coffee_maker.langchain_observe.auto_picker_llm import AutoPickerLLM
+from coffee_maker.langchain_observe.auto_picker_llm_refactored import (
+    AutoPickerLLMRefactored,
+    create_auto_picker_llm_refactored,
+)
 from coffee_maker.langchain_observe.cost_calculator import CostCalculator
 from coffee_maker.langchain_observe.llm_config import MODEL_CONFIGS, get_fallback_models
 
@@ -21,41 +28,37 @@ def create_auto_picker_llm(
     backoff_base: float = 2.0,
     min_wait_before_fallback: float = 90.0,
     streaming: bool = False,
-) -> AutoPickerLLM:
-    """Create an AutoPickerLLM instance with automatic fallback configuration.
+) -> AutoPickerLLMRefactored:
+    """Create an AutoPickerLLMRefactored instance with automatic fallback configuration.
+
+    DEPRECATED: Use coffee_maker.langchain_observe.builder.SmartLLM instead.
 
     Args:
         tier: API tier for rate limiting ('free', 'tier1', 'tier2', 'paid')
         primary_provider: Primary LLM provider ('openai', 'gemini')
         primary_model: Primary model name
-        auto_wait: Whether to automatically wait when rate limited
+        auto_wait: Whether to automatically wait when rate limited (deprecated, always enabled)
         max_wait_seconds: Maximum seconds to wait before falling back (default: 300s = 5min)
-        max_retries: Maximum retry attempts with exponential backoff (default: 3)
-        backoff_base: Exponential backoff multiplier (default: 2.0)
-        min_wait_before_fallback: Minimum seconds from last call before allowing fallback (default: 90s)
+        max_retries: Maximum retry attempts (deprecated, managed by ScheduledLLM)
+        backoff_base: Exponential backoff multiplier (deprecated, managed by ScheduledLLM)
+        min_wait_before_fallback: Minimum seconds before fallback (deprecated, managed by ScheduledLLM)
         streaming: Whether to enable streaming
 
     Returns:
-        Configured AutoPickerLLM instance
+        Configured AutoPickerLLMRefactored instance
 
     Example:
         >>> auto_llm = create_auto_picker_llm(tier="tier1", streaming=True)
         >>> response = auto_llm.invoke({"input": "Hello"})
     """
-    from coffee_maker.langchain_observe.llm import get_scheduled_llm
     from coffee_maker.langchain_observe.global_rate_tracker import get_global_rate_tracker
 
     # Use global rate tracker to ensure rate limits are shared across all LLM instances
     rate_tracker = get_global_rate_tracker(tier)
 
-    # Create primary LLM with scheduling
-    logger.info(f"Creating primary LLM: {primary_provider}/{primary_model}")
-    primary_llm = get_scheduled_llm(provider=primary_provider, model=primary_model, tier=tier, streaming=streaming)
-    primary_model_name = f"{primary_provider}/{primary_model}"
-
     # Get fallback models
     fallback_model_configs = get_fallback_models()
-    fallback_llms = []
+    fallback_configs = []
 
     for provider, model in fallback_model_configs:
         # Skip if it's the same as primary
@@ -68,15 +71,11 @@ def create_auto_picker_llm(
             logger.debug(f"Skipping {full_name} - not available in tier {tier}")
             continue
 
-        logger.info(f"Adding fallback LLM: {full_name}")
-        try:
-            fallback_llm = get_scheduled_llm(provider=provider, model=model, tier=tier, streaming=streaming)
-            fallback_llms.append((fallback_llm, full_name))
-        except Exception as e:
-            logger.warning(f"Could not create fallback LLM {full_name}: {e}")
+        logger.info(f"Adding fallback: {full_name}")
+        fallback_configs.append((provider, model))
 
-    if not fallback_llms:
-        logger.warning("No fallback LLMs available - will only use primary model")
+    if not fallback_configs:
+        logger.warning("No fallback models available - will only use primary model")
 
     # Create cost calculator with pricing info
     pricing_info = {}
@@ -96,29 +95,28 @@ def create_auto_picker_llm(
         logger.warning(f"Could not initialize Langfuse client: {e}")
         langfuse_client = None
 
-    # Create AutoPickerLLM
-    auto_picker = AutoPickerLLM(
-        primary_llm=primary_llm,
-        primary_model_name=primary_model_name,
-        fallback_llms=fallback_llms,
-        rate_tracker=rate_tracker,
-        auto_wait=auto_wait,
-        max_wait_seconds=max_wait_seconds,
-        max_retries=max_retries,
-        backoff_base=backoff_base,
-        min_wait_before_fallback=min_wait_before_fallback,
+    # Use the new refactored version
+    auto_picker = create_auto_picker_llm_refactored(
+        primary_provider=primary_provider,
+        primary_model=primary_model,
+        fallback_configs=fallback_configs,
+        tier=tier,
         cost_calculator=cost_calculator,
         langfuse_client=langfuse_client,
+        max_wait_seconds=max_wait_seconds,
+        streaming=streaming,
     )
 
-    logger.info(f"Created AutoPickerLLM with {len(fallback_llms)} fallback options")
+    logger.info(f"Created AutoPickerLLMRefactored with {len(fallback_configs)} fallback options")
     return auto_picker
 
 
 def create_auto_picker_for_react_agent(
     tier: str = "tier1", streaming: bool = True, max_wait_seconds: float = 5.0
-) -> AutoPickerLLM:
-    """Create AutoPickerLLM optimized for ReAct agents.
+) -> AutoPickerLLMRefactored:
+    """Create AutoPickerLLMRefactored optimized for ReAct agents.
+
+    DEPRECATED: Use coffee_maker.langchain_observe.builder.SmartLLM.fast() instead.
 
     Args:
         tier: API tier
@@ -126,7 +124,7 @@ def create_auto_picker_for_react_agent(
         max_wait_seconds: Max wait before fallback (shorter for interactive agents)
 
     Returns:
-        Configured AutoPickerLLM
+        Configured AutoPickerLLMRefactored
     """
     return create_auto_picker_llm(
         tier=tier,
