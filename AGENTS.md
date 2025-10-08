@@ -4,7 +4,7 @@
 - `coffee_maker/` holds agent modules; `auto_gemini_styleguide.py` orchestrates AI-driven formatting, `utils/` contains shared helpers, `sec_vuln_helper/` isolates security scans, and `code_formatter/` hosts formatting pipelines consumed by CI.
 - Example projects live in `coffee_maker/examples/llama_index/` and `examples/HF_MCP_course/`; use them as reference when wiring new agents or MCP integrations.
 - Tests are under `tests/`, with fast guardrails in `ci_tests/` (arranged by feature folders) and slower external checks in `integration_tests/`.
-- Static assets and docs reside in `ressources/README/` and automation helpers in `init_scripts/`.
+- Static assets and docs reside in `resources/README/` and automation helpers in `init_scripts/`.
 
 ## Build, Test, and Development Commands
 - `poetry install` — provision a local virtualenv aligned with `pyproject.toml`.
