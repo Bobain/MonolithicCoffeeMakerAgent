@@ -4,11 +4,12 @@ This is a SIMPLIFIED version of AutoPickerLLM that delegates:
 - Rate limiting → ScheduledLLM
 - Retry logic → ScheduledLLM's SchedulingStrategy
 - Scheduling → ScheduledLLM
+- Fallback selection → FallbackStrategy (NEW!)
 
 AutoPickerLLM now ONLY handles:
 - Fallback orchestration (primary → fallback1 → fallback2 → ...)
 - Cost tracking
-- Context length checking (will be extracted to strategy in next phase)
+- Context length checking
 """
 
 import logging
@@ -18,6 +19,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import tiktoken
 from langchain_core.language_models import BaseLLM
 from langchain_core.outputs import Generation, LLMResult
+
+from coffee_maker.langchain_observe.strategies.fallback import FallbackStrategy, SequentialFallback
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +57,7 @@ class AutoPickerLLMRefactored(BaseLLM):
     primary_llm: Any  # Should be ScheduledLLM
     primary_model_name: str
     fallback_llms: List[Tuple[Any, str]]  # List of (ScheduledLLM, model_name)
+    fallback_strategy: FallbackStrategy  # Strategy for selecting fallbacks
     cost_calculator: Optional[Any] = None  # CostCalculator instance
     langfuse_client: Optional[Any] = None  # Langfuse client for logging
     enable_context_fallback: bool = True  # Enable automatic context length fallback
@@ -72,6 +76,7 @@ class AutoPickerLLMRefactored(BaseLLM):
         primary_llm: Any,
         primary_model_name: str,
         fallback_llms: List[Tuple[Any, str]],
+        fallback_strategy: Optional[FallbackStrategy] = None,
         cost_calculator: Optional[Any] = None,
         langfuse_client: Optional[Any] = None,
         enable_context_fallback: bool = True,
@@ -83,6 +88,7 @@ class AutoPickerLLMRefactored(BaseLLM):
             primary_llm: Primary LLM (should be ScheduledLLM)
             primary_model_name: Full name of primary model (e.g., "openai/gpt-4o-mini")
             fallback_llms: List of (llm_instance, model_name) tuples for fallback
+            fallback_strategy: Strategy for selecting fallbacks (default: SequentialFallback)
             cost_calculator: Optional CostCalculator for tracking costs
             langfuse_client: Optional Langfuse client for logging costs
             enable_context_fallback: If True, automatically fallback to larger-context models
@@ -99,11 +105,16 @@ class AutoPickerLLMRefactored(BaseLLM):
         # Get tokenizer for the primary model
         tokenizer = self._get_tokenizer_static(primary_model_name)
 
+        # Use default fallback strategy if none provided
+        if fallback_strategy is None:
+            fallback_strategy = SequentialFallback()
+
         # Call parent init
         super().__init__(
             primary_llm=primary_llm,
             primary_model_name=primary_model_name,
             fallback_llms=fallback_llms,
+            fallback_strategy=fallback_strategy,
             cost_calculator=cost_calculator,
             langfuse_client=langfuse_client,
             enable_context_fallback=enable_context_fallback,
@@ -129,35 +140,64 @@ class AutoPickerLLMRefactored(BaseLLM):
         self.stats["total_requests"] += 1
 
         # Try primary model first
-        result = self._try_invoke_model(
+        primary_error = None
+        result = self._try_invoke_model_with_error(
             self.primary_llm, self.primary_model_name, input_data, is_primary=True, **kwargs
         )
 
-        if result is not None:
-            return result
+        if result["success"]:
+            return result["response"]
 
-        # Try fallback models
+        primary_error = result["error"]
+
+        # Try fallback models using strategy
         logger.info(f"Primary model {self.primary_model_name} failed, trying fallbacks")
-        for fallback_llm, fallback_model_name in self.fallback_llms:
-            logger.info(f"Attempting fallback to {fallback_model_name}")
-            result = self._try_invoke_model(fallback_llm, fallback_model_name, input_data, is_primary=False, **kwargs)
 
-            if result is not None:
-                # Log rate limit fallback to Langfuse
+        # Build available fallbacks list
+        available_fallback_names = [name for _, name in self.fallback_llms]
+        fallback_dict = {name: llm for llm, name in self.fallback_llms}
+
+        # Estimate tokens for smart fallback (if needed)
+        estimated_tokens = self._estimate_tokens(input_data, self.primary_model_name)
+        metadata = {"estimated_tokens": estimated_tokens}
+
+        while available_fallback_names:
+            # Use strategy to select next fallback
+            next_fallback_name = self.fallback_strategy.select_next_fallback(
+                failed_model_name=self.primary_model_name if primary_error else "previous_fallback",
+                available_fallbacks=available_fallback_names,
+                error=primary_error if primary_error else Exception("Unknown error"),
+                metadata=metadata,
+            )
+
+            if next_fallback_name is None:
+                break
+
+            # Remove selected fallback from available list
+            available_fallback_names.remove(next_fallback_name)
+            fallback_llm = fallback_dict[next_fallback_name]
+
+            logger.info(f"Attempting fallback to {next_fallback_name}")
+            result = self._try_invoke_model_with_error(
+                fallback_llm, next_fallback_name, input_data, is_primary=False, **kwargs
+            )
+
+            if result["success"]:
+                # Log fallback to Langfuse
                 if self.langfuse_client:
                     try:
                         self.langfuse_client.event(
-                            name="rate_limit_fallback",
+                            name="fallback_success",
                             metadata={
                                 "original_model": self.primary_model_name,
-                                "fallback_model": fallback_model_name,
-                                "reason": "rate_limit_or_error",
+                                "fallback_model": next_fallback_name,
+                                "reason": str(primary_error) if primary_error else "unknown",
                             },
                         )
                     except Exception as e:
-                        logger.warning(f"Failed to log rate limit fallback to Langfuse: {e}")
+                        logger.warning(f"Failed to log fallback to Langfuse: {e}")
 
-                return result
+                return result["response"]
 
         # All models failed
         raise RuntimeError(
@@ -165,6 +205,29 @@ class AutoPickerLLMRefactored(BaseLLM):
             f"Primary: {self.primary_model_name}, "
             f"Fallbacks: {[name for _, name in self.fallback_llms]}"
         )
+
+    def _try_invoke_model_with_error(
+        self, llm: Any, model_name: str, input_data: dict, is_primary: bool, **kwargs
+    ) -> Dict[str, Any]:
+        """Try to invoke a model and return success/error info.
+
+        Args:
+            llm: LLM instance
+            model_name: Model name
+            input_data: Input data
+            is_primary: Whether this is primary model
+            **kwargs: Additional args
+
+        Returns:
+            Dict with {"success": bool, "response": Any, "error": Optional[Exception]}
+        """
+        try:
+            response = self._try_invoke_model(llm, model_name, input_data, is_primary, **kwargs)
+            if response is None:
+                return {"success": False, "response": None, "error": Exception("Model returned None")}
+            return {"success": True, "response": response, "error": None}
+        except Exception as e:
+            return {"success": False, "response": None, "error": e}
 
     def _try_invoke_model(
         self, llm: Any, model_name: str, input_data: dict, is_primary: bool, **kwargs
