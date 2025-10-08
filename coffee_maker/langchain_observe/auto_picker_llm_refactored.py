@@ -9,6 +9,8 @@ from langchain_core.outputs import Generation, LLMResult
 
 from coffee_maker.langchain_observe.strategies.fallback import FallbackStrategy, SequentialFallback
 from coffee_maker.langchain_observe.token_estimator import estimate_tokens
+from coffee_maker.langchain_observe.langfuse_logger import LangfuseLogger
+from coffee_maker.langchain_observe.response_parser import extract_token_usage, is_rate_limit_error
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,7 @@ class AutoPickerLLMRefactored(BaseLLM):
     enable_context_fallback: bool = True  # Enable automatic context length fallback
     stats: Dict[str, int] = {}
     _large_context_models: Optional[List[Tuple[Any, str, int]]] = None  # Lazy-loaded
+    _langfuse_logger: Optional[LangfuseLogger] = None  # Lazy-loaded logger
 
     class Config:
         """Pydantic config."""
@@ -62,6 +65,9 @@ class AutoPickerLLMRefactored(BaseLLM):
         if fallback_strategy is None:
             fallback_strategy = SequentialFallback()
 
+        # Create Langfuse logger if client provided
+        langfuse_logger = LangfuseLogger(langfuse_client) if langfuse_client else None
+
         # Call parent init
         super().__init__(
             primary_llm=primary_llm,
@@ -73,6 +79,7 @@ class AutoPickerLLMRefactored(BaseLLM):
             enable_context_fallback=enable_context_fallback,
             stats=stats,
             _large_context_models=None,
+            _langfuse_logger=langfuse_logger,
             **kwargs,
         )
 
@@ -125,18 +132,12 @@ class AutoPickerLLMRefactored(BaseLLM):
 
             if result["success"]:
                 # Log fallback to Langfuse
-                if self.langfuse_client:
-                    try:
-                        self.langfuse_client.event(
-                            name="fallback_success",
-                            metadata={
-                                "original_model": self.primary_model_name,
-                                "fallback_model": next_fallback_name,
-                                "reason": str(primary_error) if primary_error else "unknown",
-                            },
-                        )
-                    except Exception as e:
-                        logger.warning(f"Failed to log fallback to Langfuse: {e}")
+                if self._langfuse_logger:
+                    self._langfuse_logger.log_fallback(
+                        original_model=self.primary_model_name,
+                        fallback_model=next_fallback_name,
+                        reason=str(primary_error) if primary_error else "unknown",
+                    )
 
                 return result["response"]
 
@@ -191,26 +192,18 @@ class AutoPickerLLMRefactored(BaseLLM):
                             self.stats["context_fallbacks"] += 1
 
                             # Log context fallback to Langfuse
-                            if self.langfuse_client:
-                                try:
-                                    from coffee_maker.langchain_observe.llm_config import (
-                                        get_model_context_length_from_name,
-                                    )
+                            if self._langfuse_logger:
+                                from coffee_maker.langchain_observe.llm_config import (
+                                    get_model_context_length_from_name,
+                                )
 
-                                    self.langfuse_client.event(
-                                        name="context_length_fallback",
-                                        metadata={
-                                            "original_model": model_name,
-                                            "fallback_model": large_model_name,
-                                            "estimated_tokens": estimated_tokens,
-                                            "original_max_context": max_context,
-                                            "fallback_max_context": get_model_context_length_from_name(
-                                                large_model_name
-                                            ),
-                                        },
-                                    )
-                                except Exception as e:
-                                    logger.warning(f"Failed to log context fallback to Langfuse: {e}")
+                                self._langfuse_logger.log_context_fallback(
+                                    original_model=model_name,
+                                    fallback_model=large_model_name,
+                                    estimated_tokens=estimated_tokens,
+                                    original_max_context=max_context,
+                                    fallback_max_context=get_model_context_length_from_name(large_model_name),
+                                )
 
                             return result
 
@@ -237,7 +230,7 @@ class AutoPickerLLMRefactored(BaseLLM):
             latency = time.time() - start_time
 
             # Extract token counts from response
-            input_tokens, output_tokens = self._extract_token_usage(response)
+            input_tokens, output_tokens = extract_token_usage(response)
 
             # Calculate and log cost if cost_calculator is available
             if self.cost_calculator and input_tokens > 0:
@@ -247,28 +240,16 @@ class AutoPickerLLMRefactored(BaseLLM):
                     f"({input_tokens} in + {output_tokens} out tokens)"
                 )
 
-                # Log to Langfuse if client is available
-                if self.langfuse_client:
-                    try:
-                        self.langfuse_client.generation(
-                            name=f"llm_call_{model_name.replace('/', '_')}",
-                            model=model_name,
-                            usage={
-                                "input": input_tokens,
-                                "output": output_tokens,
-                                "total": input_tokens + output_tokens,
-                            },
-                            metadata={
-                                "cost_usd": cost_info["total_cost"],
-                                "input_cost_usd": cost_info["input_cost"],
-                                "output_cost_usd": cost_info["output_cost"],
-                                "is_primary": is_primary,
-                                "latency_seconds": latency,
-                            },
-                        )
-                        logger.debug(f"Logged cost to Langfuse: ${cost_info['total_cost']:.4f}")
-                    except Exception as e:
-                        logger.warning(f"Failed to log cost to Langfuse: {e}")
+                # Log to Langfuse if logger is available
+                if self._langfuse_logger:
+                    self._langfuse_logger.log_generation(
+                        model_name=model_name,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                        cost_info=cost_info,
+                        is_primary=is_primary,
+                        latency=latency,
+                    )
 
             # Update stats
             if is_primary:
@@ -284,55 +265,11 @@ class AutoPickerLLMRefactored(BaseLLM):
             logger.error(f"Model {model_name} failed after all retries: {e}")
 
             # Check if this is a rate limit error for stats
-            if self._is_rate_limit_error(e):
+            if is_rate_limit_error(e):
                 self.stats["rate_limit_fallbacks"] += 1
 
             # Return None to try next fallback
             return None
-
-    def _is_rate_limit_error(self, error: Exception) -> bool:
-        """Check if an error is a rate limit error.
-
-        Args:
-            error: The exception to check
-
-        Returns:
-            True if it's a rate limit error
-        """
-        error_msg = str(error).lower()
-        rate_limit_keywords = [
-            "rate limit",
-            "ratelimit",
-            "429",
-            "quota",
-            "too many requests",
-            "resource_exhausted",
-        ]
-        return any(keyword in error_msg for keyword in rate_limit_keywords)
-
-    def _extract_token_usage(self, response: Any) -> Tuple[int, int]:
-        """Extract token usage from response.
-
-        Args:
-            response: LLM response
-
-        Returns:
-            (input_tokens, output_tokens)
-        """
-        input_tokens = 0
-        output_tokens = 0
-
-        # Try to extract actual usage from response metadata
-        if hasattr(response, "response_metadata") and response.response_metadata:
-            usage = response.response_metadata.get("usage", {})
-            input_tokens = usage.get("prompt_tokens", usage.get("input_tokens", 0))
-            output_tokens = usage.get("completion_tokens", usage.get("output_tokens", 0))
-        elif hasattr(response, "usage_metadata") and response.usage_metadata:
-            # LangChain format
-            input_tokens = getattr(response.usage_metadata, "input_tokens", 0)
-            output_tokens = getattr(response.usage_metadata, "output_tokens", 0)
-
-        return input_tokens, output_tokens
 
     def _check_context_length(self, input_data: dict, model_name: str) -> Tuple[bool, int, int]:
         """Check if input fits within model's context window.
