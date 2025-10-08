@@ -9,8 +9,10 @@ from typing import Any, Dict, List
 
 from langchain_core.tools import Tool
 
-from coffee_maker.langchain_observe.llm import get_scheduled_llm
-from coffee_maker.langchain_observe.auto_picker_llm import AutoPickerLLM
+from coffee_maker.langchain_observe.auto_picker_llm_refactored import (
+    AutoPickerLLMRefactored,
+    create_auto_picker_llm_refactored,
+)
 from coffee_maker.langchain_observe.rate_limiter import RateLimitTracker
 
 logger = logging.getLogger(__name__)
@@ -66,19 +68,19 @@ def create_llm_tool_wrapper(
     tier: str = "tier1",
     auto_wait: bool = True,
     max_wait_seconds: float = 10.0,
-) -> AutoPickerLLM:
-    """Create an AutoPickerLLM configured for a specific purpose and provider.
+) -> AutoPickerLLMRefactored:
+    """Create an AutoPickerLLMRefactored configured for a specific purpose and provider.
 
     Args:
         purpose: Purpose of the LLM (e.g., 'long_context', 'fast', 'accurate')
         provider: Provider to use ('openai' or 'gemini')
-        rate_tracker: Shared rate limit tracker instance
+        rate_tracker: Shared rate limit tracker instance (kept for backward compatibility)
         tier: API tier for rate limiting
-        auto_wait: Whether to auto-wait when rate limited
+        auto_wait: Whether to auto-wait when rate limited (kept for backward compatibility)
         max_wait_seconds: Max seconds to wait before fallback
 
     Returns:
-        Configured AutoPickerLLM instance
+        Configured AutoPickerLLMRefactored instance
 
     Raises:
         ValueError: If purpose or provider is invalid
@@ -95,21 +97,12 @@ def create_llm_tool_wrapper(
     logger.info(f"Creating LLM tool: {purpose} ({provider}) - {description}")
     logger.info(f"  Primary: {primary_model}, Fallback: {fallback_model}")
 
-    # Create primary LLM with scheduling
-    primary_llm = get_scheduled_llm(provider=provider_name, model=primary_model, tier=tier)
-    primary_model_name = f"{provider_name}/{primary_model}"
-
-    # Create fallback LLM with scheduling
-    fallback_llm = get_scheduled_llm(provider=provider_name, model=fallback_model, tier=tier)
-    fallback_model_name = f"{provider_name}/{fallback_model}"
-
-    # Create AutoPickerLLM
-    auto_picker = AutoPickerLLM(
-        primary_llm=primary_llm,
-        primary_model_name=primary_model_name,
-        fallback_llms=[(fallback_llm, fallback_model_name)],
-        rate_tracker=rate_tracker,
-        auto_wait=auto_wait,
+    # Use the new refactored version
+    auto_picker = create_auto_picker_llm_refactored(
+        primary_provider=provider_name,
+        primary_model=primary_model,
+        fallback_configs=[(provider_name, fallback_model)],
+        tier=tier,
         max_wait_seconds=max_wait_seconds,
     )
 
