@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from coffee_maker.code_formatter.agents import (
+from coffee_maker.code_formatter.crewai.flow import (
     MODIFIED_CODE_DELIMITER_START,
     MODIFIED_CODE_DELIMITER_END,
     EXPLANATIONS_DELIMITER_START,

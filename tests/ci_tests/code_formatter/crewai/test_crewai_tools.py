@@ -9,6 +9,7 @@ import pytest
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionInput, PostSuggestionToolLangAI
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionInput, PostSuggestionToolLangAI
 
+
 class TestPostSuggestionInput:
     """Tests for PostSuggestionInput Pydantic model."""
 
@@ -43,8 +44,8 @@ class TestPostSuggestionInput:
                 suggestion_body="improved code",
                 comment_text="comment",
             )
-                # missing file_path
-                start_line=10,
+
+
 class TestPostSuggestionToolLangAI:
     """Tests for PostSuggestionToolLangAI CrewAI tool."""
 
@@ -177,5 +178,4 @@ class TestPostSuggestionToolLangAI:
                 end_line=2,
                 suggestion_body="print('hello')",
                 comment_text="Add output",
-            )
             )

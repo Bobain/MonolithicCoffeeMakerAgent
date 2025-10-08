@@ -22,42 +22,37 @@ class TestLangchainCodeFormatterAgent:
 
     def test_agent_fields_from_langfuse_prompts(self):
         langfuse_client = mock.MagicMock()
-        langfuse_client.get_prompt.side_effect = [
-            SimpleNamespace(prompt="Goal text"),
-            SimpleNamespace(prompt="Backstory text"),
-        ]
+        # Mock the main prompt that's actually used
+        langfuse_client.get_prompt.return_value = SimpleNamespace(prompt="Main prompt text")
 
         agent = lc_agents.create_langchain_code_formatter_agent(langfuse_client)
 
         assert agent["role"] == "Senior Software Engineer: python code formatter"
-        assert agent["goal"] == "Goal text"
-        assert agent["backstory"] == "Backstory text"
+        assert agent["goal"] == ""  # Goal and backstory are now empty as they're not used
+        assert agent["backstory"] == ""
         assert agent["tools"] == ()
         assert agent["allow_delegation"] is False
         assert agent["verbose"] is True
         assert agent["llm"] is lc_agents.llm
 
-        # Two prompts fetched: goal and backstory
-        assert langfuse_client.get_prompt.call_count == 2
-        langfuse_client.get_prompt.assert_any_call("refactor_agent/goal_prompt")
-        langfuse_client.get_prompt.assert_any_call("refactor_agent/backstory_prompt")
+        # Only one prompt is fetched now: the main prompt
+        assert langfuse_client.get_prompt.call_count == 1
+        langfuse_client.get_prompt.assert_called_once_with("code_formatter_main_llm_entry")
 
     def test_prompt_formats_messages(self):
         langfuse_client = mock.MagicMock()
-        langfuse_client.get_prompt.side_effect = [
-            SimpleNamespace(prompt="Analyse"),
-            SimpleNamespace(prompt="Experienced"),
-        ]
+        # Mock the main prompt
+        langfuse_client.get_prompt.return_value = SimpleNamespace(prompt="Analyse this code carefully")
 
         agent = lc_agents.create_langchain_code_formatter_agent(langfuse_client)
 
-        formatted = agent["prompt"].format_messages(input="hello")
+        # The new prompt expects file_path and code_to_modify
+        formatted = agent["prompt"].format_messages(file_path="test/file.py", code_to_modify="def hello(): pass")
         assert formatted[0].type == "system"
-        assert "You are a meticulous Senior Software Engineer" in formatted[0].content
-        assert "Goal: Analyse" in formatted[0].content
-        assert "Backstory: Experienced" in formatted[0].content
+        assert "Analyse this code carefully" in formatted[0].content
         assert formatted[1].type == "human"
-        assert formatted[1].content == "hello"
+        assert "test/file.py" in formatted[1].content
+        assert "def hello(): pass" in formatted[1].content
 
 
 class TestLangchainReviewerAgent:
