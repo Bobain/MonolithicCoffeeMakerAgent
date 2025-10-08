@@ -201,7 +201,7 @@ def create_langchain_code_formatter_agent(
             result = json.loads(content)
             # Ensure result is a list
             if not isinstance(result, list):
-                assert isinstance(result, dict), "Expected dictionnary or list of dictionaries"
+                assert isinstance(result, dict), "Expected dictionary or list of dictionaries"
                 result = [result]
             return result
         except json.JSONDecodeError as exc:
