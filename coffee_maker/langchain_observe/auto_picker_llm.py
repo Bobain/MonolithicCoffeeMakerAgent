@@ -1,5 +1,27 @@
 """AutoPickerLLM: Intelligent LLM wrapper with rate limiting and automatic fallback.
 
+DEPRECATED: This module is deprecated in favor of AutoPickerLLMRefactored.
+
+Use coffee_maker.langchain_observe.auto_picker_llm_refactored.AutoPickerLLMRefactored instead.
+For even simpler usage, use coffee_maker.langchain_observe.builder.SmartLLM.
+
+Migration:
+    # Old
+    from coffee_maker.langchain_observe.auto_picker_llm import AutoPickerLLM
+    llm = AutoPickerLLM(...)
+
+    # New (simple)
+    from coffee_maker.langchain_observe.builder import SmartLLM
+    llm = SmartLLM.for_tier("tier1")
+
+    # New (advanced)
+    from coffee_maker.langchain_observe.builder import LLMBuilder
+    llm = (LLMBuilder()
+        .with_tier("tier1")
+        .with_primary("openai", "gpt-4o-mini")
+        .with_fallback("gemini", "gemini-2.5-flash")
+        .build())
+
 This module provides an intelligent wrapper around LLM instances that:
 - Tracks rate limits and prevents API limit errors
 - Automatically falls back to alternative models when limits are reached
@@ -25,13 +47,16 @@ logger = logging.getLogger(__name__)
 class AutoPickerLLM(BaseLLM):
     """Intelligent LLM wrapper with rate limiting and fallback capabilities.
 
+    DEPRECATED: Use AutoPickerLLMRefactored or SmartLLM instead.
+
     This class wraps one or more LLM instances and provides:
     - Automatic rate limit checking before requests
     - Fallback to alternative models when primary is rate-limited
     - Token estimation for better rate limit predictions
     - Wait time calculation and optional automatic waiting
 
-    Example:
+    Migration:
+        # Old
         >>> primary = get_llm(provider="openai", model="gpt-4o-mini")
         >>> fallback = get_llm(provider="gemini", model="gemini-2.5-flash-lite")
         >>> auto_llm = AutoPickerLLM(
@@ -40,7 +65,18 @@ class AutoPickerLLM(BaseLLM):
         ...     fallback_llms=[(fallback, "gemini/gemini-2.5-flash-lite")],
         ...     rate_tracker=rate_tracker
         ... )
-        >>> response = auto_llm.invoke({"input": "Review this code..."})
+
+        # New (simple)
+        >>> from coffee_maker.langchain_observe.builder import SmartLLM
+        >>> auto_llm = SmartLLM.for_tier("tier1")
+
+        # New (advanced)
+        >>> from coffee_maker.langchain_observe.builder import LLMBuilder
+        >>> auto_llm = (LLMBuilder()
+        ...     .with_tier("tier1")
+        ...     .with_primary("openai", "gpt-4o-mini")
+        ...     .with_fallback("gemini", "gemini-2.5-flash")
+        ...     .build())
     """
 
     # Pydantic model fields
