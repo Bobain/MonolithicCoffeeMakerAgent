@@ -1,9 +1,4 @@
-"""Rate limiting tracker for LLM API calls.
-
-This module provides rate limiting functionality to prevent hitting API limits
-for various LLM providers. It uses a sliding window algorithm to accurately
-track requests and tokens per minute.
-"""
+"""Rate limiting tracker using sliding window algorithm for LLM API calls."""
 
 import logging
 import threading
@@ -33,30 +28,10 @@ class RequestRecord:
 
 
 class RateLimitTracker:
-    """Track API rate limits for multiple models using sliding window algorithm.
-
-    This class maintains a thread-safe record of API requests and tokens used
-    for each model, allowing for accurate rate limit checking before making
-    requests.
-
-    Example:
-        >>> tracker = RateLimitTracker({
-        ...     "gpt-4o-mini": RateLimitConfig(
-        ...         requests_per_minute=500,
-        ...         tokens_per_minute=200000
-        ...     )
-        ... })
-        >>> if tracker.can_make_request("gpt-4o-mini", estimated_tokens=1000):
-        ...     # Make the request
-        ...     tracker.record_request("gpt-4o-mini", tokens_used=1000)
-    """
+    """Thread-safe rate limit tracker with sliding window for multiple models."""
 
     def __init__(self, model_limits: Dict[str, RateLimitConfig]):
-        """Initialize rate limit tracker.
-
-        Args:
-            model_limits: Dictionary mapping model names to their rate limit configs
-        """
+        """Initialize with model limits dictionary."""
         self.model_limits = model_limits
         self._request_history: Dict[str, deque] = {model: deque() for model in model_limits}
         self._daily_requests: Dict[str, int] = {model: 0 for model in model_limits}

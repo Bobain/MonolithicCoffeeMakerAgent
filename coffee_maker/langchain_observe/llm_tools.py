@@ -17,46 +17,35 @@ from coffee_maker.langchain_observe.rate_limiter import RateLimitTracker
 
 logger = logging.getLogger(__name__)
 
-# Define model purposes and their configurations
-# Format: purpose -> (provider, primary_model, fallback_model, description)
+# Model configurations: purpose -> provider -> (provider, primary, fallback, description)
 MODEL_PURPOSES = {
     "long_context": {
-        "openai": ("openai", "gpt-4o", "gpt-4o-mini", "For tasks requiring very long context (128K tokens)"),
-        "gemini": ("gemini", "gemini-2.5-pro", "gemini-2.5-flash", "For tasks requiring very long context (2M tokens)"),
+        "openai": ("openai", "gpt-4o", "gpt-4o-mini", "Very long context (128K tokens)"),
+        "gemini": ("gemini", "gemini-2.5-pro", "gemini-2.5-flash", "Very long context (2M tokens)"),
     },
     "reasoning": {
-        "openai": ("openai", "o1", "o1-mini", "Advanced reasoning and planning with chain-of-thought"),
-        "gemini": (
-            "gemini",
-            "gemini-2.0-flash-thinking-exp",
-            "gemini-2.5-flash",
-            "Extended thinking and problem-solving",
-        ),
+        "openai": ("openai", "o1", "o1-mini", "Advanced reasoning with chain-of-thought"),
+        "gemini": ("gemini", "gemini-2.0-flash-thinking-exp", "gemini-2.5-flash", "Extended thinking"),
     },
     "best_model": {
-        "openai": ("openai", "gpt-4o", "gpt-4o-mini", "Best overall OpenAI model for quality and performance"),
-        "gemini": (
-            "gemini",
-            "gemini-2.5-pro",
-            "gemini-2.5-flash",
-            "Best overall Gemini model for quality and performance",
-        ),
+        "openai": ("openai", "gpt-4o", "gpt-4o-mini", "Best overall quality and performance"),
+        "gemini": ("gemini", "gemini-2.5-pro", "gemini-2.5-flash", "Best overall quality and performance"),
     },
     "second_best_model": {
-        "openai": ("openai", "gpt-4o-mini", "gpt-3.5-turbo", "Good quality with better cost efficiency"),
-        "gemini": ("gemini", "gemini-2.5-flash", "gemini-2.5-flash-lite", "Good quality with better cost efficiency"),
+        "openai": ("openai", "gpt-4o-mini", "gpt-3.5-turbo", "Good quality, better cost"),
+        "gemini": ("gemini", "gemini-2.5-flash", "gemini-2.5-flash-lite", "Good quality, better cost"),
     },
     "fast": {
-        "openai": ("openai", "gpt-4o-mini", "gpt-3.5-turbo", "Fastest OpenAI model for quick tasks"),
-        "gemini": ("gemini", "gemini-2.5-flash-lite", "gemini-2.5-flash", "Fastest Gemini model"),
+        "openai": ("openai", "gpt-4o-mini", "gpt-3.5-turbo", "Fastest for quick tasks"),
+        "gemini": ("gemini", "gemini-2.5-flash-lite", "gemini-2.5-flash", "Fastest for quick tasks"),
     },
     "accurate": {
-        "openai": ("openai", "gpt-4o", "gpt-4o-mini", "Most accurate OpenAI model"),
-        "gemini": ("gemini", "gemini-2.5-pro", "gemini-2.5-flash", "Most accurate Gemini model"),
+        "openai": ("openai", "gpt-4o", "gpt-4o-mini", "Most accurate"),
+        "gemini": ("gemini", "gemini-2.5-pro", "gemini-2.5-flash", "Most accurate"),
     },
     "budget": {
-        "openai": ("openai", "gpt-4o-mini", "gpt-3.5-turbo", "Most cost-effective OpenAI model"),
-        "gemini": ("gemini", "gemini-2.5-flash-lite", "gemini-2.5-flash", "Most cost-effective Gemini model"),
+        "openai": ("openai", "gpt-4o-mini", "gpt-3.5-turbo", "Most cost-effective"),
+        "gemini": ("gemini", "gemini-2.5-flash-lite", "gemini-2.5-flash", "Most cost-effective"),
     },
 }
 
