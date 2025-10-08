@@ -7,6 +7,7 @@ from coffee_maker.langchain_observe.strategies.context import (
     NoContextCheckStrategy,
     create_context_strategy,
 )
+from coffee_maker.langchain_observe.token_estimator import estimate_tokens
 
 
 class TestLargeContextFallbackStrategy:
@@ -88,59 +89,6 @@ class TestLargeContextFallbackStrategy:
 
         assert models == []
 
-    def test_estimate_tokens_dict_input(self, strategy):
-        """Test token estimation with dict input."""
-        input_data = {"input": "Hello world"}
-        model_name = "openai/gpt-4o-mini"
-
-        tokens = strategy.estimate_tokens(input_data, model_name)
-
-        # Should be ~2-3 tokens for "Hello world"
-        assert 1 <= tokens <= 10
-
-    def test_estimate_tokens_string_input(self, strategy):
-        """Test token estimation with string input."""
-        input_data = "Hello world"
-        model_name = "openai/gpt-4o-mini"
-
-        tokens = strategy.estimate_tokens(input_data, model_name)
-
-        assert 1 <= tokens <= 10
-
-    def test_estimate_tokens_list_input(self, strategy):
-        """Test token estimation with list input."""
-        input_data = ["Hello", "world"]
-        model_name = "openai/gpt-4o-mini"
-
-        tokens = strategy.estimate_tokens(input_data, model_name)
-
-        assert tokens > 0
-
-    def test_tokenizer_caching(self, strategy):
-        """Test that tokenizers are cached per model."""
-        model_name = "openai/gpt-4o-mini"
-
-        # First call
-        tokens1 = strategy.estimate_tokens("Hello", model_name)
-
-        # Tokenizer should be cached
-        assert model_name in strategy._tokenizers
-
-        # Second call should use cached tokenizer
-        tokens2 = strategy.estimate_tokens("Hello", model_name)
-
-        assert tokens1 == tokens2
-
-    def test_non_openai_model_fallback(self, strategy):
-        """Test that non-OpenAI models use character-based estimation."""
-        input_data = {"input": "Hello world"}  # 11 characters
-        model_name = "gemini/gemini-2.5-flash"
-
-        tokens = strategy.estimate_tokens(input_data, model_name)
-
-        # Should use character-based: 11 // 4 = 2
-        assert tokens == 2  # "Hello world" = 11 chars / 4 = 2 tokens
-
 
 class TestNoContextCheckStrategy:
     """Tests for NoContextCheckStrategy."""
@@ -167,12 +115,6 @@ class TestNoContextCheckStrategy:
         models = strategy.get_larger_context_models(1000000)
 
         assert models == []
-
-    def test_estimate_tokens_zero(self, strategy):
-        """Test that estimate_tokens returns 0."""
-        tokens = strategy.estimate_tokens("any input", "any/model")
-
-        assert tokens == 0
 
 
 class TestCreateContextStrategy:
@@ -206,6 +148,27 @@ class TestCreateContextStrategy:
         assert len(strategy.model_limits) > 0
         # Should include common models
         assert any("gpt" in model for model in strategy.model_limits.keys())
+
+
+class TestTokenEstimator:
+    """Tests for token estimation function."""
+
+    def test_estimate_tokens_dict_input(self):
+        """Test token estimation with dict input."""
+        input_data = {"input": "Hello world"}
+        tokens = estimate_tokens(input_data, "gpt-4")
+        assert 1 <= tokens <= 10
+
+    def test_estimate_tokens_string_input(self):
+        """Test token estimation with string input."""
+        tokens = estimate_tokens("Hello world", "gpt-4")
+        assert 1 <= tokens <= 10
+
+    def test_estimate_tokens_list_input(self):
+        """Test token estimation with list input."""
+        input_data = ["Hello", "world"]
+        tokens = estimate_tokens(input_data, "gpt-4")
+        assert tokens > 0
 
 
 class TestContextStrategyIntegration:
