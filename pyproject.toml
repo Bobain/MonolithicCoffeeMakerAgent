@@ -42,6 +42,7 @@ pdoc = "^15.0.4"
 [tool.pytest.ini_options]
 markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+    "slow: marks tests as slow running tests (deselect with '-m \"not slow\"')",
 ]
 
 [build-system]

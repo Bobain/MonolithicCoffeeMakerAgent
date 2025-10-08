@@ -8,6 +8,7 @@ from langchain_core.language_models import BaseLLM
 from langchain_core.outputs import Generation, LLMResult
 
 from coffee_maker.langchain_observe.strategies.fallback import FallbackStrategy, SequentialFallback
+from coffee_maker.langchain_observe.strategies.metrics import MetricsStrategy, NoOpMetrics
 from coffee_maker.langchain_observe.token_estimator import estimate_tokens
 from coffee_maker.langchain_observe.langfuse_logger import LangfuseLogger
 from coffee_maker.langchain_observe.response_parser import extract_token_usage, is_rate_limit_error
@@ -27,6 +28,7 @@ class AutoPickerLLMRefactored(BaseLLM):
     primary_model_name: str
     fallback_llms: List[Tuple[Any, str]]  # List of (ScheduledLLM, model_name)
     fallback_strategy: FallbackStrategy  # Strategy for selecting fallbacks
+    metrics_strategy: MetricsStrategy  # Strategy for metrics collection
     cost_calculator: Optional[Any] = None  # CostCalculator instance
     langfuse_client: Optional[Any] = None  # Langfuse client for logging
     enable_context_fallback: bool = True  # Enable automatic context length fallback
@@ -46,6 +48,7 @@ class AutoPickerLLMRefactored(BaseLLM):
         primary_model_name: str,
         fallback_llms: List[Tuple[Any, str]],
         fallback_strategy: Optional[FallbackStrategy] = None,
+        metrics_strategy: Optional[MetricsStrategy] = None,
         cost_calculator: Optional[Any] = None,
         langfuse_client: Optional[Any] = None,
         enable_context_fallback: bool = True,
@@ -65,6 +68,10 @@ class AutoPickerLLMRefactored(BaseLLM):
         if fallback_strategy is None:
             fallback_strategy = SequentialFallback()
 
+        # Use default metrics strategy if none provided
+        if metrics_strategy is None:
+            metrics_strategy = NoOpMetrics()
+
         # Create Langfuse logger if client provided
         langfuse_logger = LangfuseLogger(langfuse_client) if langfuse_client else None
 
@@ -74,6 +81,7 @@ class AutoPickerLLMRefactored(BaseLLM):
             primary_model_name=primary_model_name,
             fallback_llms=fallback_llms,
             fallback_strategy=fallback_strategy,
+            metrics_strategy=metrics_strategy,
             cost_calculator=cost_calculator,
             langfuse_client=langfuse_client,
             enable_context_fallback=enable_context_fallback,
@@ -131,6 +139,13 @@ class AutoPickerLLMRefactored(BaseLLM):
             )
 
             if result["success"]:
+                # Record fallback metrics
+                self.metrics_strategy.record_fallback(
+                    from_model=self.primary_model_name,
+                    to_model=next_fallback_name,
+                    reason=str(primary_error) if primary_error else "unknown",
+                )
+
                 # Log fallback to Langfuse
                 if self._langfuse_logger:
                     self._langfuse_logger.log_fallback(
@@ -233,6 +248,7 @@ class AutoPickerLLMRefactored(BaseLLM):
             input_tokens, output_tokens = extract_token_usage(response)
 
             # Calculate and log cost if cost_calculator is available
+            cost_info = None
             if self.cost_calculator and input_tokens > 0:
                 cost_info = self.cost_calculator.calculate_cost(model_name, input_tokens, output_tokens)
                 logger.info(
@@ -251,6 +267,20 @@ class AutoPickerLLMRefactored(BaseLLM):
                         latency=latency,
                     )
 
+            # Record metrics
+            total_tokens = input_tokens + output_tokens
+            self.metrics_strategy.record_request(
+                model=model_name,
+                latency=latency,
+                tokens=total_tokens,
+                is_primary=is_primary,
+                success=True,
+            )
+
+            # Record cost if available
+            if cost_info:
+                self.metrics_strategy.record_cost(model=model_name, cost=cost_info["total_cost"], tokens=total_tokens)
+
             # Update stats
             if is_primary:
                 self.stats["primary_requests"] += 1
@@ -263,6 +293,10 @@ class AutoPickerLLMRefactored(BaseLLM):
         except Exception as e:
             # ScheduledLLM already handled retries, so any error means this model exhausted
             logger.error(f"Model {model_name} failed after all retries: {e}")
+
+            # Record error metrics
+            error_type = "rate_limit" if is_rate_limit_error(e) else "other"
+            self.metrics_strategy.record_error(model=model_name, error_type=error_type, error_message=str(e))
 
             # Check if this is a rate limit error for stats
             if is_rate_limit_error(e):
