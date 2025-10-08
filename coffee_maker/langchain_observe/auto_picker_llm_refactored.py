@@ -1,26 +1,14 @@
-"""AutoPickerLLM Refactored: Simplified orchestrator with fallback logic only.
-
-This is a SIMPLIFIED version of AutoPickerLLM that delegates:
-- Rate limiting → ScheduledLLM
-- Retry logic → ScheduledLLM's SchedulingStrategy
-- Scheduling → ScheduledLLM
-- Fallback selection → FallbackStrategy (NEW!)
-
-AutoPickerLLM now ONLY handles:
-- Fallback orchestration (primary → fallback1 → fallback2 → ...)
-- Cost tracking
-- Context length checking
-"""
+"""AutoPickerLLM Refactored: Simplified LLM orchestrator with fallback capabilities."""
 
 import logging
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-import tiktoken
 from langchain_core.language_models import BaseLLM
 from langchain_core.outputs import Generation, LLMResult
 
 from coffee_maker.langchain_observe.strategies.fallback import FallbackStrategy, SequentialFallback
+from coffee_maker.langchain_observe.token_estimator import estimate_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -30,28 +18,7 @@ class ContextLengthError(Exception):
 
 
 class AutoPickerLLMRefactored(BaseLLM):
-    """Simplified LLM orchestrator with fallback capabilities.
-
-    This orchestrator:
-    - Manages fallback logic (primary → fallback1 → fallback2 → ...)
-    - Tracks costs via CostCalculator
-    - Checks context lengths
-
-    Scheduling, rate limiting, and retries are delegated to ScheduledLLM.
-
-    Example:
-        >>> from coffee_maker.langchain_observe.llm import get_scheduled_llm
-        >>>
-        >>> primary = get_scheduled_llm(provider="openai", model="gpt-4o-mini", tier="tier1")
-        >>> fallback = get_scheduled_llm(provider="gemini", model="gemini-2.5-flash", tier="tier1")
-        >>>
-        >>> auto_picker = AutoPickerLLMRefactored(
-        ...     primary_llm=primary,
-        ...     primary_model_name="openai/gpt-4o-mini",
-        ...     fallback_llms=[(fallback, "gemini/gemini-2.5-flash")],
-        ... )
-        >>> response = auto_picker.invoke({"input": "Review this code..."})
-    """
+    """LLM orchestrator with fallback capabilities and cost tracking."""
 
     # Pydantic model fields
     primary_llm: Any  # Should be ScheduledLLM
@@ -62,7 +29,6 @@ class AutoPickerLLMRefactored(BaseLLM):
     langfuse_client: Optional[Any] = None  # Langfuse client for logging
     enable_context_fallback: bool = True  # Enable automatic context length fallback
     stats: Dict[str, int] = {}
-    _tokenizer: Optional[Any] = None
     _large_context_models: Optional[List[Tuple[Any, str, int]]] = None  # Lazy-loaded
 
     class Config:
@@ -82,17 +48,7 @@ class AutoPickerLLMRefactored(BaseLLM):
         enable_context_fallback: bool = True,
         **kwargs,
     ):
-        """Initialize AutoPickerLLMRefactored.
-
-        Args:
-            primary_llm: Primary LLM (should be ScheduledLLM)
-            primary_model_name: Full name of primary model (e.g., "openai/gpt-4o-mini")
-            fallback_llms: List of (llm_instance, model_name) tuples for fallback
-            fallback_strategy: Strategy for selecting fallbacks (default: SequentialFallback)
-            cost_calculator: Optional CostCalculator for tracking costs
-            langfuse_client: Optional Langfuse client for logging costs
-            enable_context_fallback: If True, automatically fallback to larger-context models
-        """
+        """Initialize AutoPickerLLMRefactored."""
         # Initialize statistics
         stats = {
             "total_requests": 0,
@@ -101,9 +57,6 @@ class AutoPickerLLMRefactored(BaseLLM):
             "rate_limit_fallbacks": 0,
             "context_fallbacks": 0,
         }
-
-        # Get tokenizer for the primary model
-        tokenizer = self._get_tokenizer_static(primary_model_name)
 
         # Use default fallback strategy if none provided
         if fallback_strategy is None:
@@ -119,24 +72,12 @@ class AutoPickerLLMRefactored(BaseLLM):
             langfuse_client=langfuse_client,
             enable_context_fallback=enable_context_fallback,
             stats=stats,
-            _tokenizer=tokenizer,
             _large_context_models=None,
             **kwargs,
         )
 
     def invoke(self, input_data: dict, **kwargs) -> Any:
-        """Invoke the LLM with fallback orchestration.
-
-        Args:
-            input_data: Input dictionary for the LLM
-            **kwargs: Additional arguments to pass to the LLM
-
-        Returns:
-            LLM response
-
-        Raises:
-            Exception: If all models fail
-        """
+        """Invoke LLM with fallback orchestration."""
         self.stats["total_requests"] += 1
 
         # Try primary model first
@@ -209,18 +150,7 @@ class AutoPickerLLMRefactored(BaseLLM):
     def _try_invoke_model_with_error(
         self, llm: Any, model_name: str, input_data: dict, is_primary: bool, **kwargs
     ) -> Dict[str, Any]:
-        """Try to invoke a model and return success/error info.
-
-        Args:
-            llm: LLM instance
-            model_name: Model name
-            input_data: Input data
-            is_primary: Whether this is primary model
-            **kwargs: Additional args
-
-        Returns:
-            Dict with {"success": bool, "response": Any, "error": Optional[Exception]}
-        """
+        """Try to invoke a model and return success/error info."""
         try:
             response = self._try_invoke_model(llm, model_name, input_data, is_primary, **kwargs)
             if response is None:
@@ -232,21 +162,7 @@ class AutoPickerLLMRefactored(BaseLLM):
     def _try_invoke_model(
         self, llm: Any, model_name: str, input_data: dict, is_primary: bool, **kwargs
     ) -> Optional[Any]:
-        """Try to invoke a specific model, handling context length.
-
-        Args:
-            llm: LLM instance (should be ScheduledLLM)
-            model_name: Full model name
-            input_data: Input data
-            is_primary: Whether this is the primary model
-            **kwargs: Additional arguments
-
-        Returns:
-            LLM response if successful, None if failed
-
-        Raises:
-            ValueError: If input is too large for any available model
-        """
+        """Try to invoke a specific model, handling context length."""
         # Check context length FIRST (before invoking)
         if self.enable_context_fallback:
             fits, estimated_tokens, max_context = self._check_context_length(input_data, model_name)
@@ -488,67 +404,8 @@ class AutoPickerLLMRefactored(BaseLLM):
         return suitable_models
 
     def _estimate_tokens(self, input_data: dict, model_name: str) -> int:
-        """Estimate number of tokens in input.
-
-        Args:
-            input_data: Input dictionary
-            model_name: Model name for token counting
-
-        Returns:
-            Estimated token count
-        """
-        # Convert input to string
-        if isinstance(input_data, dict):
-            # Common patterns for LangChain inputs
-            text = input_data.get("input", "")
-            if isinstance(text, str):
-                input_text = text
-            else:
-                input_text = str(input_data)
-        else:
-            input_text = str(input_data)
-
-        # Use tokenizer if available
-        if self._tokenizer:
-            try:
-                tokens = len(self._tokenizer.encode(input_text))
-                return tokens
-            except Exception as e:
-                logger.debug(f"Error using tokenizer: {e}")
-
-        # Fallback: rough estimation (1 token ≈ 4 characters)
-        estimated = len(input_text) // 4
-        logger.debug(f"Using character-based token estimation: {estimated} tokens")
-        return estimated
-
-    @staticmethod
-    def _get_tokenizer_static(model_name: str):
-        """Get appropriate tokenizer for a model.
-
-        Args:
-            model_name: Full model name (e.g., "openai/gpt-4o-mini")
-
-        Returns:
-            Tokenizer instance or None
-        """
-        try:
-            # Extract base model name
-            if "/" in model_name:
-                _, base_model = model_name.split("/", 1)
-            else:
-                base_model = model_name
-
-            # Get tokenizer for OpenAI models
-            if "gpt" in base_model.lower():
-                encoding_name = "cl100k_base"  # Default for GPT-4/3.5
-                return tiktoken.get_encoding(encoding_name)
-
-            # For non-OpenAI models, return None
-            return None
-
-        except Exception as e:
-            logger.debug(f"Could not load tokenizer for {model_name}: {e}")
-            return None
+        """Estimate number of tokens in input."""
+        return estimate_tokens(input_data, model_name)
 
     def get_stats(self) -> Dict:
         """Get usage statistics.
@@ -643,6 +500,7 @@ def create_auto_picker_llm_refactored(
     langfuse_client: Optional[Any] = None,
     enable_context_fallback: bool = True,
     max_wait_seconds: float = 300.0,
+    fallback_strategy: Optional[FallbackStrategy] = None,
 ) -> AutoPickerLLMRefactored:
     """Helper function to create AutoPickerLLMRefactored with scheduled LLMs.
 
@@ -658,6 +516,7 @@ def create_auto_picker_llm_refactored(
         langfuse_client: Optional Langfuse client for logging
         enable_context_fallback: Enable automatic context length fallback
         max_wait_seconds: Maximum wait time for rate limits
+        fallback_strategy: Optional FallbackStrategy (default: Sequential)
 
     Returns:
         Configured AutoPickerLLMRefactored instance
@@ -712,6 +571,7 @@ def create_auto_picker_llm_refactored(
         primary_llm=primary_llm,
         primary_model_name=primary_model_name,
         fallback_llms=fallback_llms,
+        fallback_strategy=fallback_strategy,
         cost_calculator=cost_calculator,
         langfuse_client=langfuse_client,
         enable_context_fallback=enable_context_fallback,
