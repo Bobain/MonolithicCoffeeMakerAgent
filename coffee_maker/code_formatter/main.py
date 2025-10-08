@@ -287,7 +287,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run code formatter on a GitHub PR")
     parser.add_argument("--repo", default="Bobain/MonolithicCoffeeMakerAgent", help="Full repository name (owner/repo)")
-    parser.add_argument("--pr", type=int, default=112, help="Pull request number")
+    parser.add_argument("--pr", type=int, default=113, help="Pull request number")
     parser.add_argument("--file", type=str, default=None, help="Optional: specific file path to process")
     args = parser.parse_args()
 
@@ -299,15 +299,9 @@ if __name__ == "__main__":
     from coffee_maker.langchain_observe.agents import get_llm
     from langchain.callbacks.base import BaseCallbackHandler
 
-    # Create a custom callback handler to display LLM outputs piece by piece
+    # Create a custom callback handler to display LLM thinking process
     class StreamingCallbackHandler(BaseCallbackHandler):
         """Callback handler to display LLM thinking process in real-time."""
-
-        def on_llm_start(self, serialized: dict, prompts: list[str], **kwargs) -> None:
-            """Run when LLM starts running."""
-            logger.info("=" * 80)
-            logger.info("LLM started processing...")
-            logger.info("=" * 80)
 
         def on_llm_new_token(self, token: str, **kwargs) -> None:
             """Run on new LLM token. Only available when streaming is enabled."""
@@ -316,35 +310,18 @@ if __name__ == "__main__":
         def on_llm_end(self, response, **kwargs) -> None:
             """Run when LLM ends running."""
             print("\n")
-            logger.info("=" * 80)
-            logger.info("LLM finished processing")
-            logger.info("=" * 80)
-
-        def on_agent_action(self, action, **kwargs) -> None:
-            """Run on agent action."""
-            logger.info(f"\n[ACTION] Tool: {action.tool}")
-            logger.info(f"[ACTION] Input: {action.tool_input}")
-            logger.info("-" * 80)
 
         def on_tool_start(self, serialized: dict, input_str: str, **kwargs) -> None:
             """Run when tool starts running."""
-            logger.info(f"[TOOL START] {serialized.get('name', 'Unknown')}")
+            print(f"\n🔧 {serialized.get('name', 'Tool')}: ", end="", flush=True)
 
         def on_tool_end(self, output: str, **kwargs) -> None:
             """Run when tool ends running."""
-            logger.info(f"[TOOL OUTPUT] {output[:200]}..." if len(output) > 200 else f"[TOOL OUTPUT] {output}")
-            logger.info("-" * 80)
+            print("✓")
 
         def on_tool_error(self, error: Exception, **kwargs) -> None:
             """Run when tool errors."""
-            logger.error(f"[TOOL ERROR] {error}")
-
-        def on_agent_finish(self, finish, **kwargs) -> None:
-            """Run on agent end."""
-            logger.info("\n" + "=" * 80)
-            logger.info("[AGENT FINISHED]")
-            logger.info(f"Final Answer: {finish.return_values}")
-            logger.info("=" * 80)
+            print(f"✗ {error}")
 
     # Get LLM with streaming enabled
     llm_with_streaming = get_llm(streaming=True)
@@ -355,9 +332,10 @@ if __name__ == "__main__":
     agent_executor = AgentExecutor(
         agent=react_agent,
         tools=tools,
-        verbose=True,
+        verbose=False,  # Disable verbose to reduce output
         callbacks=[streaming_handler],
-        return_intermediate_steps=True,  # Return intermediate steps to see agent reasoning
+        return_intermediate_steps=False,  # Don't return intermediate steps
+        max_iterations=15,  # Limit iterations to prevent long runs
     )
 
     # 4. Run the Agent asynchronously to allow streaming

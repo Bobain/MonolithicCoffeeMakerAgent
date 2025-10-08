@@ -67,57 +67,34 @@ def post_suggestion_in_pr_review(
     """
     Post a code suggestion as a review comment on a GitHub pull request.
 
-    This method creates a review comment with a code suggestion block on the specified
-    lines of a file in a pull request. The suggestion uses GitHub's native suggestion
-    feature, which allows the PR author to apply the suggestion with a single click.
+    Args (provide as JSON):
+        repo_full_name (str): Full repository name, e.g., 'owner/repo'
+        pr_number (int): Pull request number
+        file_path (str): Path to the file in the repository
+        start_line (int): Starting line number (1-indexed)
+        end_line (int): Ending line number (1-indexed)
+        suggestion_body (str): The suggested code (plain text, no markdown)
+        comment_text (str): Explanatory text for the suggestion
 
-    The method performs the following steps:
-    1. Validates that GITHUB_TOKEN environment variable is set
-    2. Authenticates with GitHub API using the token
-    3. Retrieves the repository and pull request
-    4. Gets the latest commit SHA from the PR's head branch
-    5. Formats the suggestion body with markdown suggestion syntax
-    6. Posts the review comment with the suggestion
+    Example input (use \\n for newlines in JSON strings): {
+        "repo_full_name": "owner/repo",
+        "pr_number": 123,
+        "file_path": "src/main.py",
+        "start_line": 10,
+        "end_line": 12,
+        "suggestion_body": "def improved():\\n    pass",
+        "comment_text": "Better implementation"
+    }
 
-    Args:
-        repo_full_name: Full repository name in format 'owner/repo' (e.g., 'Bobain/MonolithicCoffeeMakerAgent')
-        pr_number: Pull request number (must be a positive integer)
-        file_path: Path to the file in the repository (e.g., 'src/main.py')
-        start_line: Starting line number for the suggestion (1-indexed, must be >= 1)
-        end_line: Ending line number for the suggestion (1-indexed, must be >= start_line)
-        suggestion_body: The suggested code content (plain text, without markdown backticks).
-                       This will be automatically wrapped in GitHub's suggestion format.
-        comment_text: Additional explanatory text to accompany the suggestion.
-                     This appears above the code suggestion block.
+    IMPORTANT: In JSON, use \\n for newlines, not actual line breaks!
 
     Returns:
-        str: Success message indicating the suggestion was posted, in the format:
-            "Successfully posted suggestion for {file_path} in PR #{pr_number}"
-
-    Raises:
-        ValueError: If GITHUB_TOKEN environment variable is not set
-        Exception: For any GitHub API errors (authentication, permissions, invalid PR, etc.)
+        str: Success message
 
     Notes:
-        - The function uses pr.head.sha to get the latest commit, which is more reliable
-          than using pr.get_commits()[-1] which can fail with IndexError
-        - Line numbers are 1-indexed (first line is 1, not 0)
-        - The suggestion is posted on the RIGHT side of the diff (the new version)
+        - Line numbers are 1-indexed (first line is 1)
         - start_line and end_line can be the same for single-line suggestions
-        - All operations are logged using the module logger for observability
-
-    Example:
-        >>> result = post_suggestion_in_pr_review(
-        ...     repo_full_name="Bobain/MonolithicCoffeeMakerAgent",
-        ...     pr_number=111,
-        ...     file_path="coffee_maker/code_formatter/crewai/main.py",
-        ...     start_line=10,
-        ...     end_line=12,
-        ...     suggestion_body="# Improved comment\\ndef better_function():\\n    pass",
-        ...     comment_text="This implementation is clearer and follows PEP 8"
-        ... )
-        >>> print(result)
-        Successfully posted suggestion for coffee_maker/code_formatter/crewai/main.py in PR #111
+        - suggestion_body should NOT include markdown code fences
     """
 
     try:
@@ -189,13 +166,14 @@ def get_pr_modified_files(repo_full_name, pr_number, g: Github = github_client_i
     """
     Fetches the list of modified files from a pull request.
 
-    Args:
-        repo_full_name: Full repository name (e.g., 'owner/repo')
-        pr_number: Pull request number
+    Args (provide as JSON):
+        repo_full_name (str): Full repository name, e.g., 'owner/repo'
+        pr_number (int): Pull request number
+
+    Example input: {"repo_full_name": "owner/repo", "pr_number": 123}
 
     Returns:
-        List of dictionaries containing file metadata (filename, patch, status)
-        for files modified in the PR, or empty list if fetch fails
+        Dict with "python_files" (list of .py filenames) and "total_files" count
     """
     LOGGER.info(f"Fetching modified files from PR #{pr_number} in {repo_full_name}")
     try:
@@ -204,18 +182,20 @@ def get_pr_modified_files(repo_full_name, pr_number, g: Github = github_client_i
         files = pull_request.get_files()
         file_list = []
         for file in files:
+            # Only include filename and status, NOT the patch (to save tokens)
             file_list.append(
                 {
                     "filename": file.filename,
-                    "patch": getattr(file, "patch", None),
                     "status": getattr(file, "status", None),
                 }
             )
         LOGGER.info(f"Found {len(file_list)} modified files in PR #{pr_number}")
-        return file_list
+        # Return just the filenames as a simple list to minimize tokens
+        filenames = [f["filename"] for f in file_list if f["filename"].endswith(".py")]
+        return {"python_files": filenames, "total_files": len(file_list)}
     except Exception:
         LOGGER.error(f"Could not fetch modified files from PR #{pr_number}.", exc_info=True)
-        return []
+        return {"python_files": [], "total_files": 0}
 
 
 @observe
@@ -223,10 +203,12 @@ def get_pr_file_content(repo_full_name, pr_number, file_path, g: Github = github
     """
     Fetches the content of a specific file from a PR's head commit.
 
-    Args:
-        repo_full_name: Full repository name (e.g., 'owner/repo')
-        pr_number: Pull request number
-        file_path: Path to the file in the repository
+    Args (provide as JSON):
+        repo_full_name (str): Full repository name, e.g., 'owner/repo'
+        pr_number (int): Pull request number
+        file_path (str): Path to the file in the repository
+
+    Example input: {"repo_full_name": "owner/repo", "pr_number": 123, "file_path": "src/main.py"}
 
     Returns:
         File content as string, or None if fetch fails

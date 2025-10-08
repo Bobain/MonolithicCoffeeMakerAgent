@@ -25,13 +25,9 @@ from coffee_maker.langchain_observe.utils import get_callers_modules
 logger = logging.getLogger(__name__)
 SUPPORTED_PROVIDERS = dict()
 
-__DEFAULT_PROVIDER = "openai"
-__DEFAULT_MODEL = "gpt-4"
-__DEFAULT_MODEL = "gpt-5-codex"
-
-
 __DEFAULT_PROVIDER = "gemini"
-__DEFAULT_MODEL = "gemini-2.5-pro"
+
+__DEFAULT_PROVIDER = "openai"
 
 
 try:
@@ -49,7 +45,8 @@ try:
     #   Valid models for OpenAI class: gpt-3.5-turbo-instruct, davinci-002, babbage-002
     #
     #   Valid models for ChatOpenAI class: gpt-4, gpt-4-turbo, gpt-3.5-turbo, and their variants
-    SUPPORTED_PROVIDERS.update({"openai": (ChatOpenAI, "OPENAI_API_KEY", "gpt-4", {"max_tokens": 4096})})
+    # Use gpt-4o-mini for better performance and larger context (128k tokens)
+    SUPPORTED_PROVIDERS.update({"openai": (ChatOpenAI, "OPENAI_API_KEY", "gpt-4.1", {})})
 
     # from langchain_core.prompts import PromptTemplate
     #
@@ -71,18 +68,18 @@ try:
         {"anthropic": (ChatAnthropic, "ANTHROPIC_API_KEY", "claude-opus-4-20250514", {"max_tokens": 8192})}
     )
 
-    from langchain_core.prompts import PromptTemplate
-
-    prompt = PromptTemplate.from_template("How to say {input} in {output_language}:\n")
-    chat_anthropic = ChatAnthropic()
-
-    chain = prompt | chat_anthropic
-    chain.invoke(
-        {
-            "output_language": "German",
-            "input": "I love programming.",
-        }
-    )
+    # from langchain_core.prompts import PromptTemplate
+    #
+    # prompt = PromptTemplate.from_template("How to say {input} in {output_language}:\n")
+    # chat_anthropic = ChatAnthropic()
+    #
+    # chain = prompt | chat_anthropic
+    # chain.invoke(
+    #     {
+    #         "output_language": "German",
+    #         "input": "I love programming.",
+    #     }
+    # )
 
 except:
     logger.warning("langchain_anthropic not installed. will not use anthropic")
