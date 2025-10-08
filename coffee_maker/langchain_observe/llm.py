@@ -92,6 +92,17 @@ logger.info(f"{default_provider=}")
 
 
 def get_llm(langfuse_client: langfuse.Langfuse = None, provider: str = None, model: str = None, **llm_kwargs):
+    """Get a basic LLM instance without scheduling.
+
+    Args:
+        langfuse_client: Langfuse client for tracing
+        provider: LLM provider (openai, gemini, anthropic)
+        model: Model name
+        **llm_kwargs: Additional LLM configuration
+
+    Returns:
+        Basic LLM instance (ChatOpenAI, ChatGoogleGenerativeAI, etc.)
+    """
     if provider is None:
         provider = default_provider
         assert model is None, f"Please input a provider when you specify a specific model: {model}"
@@ -127,3 +138,85 @@ def get_llm(langfuse_client: langfuse.Langfuse = None, provider: str = None, mod
         return llm
     else:
         raise ValueError(f"Unsupported provider: {provider}")
+
+
+def get_scheduled_llm(
+    langfuse_client: langfuse.Langfuse = None,
+    provider: str = None,
+    model: str = None,
+    tier: str = "tier1",
+    max_wait_seconds: float = 300.0,
+    **llm_kwargs,
+):
+    """Get an LLM instance with proactive rate limiting scheduling.
+
+    This function wraps the base LLM with ScheduledLLM/ScheduledChatModel to add:
+    - N-2 safety margin (never reaches N-1 of rate limits)
+    - 60/RPM spacing between requests
+    - Intelligent waiting based on actual usage
+
+    Args:
+        langfuse_client: Langfuse client for tracing
+        provider: LLM provider (openai, gemini, anthropic)
+        model: Model name
+        tier: API tier for rate limiting (default: tier1)
+        max_wait_seconds: Maximum wait time before raising error (default: 300s)
+        **llm_kwargs: Additional LLM configuration
+
+    Returns:
+        ScheduledLLM or ScheduledChatModel instance with proactive rate limiting
+
+    Example:
+        >>> llm = get_scheduled_llm(provider="openai", model="gpt-4o-mini", tier="tier1")
+        >>> response = llm.invoke("Hello")  # Automatically scheduled
+    """
+    from coffee_maker.langchain_observe.global_rate_tracker import get_global_rate_tracker
+    from coffee_maker.langchain_observe.scheduled_llm import ScheduledLLM, ScheduledChatModel
+    from coffee_maker.langchain_observe.strategies.scheduling import ProactiveRateLimitScheduler
+    from langchain_core.language_models import BaseChatModel
+
+    # Get base LLM first
+    llm = get_llm(langfuse_client=langfuse_client, provider=provider, model=model, **llm_kwargs)
+
+    # Determine provider and model if not specified
+    if provider is None:
+        provider = default_provider
+    if model is None:
+        _, _, model, _ = SUPPORTED_PROVIDERS[provider]
+
+    # Get global rate tracker for this tier
+    rate_tracker = get_global_rate_tracker(tier)
+    model_full_name = f"{provider}/{model}"
+
+    # Check if model is in rate tracker
+    if model_full_name not in rate_tracker.model_limits:
+        logger.warning(
+            f"Model {model_full_name} not in rate tracker for tier {tier}. " f"Returning base LLM without scheduling."
+        )
+        return llm
+
+    # Create scheduling strategy
+    scheduler = ProactiveRateLimitScheduler(
+        rate_tracker=rate_tracker,
+        safety_margin=2,  # Stay at N-2 of limits
+    )
+
+    # Wrap with appropriate scheduled wrapper
+    if isinstance(llm, BaseChatModel):
+        logger.info(f"Wrapping {model_full_name} with ScheduledChatModel (proactive rate limiting)")
+        scheduled_llm = ScheduledChatModel(
+            llm=llm,
+            model_name=model_full_name,
+            scheduling_strategy=scheduler,
+            max_wait_seconds=max_wait_seconds,
+        )
+    else:
+        logger.info(f"Wrapping {model_full_name} with ScheduledLLM (proactive rate limiting)")
+        scheduled_llm = ScheduledLLM(
+            llm=llm,
+            model_name=model_full_name,
+            scheduling_strategy=scheduler,
+            max_wait_seconds=max_wait_seconds,
+        )
+
+    return scheduled_llm

@@ -42,15 +42,15 @@ def create_auto_picker_llm(
         >>> auto_llm = create_auto_picker_llm(tier="tier1", streaming=True)
         >>> response = auto_llm.invoke({"input": "Hello"})
     """
-    from coffee_maker.langchain_observe.agents import get_llm
+    from coffee_maker.langchain_observe.llm import get_scheduled_llm
     from coffee_maker.langchain_observe.global_rate_tracker import get_global_rate_tracker
 
     # Use global rate tracker to ensure rate limits are shared across all LLM instances
     rate_tracker = get_global_rate_tracker(tier)
 
-    # Create primary LLM
+    # Create primary LLM with scheduling
     logger.info(f"Creating primary LLM: {primary_provider}/{primary_model}")
-    primary_llm = get_llm(provider=primary_provider, model=primary_model, streaming=streaming)
+    primary_llm = get_scheduled_llm(provider=primary_provider, model=primary_model, tier=tier, streaming=streaming)
     primary_model_name = f"{primary_provider}/{primary_model}"
 
     # Get fallback models
@@ -70,7 +70,7 @@ def create_auto_picker_llm(
 
         logger.info(f"Adding fallback LLM: {full_name}")
         try:
-            fallback_llm = get_llm(provider=provider, model=model, streaming=streaming)
+            fallback_llm = get_scheduled_llm(provider=provider, model=model, tier=tier, streaming=streaming)
             fallback_llms.append((fallback_llm, full_name))
         except Exception as e:
             logger.warning(f"Could not create fallback LLM {full_name}: {e}")

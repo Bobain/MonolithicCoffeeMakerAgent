@@ -1,3 +1,11 @@
+"""LLM Provider configurations."""
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+SUPPORTED_PROVIDERS = {}
+
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
 

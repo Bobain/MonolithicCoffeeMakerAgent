@@ -1,129 +1,143 @@
 """Centralized configuration for LLM models and their rate limits.
 
-This module consolidates rate limit information from various provider files
+This module consolidates rate limit information from provider files
 and provides a single source of truth for model configurations.
 """
 
 from coffee_maker.langchain_observe.rate_limiter import RateLimitConfig
+from coffee_maker.langchain_observe.llm_providers import gemini, openai as openai_provider
 
-# Model configurations with rate limits and capabilities
+
+def _transform_provider_info_to_config(provider_name: str, models_info: dict) -> dict:
+    """Transform provider MODELS_INFO format to MODEL_CONFIGS format.
+
+    Args:
+        provider_name: Name of the provider ('openai' or 'gemini')
+        models_info: The provider's MODELS_INFO dictionary
+
+    Returns:
+        Dictionary of model configurations in MODEL_CONFIGS format
+    """
+    configs = {}
+
+    # Get the provider-specific info
+    provider_info = models_info.get(provider_name, {})
+    tiers = provider_info.get("values", {})
+
+    # Collect all unique model names across all tiers
+    all_models = set()
+    for tier_name, tier_models in tiers.items():
+        all_models.update(tier_models.keys())
+
+    # Build config for each model
+    for model_name in all_models:
+        model_config = {
+            "rate_limits": {},
+            "pricing": {},
+            "use_cases": _infer_use_cases(model_name),
+        }
+
+        # Collect rate limits and pricing from all tiers
+        for tier_name, tier_models in tiers.items():
+            if model_name in tier_models:
+                model_info = tier_models[model_name]
+
+                # Add context length and max output tokens (should be same across tiers)
+                if "context_length" in model_info:
+                    model_config["context_length"] = model_info["context_length"]
+                if "max_output_tokens" in model_info:
+                    model_config["max_output_tokens"] = model_info["max_output_tokens"]
+
+                # Add rate limits for this tier
+                rpm = model_info.get("requests per minute", -1)
+                tpm = model_info.get("tokens per minute", -1)
+                rpd = model_info.get("requests per day", -1)
+
+                model_config["rate_limits"][tier_name] = RateLimitConfig(
+                    requests_per_minute=rpm, tokens_per_minute=tpm, requests_per_day=rpd
+                )
+
+                # Add pricing info
+                price_info = model_info.get("price", {})
+                if price_info:
+                    # Handle simple pricing (OpenAI style)
+                    if "per 1M tokens input" in price_info and "per 1M tokens output" in price_info:
+                        if tier_name in ["tier1", "tier2", "paid"]:  # Use paid tier pricing
+                            model_config["pricing"]["input_per_1m"] = price_info["per 1M tokens input"]
+                            model_config["pricing"]["output_per_1m"] = price_info["per 1M tokens output"]
+                        elif tier_name == "free":
+                            # Mark as free if it's zero
+                            if price_info["per 1M tokens input"] == 0:
+                                model_config["pricing"]["free"] = True
+                            model_config["pricing"]["input_per_1m"] = price_info["per 1M tokens input"]
+                            model_config["pricing"]["output_per_1m"] = price_info["per 1M tokens output"]
+
+                    # Handle tiered pricing (Gemini 2.5 Pro style)
+                    if "per 1M tokens input (<=200k)" in price_info:
+                        model_config["pricing"]["input_per_1m_low"] = price_info["per 1M tokens input (<=200k)"]
+                        model_config["pricing"]["output_per_1m_low"] = price_info["per 1M tokens output (<=200k)"]
+                    if "per 1M tokens input (>200k)" in price_info:
+                        model_config["pricing"]["input_per_1m_high"] = price_info["per 1M tokens input (>200k)"]
+                        model_config["pricing"]["output_per_1m_high"] = price_info["per 1M tokens output (>200k)"]
+
+        configs[model_name] = model_config
+
+    return configs
+
+
+def _infer_use_cases(model_name: str) -> list:
+    """Infer use cases based on model name.
+
+    Args:
+        model_name: Name of the model
+
+    Returns:
+        List of use case strings
+    """
+    use_cases = []
+    model_lower = model_name.lower()
+
+    # Large context models
+    if "2.5-pro" in model_lower or "1.5-pro" in model_lower or "4.1" in model_lower:
+        use_cases.append("large_context")
+
+    # Primary/best models
+    if "2.5-pro" in model_lower or "4o" == model_lower.split("-")[-1]:
+        use_cases.append("primary")
+
+    # Reasoning models
+    if "o1" in model_lower or "thinking" in model_lower:
+        use_cases.append("reasoning")
+        use_cases.append("planning")
+        if "mini" in model_lower:
+            use_cases.append("budget_reasoning")
+        else:
+            use_cases.append("complex_problem_solving")
+
+    # General purpose models
+    if "flash" in model_lower or "mini" in model_lower or "3.5" in model_lower:
+        use_cases.append("general")
+
+    # Budget/fallback models
+    if "lite" in model_lower or "mini" in model_lower or "3.5" in model_lower or "flash" in model_lower:
+        use_cases.append("fallback")
+        use_cases.append("budget")
+
+    # Code review
+    if "4o" in model_lower or "pro" in model_lower:
+        use_cases.append("code_review")
+
+    # If no use cases matched, add simple
+    if not use_cases:
+        use_cases.append("simple")
+
+    return use_cases
+
+
+# Build MODEL_CONFIGS from provider files
 MODEL_CONFIGS = {
-    "openai": {
-        "gpt-4o": {
-            "context_length": 128000,
-            "max_output_tokens": 4096,
-            "rate_limits": {
-                "tier1": RateLimitConfig(requests_per_minute=500, tokens_per_minute=30000, requests_per_day=10000),
-                "tier2": RateLimitConfig(requests_per_minute=5000, tokens_per_minute=450000, requests_per_day=10000),
-            },
-            "pricing": {"input_per_1m": 2.50, "output_per_1m": 10.00},
-            "use_cases": ["complex_reasoning", "code_review", "primary"],
-        },
-        "gpt-4o-mini": {
-            "context_length": 128000,
-            "max_output_tokens": 16384,
-            "rate_limits": {
-                "tier1": RateLimitConfig(requests_per_minute=500, tokens_per_minute=200000, requests_per_day=10000),
-                "tier2": RateLimitConfig(requests_per_minute=5000, tokens_per_minute=2000000, requests_per_day=10000),
-            },
-            "pricing": {"input_per_1m": 0.150, "output_per_1m": 0.600},
-            "use_cases": ["general", "fallback", "budget"],
-        },
-        "gpt-3.5-turbo": {
-            "context_length": 16385,
-            "max_output_tokens": 4096,
-            "rate_limits": {
-                "tier1": RateLimitConfig(requests_per_minute=500, tokens_per_minute=60000, requests_per_day=10000),
-            },
-            "pricing": {"input_per_1m": 0.50, "output_per_1m": 1.50},
-            "use_cases": ["budget", "simple"],
-        },
-        "gpt-4.1": {
-            "context_length": 1000000,
-            "max_output_tokens": 64000,
-            "rate_limits": {
-                "tier1": RateLimitConfig(requests_per_minute=100, tokens_per_minute=100000, requests_per_day=1000),
-            },
-            "pricing": {"input_per_1m": 10.00, "output_per_1m": 30.00},
-            "use_cases": ["large_context", "complex_reasoning"],
-        },
-        "o1": {
-            "context_length": 200000,
-            "max_output_tokens": 100000,
-            "rate_limits": {
-                "tier1": RateLimitConfig(requests_per_minute=20, tokens_per_minute=100000, requests_per_day=500),
-                "tier2": RateLimitConfig(requests_per_minute=40, tokens_per_minute=200000, requests_per_day=1000),
-            },
-            "pricing": {"input_per_1m": 15.00, "output_per_1m": 60.00},
-            "use_cases": ["reasoning", "planning", "complex_problem_solving"],
-        },
-        "o1-mini": {
-            "context_length": 128000,
-            "max_output_tokens": 65536,
-            "rate_limits": {
-                "tier1": RateLimitConfig(requests_per_minute=30, tokens_per_minute=150000, requests_per_day=1000),
-                "tier2": RateLimitConfig(requests_per_minute=60, tokens_per_minute=300000, requests_per_day=2000),
-            },
-            "pricing": {"input_per_1m": 3.00, "output_per_1m": 12.00},
-            "use_cases": ["reasoning", "planning", "budget_reasoning"],
-        },
-    },
-    "gemini": {
-        "gemini-2.5-pro": {
-            "context_length": 2097152,  # 2M tokens
-            "max_output_tokens": 8192,
-            "rate_limits": {
-                "free": RateLimitConfig(requests_per_minute=5, tokens_per_minute=250000, requests_per_day=100),
-                "paid": RateLimitConfig(
-                    requests_per_minute=1000,
-                    tokens_per_minute=-1,  # Unlimited
-                    requests_per_day=-1,  # Unlimited
-                ),
-            },
-            "pricing": {
-                "free": True,
-                "input_per_1m_low": 1.25,
-                "output_per_1m_low": 10.00,
-                "input_per_1m_high": 2.50,
-                "output_per_1m_high": 15.00,
-            },
-            "use_cases": ["large_context", "primary"],
-        },
-        "gemini-2.5-flash-lite": {
-            "context_length": 1048576,  # 1M tokens
-            "max_output_tokens": 8192,
-            "rate_limits": {
-                "free": RateLimitConfig(requests_per_minute=15, tokens_per_minute=250000, requests_per_day=1000),
-                "paid": RateLimitConfig(
-                    requests_per_minute=2000,
-                    tokens_per_minute=-1,  # Unlimited
-                    requests_per_day=-1,  # Unlimited
-                ),
-            },
-            "pricing": {"free": True, "input_per_1m": 0.10, "output_per_1m": 0.40},
-            "use_cases": ["large_context", "budget", "fallback"],
-        },
-        "gemini-1.5-flash": {
-            "context_length": 1048576,  # 1M tokens
-            "max_output_tokens": 8192,
-            "rate_limits": {
-                "free": RateLimitConfig(requests_per_minute=15, tokens_per_minute=1000000, requests_per_day=1500),
-                "paid": RateLimitConfig(requests_per_minute=2000, tokens_per_minute=8192000, requests_per_day=-1),
-            },
-            "pricing": {"free": True, "input_per_1m": 0.35, "output_per_1m": 1.05},
-            "use_cases": ["large_context", "general"],
-        },
-        "gemini-2.0-flash-thinking-exp": {
-            "context_length": 32768,
-            "max_output_tokens": 8192,
-            "rate_limits": {
-                "free": RateLimitConfig(requests_per_minute=10, tokens_per_minute=32000, requests_per_day=500),
-                "tier1": RateLimitConfig(requests_per_minute=50, tokens_per_minute=100000, requests_per_day=2000),
-            },
-            "pricing": {"free": True, "input_per_1m": 0.00, "output_per_1m": 0.00},
-            "use_cases": ["reasoning", "planning", "problem_solving"],
-        },
-    },
+    "openai": _transform_provider_info_to_config("openai", openai_provider.MODELS_INFO),
+    "gemini": _transform_provider_info_to_config("gemini", gemini.MODELS_ÌNFO),
 }
 
 
@@ -176,6 +190,7 @@ def get_fallback_models(use_case: str = None) -> list:
     # Priority order for fallbacks
     priority_order = [
         ("openai", "gpt-4o-mini"),
+        ("gemini", "gemini-2.5-flash"),
         ("gemini", "gemini-2.5-flash-lite"),
         ("gemini", "gemini-1.5-flash"),
         ("openai", "gpt-3.5-turbo"),
@@ -201,7 +216,7 @@ def get_large_context_model() -> tuple:
 
     for provider, models in MODEL_CONFIGS.items():
         for model_name, config in models.items():
-            if config["context_length"] > max_context:
+            if config.get("context_length", 0) > max_context:
                 max_context = config["context_length"]
                 best_model = (provider, model_name)
 
@@ -218,7 +233,7 @@ def get_large_context_models() -> list:
 
     for provider, models in MODEL_CONFIGS.items():
         for model_name, config in models.items():
-            context = config["context_length"]
+            context = config.get("context_length", 0)
             models_with_context.append((provider, model_name, context))
 
     # Sort by context length descending

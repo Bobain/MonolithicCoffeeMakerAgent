@@ -99,15 +99,15 @@ class TestLLMTools:
             rate_tracker=rate_tracker,
         )
 
-        assert llm.primary_model_name == "gemini/gemini-2.0-pro"
+        assert llm.primary_model_name == "gemini/gemini-2.5-pro"
         assert llm.fallback_llms[0][1] == "gemini/gemini-2.5-flash"
 
     def test_create_llm_tools(self):
         """Test creating all LLM tools."""
         tools = create_llm_tools(tier="tier1")
 
-        # Should create tools for all purposes and providers
-        expected_count = len(MODEL_PURPOSES) * 2  # 2 providers per purpose
+        # Should create tools for all purposes and providers, plus the availability checker
+        expected_count = len(MODEL_PURPOSES) * 2 + 1  # 2 providers per purpose + check_llm_availability
         assert len(tools) == expected_count
 
         # Check that all tools have required attributes
@@ -115,7 +115,8 @@ class TestLLMTools:
             assert hasattr(tool, "name")
             assert hasattr(tool, "func")
             assert hasattr(tool, "description")
-            assert tool.name.startswith("invoke_llm_")
+            # Most tools start with "invoke_llm_", but check_llm_availability doesn't
+            assert tool.name.startswith("invoke_llm_") or tool.name == "check_llm_availability"
 
     def test_get_llm_tool_names(self):
         """Test getting LLM tool names."""
@@ -125,10 +126,11 @@ class TestLLMTools:
         assert "invoke_llm_openai_fast" in names
         assert "invoke_llm_gemini_long_context" in names
         assert "invoke_llm_openai_accurate" in names
+        assert "check_llm_availability" in names
 
-        # All names should follow the pattern
-        for name in names:
-            assert name.startswith("invoke_llm_")
+        # Most names should follow the invoke_llm_ pattern
+        invoke_llm_names = [n for n in names if n.startswith("invoke_llm_")]
+        for name in invoke_llm_names:
             parts = name.split("_")
             assert len(parts) >= 4  # invoke, llm, provider, purpose...
 
@@ -178,12 +180,20 @@ class TestLLMTools:
         tools = create_llm_tools()
 
         for tool in tools:
-            # Description should mention the purpose
-            assert "Invoke" in tool.description
+            # All tools should mention LLM
             assert "LLM" in tool.description
 
-            # Should include input format information
-            assert "Input format" in tool.description or "task_description" in tool.description
+            # check_llm_availability has different format from invoke_llm_ tools
+            if tool.name == "check_llm_availability":
+                assert "Check" in tool.description
+                assert "availability" in tool.description
+                assert "Use this tool" in tool.description
+            else:
+                # invoke_llm_ tools should have "Invoke" and task guidance
+                assert "Invoke" in tool.description
 
-            # Should include use case guidance
-            assert "Use this tool when" in tool.description or "For tasks" in tool.description
+                # Should include input format information
+                assert "Input format" in tool.description or "task_description" in tool.description
+
+                # Should include use case guidance
+                assert "Use this tool when" in tool.description or "For tasks" in tool.description

@@ -6,13 +6,20 @@ import langchain_google_genai as lg
 
 MODELS_LIST = {
     "chat": dict(
-        best_models=["gemini-2.5-pro", "gemini-2.5-flash-lite", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"],
+        best_models=[
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-1.5-pro",
+            "gemini-1.5-flash",
+            "gemini-1.0-pro",
+        ],
         create_instance=[lg.ChatGoogleGenerativeAI],
     ),
     "embeddings": [dict(best_models=["gemini-embedding-001"], create_instance=[lg.GoogleGenerativeAIEmbeddings])],
-    "code": ["gemini-2.5-flash-lite", "gemini-1.5-pro", "gemini-1.5-flash"],
-    "reasonning": [],
-    "cheapest general purpose": [],
+    "code": ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-1.5-pro", "gemini-1.5-flash"],
+    "reasoning": ["gemini-2.0-flash-thinking-exp"],
+    "cheapest general purpose": ["gemini-2.5-flash-lite"],
 }
 
 MODELS_ÌNFO = dict(
@@ -25,24 +32,48 @@ MODELS_ÌNFO = dict(
                         "requests per minute": 5,
                         "tokens per minute": 250000,
                         "requests per day": 100,
+                        "context_length": 2097152,
+                        "max_output_tokens": 8192,
+                        "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
+                    },
+                    "gemini-2.5-flash": {
+                        "requests per minute": 15,
+                        "tokens per minute": 1000000,
+                        "requests per day": 1500,
+                        "context_length": 1048576,
+                        "max_output_tokens": 8192,
                         "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
                     },
                     "gemini-2.5-flash-lite": {
                         "requests per minute": 15,
                         "tokens per minute": 250000,
                         "requests per day": 1000,
+                        "context_length": 1048576,
+                        "max_output_tokens": 8192,
                         "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
                     },
                     "gemini-1.5-pro": {
                         "requests per minute": 2,
                         "tokens per minute": 32768,
                         "requests per day": 50,
+                        "context_length": 2097152,
+                        "max_output_tokens": 8192,
                         "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
                     },
                     "gemini-1.5-flash": {
                         "requests per minute": 15,
                         "tokens per minute": 1000000,
                         "requests per day": 1500,
+                        "context_length": 1048576,
+                        "max_output_tokens": 8192,
+                        "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
+                    },
+                    "gemini-2.0-flash-thinking-exp": {
+                        "requests per minute": 10,
+                        "tokens per minute": 32000,
+                        "requests per day": 500,
+                        "context_length": 32768,
+                        "max_output_tokens": 8192,
                         "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
                     },
                 }
@@ -50,9 +81,11 @@ MODELS_ÌNFO = dict(
             paid=dict(
                 **{
                     "gemini-2.5-pro": {
-                        "requests per minute": -1,  # Custom, requires enterprise tier
-                        "tokens per minute": -1,  # Custom, requires enterprise tier
-                        "requests per day": -1,  # Custom, requires enterprise tier
+                        "requests per minute": 1000,
+                        "tokens per minute": -1,  # Unlimited
+                        "requests per day": -1,  # Unlimited
+                        "context_length": 2097152,
+                        "max_output_tokens": 8192,
                         "price": {
                             "per 1M tokens input (<=200k)": 1.25,
                             "per 1M tokens output (<=200k)": 10.00,
@@ -60,10 +93,23 @@ MODELS_ÌNFO = dict(
                             "per 1M tokens output (>200k)": 15.00,
                         },
                     },
+                    "gemini-2.5-flash": {
+                        "requests per minute": 2000,
+                        "tokens per minute": -1,  # Unlimited
+                        "requests per day": -1,  # Unlimited
+                        "context_length": 1048576,
+                        "max_output_tokens": 8192,
+                        "price": {
+                            "per 1M tokens input": 0.20,
+                            "per 1M tokens output": 0.70,
+                        },
+                    },
                     "gemini-2.5-flash-lite": {
-                        "requests per minute": -1,  # Not specified, likely higher than free
-                        "tokens per minute": -1,  # Not specified, likely higher than free
-                        "requests per day": -1,  # Not specified, likely higher than free
+                        "requests per minute": 2000,
+                        "tokens per minute": -1,  # Unlimited
+                        "requests per day": -1,  # Unlimited
+                        "context_length": 1048576,
+                        "max_output_tokens": 8192,
                         "price": {
                             "per 1M tokens input": 0.10,
                             "per 1M tokens output": 0.40,
@@ -73,6 +119,8 @@ MODELS_ÌNFO = dict(
                         "requests per minute": 1000,
                         "tokens per minute": 8192000,
                         "requests per day": -1,  # Unlimited
+                        "context_length": 2097152,
+                        "max_output_tokens": 8192,
                         "price": {
                             "per 1M tokens input (<128k)": 3.50,
                             "per 1M tokens output (<128k)": 10.50,
@@ -82,9 +130,26 @@ MODELS_ÌNFO = dict(
                         "requests per minute": 2000,
                         "tokens per minute": 8192000,
                         "requests per day": -1,  # Unlimited
+                        "context_length": 1048576,
+                        "max_output_tokens": 8192,
                         "price": {
                             "per 1M tokens input": 0.35,
                             "per 1M tokens output": 1.05,
+                        },
+                    },
+                }
+            ),
+            tier1=dict(
+                **{
+                    "gemini-2.0-flash-thinking-exp": {
+                        "requests per minute": 50,
+                        "tokens per minute": 100000,
+                        "requests per day": 2000,
+                        "context_length": 32768,
+                        "max_output_tokens": 8192,
+                        "price": {
+                            "per 1M tokens input": 0.00,
+                            "per 1M tokens output": 0.00,
                         },
                     },
                 }

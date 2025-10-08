@@ -16,6 +16,8 @@ from langchain_core.language_models import BaseLLM
 from langchain_core.outputs import Generation, LLMResult
 
 from coffee_maker.langchain_observe.rate_limiter import RateLimitTracker
+from coffee_maker.langchain_observe.strategies.retry import ExponentialBackoffRetry, RetryStrategy
+from coffee_maker.langchain_observe.strategies.scheduling import ProactiveRateLimitScheduler, SchedulingStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,8 @@ class AutoPickerLLM(BaseLLM):
     max_retries: int = 3  # Max retry attempts with exponential backoff
     backoff_base: float = 2.0  # Exponential backoff multiplier
     min_wait_before_fallback: float = 90.0  # Min seconds to wait before allowing fallback
+    retry_strategy: Optional[RetryStrategy] = None  # Retry strategy for exponential backoff
+    scheduling_strategy: Optional[SchedulingStrategy] = None  # Proactive scheduling to prevent rate limits
     stats: Dict[str, int] = {}
     _tokenizer: Optional[Any] = None
     cost_calculator: Optional[Any] = None  # CostCalculator instance
@@ -75,6 +79,8 @@ class AutoPickerLLM(BaseLLM):
         max_retries: int = 3,
         backoff_base: float = 2.0,
         min_wait_before_fallback: float = 90.0,
+        retry_strategy: Optional[RetryStrategy] = None,
+        scheduling_strategy: Optional[SchedulingStrategy] = None,
         cost_calculator: Optional[Any] = None,
         langfuse_client: Optional[Any] = None,
         enable_context_fallback: bool = True,
@@ -92,6 +98,7 @@ class AutoPickerLLM(BaseLLM):
             max_retries: Maximum retry attempts with exponential backoff (default 3)
             backoff_base: Exponential backoff multiplier (default 2.0)
             min_wait_before_fallback: Minimum seconds to wait from last call before fallback (default 90s)
+            retry_strategy: Optional RetryStrategy for handling retries (default: ExponentialBackoffRetry)
             cost_calculator: Optional CostCalculator for tracking costs
             langfuse_client: Optional Langfuse client for logging costs
             enable_context_fallback: If True, automatically fallback to larger-context models
@@ -108,6 +115,22 @@ class AutoPickerLLM(BaseLLM):
         # Get tokenizer for the primary model
         tokenizer = self._get_tokenizer_static(primary_model_name)
 
+        # Create default retry strategy if not provided
+        if retry_strategy is None:
+            retry_strategy = ExponentialBackoffRetry(
+                max_retries=max_retries,
+                backoff_base=backoff_base,
+                max_wait_seconds=max_wait_seconds,
+                min_wait_before_fallback=min_wait_before_fallback,
+            )
+
+        # Create default scheduling strategy if not provided
+        if scheduling_strategy is None:
+            scheduling_strategy = ProactiveRateLimitScheduler(
+                rate_tracker=rate_tracker,
+                safety_margin=2,  # Stay at N-2 of limit
+            )
+
         # Call parent init with all fields
         super().__init__(
             primary_llm=primary_llm,
@@ -119,6 +142,8 @@ class AutoPickerLLM(BaseLLM):
             max_retries=max_retries,
             backoff_base=backoff_base,
             min_wait_before_fallback=min_wait_before_fallback,
+            retry_strategy=retry_strategy,
+            scheduling_strategy=scheduling_strategy,
             stats=stats,
             _tokenizer=tokenizer,
             cost_calculator=cost_calculator,
@@ -259,7 +284,7 @@ class AutoPickerLLM(BaseLLM):
         return suitable_models
 
     def _try_invoke_model(
-        self, llm: Any, model_name: str, input_data: dict, is_primary: bool, **kwargs
+        self, llm: Any, model_name: str, input_data: dict, is_primary: bool, error_retry_count: int = 0, **kwargs
     ) -> Optional[Any]:
         """Try to invoke a specific model, handling context length and rate limits.
 
@@ -268,6 +293,7 @@ class AutoPickerLLM(BaseLLM):
             model_name: Full model name
             input_data: Input data
             is_primary: Whether this is the primary model
+            error_retry_count: Number of error-based retries already attempted (internal)
             **kwargs: Additional arguments
 
         Returns:
@@ -346,117 +372,32 @@ class AutoPickerLLM(BaseLLM):
         else:
             estimated_tokens = self._estimate_tokens(input_data, model_name)
 
-        # NEW: Retry with exponential backoff for rate limits
-        retry_count = 0
-        while retry_count <= self.max_retries:
-            # Check if we can make the request
-            if not self.rate_tracker.can_make_request(model_name, estimated_tokens):
-                wait_time = self.rate_tracker.get_wait_time(model_name, estimated_tokens)
+        # Use scheduling strategy for proactive rate limiting
+        if self.auto_wait:
+            # Proactively wait until safe to proceed
+            can_proceed, wait_time = self.scheduling_strategy.can_proceed(model_name, estimated_tokens)
 
-                if not self.auto_wait:
-                    # Auto-wait disabled, but still check minimum wait before fallback
-                    last_call_time = self.rate_tracker.get_last_call_time()
-                    if last_call_time is not None:
-                        time_since_last_call = time.time() - last_call_time
-                        if time_since_last_call < self.min_wait_before_fallback:
-                            remaining_wait = self.min_wait_before_fallback - time_since_last_call
-                            logger.info(
-                                f"Rate limit reached for {model_name}, auto-wait disabled, "
-                                f"but only {time_since_last_call:.1f}s since last call. "
-                                f"Waiting additional {remaining_wait:.1f}s before fallback (min: {self.min_wait_before_fallback}s)."
-                            )
-                            time.sleep(remaining_wait)
-                            self.stats["rate_limit_waits"] += 1
-
-                    logger.info(f"Rate limit reached for {model_name}, using fallback")
-                    self.stats["rate_limit_fallbacks"] += 1
-                    return None
-
-                # Calculate backoff time (exponential for retries after first attempt)
-                if retry_count > 0:
-                    # Exponential backoff: wait_time * backoff_base^(retry_count-1)
-                    # First retry: base * 2^0 = base
-                    # Second retry: base * 2^1 = base * 2
-                    # Third retry: base * 2^2 = base * 4
-                    backoff_time = wait_time * (self.backoff_base ** (retry_count - 1))
-                    logger.info(
-                        f"Rate limit retry {retry_count}/{self.max_retries} for {model_name}. "
-                        f"Waiting {backoff_time:.1f}s (base: {wait_time:.1f}s, multiplier: {self.backoff_base}^{retry_count-1})"
-                    )
-                else:
-                    # First attempt: just wait the calculated time
-                    backoff_time = wait_time
-                    logger.info(f"Rate limit reached for {model_name}. Waiting {backoff_time:.1f}s")
-
-                # Check if wait time is acceptable
-                if backoff_time > self.max_wait_seconds:
-                    # Check if minimum time since last call has passed (and not already done final attempt)
-                    last_call_time = self.rate_tracker.get_last_call_time()
-                    if last_call_time is not None and retry_count <= self.max_retries:
-                        time_since_last_call = time.time() - last_call_time
-                        if time_since_last_call < self.min_wait_before_fallback:
-                            remaining_wait = self.min_wait_before_fallback - time_since_last_call
-                            logger.info(
-                                f"Wait time {backoff_time:.1f}s exceeds max {self.max_wait_seconds}s, "
-                                f"but only {time_since_last_call:.1f}s since last call. "
-                                f"Waiting additional {remaining_wait:.1f}s, then making ONE FINAL ATTEMPT."
-                            )
-                            time.sleep(remaining_wait)
-                            self.stats["rate_limit_waits"] += 1
-
-                            # Make ONE FINAL ATTEMPT after ensuring 90s wait
-                            logger.info(
-                                f"Making final attempt for {model_name} after {self.min_wait_before_fallback}s wait"
-                            )
-                            # Recursively call this method ONE MORE TIME (will fallback if fails)
-                            # Remove retry_count from kwargs if present to avoid conflict
-                            kwargs_copy = {k: v for k, v in kwargs.items() if k != "retry_count"}
-                            return self._try_invoke_model(
-                                llm, model_name, input_data, is_primary, retry_count=self.max_retries + 1, **kwargs_copy
-                            )
-
+            if not can_proceed:
+                if wait_time > self.max_wait_seconds:
+                    # Wait would exceed max, fallback instead
                     logger.warning(
-                        f"Wait time {backoff_time:.1f}s exceeds max {self.max_wait_seconds}s. "
-                        f"Tried {retry_count} retries. Using fallback."
+                        f"Scheduling strategy requires {wait_time:.1f}s wait for {model_name}, "
+                        f"exceeds max {self.max_wait_seconds}s. Using fallback."
                     )
                     self.stats["rate_limit_fallbacks"] += 1
                     return None
 
-                # Wait and retry
-                time.sleep(backoff_time)
+                # Wait as instructed by scheduling strategy
+                logger.info(f"Scheduling strategy: waiting {wait_time:.1f}s for {model_name}")
+                time.sleep(wait_time)
                 self.stats["rate_limit_waits"] += 1
-                retry_count += 1
-                continue  # Retry the rate limit check
-
-            # Rate limit OK, break out of retry loop
-            break
-
-        # If we exhausted all retries
-        if retry_count > self.max_retries:
-            # Check if minimum time since last call has passed
-            last_call_time = self.rate_tracker.get_last_call_time()
-            if last_call_time is not None:
-                time_since_last_call = time.time() - last_call_time
-                if time_since_last_call < self.min_wait_before_fallback:
-                    remaining_wait = self.min_wait_before_fallback - time_since_last_call
-                    logger.info(
-                        f"Exhausted {self.max_retries} retries, but only {time_since_last_call:.1f}s since last call. "
-                        f"Waiting additional {remaining_wait:.1f}s, then making ONE FINAL ATTEMPT."
-                    )
-                    time.sleep(remaining_wait)
-                    self.stats["rate_limit_waits"] += 1
-
-                    # Make ONE FINAL ATTEMPT after ensuring 90s wait
-                    logger.info(f"Making final attempt for {model_name} after {self.min_wait_before_fallback}s wait")
-                    # Recursively call this method ONE MORE TIME (will fallback if fails)
-                    kwargs_copy = {k: v for k, v in kwargs.items() if k != "retry_count"}
-                    return self._try_invoke_model(
-                        llm, model_name, input_data, is_primary, retry_count=self.max_retries + 2, **kwargs_copy
-                    )
-
-            logger.error(f"Exhausted {self.max_retries} retries for {model_name}. Using fallback.")
-            self.stats["rate_limit_fallbacks"] += 1
-            return None
+        else:
+            # Auto-wait disabled, just check if we can proceed
+            can_proceed, wait_time = self.scheduling_strategy.can_proceed(model_name, estimated_tokens)
+            if not can_proceed:
+                logger.info(f"Rate limit check failed for {model_name}, auto-wait disabled, using fallback")
+                self.stats["rate_limit_fallbacks"] += 1
+                return None
 
         # Make the request
         try:
@@ -487,7 +428,8 @@ class AutoPickerLLM(BaseLLM):
 
             # If we got actual token counts, use them for rate limiting
             total_tokens = input_tokens + output_tokens if output_tokens > 0 else estimated_tokens
-            self.rate_tracker.record_request(model_name, total_tokens)
+            # Use scheduling strategy to record the request
+            self.scheduling_strategy.record_request(model_name, total_tokens)
 
             # Calculate and log cost if cost_calculator is available
             if self.cost_calculator:
@@ -546,49 +488,30 @@ class AutoPickerLLM(BaseLLM):
             )
 
             if is_rate_limit_error:
-                logger.warning(f"Rate limit error from {model_name}: {e}")
+                logger.warning(f"Unexpected rate limit error from {model_name}: {e}")
+                logger.info("Scheduling strategy should have prevented this, but handling gracefully")
 
-                # Retry with exponential backoff (if not already at max retries)
-                if retry_count < self.max_retries and self.auto_wait:
-                    retry_count += 1
-                    # Force wait time of 60s for rate limit errors
-                    backoff_time = 60 * (self.backoff_base ** (retry_count - 1))
+                # Use retry strategy for error-based retries
+                if error_retry_count < self.retry_strategy.max_retries and self.auto_wait:
+                    # Force wait time of 60s for unexpected rate limit errors
+                    backoff_time = 60 * self.retry_strategy.get_backoff_time(error_retry_count)
 
                     if backoff_time <= self.max_wait_seconds:
                         logger.info(
                             f"Retrying {model_name} after rate limit error "
-                            f"(attempt {retry_count}/{self.max_retries}, waiting {backoff_time:.1f}s)"
+                            f"(attempt {error_retry_count + 1}/{self.retry_strategy.max_retries}, "
+                            f"waiting {backoff_time:.1f}s)"
                         )
                         time.sleep(backoff_time)
                         self.stats["rate_limit_waits"] += 1
-                        # Recursive retry
-                        return self._try_invoke_model(llm, model_name, input_data, is_primary, **kwargs)
-
-                # Max retries exhausted or wait too long
-                # Check if minimum time since last call has passed
-                last_call_time = self.rate_tracker.get_last_call_time()
-                if last_call_time is not None:
-                    time_since_last_call = time.time() - last_call_time
-                    if time_since_last_call < self.min_wait_before_fallback:
-                        remaining_wait = self.min_wait_before_fallback - time_since_last_call
-                        logger.info(
-                            f"Rate limit error persists, but only {time_since_last_call:.1f}s since last call. "
-                            f"Waiting additional {remaining_wait:.1f}s, then making ONE FINAL ATTEMPT."
-                        )
-                        time.sleep(remaining_wait)
-                        self.stats["rate_limit_waits"] += 1
-
-                        # Make ONE FINAL ATTEMPT after ensuring 90s wait
-                        logger.info(
-                            f"Making final attempt for {model_name} after {self.min_wait_before_fallback}s wait"
-                        )
-                        # Recursively call this method ONE MORE TIME (will fallback if fails)
-                        kwargs_copy = {k: v for k, v in kwargs.items() if k != "retry_count"}
+                        # Recursive retry with incremented error count
                         return self._try_invoke_model(
-                            llm, model_name, input_data, is_primary, retry_count=self.max_retries + 2, **kwargs_copy
+                            llm, model_name, input_data, is_primary, error_retry_count=error_retry_count + 1, **kwargs
                         )
 
-                logger.error(f"Rate limit error persists after {retry_count} retries. Using fallback.")
+                logger.error(
+                    f"Rate limit error persists after {error_retry_count} retries for {model_name}. Using fallback."
+                )
                 self.stats["rate_limit_fallbacks"] += 1
                 return None
 
