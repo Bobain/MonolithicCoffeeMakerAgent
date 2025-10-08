@@ -5,8 +5,13 @@ import os
 import pathlib
 from unittest import mock
 
-import google.api_core.exceptions  # Added: For GoogleAPICallError
-import google.generativeai.types  # Added: For BlockedPromptException
+import pytest
+
+try:
+    import google.api_core.exceptions  # Added: For GoogleAPICallError
+    import google.generativeai.types  # Added: For BlockedPromptException
+except ModuleNotFoundError:
+    pytest.skip("google generative AI dependencies not installed", allow_module_level=True)
 
 from coffee_maker import auto_gemini_styleguide as ags
 

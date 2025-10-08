@@ -64,8 +64,8 @@ async def get_agent_and_llm(
     return agent, llm
 
 
-async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent) -> AsyncGenerator[str, None]:
-    """Runs the agent for a given message and streams the response.
+async def run_agent_chat(message: str, history: list, agent: ReActAgent) -> str:
+    """Runs the agent for a given message and returns the full answer.
 
     Args:
         message (str): The user's input message.
@@ -77,7 +77,27 @@ async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent) 
     LOGGER.info(f"--- Running Agent for user message: '{message}' ---")
     response = await agent.run(message)
     LOGGER.info(f"Agent response: {response}")
-    yield str(response)
+    return str(response)
+
+
+async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent) -> AsyncGenerator[str, None]:
+    """Runs the agent for a given message and streams the response token by token.
+
+    Args:
+        message (str): The user's input message.
+        history (list): The chat history from the Gradio interface (currently unused).
+        agent (ReActAgent): The agent instance to run the query.
+
+    Yields:
+        str: The agent's response, one token at a time.
+    """
+    LOGGER.info(f"--- Running Agent for user message: '{message}' ---")
+    # Use astream_chat for true streaming instead of the blocking agent.run()
+    response = await agent.astream_chat(message)
+
+    # Stream the response tokens back to the caller
+    async for token in response.async_stream_response():
+        yield token
 
 
 async def get_agent_func_with_context(

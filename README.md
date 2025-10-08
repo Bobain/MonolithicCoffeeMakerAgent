@@ -1,6 +1,8 @@
 AI agent toy, written with agents AI.
 No idea yet what it will do for real
 
+For contributor instructions, see [`AGENTS.md`](AGENTS.md).
+
 [**Static github pages**](https://bobain.github.io/MonolithicCoffeeMakerAgent/)
 
 ![Boondoggle](ressources/README/coffee_maker.png)
