@@ -15,12 +15,24 @@ MODELS_LIST = {
     "cheapest general purpose": [],
 }
 
-MODELS_INFO = dict(
+MODELS_ÌNFO = dict(
     gemini=dict(
         reference="https://ai.google.dev/gemini-api/docs/rate-limits",
         values=dict(
             free=dict(
                 **{
+                    "gemini-2.5-pro": {
+                        "requests per minute": 5,
+                        "tokens per minute": 250000,
+                        "requests per day": 100,
+                        "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
+                    },
+                    "gemini-2.5-flash-lite": {
+                        "requests per minute": 15,
+                        "tokens per minute": 250000,
+                        "requests per day": 1000,
+                        "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
+                    },
                     "gemini-1.5-pro": {
                         "requests per minute": 2,
                         "tokens per minute": 32768,
@@ -33,33 +45,47 @@ MODELS_INFO = dict(
                         "requests per day": 1500,
                         "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
                     },
-                    "gemini-1.0-pro": {
-                        "requests per minute": 15,
-                        "tokens per minute": 32768,
-                        "requests per day": 1500,
-                        "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
-                    },
                 }
             ),
             paid=dict(
                 **{
+                    "gemini-2.5-pro": {
+                        "requests per minute": -1,  # Custom, requires enterprise tier
+                        "tokens per minute": -1,  # Custom, requires enterprise tier
+                        "requests per day": -1,  # Custom, requires enterprise tier
+                        "price": {
+                            "per 1M tokens input (<=200k)": 1.25,
+                            "per 1M tokens output (<=200k)": 10.00,
+                            "per 1M tokens input (>200k)": 2.50,
+                            "per 1M tokens output (>200k)": 15.00,
+                        },
+                    },
+                    "gemini-2.5-flash-lite": {
+                        "requests per minute": -1,  # Not specified, likely higher than free
+                        "tokens per minute": -1,  # Not specified, likely higher than free
+                        "requests per day": -1,  # Not specified, likely higher than free
+                        "price": {
+                            "per 1M tokens input": 0.10,
+                            "per 1M tokens output": 0.40,
+                        },
+                    },
                     "gemini-1.5-pro": {
                         "requests per minute": 1000,
                         "tokens per minute": 8192000,
-                        "requests per day": -1,
-                        "price": {"per 1M tokens input": 3.50, "per 1M tokens output": 10.50},
+                        "requests per day": -1,  # Unlimited
+                        "price": {
+                            "per 1M tokens input (<128k)": 3.50,
+                            "per 1M tokens output (<128k)": 10.50,
+                        },
                     },
                     "gemini-1.5-flash": {
                         "requests per minute": 2000,
                         "tokens per minute": 8192000,
-                        "requests per day": -1,
-                        "price": {"per 1M tokens input": 0.35, "per 1M tokens output": 1.05},
-                    },
-                    "gemini-1.0-pro": {
-                        "requests per minute": 360,
-                        "tokens per minute": 2048000,
-                        "requests per day": -1,
-                        "price": {"per 1M tokens input": 0.50, "per 1M tokens output": 1.50},
+                        "requests per day": -1,  # Unlimited
+                        "price": {
+                            "per 1M tokens input": 0.35,
+                            "per 1M tokens output": 1.05,
+                        },
                     },
                 }
             ),
@@ -101,81 +127,3 @@ if __name__ == "__main__":
         print(response)
 
     update_rate_limits()
-
-    # MODELS_ÌNFO = dict(
-    #     gemini=dict(
-    #         reference="https://ai.google.dev/gemini-api/docs/rate-limits",
-    #         values=dict(
-    #             free=dict(
-    #                 **{
-    #                     "gemini-2.5-pro": {
-    #                         "requests per minute": 5,
-    #                         "tokens per minute": 250000,
-    #                         "requests per day": 100,
-    #                         "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
-    #                     },
-    #                     "gemini-2.5-flash-lite": {
-    #                         "requests per minute": 15,
-    #                         "tokens per minute": 250000,
-    #                         "requests per day": 1000,
-    #                         "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
-    #                     },
-    #                     "gemini-1.5-pro": {
-    #                         "requests per minute": 2,
-    #                         "tokens per minute": 32768,
-    #                         "requests per day": 50,
-    #                         "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
-    #                     },
-    #                     "gemini-1.5-flash": {
-    #                         "requests per minute": 15,
-    #                         "tokens per minute": 1000000,
-    #                         "requests per day": 1500,
-    #                         "price": {"per 1M tokens input": 0, "per 1M tokens output": 0},
-    #                     },
-    #                 }
-    #             ),
-    #             paid=dict(
-    #                 **{
-    #                     "gemini-2.5-pro": {
-    #                         "requests per minute": -1, # Custom, requires enterprise tier
-    #                         "tokens per minute": -1, # Custom, requires enterprise tier
-    #                         "requests per day": -1, # Custom, requires enterprise tier
-    #                         "price": {
-    #                             "per 1M tokens input (<=200k)": 1.25,
-    #                             "per 1M tokens output (<=200k)": 10.00,
-    #                             "per 1M tokens input (>200k)": 2.50,
-    #                             "per 1M tokens output (>200k)": 15.00,
-    #                         },
-    #                     },
-    #                     "gemini-2.5-flash-lite": {
-    #                         "requests per minute": -1, # Not specified, likely higher than free
-    #                         "tokens per minute": -1, # Not specified, likely higher than free
-    #                         "requests per day": -1, # Not specified, likely higher than free
-    #                         "price": {
-    #                             "per 1M tokens input": 0.10,
-    #                             "per 1M tokens output": 0.40,
-    #                         },
-    #                     },
-    #                     "gemini-1.5-pro": {
-    #                         "requests per minute": 1000,
-    #                         "tokens per minute": 8192000,
-    #                         "requests per day": -1, # Unlimited
-    #                         "price": {
-    #                             "per 1M tokens input (<128k)": 3.50,
-    #                             "per 1M tokens output (<128k)": 10.50,
-    #                         },
-    #                     },
-    #                     "gemini-1.5-flash": {
-    #                         "requests per minute": 2000,
-    #                         "tokens per minute": 8192000,
-    #                         "requests per day": -1, # Unlimited
-    #                         "price": {
-    #                             "per 1M tokens input": 0.35,
-    #                             "per 1M tokens output": 1.05,
-    #                         },
-    #                     },
-    #                 }
-    #             ),
-    #         ),
-    #     )
-    # )

@@ -78,7 +78,25 @@ def _build_agent_config(
     }
 
 
-def create_react_formatter_agent(langfuse_client: Langfuse, llm):
+def create_react_formatter_agent(
+    langfuse_client: Langfuse,
+    llm,
+    use_auto_picker: bool = False,
+    tier: str = "tier1",
+    include_llm_tools: bool = True,
+):
+    """Create a ReAct formatter agent.
+
+    Args:
+        langfuse_client: Langfuse client for prompt management
+        llm: LLM instance to use (can be AutoPickerLLM or regular LLM)
+        use_auto_picker: If True and llm is not AutoPickerLLM, wrap it in AutoPickerLLM
+        tier: API tier for rate limiting if use_auto_picker=True
+        include_llm_tools: If True, include LLM invocation tools for specialized tasks
+
+    Returns:
+        Tuple of (agent, tools, llm_used)
+    """
     # agent = ReAct agent with less complex and tools to use
     from langchain.agents import create_react_agent
 
@@ -89,11 +107,46 @@ def create_react_formatter_agent(langfuse_client: Langfuse, llm):
         github_tools,
     )
 
+    # Wrap in AutoPickerLLM if requested
+    from coffee_maker.langchain_observe.auto_picker_llm import AutoPickerLLM
+
+    if use_auto_picker and not isinstance(llm, AutoPickerLLM):
+        logger.info("Wrapping LLM in AutoPickerLLM for rate limiting and fallback")
+        from coffee_maker.langchain_observe.create_auto_picker import create_auto_picker_for_react_agent
+
+        llm = create_auto_picker_for_react_agent(tier=tier, streaming=True)
+
     # 2. Define the tools
     tools = github_tools + [get_pr_modified_files, get_pr_file_content, post_suggestion_in_pr_review]
 
+    # Add LLM tools if requested
+    if include_llm_tools:
+        from coffee_maker.langchain_observe.llm_tools import create_llm_tools
+
+        llm_tools = create_llm_tools(tier=tier)
+        tools = tools + llm_tools
+        logger.info(f"Added {len(llm_tools)} LLM tools to ReAct agent")
+
     styleguide = langfuse_client.get_prompt("styleguide.md").prompt
     from langchain.prompts import PromptTemplate
+
+    # Build additional context about LLM tools if included
+    llm_tools_context = ""
+    if include_llm_tools:
+        llm_tools_context = """
+
+IMPORTANT: You have access to specialized LLM tools for different purposes:
+- invoke_llm_openai_reasoning / invoke_llm_gemini_reasoning: Advanced reasoning, planning, and problem-solving with extended thinking
+- invoke_llm_openai_best_model / invoke_llm_gemini_best_model: Best overall quality and performance (use for critical tasks)
+- invoke_llm_openai_long_context / invoke_llm_gemini_long_context: Use for tasks requiring very long context (large files)
+- invoke_llm_openai_accurate / invoke_llm_gemini_accurate: Use for complex code analysis requiring high accuracy
+- invoke_llm_openai_second_best_model / invoke_llm_gemini_second_best_model: Use for balanced performance and cost
+- invoke_llm_openai_fast / invoke_llm_gemini_fast: Use for quick, simple analysis tasks
+- invoke_llm_openai_budget / invoke_llm_gemini_budget: Use for simple tasks to minimize costs
+
+When you need to analyze code, consider delegating to these specialized LLMs based on the task requirements.
+For example, use reasoning for complex problem-solving, best_model for critical reviews, long_context for large files, fast for simple checks.
+"""
 
     # ReAct agents require specific variables: tools, tool_names, input, agent_scratchpad
     # Embed the styleguide directly in the template string
@@ -104,7 +157,7 @@ Use the tools at your disposal in order to post suggestions in the pull request.
 
 Here is the style guide (formatted in markdown):
 {styleguide}
-
+{llm_tools_context}
 You have access to the following tools:
 
 {{tools}}
@@ -133,7 +186,7 @@ Thought:{{agent_scratchpad}}"""
         prompt=react_prompt,
     )
 
-    return agent, tools
+    return agent, tools, llm  # Return llm so caller can access AutoPickerLLM stats if used
 
 
 def create_langchain_code_formatter_agent(
