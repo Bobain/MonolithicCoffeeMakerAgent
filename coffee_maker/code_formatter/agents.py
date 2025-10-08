@@ -89,8 +89,8 @@ def create_react_formatter_agent(
 
     Args:
         langfuse_client: Langfuse client for prompt management
-        llm: LLM instance to use (can be AutoPickerLLM or regular LLM)
-        use_auto_picker: If True and llm is not AutoPickerLLM, wrap it in AutoPickerLLM
+        llm: LLM instance to use (can be AutoPickerLLMRefactored or regular LLM)
+        use_auto_picker: If True and llm is not AutoPickerLLMRefactored, wrap it in AutoPickerLLMRefactored
         tier: API tier for rate limiting if use_auto_picker=True
         include_llm_tools: If True, include LLM invocation tools for specialized tasks
 
@@ -107,11 +107,11 @@ def create_react_formatter_agent(
         github_tools,
     )
 
-    # Wrap in AutoPickerLLM if requested
-    from coffee_maker.langchain_observe.auto_picker_llm import AutoPickerLLM
+    # Wrap in AutoPickerLLMRefactored if requested
+    from coffee_maker.langchain_observe.auto_picker_llm_refactored import AutoPickerLLMRefactored
 
-    if use_auto_picker and not isinstance(llm, AutoPickerLLM):
-        logger.info("Wrapping LLM in AutoPickerLLM for rate limiting and fallback")
+    if use_auto_picker and not isinstance(llm, AutoPickerLLMRefactored):
+        logger.info("Wrapping LLM in AutoPickerLLMRefactored for rate limiting and fallback")
         from coffee_maker.langchain_observe.create_auto_picker import create_auto_picker_for_react_agent
 
         llm = create_auto_picker_for_react_agent(tier=tier, streaming=True)

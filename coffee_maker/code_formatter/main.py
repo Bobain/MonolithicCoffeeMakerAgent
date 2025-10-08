@@ -322,12 +322,12 @@ if __name__ == "__main__":
             """Run when tool errors."""
             print(f"✗ {error}")
 
-    # Get LLM with streaming enabled - use AutoPickerLLM for rate limiting and fallback
+    # Get LLM with streaming enabled - use AutoPickerLLMRefactored for rate limiting and fallback
     from coffee_maker.langchain_observe.create_auto_picker import create_auto_picker_for_react_agent
 
     auto_picker_llm = create_auto_picker_for_react_agent(tier="tier1", streaming=True)
     react_agent, tools, llm_instance = create_react_formatter_agent(
-        langfuse_client, auto_picker_llm, use_auto_picker=False  # Already using AutoPickerLLM
+        langfuse_client, auto_picker_llm, use_auto_picker=False  # Already using AutoPickerLLMRefactored
     )
 
     # Create an agent executor with streaming enabled
@@ -349,12 +349,12 @@ if __name__ == "__main__":
     )
     logger.info(f"\nAgent completed. Response: {response}")
 
-    # Print AutoPickerLLM statistics
-    from coffee_maker.langchain_observe.auto_picker_llm import AutoPickerLLM
+    # Print AutoPickerLLMRefactored statistics
+    from coffee_maker.langchain_observe.auto_picker_llm_refactored import AutoPickerLLMRefactored
 
-    if isinstance(llm_instance, AutoPickerLLM):
+    if isinstance(llm_instance, AutoPickerLLMRefactored):
         stats = llm_instance.get_stats()
-        logger.info("\n=== AutoPickerLLM Statistics ===")
+        logger.info("\n=== AutoPickerLLMRefactored Statistics ===")
         logger.info(f"Total requests: {stats['total_requests']}")
         logger.info(f"Primary model requests: {stats['primary_requests']} ({stats['primary_usage_percent']:.1f}%)")
         logger.info(f"Fallback requests: {stats['fallback_requests']} ({stats['fallback_usage_percent']:.1f}%)")
