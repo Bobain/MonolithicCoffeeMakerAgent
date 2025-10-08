@@ -1,8 +1,4 @@
-"""Cost calculation and tracking for LLM API usage.
-
-This module provides cost calculation based on token usage and model pricing,
-as well as cumulative cost tracking over time.
-"""
+"""Cost calculation and tracking for LLM API usage."""
 
 import logging
 import time
@@ -28,29 +24,10 @@ class CostRecord:
 
 
 class CostCalculator:
-    """Calculate and track LLM API costs.
-
-    This class calculates costs based on token usage and model pricing,
-    and maintains a history of costs for reporting and analysis.
-
-    Example:
-        >>> calculator = CostCalculator(pricing_info)
-        >>> cost = calculator.calculate_cost("openai/gpt-4o", 1000, 500)
-        >>> print(f"Cost: ${cost['total_cost']:.4f}")
-    """
+    """Calculate and track LLM API costs with pricing and history."""
 
     def __init__(self, pricing_info: Dict[str, Dict]):
-        """Initialize cost calculator.
-
-        Args:
-            pricing_info: Dictionary mapping model names to pricing info
-                Example: {
-                    "openai/gpt-4o": {
-                        "input_per_1m": 2.50,
-                        "output_per_1m": 10.00
-                    }
-                }
-        """
+        """Initialize with pricing info dict: model -> {input_per_1m, output_per_1m}."""
         self.pricing_info = pricing_info
         self._cost_history: List[CostRecord] = []
         self._cumulative_cost_by_model: Dict[str, float] = defaultdict(float)
