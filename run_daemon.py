@@ -1,6 +1,21 @@
 #!/usr/bin/env python3
 """Quick-start script for running the code-developer daemon.
 
+⚠️  IMPORTANT: Run this daemon from a SEPARATE TERMINAL, NOT from within Claude Code!
+
+The daemon spawns Claude CLI sessions to implement features. Running it from
+within an existing Claude Code session will cause it to hang due to nested
+session conflicts.
+
+CORRECT USAGE:
+1. Open a NEW terminal (separate from Claude Code)
+2. Activate the poetry environment
+3. Run this script
+
+WRONG USAGE:
+❌ Running from within Claude Code terminal
+❌ Running while Claude Code is using the same working directory
+
 This is a temporary convenience script until PRIORITY 3 (PyPI Package & Binaries)
 is complete and the proper `code-developer` CLI command is available.
 
@@ -19,6 +34,36 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from coffee_maker.autonomous.daemon import DevDaemon
+
+
+def check_claude_session():
+    """Check if running inside a Claude Code session and warn user.
+
+    Returns:
+        bool: True if likely running inside Claude session
+    """
+    import os
+    import subprocess
+
+    # Check for Claude-specific environment variables
+    claude_env_vars = [
+        "CLAUDE_SESSION_ID",
+        "CLAUDE_CLI_SESSION",
+    ]
+
+    for var in claude_env_vars:
+        if os.environ.get(var):
+            return True
+
+    # Check if 'claude' process is running
+    try:
+        result = subprocess.run(["pgrep", "-f", "claude"], capture_output=True, text=True)
+        if result.returncode == 0:
+            return True
+    except:
+        pass
+
+    return False
 
 
 def main():
@@ -84,6 +129,30 @@ Note: This is a temporary script. After PRIORITY 3 is complete,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+
+    # Check if running inside Claude session
+    if check_claude_session():
+        print("=" * 70)
+        print("⚠️  WARNING: Claude Code session detected!")
+        print("=" * 70)
+        print("\n⚠️  Running the daemon from within Claude Code will cause it to HANG!")
+        print("\nThe daemon needs to spawn Claude CLI sessions, which conflicts with")
+        print("running inside an existing Claude Code session.")
+        print("\n🔧 SOLUTION:")
+        print("  1. Exit this Claude Code session (type 'exit' or press Ctrl+D)")
+        print("  2. Open a NEW terminal (completely separate)")
+        print("  3. Activate poetry environment:")
+        print("     source /Users/bobain/Library/Caches/pypoetry/virtualenvs/coffee-maker-efk4LJvC-py3.11/bin/activate")
+        print("  4. Run daemon again from the new terminal")
+        print("\n" + "=" * 70)
+
+        response = input("\n⚠️  Continue anyway? (NOT recommended) [y/N]: ").strip().lower()
+        if response not in ["y", "yes"]:
+            print("\n✅ Good choice! Exiting safely.")
+            print("Please run this daemon from a separate terminal.\n")
+            sys.exit(0)
+        else:
+            print("\n⚠️  Proceeding... (expect the daemon to hang)\n")
 
     # Create and run daemon
     print("=" * 70)
