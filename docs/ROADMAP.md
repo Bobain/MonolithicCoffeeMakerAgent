@@ -16,15 +16,214 @@
 
 **New Priority Order**:
 1. 🤖 **Autonomous Development Daemon** (minimal MVP, 3-5 days) - **YOU ARE HERE**
-2. 📬 **Minimal Notification UI** (daemon-user communication, 1 day) - **CRITICAL FOR DAEMON**
-3. 🗃️ **Database Synchronization** (daemon implements this with oversight!)
-4. 🎯 **Project Manager CLI** (full-featured roadmap management)
-5. 📊 **Analytics & Observability** (daemon implements this!)
-6. 📱 **Streamlit Dashboards** (daemon implements this!)
+2. 🎯 **Project Manager UI** (single interface for user, 1-2 days) - **HIGH PRIORITY**
+   - View roadmap + daemon status in one place
+   - See pending notifications (daemon questions)
+   - Respond to daemon (approve dependencies, answer questions)
+   - Simple terminal UI (TUI with `rich` library)
+   - **User's single interface for everything**
+3. 🗃️ **Database Synchronization** (daemon implements this with PM UI oversight!)
+4. 📊 **Analytics & Observability** (daemon implements this!)
+5. 📱 **Streamlit Dashboards** (daemon implements this!)
+6. 🚀 **Advanced PM Features** (AI chat, Slack integration - daemon implements!)
 
 **Rationale**: Get daemon working ASAP → Daemon autonomously implements everything else → Faster delivery!
 
 **Reference**: `docs/PRIORITY_REORGANIZATION_2025_10_09.md` (detailed rationale and timeline)
+
+---
+
+## 🔧 Project Binaries (PyPI Package)
+
+When published on PyPI, the `coffee-maker` package will provide **two command-line tools**:
+
+### 1. `project-manager` - User Interface 👤
+
+**Purpose**: Single interface for user to interact with roadmap and daemon
+
+**Commands**:
+```bash
+# View roadmap and daemon status
+project-manager status
+
+# View pending notifications from daemon
+project-manager notifications
+
+# Respond to daemon questions
+project-manager respond <msg_id> <answer>
+
+# Manage roadmap
+project-manager view
+project-manager edit
+
+# Control daemon
+project-manager start-daemon
+project-manager stop-daemon
+project-manager pause-daemon
+```
+
+**Configuration** (`pyproject.toml`):
+```toml
+[project.scripts]
+project-manager = "coffee_maker.cli.project_manager:main"
+```
+
+**User Experience**:
+- Terminal UI with `rich` library
+- Real-time daemon status display
+- Interactive notification system
+- Roadmap viewer/editor
+- One command to rule them all!
+
+---
+
+### 2. `code-developer` - Autonomous Daemon 🤖
+
+**Purpose**: Autonomous development daemon that implements roadmap (runs underlying Claude CLI)
+
+**Commands**:
+```bash
+# Start daemon (runs continuously)
+code-developer start
+
+# Start in foreground (for debugging)
+code-developer start --foreground
+
+# Stop daemon
+code-developer stop
+
+# Check status
+code-developer status
+
+# View logs
+code-developer logs --tail 100
+
+# Pause daemon (finish current task, then wait)
+code-developer pause
+
+# Resume daemon
+code-developer resume
+```
+
+**Configuration** (`pyproject.toml`):
+```toml
+[project.scripts]
+code-developer = "coffee_maker.autonomous.daemon_cli:main"
+```
+
+**Daemon Behavior**:
+- Runs as background process (daemon mode)
+- Wraps Claude CLI (`claude code`) in subprocess
+- Reads `docs/ROADMAP.md` continuously
+- Implements priorities autonomously
+- **ALWAYS asks permission** (core principle!)
+- Creates demos after completion
+- Notifies user via `project-manager`
+- Never stops without user command
+
+---
+
+### 🔄 How They Work Together
+
+```
+User             Project Manager           Code Developer (wraps Claude CLI)
+ │                    │                              │
+ ├──────────────────►│                              │
+ │  project-manager  │                              │
+ │    start-daemon   │                              │
+ │                   │                              │
+ │                   ├────────────────────────────► │
+ │                   │  Start daemon process        │
+ │                   │                              │
+ │                   │                              ├─ Read ROADMAP.md
+ │                   │                              ├─ Call: claude code -p "implement PRIORITY 1"
+ │                   │                              │
+ │                   │ ◄────────────────────────────┤
+ │                   │  Need dependency approval    │
+ │                   │                              │
+ │ ◄─────────────────┤                              │
+ │  Notification:    │                              │
+ │  "Daemon asks..." │                              │
+ │                   │                              │
+ ├──────────────────►│                              │
+ │  project-manager  │                              │
+ │  respond msg_001  │                              │
+ │  approve          │                              │
+ │                   │                              │
+ │                   ├────────────────────────────► │
+ │                   │  User approved               │
+ │                   │                              │
+ │                   │                              ├─ Install dependency
+ │                   │                              ├─ Continue Claude CLI
+ │                   │                              ├─ Create demo
+ │                   │                              │
+ │                   │ ◄────────────────────────────┤
+ │                   │  PRIORITY complete!          │
+ │                   │                              │
+ │ ◄─────────────────┤                              │
+ │  Notification:    │                              │
+ │  "✅ PRIORITY 1   │                              │
+ │   complete! 🎬"   │                              │
+```
+
+**Key Points**:
+- User interacts ONLY with `project-manager`
+- `code-developer` runs in background, wrapping Claude CLI
+- `code-developer` calls `claude code` subprocess for each task
+- All communication through file-based notifications
+- User always has control (permission-first!)
+
+---
+
+### 📦 Installation & Setup
+
+```bash
+# Install from PyPI
+pip install coffee-maker
+
+# Verify binaries available
+project-manager --version
+claude-coder --version
+
+# First-time setup
+project-manager setup
+# → Creates data/ directory
+# → Initializes ROADMAP.md
+# → Configures notification system
+
+# Start daemon
+project-manager start-daemon
+# or directly:
+claude-coder start
+
+# Monitor status
+project-manager status
+```
+
+---
+
+### 🛡️ Safety Features (Built into MVP)
+
+Both binaries enforce safety from day one:
+
+**`claude-coder` Safety**:
+- ✅ Permission-first architecture (ALWAYS asks)
+- ✅ File lock on ROADMAP.md (no conflicts)
+- ✅ Automatic rollback on test failures
+- ✅ Timeout limits (won't run forever)
+- ✅ Graceful shutdown (CTRL+C safe)
+
+**`project-manager` Safety**:
+- ✅ Input validation (no malformed responses)
+- ✅ File lock enforcement (no concurrent edits)
+- ✅ Audit log (all user responses logged)
+- ✅ Emergency stop (can kill daemon immediately)
+
+**Together**: Permission-first + Single interface = Safe autonomous development
+
+---
+
+**This architecture is the foundation for version 0.1.0 and all future versions.** 🚀
 
 ---
 
@@ -648,17 +847,364 @@ Reason: We're using SQLite MVP, not PostgreSQL yet.
 4. **After implementation**: Update documentation and type hints
 5. **Before commit**: Run tests, linting, formatting
 6. **After commit**: Update ROADMAP.md status
-7. **Weekly**: Review for refactoring opportunities
-8. **Monthly**: Dependency updates and security audit
+7. **After PRIORITY completion**: Create demo + notify user ⚡ **NEW**
+8. **Weekly**: Review for refactoring opportunities
+9. **Monthly**: Dependency updates and security audit
 
-**🤖 For Autonomous Daemon** (Critical):
+**🤖 For Autonomous Daemon** (Critical - Non-Negotiable):
+- ⚠️ **NEVER STOP ASKING PERMISSION** - This is the CORE PRINCIPLE ⚡
 - ⚠️ **ALWAYS ask permission before adding new dependencies**
-- Explain why the dependency is needed
-- Provide alternatives (standard library, existing dependencies)
+- ⚠️ **ALWAYS ask permission before making architectural changes**
+- ⚠️ **ALWAYS ask permission before breaking changes**
+- ⚠️ **ALWAYS ask permission before external API calls**
+- Explain why the action is needed
+- Provide alternatives when possible
 - Wait for user approval (1 hour timeout)
-- Never install dependencies without explicit approval
+- Never proceed without explicit approval
+- ⚠️ **ALWAYS create demo after completing a PRIORITY**
+
+**🔴 CORE PRINCIPLE**: Permission-First Architecture
+- This MUST be in MVP (version 0.1.0)
+- This MUST be in every published version
+- This is NON-NEGOTIABLE for ethical AI
+- Daemon is powerful assistant, NOT autonomous overlord
 
 **Goal**: Every feature leaves the codebase cleaner than before ✨
+
+---
+
+### 🎬 Demo & Notification After Priority Completion ⚡ **REQUIRED**
+
+**When**: After completing ANY PRIORITY (before moving to next)
+
+**Why**: User needs to understand what was built and how to use it
+
+**What to Create**:
+
+#### Option A: Interactive Demo (Preferred) 🌟
+Create a runnable demonstration showing the new feature in action.
+
+**Format**:
+- Jupyter notebook (`.ipynb`) with code + explanations
+- Python script with rich terminal output
+- Video recording (screen capture with narration)
+- GIF animations showing key interactions
+
+**Example** (PRIORITY 2: Project Manager UI):
+```bash
+# File: demos/priority_2_project_manager_demo.py
+"""
+Interactive Demo: Project Manager UI
+
+This demo shows how to use the new Project Manager UI to:
+1. View roadmap and daemon status
+2. Respond to daemon notifications
+3. Approve/reject dependency requests
+
+Run: python demos/priority_2_project_manager_demo.py
+"""
+
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+console = Console()
+
+# Demo 1: View Roadmap
+console.print(Panel("[bold cyan]Demo 1: Viewing Roadmap[/]"))
+# ... runnable code ...
+
+# Demo 2: Respond to Notification
+console.print(Panel("[bold cyan]Demo 2: Responding to Daemon[/]"))
+# ... runnable code ...
+```
+
+#### Option B: Documentation (Minimum) 📝
+If interactive demo isn't feasible, create comprehensive documentation.
+
+**Format**: Markdown file with:
+- Overview of what was built
+- Key features and capabilities
+- Usage examples (code snippets)
+- Screenshots/GIFs of UI
+- Troubleshooting tips
+
+**Template**:
+```markdown
+# PRIORITY X: [Name] - Completion Summary
+
+**Completion Date**: YYYY-MM-DD
+**Status**: ✅ Complete
+**PR**: #123
+
+## What Was Built
+
+[2-3 paragraph overview]
+
+## Key Features
+
+1. **Feature 1**: Description
+   - Sub-feature A
+   - Sub-feature B
+
+2. **Feature 2**: Description
+
+## How to Use
+
+### Example 1: Basic Usage
+\`\`\`python
+# Code example showing how to use
+\`\`\`
+
+### Example 2: Advanced Usage
+\`\`\`python
+# Advanced code example
+\`\`\`
+
+## Visual Guide
+
+![Screenshot 1](path/to/screenshot1.png)
+*Caption explaining what this shows*
+
+## Testing It Yourself
+
+\`\`\`bash
+# Commands to try the new feature
+coffee-manager view
+coffee-manager status
+\`\`\`
+
+## What's Next
+
+This enables PRIORITY X+1...
+```
+
+**Storage Location**:
+```
+demos/
+├── priority_1_daemon/
+│   ├── README.md                    # Summary document
+│   ├── demo.py                      # Interactive demo script
+│   ├── demo.ipynb                   # Jupyter notebook
+│   └── screenshots/
+│       ├── daemon_running.png
+│       └── notification_received.png
+│
+├── priority_2_project_manager/
+│   ├── README.md
+│   ├── demo.py
+│   └── demo.gif                     # Animated GIF
+│
+└── priority_3_database_sync/
+    └── README.md
+```
+
+---
+
+### 📬 User Notification
+
+**When**: Immediately after demo is created
+
+**Format**: Send notification through Project Manager UI
+
+```python
+# In daemon after completing priority
+def notify_completion(priority_name: str, demo_path: str):
+    """Notify user that priority is complete with demo link."""
+
+    notification = {
+        "type": "priority_completed",
+        "priority": priority_name,
+        "message": f"✅ {priority_name} is complete!",
+        "demo_link": demo_path,
+        "pr_link": f"https://github.com/user/repo/pull/{pr_number}",
+        "summary": generate_summary(priority_name),
+        "next_priority": get_next_priority()
+    }
+
+    send_notification(notification)
+```
+
+**User sees**:
+```
+🎉 PRIORITY COMPLETED!
+
+✅ PRIORITY 2: Project Manager UI is complete!
+
+📊 Summary:
+   - Built terminal UI with rich library
+   - Integrated daemon status display
+   - Added notification response system
+   - Created 15 new files, 800+ LOC
+   - All tests passing (25/25)
+
+🎬 Interactive Demo:
+   → demos/priority_2_project_manager/demo.py
+   → Run: python demos/priority_2_project_manager/demo.py
+
+📝 Documentation:
+   → demos/priority_2_project_manager/README.md
+
+🔗 Pull Request:
+   → https://github.com/user/repo/pull/456
+
+⏭️  Next: PRIORITY 3 - Database Synchronization
+   Estimated: 2-3 days
+
+[View Demo] [Review PR] [Start Next Priority]
+```
+
+---
+
+### 🤖 Daemon Implementation
+
+**Step-by-Step Process**:
+
+```python
+# In coffee_maker/autonomous/minimal_daemon.py
+
+async def complete_priority(self, priority_name: str):
+    """Complete a priority with demo and notification."""
+
+    # 1. Run final tests
+    self.run_tests()
+
+    # 2. Create demo
+    demo_path = self.create_demo(priority_name)
+
+    # 3. Generate summary
+    summary = self.generate_priority_summary(
+        priority_name=priority_name,
+        files_changed=self.get_changed_files(),
+        lines_added=self.count_lines_added(),
+        tests_passing=self.count_tests()
+    )
+
+    # 4. Create PR
+    pr_url = self.create_pull_request(
+        title=f"feat: Complete {priority_name}",
+        body=summary + f"\n\nDemo: {demo_path}"
+    )
+
+    # 5. Notify user
+    self.notify_user_completion(
+        priority_name=priority_name,
+        demo_path=demo_path,
+        pr_url=pr_url,
+        summary=summary
+    )
+
+    # 6. Update ROADMAP.md
+    self.update_roadmap_status(priority_name, "✅ Completed")
+
+    # 7. Wait for user to review before starting next priority
+    response = self.wait_for_user_approval(
+        message=f"{priority_name} complete. Review PR and demo. Start next priority?",
+        timeout=86400  # 24 hours
+    )
+
+    if response == "approved":
+        self.move_to_next_priority()
+    else:
+        self.pause_daemon(reason="Waiting for user feedback on completed priority")
+```
+
+**Demo Creation**:
+
+```python
+def create_demo(self, priority_name: str) -> str:
+    """Create demo for completed priority."""
+
+    demo_dir = Path(f"demos/{self.sanitize_name(priority_name)}")
+    demo_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate README with summary
+    readme = self.generate_demo_readme(priority_name)
+    (demo_dir / "README.md").write_text(readme)
+
+    # Try to create interactive demo
+    try:
+        demo_script = self.generate_demo_script(priority_name)
+        (demo_dir / "demo.py").write_text(demo_script)
+    except Exception as e:
+        logger.warning(f"Could not generate interactive demo: {e}")
+
+    # Capture screenshots if UI changes
+    if self.has_ui_changes(priority_name):
+        self.capture_screenshots(demo_dir / "screenshots")
+
+    return str(demo_dir / "README.md")
+```
+
+---
+
+### ✅ Checklist for Completion
+
+Before marking PRIORITY as complete, verify:
+
+- [ ] All features implemented
+- [ ] All tests passing
+- [ ] Documentation updated
+- [ ] Code reviewed and cleaned
+- [ ] **Demo created** (interactive or document) ⚡
+- [ ] **User notified** with demo link ⚡
+- [ ] PR created with demo reference
+- [ ] ROADMAP.md updated to ✅ Completed
+
+**If demo is missing**: PRIORITY is NOT complete!
+
+---
+
+### 📊 Demo Quality Standards
+
+**Good Demo Has**:
+- ✅ Clear explanation of what was built
+- ✅ Runnable examples (not just screenshots)
+- ✅ Step-by-step instructions
+- ✅ Visual aids (screenshots, GIFs, or video)
+- ✅ Troubleshooting section
+- ✅ Link to detailed documentation
+
+**Poor Demo** (Don't do this):
+- ❌ Just code without explanation
+- ❌ "It works, trust me"
+- ❌ Broken examples that don't run
+- ❌ No visual aids
+- ❌ Assumes too much knowledge
+
+---
+
+### 🎯 Benefits
+
+**For User**:
+- ✅ Immediately understands what was built
+- ✅ Can try the feature hands-on
+- ✅ Has reference material for future use
+- ✅ Can share demo with others
+
+**For Daemon**:
+- ✅ Forces clear documentation of work
+- ✅ Validates feature actually works end-to-end
+- ✅ Creates knowledge base for future priorities
+- ✅ Builds user trust (transparency)
+
+**For Project**:
+- ✅ Professional documentation
+- ✅ Easier onboarding for new contributors
+- ✅ Demo can become part of marketing
+- ✅ Creates portfolio of work accomplished
+
+---
+
+### 📚 Examples from Other Projects
+
+**Good Demo Examples to Learn From**:
+- [Rich library demos](https://github.com/Textualize/rich/tree/master/examples) - Interactive Python scripts
+- [Textual demos](https://github.com/Textualize/textual/tree/main/examples) - TUI demonstrations
+- [FastAPI tutorial](https://fastapi.tiangolo.com/tutorial/) - Progressive examples
+- [Streamlit gallery](https://streamlit.io/gallery) - Visual demonstrations
+
+**This is non-negotiable for professional autonomous development.** 🎬
 
 ---
 

@@ -1,6 +1,29 @@
 AI agent toy, written with agents AI.
 No idea yet what it will do for real
 
+---
+
+## 📋 Project Roadmap - Single Source of Truth
+
+**THE ONE AND ONLY ROADMAP**: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+
+This file is the **SINGLE SOURCE OF TRUTH** for:
+- All project priorities and features
+- Implementation plans and timelines
+- Current status and progress
+- Future vision (roadmap-driven development library)
+
+**Used by**:
+- 🤖 Autonomous Daemon (reads and implements features)
+- 🎯 Project Manager CLI (reads and updates status)
+- 👨‍💻 Human Developers (plan and review)
+
+**Documentation Structure**: See [`docs/README_DOCS.md`](docs/README_DOCS.md) for complete documentation organization.
+
+⚠️ **IMPORTANT**: Never create alternative roadmap files. Always edit `docs/ROADMAP.md` directly.
+
+---
+
 For contributor instructions, see [`AGENTS.md`](AGENTS.md).
 
 [**Static github pages**](https://bobain.github.io/MonolithicCoffeeMakerAgent/)
