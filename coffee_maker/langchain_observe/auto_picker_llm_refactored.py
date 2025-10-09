@@ -9,9 +9,9 @@ from langchain_core.outputs import Generation, LLMResult
 
 from coffee_maker.langchain_observe.langfuse_logger import LangfuseLogger
 from coffee_maker.langchain_observe.response_parser import extract_token_usage, is_rate_limit_error
+from coffee_maker.langchain_observe.strategies.context import ContextStrategy, create_context_strategy
 from coffee_maker.langchain_observe.strategies.fallback import FallbackStrategy, SequentialFallback
 from coffee_maker.langchain_observe.strategies.metrics import MetricsStrategy, NoOpMetrics
-from coffee_maker.langchain_observe.token_estimator import estimate_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +25,10 @@ class AutoPickerLLMRefactored(BaseLLM):
     fallback_llms: List[Tuple[Any, str]]  # List of (ScheduledLLM, model_name)
     fallback_strategy: FallbackStrategy  # Strategy for selecting fallbacks
     metrics_strategy: MetricsStrategy  # Strategy for metrics collection
+    context_strategy: ContextStrategy  # Strategy for context length management
     cost_calculator: Optional[Any] = None  # CostCalculator instance
     langfuse_client: Optional[Any] = None  # Langfuse client for logging
-    enable_context_fallback: bool = True  # Enable automatic context length fallback
     stats: Dict[str, int] = {}
-    _large_context_models: Optional[List[Tuple[Any, str, int]]] = None  # Lazy-loaded
     _langfuse_logger: Optional[LangfuseLogger] = None  # Lazy-loaded logger
 
     class Config:
@@ -45,9 +44,9 @@ class AutoPickerLLMRefactored(BaseLLM):
         fallback_llms: List[Tuple[Any, str]],
         fallback_strategy: Optional[FallbackStrategy] = None,
         metrics_strategy: Optional[MetricsStrategy] = None,
+        context_strategy: Optional[ContextStrategy] = None,
         cost_calculator: Optional[Any] = None,
         langfuse_client: Optional[Any] = None,
-        enable_context_fallback: bool = True,
         **kwargs,
     ):
         """Initialize AutoPickerLLMRefactored."""
@@ -68,6 +67,10 @@ class AutoPickerLLMRefactored(BaseLLM):
         if metrics_strategy is None:
             metrics_strategy = NoOpMetrics()
 
+        # Use default context strategy if none provided
+        if context_strategy is None:
+            context_strategy = create_context_strategy()
+
         # Create Langfuse logger if client provided
         langfuse_logger = LangfuseLogger(langfuse_client) if langfuse_client else None
 
@@ -78,11 +81,10 @@ class AutoPickerLLMRefactored(BaseLLM):
             fallback_llms=fallback_llms,
             fallback_strategy=fallback_strategy,
             metrics_strategy=metrics_strategy,
+            context_strategy=context_strategy,
             cost_calculator=cost_calculator,
             langfuse_client=langfuse_client,
-            enable_context_fallback=enable_context_fallback,
             stats=stats,
-            _large_context_models=None,
             _langfuse_logger=langfuse_logger,
             **kwargs,
         )
@@ -175,62 +177,61 @@ class AutoPickerLLMRefactored(BaseLLM):
         self, llm: Any, model_name: str, input_data: dict, is_primary: bool, **kwargs
     ) -> Optional[Any]:
         """Try to invoke a specific model, handling context length."""
-        # Check context length FIRST (before invoking)
-        if self.enable_context_fallback:
-            fits, estimated_tokens, max_context = self._check_context_length(input_data, model_name)
+        # Check context length FIRST (before invoking) using ContextStrategy
+        fits, estimated_tokens, max_context = self.context_strategy.check_fits(input_data, model_name)
 
-            if not fits:
-                logger.info(
-                    f"Input too large for {model_name} "
-                    f"({estimated_tokens:,} > {max_context:,} tokens), "
-                    f"searching for larger-context model"
-                )
+        if not fits:
+            logger.info(
+                f"Input too large for {model_name} "
+                f"({estimated_tokens:,} > {max_context:,} tokens), "
+                f"searching for larger-context model"
+            )
 
-                # Try to find suitable large-context model
-                large_models = self._get_large_context_models(estimated_tokens)
+            # Try to find suitable large-context model using ContextStrategy
+            large_model_names = self.context_strategy.get_larger_context_models(estimated_tokens)
 
-                if large_models:
-                    # Try each large-context model
-                    for large_llm, large_model_name in large_models:
-                        logger.info(f"Trying large-context fallback: {large_model_name}")
+            if large_model_names:
+                # Find matching LLM instances from fallback_llms
+                large_models = [(llm, name) for llm, name in self.fallback_llms if name in large_model_names]
 
-                        # Recursively try the large-context model
-                        result = self._try_invoke_model(
-                            large_llm, large_model_name, input_data, is_primary=False, **kwargs
-                        )
+                # Try each large-context model
+                for large_llm, large_model_name in large_models:
+                    logger.info(f"Trying large-context fallback: {large_model_name}")
 
-                        if result is not None:
-                            self.stats["context_fallbacks"] += 1
+                    # Recursively try the large-context model
+                    result = self._try_invoke_model(large_llm, large_model_name, input_data, is_primary=False, **kwargs)
 
-                            # Log context fallback to Langfuse
-                            if self._langfuse_logger:
-                                from coffee_maker.langchain_observe.llm_config import (
-                                    get_model_context_length_from_name,
-                                )
+                    if result is not None:
+                        self.stats["context_fallbacks"] += 1
 
-                                self._langfuse_logger.log_context_fallback(
-                                    original_model=model_name,
-                                    fallback_model=large_model_name,
-                                    estimated_tokens=estimated_tokens,
-                                    original_max_context=max_context,
-                                    fallback_max_context=get_model_context_length_from_name(large_model_name),
-                                )
+                        # Log context fallback to Langfuse
+                        if self._langfuse_logger:
+                            from coffee_maker.langchain_observe.llm_config import (
+                                get_model_context_length_from_name,
+                            )
 
-                            return result
+                            self._langfuse_logger.log_context_fallback(
+                                original_model=model_name,
+                                fallback_model=large_model_name,
+                                estimated_tokens=estimated_tokens,
+                                original_max_context=max_context,
+                                fallback_max_context=get_model_context_length_from_name(large_model_name),
+                            )
 
-                # No suitable model found - raise error
-                max_available = (
-                    max((context for _, _, context in self._large_context_models), default=max_context)
-                    if self._large_context_models
-                    else max_context
-                )
+                        return result
 
-                raise ValueError(
-                    f"Input is too large ({estimated_tokens:,} tokens) for any available model. "
-                    f"Maximum supported context: {max_available:,} tokens. "
-                    f"Original model: {model_name} (limit: {max_context:,} tokens). "
-                    f"Please reduce input size."
-                )
+            # No suitable model found - raise error
+            from coffee_maker.langchain_observe.llm_config import get_all_model_context_limits
+
+            all_limits = get_all_model_context_limits()
+            max_available = max(all_limits.values(), default=max_context)
+
+            raise ValueError(
+                f"Input is too large ({estimated_tokens:,} tokens) for any available model. "
+                f"Maximum supported context: {max_available:,} tokens. "
+                f"Original model: {model_name} (limit: {max_context:,} tokens). "
+                f"Please reduce input size."
+            )
 
         # Invoke the LLM (scheduling/retry handled by ScheduledLLM)
         try:
@@ -300,79 +301,6 @@ class AutoPickerLLMRefactored(BaseLLM):
 
             # Return None to try next fallback
             return None
-
-    def _check_context_length(self, input_data: dict, model_name: str) -> Tuple[bool, int, int]:
-        """Check if input fits within model's context window.
-
-        Args:
-            input_data: Input dictionary
-            model_name: Full model name (e.g., "openai/gpt-4o-mini")
-
-        Returns:
-            (fits, estimated_tokens, max_context_length)
-        """
-        from coffee_maker.langchain_observe.llm_config import get_model_context_length_from_name
-
-        estimated_tokens = self._estimate_tokens(input_data, model_name)
-        max_context = get_model_context_length_from_name(model_name)
-
-        fits = estimated_tokens <= max_context
-
-        if not fits:
-            logger.warning(
-                f"Input ({estimated_tokens:,} tokens) exceeds {model_name} " f"context limit ({max_context:,} tokens)"
-            )
-
-        return fits, estimated_tokens, max_context
-
-    def _initialize_large_context_models(self):
-        """Initialize list of large-context models sorted by preference."""
-        from coffee_maker.langchain_observe.llm import get_scheduled_llm
-        from coffee_maker.langchain_observe.llm_config import get_large_context_models
-
-        # Get models sorted by context length (largest first)
-        large_models = get_large_context_models()
-
-        self._large_context_models = []
-
-        # We need to know which tier we're using - extract from primary LLM
-        # For now, we'll skip models not available (will be improved in context strategy)
-        for provider, model, context_length in large_models:
-            full_name = f"{provider}/{model}"
-
-            try:
-                # Create scheduled LLM instance
-                llm_instance = get_scheduled_llm(provider=provider, model=model)
-                self._large_context_models.append((llm_instance, full_name, context_length))
-                logger.debug(f"Added large-context model: {full_name} ({context_length:,} tokens)")
-            except Exception as e:
-                logger.debug(f"Could not initialize {full_name}: {e}")
-
-        logger.info(f"Initialized {len(self._large_context_models)} large-context models")
-
-    def _get_large_context_models(self, required_tokens: int) -> List[Tuple[Any, str]]:
-        """Get models with sufficient context length.
-
-        Args:
-            required_tokens: Minimum context length needed
-
-        Returns:
-            List of (llm_instance, model_name) tuples
-        """
-        # Lazy-load large context models
-        if self._large_context_models is None:
-            self._initialize_large_context_models()
-
-        # Filter models that can handle the input
-        suitable_models = [
-            (llm, name) for llm, name, context_len in self._large_context_models if context_len >= required_tokens
-        ]
-
-        return suitable_models
-
-    def _estimate_tokens(self, input_data: dict, model_name: str) -> int:
-        """Estimate number of tokens in input."""
-        return estimate_tokens(input_data, model_name)
 
     def get_stats(self) -> Dict:
         """Get usage statistics.
