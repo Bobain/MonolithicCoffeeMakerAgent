@@ -3820,6 +3820,61 @@ This is a **design-only priority**. Implementation happens in:
 
 **Vision**: Create a dedicated **`coffee-roadmap` CLI tool** - an AI-powered project manager that provides an interactive chat interface for managing ROADMAP.md. This is the **ONLY way** to update the roadmap - both user and daemon use it.
 
+#### 📋 Core Operating Principle for project_manager
+
+**CRITICAL BEHAVIOR DIRECTIVE**:
+
+The `project_manager` CLI **MUST** always operate in **PLAN MODE** - a strategic, proactive state:
+
+1. **Always Planning**: Every interaction is a planning session, not just command execution
+2. **Strategic Thinking**: Analyze roadmap holistically, identify dependencies, suggest optimizations
+3. **Proactive Guidance**: Anticipate blockers, recommend next priorities, highlight risks
+4. **Context Awareness**: Understand project state, progress velocity, resource constraints
+5. **Decision Support**: Present options with trade-offs, guide user toward optimal choices
+
+**Plan Mode Behavior**:
+```
+USER INPUT (any command):
+  ├─ Analyze current roadmap state
+  ├─ Identify related priorities and dependencies
+  ├─ Consider project velocity and constraints
+  ├─ Execute requested command
+  ├─ Provide strategic context and recommendations
+  ├─ Suggest next logical steps
+  └─ Always leave user with clear action items
+```
+
+**Examples of Plan Mode Thinking**:
+
+Instead of:
+```
+❌ "Notification #5 marked as responded"
+```
+
+Do this:
+```
+✅ "Notification #5 marked as responded
+
+    Impact Analysis:
+    - Daemon can now proceed with PRIORITY 3 implementation
+    - Estimated completion: 2-3 days
+    - Next blocker: Will need approval for dependency upgrades
+
+    Recommendations:
+    - Review PRIORITY 4 requirements while daemon works
+    - Consider preparing test data for analytics dashboard
+
+    Action Items:
+    1. Monitor daemon progress: project-manager status
+    2. Plan PRIORITY 4 acceptance criteria
+    3. Check back in 24h for next approval request"
+```
+
+**Forbidden**: Bare command execution without strategic context
+**Required**: Every response includes analysis, impact, and recommendations
+
+This principle ensures project_manager acts as a **strategic PM**, not a simple command executor.
+
 ---
 
 #### 🎯 MVP Approach: Start Simple, Scale Smart
