@@ -8192,6 +8192,190 @@ cmd = [self.cli_path, "-p", "--dangerously-skip-permissions", prompt]
 
 ---
 
+#### 🔄 **IMPROVEMENT NEEDED: Crash Recovery with Context Reset** (Identified: 2025-10-09 19:05)
+
+**Requirement**:
+When the `code_developer` daemon crashes or Claude CLI fails, it should restart with a fresh, well-contextualized Claude session using `/compact` to ensure good context awareness.
+
+**Rationale**:
+- Claude sessions accumulate context over time (token usage, conversation history)
+- After a crash, the context might be stale, corrupted, or irrelevant
+- `/compact` creates a clean session with summarized, relevant context
+- This ensures the daemon always operates with optimal context awareness
+- Reduces token usage and improves response quality
+
+**Current Behavior** (Problematic):
+```python
+# daemon.py - no crash recovery
+def run(self):
+    while self.running:
+        try:
+            priority = self.roadmap.get_next_priority()
+            self._implement_priority(priority)  # ← If crashes, daemon stops
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            # No restart logic! ❌
+```
+
+**Proposed Solution**:
+
+1. **Crash Detection & Recovery**:
+   ```python
+   # daemon.py - add crash recovery
+   def run(self):
+       """Main daemon loop with crash recovery."""
+       crash_count = 0
+       max_crashes = 3  # Prevent infinite crash loops
+
+       while self.running:
+           try:
+               # Check if we should reset context
+               if crash_count > 0:
+                   logger.warning(f"Recovering from crash #{crash_count}")
+                   self._reset_claude_context()
+
+               priority = self.roadmap.get_next_priority()
+               result = self._implement_priority(priority)
+
+               # Success - reset crash counter
+               if result:
+                   crash_count = 0
+
+           except KeyboardInterrupt:
+               logger.info("Daemon stopped by user")
+               break
+
+           except Exception as e:
+               crash_count += 1
+               logger.error(f"💥 Daemon crashed: {e}")
+
+               if crash_count >= max_crashes:
+                   logger.error(f"Max crashes ({max_crashes}) reached - stopping daemon")
+                   self.notifications.create_notification(
+                       type=NOTIF_TYPE_ERROR,
+                       title="Daemon Crashed Multiple Times",
+                       message=f"Daemon crashed {crash_count} times and has stopped.\n\nCheck logs for details.",
+                       priority=NOTIF_PRIORITY_CRITICAL,
+                   )
+                   break
+
+               # Wait before retry
+               logger.info(f"Restarting in 30s... (crash {crash_count}/{max_crashes})")
+               time.sleep(30)
+   ```
+
+2. **Context Reset Using /compact**:
+   ```python
+   # daemon.py - add context reset method
+   def _reset_claude_context(self):
+       """Reset Claude CLI context using /compact for fresh session."""
+       logger.info("🔄 Resetting Claude context with /compact...")
+
+       try:
+           # Use /compact to create a clean, well-contextualized session
+           result = subprocess.run(
+               ['claude', '/compact'],
+               capture_output=True,
+               text=True,
+               timeout=30
+           )
+
+           if result.returncode == 0:
+               logger.info("✅ Context reset successful")
+           else:
+               logger.warning(f"Context reset failed: {result.stderr}")
+
+       except Exception as e:
+           logger.error(f"Failed to reset context: {e}")
+   ```
+
+3. **Proactive Context Management**:
+   ```python
+   # daemon.py - add periodic context refresh
+   def __init__(self, ...):
+       # ...
+       self.iterations_since_compact = 0
+       self.compact_interval = 10  # Compact every 10 iterations
+
+   def _implement_priority(self, priority: dict) -> bool:
+       """Implement priority with periodic context refresh."""
+
+       # Periodic context reset (every N iterations)
+       self.iterations_since_compact += 1
+       if self.iterations_since_compact >= self.compact_interval:
+           logger.info("🔄 Periodic context refresh...")
+           self._reset_claude_context()
+           self.iterations_since_compact = 0
+
+       # ... rest of implementation ...
+   ```
+
+**Alternative: Use Session Management**:
+```python
+# Instead of /compact, use --session-id for each task
+def _implement_priority(self, priority: dict) -> bool:
+    """Implement with isolated session per priority."""
+    import uuid
+
+    session_id = str(uuid.uuid4())
+
+    cmd = [
+        'claude', '-p',
+        '--dangerously-skip-permissions',
+        '--session-id', session_id,  # Isolated session
+        prompt
+    ]
+
+    # Each priority gets a fresh session - no context pollution
+```
+
+**Benefits**:
+
+1. **Resilience**: Daemon recovers from crashes automatically
+2. **Context Quality**: Fresh context ensures relevant, high-quality responses
+3. **Token Efficiency**: `/compact` reduces token usage by summarizing
+4. **Debugging**: Clear crash tracking and notifications
+5. **Stability**: Max crash limit prevents infinite crash loops
+
+**Implementation Priority**:
+- **Phase 1** (PRIORITY 2.6): Add crash recovery and max crash limit
+- **Phase 2** (PRIORITY 2.7): Implement `/compact` context reset
+- **Phase 3** (Future): Add periodic context refresh
+
+**Success Criteria**:
+- ✅ Daemon restarts after crash with fresh context
+- ✅ `/compact` called before retry after crash
+- ✅ Max crash limit prevents infinite loops
+- ✅ Notification created for persistent crashes
+- ✅ Context quality remains high across iterations
+
+**Testing**:
+```python
+# Test crash recovery
+def test_crash_recovery():
+    daemon = DevDaemon(...)
+
+    # Simulate crash
+    def crash_once():
+        if not hasattr(crash_once, 'called'):
+            crash_once.called = True
+            raise Exception("Simulated crash")
+        return True
+
+    daemon._implement_priority = crash_once
+    daemon.run()
+
+    # Should recover and continue
+    assert crash_once.called
+```
+
+**Status**: 📝 **PLANNED** (To be implemented in PRIORITY 2.6 or 2.7)
+
+**Key Learning**:
+> Autonomous systems need crash recovery with context reset. `/compact` ensures the daemon always has fresh, relevant context after failures, improving reliability and response quality.
+
+---
+
 #### 💡 **Proposed Technical Fixes**
 
 **Fix Option 1: Enhanced Pre-Flight Checks** (Recommended - Low Risk)
@@ -9032,6 +9216,276 @@ If daemon gets stuck:
 2. Monitor GitHub Actions for issues
 3. Iterate on health checks as needed
 4. Consider adding metrics dashboard
+
+---
+
+### 🔴 **PRIORITY 2.7: Daemon Crash Recovery & Context Management** 🔄 **RELIABILITY**
+
+**Estimated Duration**: 4-6 hours
+**Impact**: ⭐⭐⭐⭐⭐ (Critical for autonomous reliability)
+**Status**: 📝 Planned
+**Dependency**: Requires PRIORITY 2.6 completion
+**Why Important**: Autonomous systems need crash recovery and context management to ensure continuous operation
+
+#### Project: Implement Crash Recovery with Context Reset
+
+**Objectives**:
+1. Add crash detection and automatic recovery
+2. Implement `/compact` context reset after crashes
+3. Add periodic context refresh to prevent context pollution
+4. Create crash notifications for persistent failures
+5. Test crash recovery with simulated failures
+
+**Background**:
+> "When the code_developer crashes, it should be restarted with a very task: /compact in order to have a claude with good context awareness"
+
+Currently, if the daemon crashes:
+- ❌ It stops completely (no auto-recovery)
+- ❌ Context accumulates over time (token bloat)
+- ❌ No context reset after failures (stale context)
+- ❌ No crash tracking or limits (potential infinite crashes)
+
+**Deliverables**:
+
+**1. Crash Recovery Logic** (`coffee_maker/autonomous/daemon.py`)
+
+```python
+def run(self):
+    """Main daemon loop with crash recovery."""
+    crash_count = 0
+    max_crashes = 3  # Prevent infinite crash loops
+
+    while self.running:
+        try:
+            # Reset context after crash
+            if crash_count > 0:
+                logger.warning(f"🔄 Recovering from crash #{crash_count}")
+                self._reset_claude_context()
+
+            priority = self.roadmap.get_next_priority()
+
+            if not priority:
+                logger.info("✅ No more priorities - daemon complete")
+                break
+
+            result = self._implement_priority(priority)
+
+            # Success - reset crash counter
+            if result:
+                crash_count = 0
+
+            # Sleep before next iteration
+            logger.info(f"💤 Sleeping {self.sleep_interval}s before next iteration...")
+            time.sleep(self.sleep_interval)
+
+        except KeyboardInterrupt:
+            logger.info("\n⏹️  Daemon stopped by user")
+            break
+
+        except Exception as e:
+            crash_count += 1
+            logger.error(f"💥 Daemon crashed: {e}")
+            logger.error(f"Stack trace:", exc_info=True)
+
+            if crash_count >= max_crashes:
+                logger.error(f"❌ Max crashes ({max_crashes}) reached - stopping daemon")
+                self.notifications.create_notification(
+                    type=NOTIF_TYPE_ERROR,
+                    title="Daemon Crashed Multiple Times",
+                    message=f"""The daemon has crashed {crash_count} times and has stopped.
+
+Error: {str(e)}
+
+Please check logs for details:
+  tail -f logs/daemon.log
+
+To restart:
+  python run_daemon.py --auto-approve
+""",
+                    priority=NOTIF_PRIORITY_CRITICAL,
+                    context={
+                        "crash_count": crash_count,
+                        "error": str(e),
+                    }
+                )
+                break
+
+            # Wait before retry (exponential backoff)
+            wait_time = min(30 * (2 ** (crash_count - 1)), 300)  # Max 5 min
+            logger.info(f"⏳ Restarting in {wait_time}s... (crash {crash_count}/{max_crashes})")
+            time.sleep(wait_time)
+```
+
+**2. Context Reset Method** (`coffee_maker/autonomous/daemon.py`)
+
+```python
+def _reset_claude_context(self):
+    """Reset Claude CLI context using /compact for fresh session.
+
+    This ensures the daemon always has good context awareness after
+    crashes or long-running sessions.
+    """
+    logger.info("🔄 Resetting Claude context with /compact...")
+
+    try:
+        # Method 1: Use /compact command
+        result = subprocess.run(
+            ['claude', '/compact'],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            input="",  # Auto-confirm any prompts
+        )
+
+        if result.returncode == 0:
+            logger.info("✅ Context reset successful")
+            return True
+        else:
+            logger.warning(f"⚠️  Context reset returned non-zero: {result.stderr}")
+            return False
+
+    except subprocess.TimeoutExpired:
+        logger.error("❌ Context reset timed out")
+        return False
+
+    except Exception as e:
+        logger.error(f"❌ Failed to reset context: {e}")
+        return False
+```
+
+**3. Periodic Context Refresh** (`coffee_maker/autonomous/daemon.py`)
+
+```python
+def __init__(self, ...):
+    # ... existing code ...
+
+    # Context management
+    self.iterations_since_compact = 0
+    self.compact_interval = 10  # Compact every 10 iterations
+    logger.info(f"Context refresh interval: {self.compact_interval} iterations")
+
+def _implement_priority(self, priority: dict) -> bool:
+    """Implement a priority with periodic context refresh."""
+
+    # Periodic context reset to prevent token bloat
+    self.iterations_since_compact += 1
+    if self.iterations_since_compact >= self.compact_interval:
+        logger.info(f"🔄 Periodic context refresh (every {self.compact_interval} iterations)...")
+        self._reset_claude_context()
+        self.iterations_since_compact = 0
+
+    # ... rest of implementation ...
+```
+
+**4. Alternative: Isolated Sessions Per Priority**
+
+```python
+def _implement_priority(self, priority: dict) -> bool:
+    """Implement with isolated session per priority."""
+    import uuid
+
+    # Create unique session ID for this priority
+    session_id = str(uuid.uuid4())
+    logger.info(f"🆔 Using isolated session: {session_id[:8]}...")
+
+    # Build command with session isolation
+    cmd = [
+        'claude', '-p',
+        '--dangerously-skip-permissions',
+        '--session-id', session_id,  # Each priority gets fresh session
+        prompt
+    ]
+
+    # No context pollution between priorities!
+    result = subprocess.run(cmd, ...)
+```
+
+**5. Crash Recovery Tests** (`tests/autonomous/test_crash_recovery.py`)
+
+```python
+def test_daemon_recovers_from_single_crash():
+    """Test daemon recovers from a single crash."""
+    daemon = DevDaemon(...)
+
+    # Simulate crash on first call
+    crash_once = MockCrashOnce()
+    daemon._implement_priority = crash_once.execute
+
+    daemon.run()
+
+    # Should recover and continue
+    assert crash_once.call_count == 2  # Failed once, succeeded once
+    assert daemon.crash_count == 0  # Reset after success
+
+def test_daemon_stops_after_max_crashes():
+    """Test daemon stops after max crashes."""
+    daemon = DevDaemon(...)
+    daemon.max_crashes = 3
+
+    # Always crash
+    daemon._implement_priority = lambda p: exec('raise Exception("Always crash")')
+
+    daemon.run()
+
+    # Should stop after 3 crashes
+    assert daemon.crash_count == 3
+    # Should create critical notification
+    notifications = daemon.notifications.list_notifications()
+    assert any(n.priority == NOTIF_PRIORITY_CRITICAL for n in notifications)
+```
+
+**Success Criteria**:
+- ✅ Daemon recovers automatically from crashes
+- ✅ Context reset with `/compact` after each crash
+- ✅ Periodic context refresh every N iterations
+- ✅ Max crash limit prevents infinite crash loops
+- ✅ Critical notification created for persistent crashes
+- ✅ Exponential backoff between crash retries
+- ✅ Tests verify crash recovery behavior
+- ✅ Logging shows crash count and recovery status
+
+**Configuration** (`config.yaml`):
+```yaml
+daemon:
+  crash_recovery:
+    enabled: true
+    max_crashes: 3
+    backoff_initial: 30  # seconds
+    backoff_max: 300     # 5 minutes
+
+  context_management:
+    compact_enabled: true
+    compact_interval: 10  # iterations
+    isolated_sessions: false  # Use session-id per priority
+```
+
+**Benefits**:
+1. **Resilience**: Daemon continues working despite failures
+2. **Context Quality**: Fresh context ensures high-quality responses
+3. **Token Efficiency**: `/compact` reduces token usage
+4. **Debugging**: Clear crash tracking and notifications
+5. **Stability**: Max crash limit prevents runaway behavior
+
+**Implementation Priority**: **HIGH** (Should be done immediately after PRIORITY 2.6)
+
+**Testing Plan**:
+1. Simulate crashes during priority implementation
+2. Verify context reset happens before retry
+3. Test max crash limit stops daemon
+4. Verify notification creation for critical crashes
+5. Test periodic context refresh
+6. Monitor token usage with/without context reset
+
+**Risk Assessment**:
+- **Low risk**: Defensive coding, doesn't change core logic
+- **High value**: Enables true autonomous operation
+- **Quick win**: 4-6 hours implementation
+
+**Next Steps After Completion**:
+1. Monitor daemon stability in production
+2. Track crash rates and causes
+3. Optimize compact interval based on token usage
+4. Consider implementing isolated sessions
 
 ---
 
