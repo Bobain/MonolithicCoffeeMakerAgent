@@ -40,28 +40,25 @@ def check_claude_session():
     """Check if running inside a Claude Code session and warn user.
 
     Returns:
-        bool: True if likely running inside Claude session
+        bool: True if running inside Claude Code terminal session
     """
     import os
-    import subprocess
 
-    # Check for Claude-specific environment variables
+    # Check for ACTUAL Claude Code environment variables
+    # These are set when running inside a Claude Code terminal session
     claude_env_vars = [
-        "CLAUDE_SESSION_ID",
-        "CLAUDE_CLI_SESSION",
+        "CLAUDECODE",  # Set to "1" when inside Claude Code
+        "CLAUDE_CODE_ENTRYPOINT",  # Set to "cli" when using Claude Code CLI
     ]
 
     for var in claude_env_vars:
         if os.environ.get(var):
             return True
 
-    # Check if 'claude' process is running
-    try:
-        result = subprocess.run(["pgrep", "-f", "claude"], capture_output=True, text=True)
-        if result.returncode == 0:
-            return True
-    except:
-        pass
+    # NOTE: We do NOT check for running processes with pgrep
+    # because that's too broad - it matches any Claude process anywhere,
+    # not just the terminal session we're running in.
+    # Only environment variables reliably indicate we're INSIDE a session.
 
     return False
 
