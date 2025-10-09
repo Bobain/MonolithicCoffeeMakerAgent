@@ -10,6 +10,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langfuse import observe
+from pydantic import ConfigDict
 
 from coffee_maker.langchain_observe.llm import get_llm
 
@@ -59,10 +60,7 @@ def _build_stub_llm(provider: str, model: Optional[str], error: Exception) -> An
         description: str
         model_name: str = model or "stub"
 
-        class Config:
-            """Pydantic configuration."""
-
-            arbitrary_types_allowed = True
+        model_config = ConfigDict(arbitrary_types_allowed=True)
 
         def _generate(
             self,

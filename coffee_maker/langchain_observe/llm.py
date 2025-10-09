@@ -1,17 +1,10 @@
-"""Helpers for wiring LangChain chat models with Langfuse instrumentation."""
+"""Helpers for wiring LangChain chat models with Langfuse instrumentation.
 
-# TODO : add handling of quotas :
-# 2025-10-06 12:23:28 - langchain_google_genai.chat_models - WARNING - Retrying langchain_google_genai.chat_models._chat_with_retry.<locals>._chat_with_retry in 16.0 seconds as it raised ResourceExhausted: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.
-# * Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 2
-# Please retry in 31.940768649s. [violations {
-#   quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_requests"
-#   quota_id: "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"
-#   quota_dimensions {
-#     key: "model"
-#     value: "gemini-2.5-pro"
-#   }
-#   quota_dimensions {
-#     key: "location"
+Note: Quota exceeded errors (ResourceExhausted) are now handled in AutoPickerLLM
+with automatic fallback to alternative models. See auto_picker_llm_refactored.py
+and response_parser.py for implementation (Sprint 4, commit 026807d).
+"""
+
 import datetime
 import logging
 import os

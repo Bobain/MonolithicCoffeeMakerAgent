@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from langchain_core.language_models import BaseLLM, BaseChatModel
 from langchain_core.outputs import LLMResult
+from pydantic import ConfigDict
 
 from coffee_maker.langchain_observe.strategies.scheduling import SchedulingStrategy
 
@@ -42,10 +43,7 @@ class ScheduledLLM(BaseLLM):
     max_wait_seconds: float = 300.0  # Max wait before giving up
     stats: Dict[str, int] = {}  # Usage statistics
 
-    class Config:
-        """Pydantic config."""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def __init__(
         self,
@@ -338,10 +336,7 @@ class ScheduledChatModel(BaseChatModel):
     max_wait_seconds: float = 300.0
     stats: Dict[str, int] = {}
 
-    class Config:
-        """Pydantic config."""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def __init__(
         self,

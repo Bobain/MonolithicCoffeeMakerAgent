@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.language_models import BaseLLM
 from langchain_core.outputs import Generation, LLMResult
+from pydantic import ConfigDict
 
 from coffee_maker.langchain_observe.langfuse_logger import LangfuseLogger
 from coffee_maker.langchain_observe.response_parser import (
@@ -35,11 +36,7 @@ class AutoPickerLLMRefactored(BaseLLM):
     stats: Dict[str, int] = {}
     _langfuse_logger: Optional[LangfuseLogger] = None  # Lazy-loaded logger
 
-    class Config:
-        """Pydantic config."""
-
-        arbitrary_types_allowed = True
-        underscore_attrs_are_private = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def __init__(
         self,
