@@ -8221,11 +8221,24 @@ subprocess.run(
 )
 ```
 
-**Status**: ⏳ Testing
+**Status**: ❌ **FAILED** - stdin=DEVNULL did not resolve the issue
 
-**Fallback Solution - PRIORITY 2.8: Use Anthropic SDK Directly**:
+**Root Cause Discovered**:
+The fundamental problem is that you **cannot call `claude` CLI from within a Claude Code session**. When the daemon runs `claude -p` as a subprocess from within Claude Code:
+1. Claude CLI detects it's already running in a Claude session
+2. Shows interactive warning: "⚠️ THIS IS A..."
+3. Waits for user input that will never come (subprocess has stdin=DEVNULL)
+4. Process hangs indefinitely
 
-If the CLI approach continues to be problematic, we should replace the Claude CLI subprocess calls with direct Anthropic API calls using the Python SDK. This would be:
+**This is a design limitation, not a configuration issue.**
+
+---
+
+#### ✅ **FINAL SOLUTION: Use Anthropic SDK Directly** (Implemented: 2025-10-09 19:30)
+
+**Status**: ✅ **COMPLETE** (Commits: e997176, 40a4bc7)
+
+After multiple failed attempts to make Claude CLI work via subprocess, we pivoted to using the Anthropic Python SDK directly. This approach:
 
 1. **More Reliable**: No subprocess/TTY/interactive prompt issues
 2. **More Efficient**: Direct API calls, no CLI overhead
@@ -8271,19 +8284,121 @@ class ClaudeAPI:
 - ✅ Better error handling
 - ✅ Token usage tracking built-in
 
-**Migration**:
-```python
-# daemon.py - minimal change required
-# Before:
-self.claude = ClaudeCLI()
-result = self.claude.execute_prompt(prompt)
+**Implementation Details**:
 
-# After:
-self.claude = ClaudeAPI()  # Drop-in replacement
-result = self.claude.execute_prompt(prompt)
+Commit 40a4bc7 added:
+- `coffee_maker/autonomous/claude_api_interface.py` - New ClaudeAPI class
+- Updated `coffee_maker/autonomous/daemon.py` - Replaced ClaudeCLI with ClaudeAPI
+
+The migration was seamless with minimal code changes:
+```python
+# daemon.py changes:
+# OLD:
+from coffee_maker.autonomous.claude_cli_interface import ClaudeCLI
+self.claude = ClaudeCLI()
+
+# NEW:
+from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
+self.claude = ClaudeAPI(model=self.model)
 ```
 
-**Status**: 📝 Planned (if stdin=DEVNULL fix doesn't work)
+**Testing Results**:
+- ✅ No subprocess issues
+- ✅ No interactive prompt issues
+- ✅ Works from within Claude Code session
+- ✅ Token usage tracking built-in
+- ✅ Better error handling
+- ✅ More reliable and maintainable
+
+**Key Learning**: When a tool/CLI has persistent subprocess issues, consider using the underlying SDK/API directly rather than trying to work around the limitations.
+
+---
+
+#### 📚 **DEBUGGING JOURNEY & RE-PRIORITIZATION** (2025-10-09 19:00-19:45)
+
+**The Problem We Hit**:
+We encountered a persistent blocker where the autonomous daemon couldn't make progress on ANY priorities because Claude CLI subprocess calls were hanging indefinitely. Despite multiple fix attempts, the daemon remained stuck.
+
+**Debugging Timeline** (45 minutes of iterative problem-solving):
+
+1. **First Attempt** (Commit: 421e982):
+   - Added `--dangerously-skip-permissions` flag
+   - **Result**: Still hanging with "⚠️ THIS IS A..." warning
+
+2. **Second Attempt** (Commit: e997176):
+   - Added `stdin=subprocess.DEVNULL` to prevent input
+   - Added `CI=true` environment variable
+   - Added `DEBIAN_FRONTEND=noninteractive`
+   - **Result**: Still hanging - env vars don't stop Claude CLI's session detection
+
+3. **Root Cause Discovery**:
+   - Realized we're calling `claude` from WITHIN a Claude Code session
+   - Claude CLI detects nested session and shows interactive warning
+   - No flags or env vars can bypass this fundamental limitation
+   - **This is a design constraint, not a bug**
+
+**Decision Point - Hitting the Wall**:
+
+At this point, we had two choices:
+1. Keep trying to hack around Claude CLI subprocess issues (diminishing returns)
+2. Pivot to a fundamentally different approach (Anthropic SDK)
+
+**Why We Pivoted**:
+- 3 fix attempts, all failed for fundamental architectural reasons
+- Claude CLI subprocess approach is inherently fragile:
+  - Subprocess management complexity
+  - TTY detection issues
+  - Permission dialog handling
+  - Nested session detection
+  - Cannot work from within Claude Code
+- Anthropic SDK is the "right" solution:
+  - Direct API calls
+  - No subprocess issues
+  - Better control and observability
+  - More maintainable long-term
+
+**Re-Prioritization Decision**:
+
+Instead of continuing to debug the CLI approach, we immediately:
+1. Documented all attempts in ROADMAP (learning from failures)
+2. Designed the Anthropic SDK solution
+3. Implemented ClaudeAPI class (40a4bc7)
+4. Migrated daemon to use it
+5. Tested and verified
+
+**Time Comparison**:
+- Failed CLI debugging: 45 minutes (3 attempts, no progress)
+- Anthropic SDK implementation: 30 minutes (clean solution, working)
+
+**Key Insights**:
+
+1. **Know When to Pivot**: After 3 failed attempts addressing the same root cause from different angles, it's time to consider a fundamentally different approach
+
+2. **Don't Fight the Tool**: Claude CLI is designed for interactive use, not subprocess automation from within Claude Code. Fighting this design is counterproductive
+
+3. **Use the Right Tool**: When a CLI doesn't work well programmatically, use the underlying API/SDK directly
+
+4. **Document Failures**: Every failed attempt provided valuable debugging knowledge that informed the final solution
+
+5. **Timebox Debugging**: Set a limit (3 attempts, 1 hour, etc.) before reconsidering your approach
+
+**What We Learned About Debugging**:
+
+- Test small, isolated examples first (e.g., `subprocess.run(['claude', '--version'])`)
+- Check if the tool is designed for your use case (interactive vs. programmatic)
+- Look for official SDKs before wrapping CLIs
+- Consider the execution environment (calling from within the tool itself)
+- Document what you tried so you don't repeat failed approaches
+
+**Impact on Project Priorities**:
+
+This experience reinforced the importance of our ROADMAP approach:
+- Clear priorities prevent getting stuck in rabbit holes
+- Documentation of blockers helps future debugging
+- Flexibility to pivot when hitting walls
+- Focus on outcomes, not specific implementations
+
+The daemon is now unblocked and can continue implementing the remaining priorities with a more reliable foundation.
 
 ---
 
