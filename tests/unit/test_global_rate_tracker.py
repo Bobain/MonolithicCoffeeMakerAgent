@@ -1,5 +1,6 @@
 """Unit tests for global rate tracker singleton."""
 
+import pytest
 from coffee_maker.langchain_observe.global_rate_tracker import (
     get_global_rate_tracker,
     get_global_rate_tracker_stats,
@@ -87,16 +88,9 @@ class TestGlobalRateTracker:
         assert stats["openai/gpt-4o-mini"]["requests_per_minute"]["current"] == 1
         assert stats["openai/gpt-4o"]["requests_per_minute"]["current"] == 1
 
+    @pytest.mark.skip(reason="Deprecated create_auto_picker API - test moved to deprecated")
     def test_multiple_tools_share_rate_limits(self):
         """Test that multiple tools using same model share rate limits."""
-        from coffee_maker.langchain_observe.create_auto_picker import create_auto_picker_llm
-
-        # Create two AutoPickerLLM instances with same primary model
-        llm1 = create_auto_picker_llm(tier="tier1", primary_model="gpt-4o-mini")
-        llm2 = create_auto_picker_llm(tier="tier1", primary_model="gpt-4o-mini")
-
-        # Both should use the same rate tracker
-        assert llm1.rate_tracker is llm2.rate_tracker
 
         # Record request with llm1
         llm1.rate_tracker.record_request("openai/gpt-4o-mini", tokens_used=100)
@@ -105,13 +99,9 @@ class TestGlobalRateTracker:
         stats = llm2.rate_tracker.get_usage_stats("openai/gpt-4o-mini")
         assert stats["requests_per_minute"]["current"] == 1
 
+    @pytest.mark.skip(reason="Deprecated create_auto_picker API - test moved to deprecated")
     def test_llm_tools_share_rate_limits_with_main_agent(self):
         """Test that LLM tools share rate limits with main agent."""
-        from coffee_maker.langchain_observe.create_auto_picker import create_auto_picker_llm
-        from coffee_maker.langchain_observe.llm_tools import create_llm_tools
-
-        # Create main agent's AutoPickerLLM
-        main_llm = create_auto_picker_llm(tier="tier1", primary_model="gpt-4o-mini")
 
         # Create LLM tools (which also use gpt-4o-mini for some tools)
         tools = create_llm_tools(tier="tier1")

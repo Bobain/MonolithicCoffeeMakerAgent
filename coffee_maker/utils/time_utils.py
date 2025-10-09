@@ -208,9 +208,11 @@ def bucket_time(
         datetime(2025, 1, 9, 15, 0, 0)
     """
     # Round down to bucket boundary
-    hours_since_epoch = int(dt.timestamp() / 3600)
+    # Use UTC epoch to avoid timezone issues
+    epoch = datetime(1970, 1, 1)
+    hours_since_epoch = int((dt - epoch).total_seconds() / 3600)
     bucket_hours = (hours_since_epoch // bucket_size_hours) * bucket_size_hours
-    return datetime.utcfromtimestamp(bucket_hours * 3600)
+    return epoch + timedelta(hours=bucket_hours)
 
 
 def is_recent(
@@ -239,7 +241,8 @@ def is_recent(
     """
     now = reference_time or datetime.utcnow()
     age_seconds = (now - dt).total_seconds()
-    return age_seconds <= threshold_seconds
+    # Only consider past datetimes as recent (age >= 0)
+    return 0 <= age_seconds <= threshold_seconds
 
 
 def time_ago(
