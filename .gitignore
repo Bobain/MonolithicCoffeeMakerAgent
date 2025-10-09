@@ -133,3 +133,7 @@ Thumbs.db
 
 # diff files
 *.diff.*
+
+# SQLite WAL files
+*.db-wal
+*.db-shm

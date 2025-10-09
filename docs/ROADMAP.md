@@ -2,9 +2,25 @@
 
 **Last Updated**: 2025-10-09 🚨 **PRIORITIES REORGANIZED**
 **Current Branch**: `feature/rateLimits-fallbacksModels-specializedModels`
-**Status**: Refactoring phase completed ✅
+**Status**: Refactoring phase completed ✅ | PRIORITY 2 MVP Phase 1 🔄 IN PROGRESS
 **New Priority**: 🤖 **DAEMON FIRST** - Build autonomous daemon immediately, let it implement everything else!
-**Vision**: Claude implements the roadmap autonomously while you plan!
+
+## 🎯 Long-Term Vision
+
+**Human-AI Team Collaboration**: In later phases, `code_developer` and `project-manager` will interact with the user just like a very-focused developer, their project manager, and the product's end user would collaborate in a professional team setting:
+
+- 🤖 **code_developer (AI Developer)**: Autonomous coder who implements features, asks clarifying questions, provides progress updates, and demonstrates completed work
+- 👔 **project-manager (AI PM)**: Facilitates communication, manages roadmap, prioritizes work, asks for user decisions, and keeps everyone aligned
+- 👤 **User (Product Owner)**: Provides requirements, makes decisions, approves features, and gives feedback
+
+**Professional Team Dynamics**:
+- Developer asks PM: "Should I use Option A or B for this implementation?"
+- PM asks User: "The developer needs approval for dependency X. Approve?"
+- Developer shows User: "Feature complete! Here's a demo: [link]"
+- User provides feedback: "Great! But can you adjust the color scheme?"
+- PM updates roadmap: "Marking Feature Y as ✅ COMPLETED"
+
+This creates a **natural, professional workflow** where AI agents collaborate just like human teams, but with the efficiency and consistency of automation.
 
 ---
 
@@ -2820,9 +2836,26 @@ This is a **design-only priority**. Implementation happens in:
 
 **Estimated Duration**: 2-3 days
 **Impact**: ⭐⭐⭐⭐⭐ (Critical foundation)
-**Status**: 📝 Planned
+**Status**: 🔄 **MVP PHASE 1 IN PROGRESS** (Basic CLI + Notification DB implemented)
+**Started**: 2025-10-09
+**Current Phase**: MVP Phase 1 (Database guardrails + basic commands)
 **Dependency**: None (must be built BEFORE autonomous daemon)
 **Why First**: Single source of truth for ROADMAP.md - simplifies daemon implementation
+
+**MVP Phase 1 Progress** ✅ **60% COMPLETE**:
+- ✅ Created `coffee_maker/cli/` directory structure
+- ✅ Implemented `notifications.py` (NotificationDB with WAL mode, retry logic)
+- ✅ Implemented `roadmap_cli.py` (project-manager CLI)
+- ✅ Added CLI entry point to pyproject.toml (`project-manager` command)
+- ✅ Implemented basic commands:
+  * `view` - View roadmap (full or specific priority)
+  * `notifications` - List pending notifications
+  * `respond` - Respond to daemon questions
+  * `status` - Daemon status (placeholder for MVP)
+  * `sync` - Sync with daemon environment (placeholder for MVP)
+- ✅ Database guardrails: WAL mode, 30s timeout, @with_retry decorator
+- ⏳ Testing in real workflow (next step)
+- ⏳ Documentation (next step)
 
 #### Project: AI-Powered Project Manager CLI (coffee-roadmap)
 

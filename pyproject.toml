@@ -33,6 +33,9 @@ pytest-html = "^4.1.1"
 pdoc = "^15.0.4"
 
 
+[tool.poetry.scripts]
+project-manager = "coffee_maker.cli.roadmap_cli:main"
+
 [tool.poetry.urls]
 "Homepage" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"
 "Repository" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"
