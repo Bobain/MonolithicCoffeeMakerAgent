@@ -2,7 +2,7 @@
 
 **Last Updated**: 2025-10-09 🚨 **PRIORITIES REORGANIZED** | Critical daemon fixes applied ✅
 **Current Branch**: `feature/priority-1.5`
-**Status**: Refactoring phase completed ✅ | PRIORITY 2 MVP Phase 1 (80%) | PRIORITY 3 MVP (90% - critical fixes applied)
+**Status**: Refactoring phase completed ✅ | PRIORITY 2 MVP Phase 1 (85% - new tests added) | PRIORITY 3 MVP (90% - critical fixes applied)
 **Quick-Start**: ⚡ Daemon runnable now via `python run_daemon.py` (see PRIORITY 3 for details) 🚨 **Run from separate terminal**
 **New Priority**: 🤖 **DAEMON FIRST** - Build autonomous daemon immediately, let it implement everything else!
 
@@ -3760,7 +3760,7 @@ This is a **design-only priority**. Implementation happens in:
 **Dependency**: None (must be built BEFORE autonomous daemon)
 **Why First**: Single source of truth for ROADMAP.md - simplifies daemon implementation
 
-**MVP Phase 1 Progress** ✅ **80% COMPLETE**:
+**MVP Phase 1 Progress** ✅ **85% COMPLETE**:
 - ✅ Created `coffee_maker/cli/` directory structure
 - ✅ Implemented `notifications.py` (NotificationDB with WAL mode, retry logic, 435 lines)
 - ✅ Implemented `roadmap_cli.py` (project-manager CLI, 366 lines)
@@ -3772,12 +3772,15 @@ This is a **design-only priority**. Implementation happens in:
   * `status` - Daemon status (placeholder for MVP)
   * `sync` - Sync with daemon environment (placeholder for MVP)
 - ✅ Database guardrails: WAL mode, 30s timeout, @with_retry decorator
-- ✅ Unit tests: 11/11 passing (test_notifications.py, 236 lines)
+- ✅ Unit tests: 24/24 passing
+  * `test_notifications.py` (11 tests, 236 lines) - NotificationDB tests
+  * `test_roadmap_cli.py` (13 tests, 350 lines) - CLI command tests ⚡ **NEW**
 - ⏳ Documentation (final step for MVP Phase 1)
 
 **Commits**:
 - Phase 1 Implementation: `18699eb`
-- Phase 1 Tests: (next commit)
+- Phase 1 Tests (notifications): `b7ff182`
+- Phase 1 Tests (CLI commands): `dd58e3e` ⚡ **NEW**
 
 #### Project: AI-Powered Project Manager CLI (coffee-roadmap)
 
@@ -9059,13 +9062,15 @@ This practice is **non-negotiable** and is an integral part of each project. Con
 - ✅ 0 duplicates in exports
 - ✅ Native sqlite3 implementation (SQLAlchemy removed)
 
-### Roadmap Management CLI (Priority 2) ⚡ NEW 🎯 80% COMPLETE
+### Roadmap Management CLI (Priority 2) ⚡ NEW 🎯 85% COMPLETE
 - ✅ NotificationDB with SQLite + WAL mode
 - ✅ Multi-process safe with retry logic (@with_retry decorator)
 - ✅ `project-manager` CLI with basic commands (view, notifications, respond, status, sync)
 - ✅ Notification system for daemon ↔ user communication
 - ✅ Support for questions, info, warnings, errors, completions
-- ✅ Unit tests: 11/11 passing
+- ✅ Unit tests: 24/24 passing (11 NotificationDB + 13 CLI command tests) ⚡ **UPDATED**
+  - ✅ test_notifications.py (11 tests) - NotificationDB coverage
+  - ✅ test_roadmap_cli.py (13 tests) - CLI command coverage ⚡ **NEW**
 - ⏳ Claude AI integration for interactive roadmap chat (Phase 2)
 
 ### Basic Autonomous Development Daemon (Priority 3) ⚡ NEW 🤖 90% COMPLETE
