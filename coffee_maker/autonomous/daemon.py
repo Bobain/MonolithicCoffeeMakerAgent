@@ -3,7 +3,7 @@
 This module implements the core autonomous daemon that:
 1. Reads ROADMAP.md continuously
 2. Finds next planned priority
-3. Executes Claude CLI to implement it
+3. Executes Claude API to implement it
 4. Commits, pushes, creates PR
 5. Updates ROADMAP status
 6. Repeats until all priorities complete
@@ -23,7 +23,7 @@ import logging
 import time
 from pathlib import Path
 
-from coffee_maker.autonomous.claude_cli_interface import ClaudeCLI
+from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
 from coffee_maker.autonomous.git_manager import GitManager
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 from coffee_maker.cli.notifications import NOTIF_PRIORITY_HIGH, NOTIF_TYPE_INFO, NotificationDB
@@ -35,11 +35,11 @@ class DevDaemon:
     """Autonomous development daemon (minimal MVP).
 
     This daemon continuously reads ROADMAP.md and autonomously implements
-    features by invoking Claude CLI. It follows a simple loop:
+    features by invoking Claude API. It follows a simple loop:
 
     1. Parse ROADMAP.md for next planned priority
     2. Create feature branch
-    3. Execute Claude CLI with implementation prompt
+    3. Execute Claude API with implementation prompt
     4. Commit changes with proper message
     5. Push and create PR
     6. Update ROADMAP status (via notification)
@@ -86,7 +86,7 @@ class DevDaemon:
         # Initialize components
         self.parser = RoadmapParser(str(self.roadmap_path))
         self.git = GitManager()
-        self.claude = ClaudeCLI()
+        self.claude = ClaudeAPI(model=self.model)
         self.notifications = NotificationDB()
 
         # State
@@ -183,18 +183,18 @@ class DevDaemon:
             True if ready to run
 
         Checks:
-            - Claude CLI available
+            - Claude API available
             - Git repository
             - ROADMAP.md exists
         """
         logger.info("Checking prerequisites...")
 
-        # Check Claude CLI
+        # Check Claude API
         if not self.claude.check_available():
-            logger.error("❌ Claude CLI not available")
+            logger.error("❌ Claude API not available")
             return False
 
-        logger.info("✅ Claude CLI available")
+        logger.info("✅ Claude API available")
 
         # Check Git
         if not self.git.has_remote():
@@ -320,20 +320,21 @@ The daemon will skip this priority in future iterations.
         # Build prompt for Claude
         prompt = self._build_implementation_prompt(priority)
 
-        logger.info("Executing Claude CLI with implementation prompt...")
+        logger.info("Executing Claude API with implementation prompt...")
 
-        # Execute Claude CLI
+        # Execute Claude API
         result = self.claude.execute_prompt(prompt, timeout=3600)  # 1 hour timeout
 
         if not result.success:
-            logger.error(f"Claude CLI failed: {result.stderr}")
+            logger.error(f"Claude API failed: {result.error}")
             return False
 
-        logger.info("✅ Claude CLI execution complete")
+        logger.info("✅ Claude API execution complete")
+        logger.info(f"📊 Token usage: {result.usage['input_tokens']} in, {result.usage['output_tokens']} out")
 
         # Check if any files were changed (Fix for infinite loop issue)
         if self.git.is_clean():
-            logger.warning("⚠️  Claude CLI completed but no files changed")
+            logger.warning("⚠️  Claude API completed but no files changed")
             logger.warning("Possible reasons:")
             logger.warning("  1. Priority already implemented")
             logger.warning("  2. Task too vague for autonomous implementation")
@@ -343,7 +344,7 @@ The daemon will skip this priority in future iterations.
             self.notifications.create_notification(
                 type=NOTIF_TYPE_INFO,
                 title=f"{priority_name}: Needs Manual Review",
-                message=f"""Claude CLI completed successfully but made no file changes.
+                message=f"""Claude API completed successfully but made no file changes.
 
 Possible actions:
 1. Review priority description - is it concrete enough?
@@ -405,7 +406,7 @@ Status: Requires human decision
         return True
 
     def _build_implementation_prompt(self, priority: dict) -> str:
-        """Build Claude CLI prompt for implementation.
+        """Build Claude API prompt for implementation.
 
         Args:
             priority: Priority dictionary
