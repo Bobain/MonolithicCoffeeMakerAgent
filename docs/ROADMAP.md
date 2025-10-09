@@ -3876,6 +3876,80 @@ Do this:
 
 This principle ensures project_manager acts as a **strategic PM**, not a simple command executor.
 
+#### 🔄 Continuous Technical Planning Work
+
+**CRITICAL CONTINUOUS OPERATION**:
+
+The `project_manager` **MUST** continuously work on deep technical planning for upcoming priorities:
+
+1. **Always Documenting**: Continuously analyze and document technical implementation details for future priorities
+2. **Technical Deep Dives**: For each planned priority without detailed technical specs, research and document:
+   - Architecture decisions and trade-offs
+   - Implementation patterns and approaches
+   - Technology stack requirements
+   - API designs and interfaces
+   - Database schemas
+   - Integration points
+   - Testing strategies
+   - Deployment considerations
+
+3. **Proactive Research**: Before code_developer starts a priority, ensure complete technical documentation exists
+4. **Living Documentation**: Continuously update technical specs as new insights emerge
+5. **Risk Analysis**: Document technical risks, blockers, and mitigation strategies
+
+**Continuous Work Pattern**:
+```
+BACKGROUND PROCESS (always running):
+  ├─ Scan ROADMAP for priorities with Status: 📝 Planned
+  ├─ Identify priorities lacking technical implementation details
+  ├─ Research and document technical architecture
+  ├─ Create detailed implementation specs
+  ├─ Document API designs, schemas, patterns
+  ├─ Identify dependencies and integration points
+  ├─ Write technical decision records (ADRs)
+  └─ REPEAT for next priority without technical details
+```
+
+**Documentation Deliverables for Each Priority**:
+- Architecture Decision Records (ADRs)
+- API specifications (endpoints, schemas, authentication)
+- Database schema designs with migrations
+- Component interaction diagrams
+- Technology evaluation matrices
+- Implementation step-by-step guides
+- Testing approach and test cases
+- Deployment runbooks
+- Performance benchmarks and targets
+- Security considerations and threat models
+
+**Example Workflow**:
+```
+PRIORITY 7 Status: 📝 Planned (no technical details)
+  ↓
+project_manager researches:
+  - Reviews similar implementations
+  - Evaluates technology options
+  - Designs architecture
+  - Documents APIs
+  - Creates schemas
+  ↓
+Creates: docs/PRIORITY_7_TECHNICAL_SPEC.md (800+ lines)
+  - Architecture overview
+  - API endpoints with examples
+  - Database schema with indexes
+  - Component diagrams
+  - Integration patterns
+  - Test strategy
+  ↓
+PRIORITY 7 now has complete technical foundation
+  ↓
+code_developer can implement immediately without research
+```
+
+**Benefit**: When code_developer reaches a priority, **all technical decisions are already made** and documented. The developer can start implementing immediately without research or architectural decisions.
+
+**Priority**: This is continuous background work, runs in parallel with user interactions.
+
 ---
 
 #### 🎯 MVP Approach: Start Simple, Scale Smart
