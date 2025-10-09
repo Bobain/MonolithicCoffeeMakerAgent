@@ -1,9 +1,11 @@
 import logging
 import os
-from typing import Optional
+from typing import Callable, Optional, Tuple
 
 from github import Auth, Github, GithubException
 from langfuse import observe
+
+from coffee_maker.langchain_observe.retry_utils import with_conditional_retry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -53,6 +55,50 @@ def _clear_pending_review(pr, login: str) -> bool:
     return False
 
 
+def _create_pending_review_retry_condition(
+    pr, current_user_login: str
+) -> Callable[[Exception], Tuple[bool, Optional[Callable]]]:
+    """Create a retry condition checker for pending review conflicts.
+
+    Args:
+        pr: GitHub PR object
+        current_user_login: Current user's GitHub login
+
+    Returns:
+        Function that checks if error is pending review conflict and returns cleanup function
+    """
+
+    def check_pending_review_conflict(error: Exception) -> Tuple[bool, Optional[Callable]]:
+        """Check if error is a pending review conflict and return cleanup function.
+
+        Args:
+            error: Exception that occurred
+
+        Returns:
+            Tuple of (should_retry, cleanup_function)
+        """
+        if not isinstance(error, GithubException):
+            return False, None
+
+        if error.status != 422:
+            return False, None
+
+        if not _is_pending_review_conflict(error):
+            return False, None
+
+        LOGGER.info("Detected pending review conflict. Will cleanup and retry.")
+
+        # Return cleanup function that clears pending review
+        def cleanup():
+            cleared = _clear_pending_review(pr, current_user_login)
+            if not cleared:
+                LOGGER.warning("Failed to clear pending review during cleanup")
+
+        return True, cleanup
+
+    return check_pending_review_conflict
+
+
 @observe
 def post_suggestion_in_pr_review(
     repo_full_name: str = None,
@@ -66,6 +112,8 @@ def post_suggestion_in_pr_review(
 ) -> str:
     """
     Post a code suggestion as a review comment on a GitHub pull request.
+
+    Automatically handles pending review conflicts with retry logic.
 
     Args (provide as JSON):
         repo_full_name (str): Full repository name, e.g., 'owner/repo'
@@ -95,11 +143,13 @@ def post_suggestion_in_pr_review(
         - Line numbers are 1-indexed (first line is 1)
         - start_line and end_line can be the same for single-line suggestions
         - suggestion_body should NOT include markdown code fences
+        - Automatically retries if pending review conflict detected
     """
 
     try:
         LOGGER.info(
-            f"Attempting to post suggestion to repo: {repo_full_name}, PR: {pr_number}, file: {file_path}, lines: {start_line}-{end_line}"
+            f"Attempting to post suggestion to repo: {repo_full_name}, PR: {pr_number}, "
+            f"file: {file_path}, lines: {start_line}-{end_line}"
         )
         current_user_login = g.get_user().login
 
@@ -107,24 +157,26 @@ def post_suggestion_in_pr_review(
             repo = g.get_repo(repo_full_name)
         except Exception as repo_error:
             LOGGER.error(f"Failed to access repository '{repo_full_name}': {repo_error}")
-            LOGGER.error(f"Make sure the repository name is in format 'owner/repo' and exists")
+            LOGGER.error("Make sure the repository name is in format 'owner/repo' and exists")
             raise ValueError(
-                f"Repository '{repo_full_name}' not found. Check the repository name format (should be 'owner/repo'). Error: {repo_error}"
-            )
-        pr = repo.get_pull(pr_number)
+                f"Repository '{repo_full_name}' not found. "
+                f"Check the repository name format (should be 'owner/repo'). Error: {repo_error}"
+            ) from repo_error
 
+        pr = repo.get_pull(pr_number)
         latest_commit_sha = pr.head.sha
 
         formatted_suggestion = f"```suggestion\n{suggestion_body}\n```"
 
-        # Use the reliable SHA string for the 'commit'.
-        LOGGER.info("PR review : posting a review commit suggestion")
+        # Validate file path
+        LOGGER.info("PR review: validating file path")
         valid_paths = {pull_file.filename for pull_file in pr.get_files()}
         if file_path not in valid_paths:
             raise ValueError(
-                f"File path '{file_path}' not found in PR #{pr_number}. Available paths: {sorted(valid_paths)}"
+                f"File path '{file_path}' not found in PR #{pr_number}. " f"Available paths: {sorted(valid_paths)}"
             )
 
+        # Prepare comment arguments
         comment_kwargs = {
             "body": f"{comment_text}\n{formatted_suggestion}",
             "commit": latest_commit_sha,
@@ -141,23 +193,29 @@ def post_suggestion_in_pr_review(
                 }
             )
 
-        try:
+        # Create retry condition for pending review conflicts
+        retry_condition = _create_pending_review_retry_condition(pr, current_user_login)
+
+        # Post comment with retry on pending review conflict
+        @with_conditional_retry(
+            condition_check=retry_condition,
+            max_attempts=2,  # Original + 1 retry after cleanup
+            backoff_base=1.0,  # No need for long backoff after cleanup
+        )
+        def _post_review_comment():
+            """Inner function to post review comment with retry logic."""
+            LOGGER.info("PR review: posting review commit suggestion")
             pr.create_review_comment(**comment_kwargs)
-        except GithubException as github_exc:
-            if github_exc.status == 422 and _is_pending_review_conflict(github_exc):
-                LOGGER.info("Encountered pending review conflict. Attempting cleanup and retry.")
-                if _clear_pending_review(pr, current_user_login):
-                    pr.create_review_comment(**comment_kwargs)
-                else:
-                    raise
-            else:
-                raise
-        LOGGER.info("PR review : Successfully posted a review commit suggestion")
+
+        # Execute with retry
+        _post_review_comment()
+
+        LOGGER.info("PR review: Successfully posted review commit suggestion")
         return f"Successfully posted suggestion for {file_path} in PR #{pr_number}"
 
     except Exception as e:
-        LOGGER.info("PR review : Failed to post a review commit suggestion")
-        LOGGER.critical(e, exc_info=True)
+        LOGGER.error("PR review: Failed to post review commit suggestion")
+        LOGGER.error(f"Error details: {type(e).__name__}: {e}", exc_info=True)
         raise
 
 
