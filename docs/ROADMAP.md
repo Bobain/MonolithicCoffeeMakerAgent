@@ -3,6 +3,7 @@
 **Last Updated**: 2025-10-09 🚨 **PRIORITIES REORGANIZED**
 **Current Branch**: `feature/rateLimits-fallbacksModels-specializedModels`
 **Status**: Refactoring phase completed ✅ | PRIORITY 2 MVP Phase 1 🔄 IN PROGRESS
+**Quick-Start**: ⚡ Daemon runnable now via `python run_daemon.py` (see PRIORITY 3 for details)
 **New Priority**: 🤖 **DAEMON FIRST** - Build autonomous daemon immediately, let it implement everything else!
 
 ## 🎯 Long-Term Vision
@@ -895,6 +896,23 @@ After implementing PRIORITY 1 & 2, we have:
 - ❌ Can't distribute to others
 
 **This priority makes the binaries installable and distributable!**
+
+### ⚡ Quick-Start Option Available Now
+
+**While waiting for PRIORITY 3**, you can run the daemon using the temporary convenience script:
+
+```bash
+# Interactive mode (asks for approval)
+python run_daemon.py
+
+# Autonomous mode (auto-approve)
+python run_daemon.py --auto-approve
+
+# See all options
+python run_daemon.py --help
+```
+
+This script provides immediate access to the code-developer functionality without waiting for the full PyPI package setup.
 
 ---
 

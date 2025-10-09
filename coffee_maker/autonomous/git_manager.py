@@ -90,8 +90,31 @@ class GitManager:
         logger.info(f"Current branch: {branch}")
         return branch
 
+    def branch_exists(self, branch_name: str) -> bool:
+        """Check if a branch exists locally.
+
+        Args:
+            branch_name: Branch name to check
+
+        Returns:
+            True if branch exists
+
+        Example:
+            >>> git = GitManager()
+            >>> if git.branch_exists("feature/priority-3"):
+            ...     print("Branch already exists")
+        """
+        try:
+            result = self._run_git("branch", "--list", branch_name, check=False)
+            exists = bool(result.stdout.strip())
+            logger.debug(f"Branch {branch_name} exists: {exists}")
+            return exists
+
+        except subprocess.CalledProcessError:
+            return False
+
     def create_branch(self, branch_name: str, from_branch: Optional[str] = None) -> bool:
-        """Create and checkout a new branch.
+        """Create and checkout a new branch, or checkout if it already exists.
 
         Args:
             branch_name: Name for new branch
@@ -105,6 +128,14 @@ class GitManager:
             >>> git.create_branch("feature/priority-3", from_branch="main")
         """
         try:
+            # Check if branch already exists
+            if self.branch_exists(branch_name):
+                logger.info(f"Branch {branch_name} already exists, checking it out")
+                self._run_git("checkout", branch_name)
+                logger.info(f"Checked out existing branch: {branch_name}")
+                return True
+
+            # Create new branch
             if from_branch:
                 self._run_git("checkout", from_branch)
 
