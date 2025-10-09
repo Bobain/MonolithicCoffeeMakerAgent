@@ -26,7 +26,8 @@ Handle transient failures:
 
 ### Context Strategies
 Manage context length limits:
-- `ContextLengthFallback`: Automatic fallback to larger context models
+- `LargeContextFallbackStrategy`: Automatic fallback to larger context models
+- `NoContextCheckStrategy`: Disable context checking
 - `ContextTruncation`: Smart truncation (planned)
 
 ## Example Usage
@@ -75,7 +76,8 @@ from coffee_maker.langchain_observe.strategies.metrics import (
 )
 from coffee_maker.langchain_observe.strategies.context import (
     ContextStrategy,
-    ContextLengthFallback,
+    LargeContextFallbackStrategy,
+    NoContextCheckStrategy,
 )
 
 __all__ = [
@@ -98,5 +100,6 @@ __all__ = [
     "create_metrics_strategy",
     # Context
     "ContextStrategy",
-    "ContextLengthFallback",
+    "LargeContextFallbackStrategy",
+    "NoContextCheckStrategy",
 ]
