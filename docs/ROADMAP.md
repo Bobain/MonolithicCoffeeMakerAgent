@@ -466,7 +466,27 @@ pip-audit
 **Sprint 3 Commit**: `8431b96`
 **Date**: 2025-10-09
 
-**Combined Impact (Sprint 1 + 2 + 3)**:
+**Sprint 4 Results** ✅ **COMPLETED**:
+- ✅ **Quota/ResourceExhausted error handling** implemented
+- ✅ **QuotaExceededError exception** added with structured metadata
+- ✅ **Automatic fallback** to alternative models when quota hit
+- ✅ **Quota vs Rate Limit distinction** - separate detection and handling
+- ✅ **Langfuse observability** for quota errors with ERROR level
+- ✅ **Retry time extraction** from error messages (e.g., "retry in 31.94s")
+- ✅ **18/18 analytics tests passing** (no regressions)
+
+**Sprint 4 Changes**:
+1. ✅ New Exception: `QuotaExceededError` with provider, model, quota_type, message_detail, retry_after
+2. ✅ Error Detection: `is_quota_exceeded_error()` - extracts quota metadata from exceptions
+3. ✅ Rate Limit Refinement: `is_rate_limit_error()` - now excludes quota keywords
+4. ✅ AutoPickerLLM: Added `quota_fallbacks` stat and intelligent fallback logic
+5. ✅ Langfuse Logging: `log_quota_error()` - tracks quota errors with full context
+
+**Sprint 4 Commit**: `026807d`
+**Date**: 2025-10-09
+**Addresses**: TODO in coffee_maker/langchain_observe/llm.py:3
+
+**Combined Impact (Sprint 1 + 2 + 3 + 4)**:
 - **Code Quality**: Net -354 lines total (Sprint 1: -400, Sprint 2: +118, Sprint 3: -72 = 3.0% smaller)
 - **AutoPickerLLM**: Simplified from 545 → 478 lines (13% reduction)
 - **Duplication**: 28 instances eliminated
@@ -684,7 +704,40 @@ This is a **design-only priority**. Implementation happens in:
 
 **Vision**: Create a dedicated **`coffee-roadmap` CLI tool** - an AI-powered project manager that provides an interactive chat interface for managing ROADMAP.md. This is the **ONLY way** to update the roadmap - both user and daemon use it.
 
-**Core Innovation**: **Claude AI as Project Manager** 🤖
+---
+
+#### 🎯 MVP Approach: Start Simple, Scale Smart
+
+**Implementation Strategy**: Build in **two phases** to establish database guardrails first:
+
+**Phase 1: MVP - Basic CLI with Database Guardrails** (2-3 days) ⚡ **START HERE**
+- ✅ Shared SQLite via Docker volume (Option A from PRIORITY 1.5)
+- ✅ Basic CLI commands (`view`, `status`, `notify`, `sync`)
+- ✅ Notification database with proper retry logic
+- ✅ WAL mode + timeout configuration
+- ✅ `@with_retry` decorator on all writes
+- ❌ NO Claude AI yet (too complex for MVP)
+- ❌ NO rich terminal UI (basic text is fine)
+- ❌ NO roadmap editing (read-only for MVP)
+
+**Phase 2: Full AI Integration** (2-3 days) - After MVP validated
+- Add Claude AI for natural language understanding
+- Add rich terminal UI with `rich` library
+- Add roadmap editing capabilities
+- Add Slack integration
+- Add history/undo functionality
+
+**Why This Approach?**
+1. ✅ **Database guardrails** established early (prevents future sync issues)
+2. ✅ **Quick validation** (can test database patterns in 2-3 days)
+3. ✅ **Risk mitigation** (complex AI features don't block daemon work)
+4. ✅ **Foundation first** (proper patterns before fancy features)
+
+**Reference**: `docs/PROJECT_MANAGER_MVP_DESIGN.md` (comprehensive MVP design with database patterns)
+
+---
+
+**Full Vision**: **Claude AI as Project Manager** 🤖 (Phase 2)
 - ✅ Natural language understanding of roadmap requests
 - ✅ Intelligent roadmap editing and suggestions
 - ✅ Context-aware priority recommendations
