@@ -3218,6 +3218,297 @@ SLACK_SIGNING_SECRET=your-signing-secret  # For signature verification
 
 ---
 
+### 🔴 **PRIORITY 2.5: New User Experience & Documentation** ⚡ **UX FOCUS**
+
+**Estimated Duration**: 3-5 days
+**Impact**: ⭐⭐⭐⭐⭐ (Critical for adoption)
+**Status**: 📝 Planned
+**Dependency**: Should be done after PRIORITY 2 (Project Manager CLI) MVP is complete
+**Why Important**: New users need clear onboarding - we're too close to the code to see friction points
+
+#### Project: Put yourself in new user's shoes - UX audit & improvements
+
+**Core Philosophy**: Act as a first-time user trying to understand and use the project_manager and Slack notification system. Identify gaps, confusion points, and documentation needs.
+
+**Key Questions to Answer**:
+1. How does a new user discover project_manager exists?
+2. What does project_manager do? (Clear value proposition)
+3. How do I set it up for the first time?
+4. How do I use it day-to-day?
+5. How do I connect it to Slack?
+6. What notifications will I receive and why?
+7. How do I troubleshoot common issues?
+8. What are the core workflows?
+
+#### Deliverables
+
+**1. User Journey Map** (`docs/USER_JOURNEY_PROJECT_MANAGER.md`)
+```markdown
+# New User Journey - Project Manager
+
+## Discovery Phase (0-5 minutes)
+- How user finds project_manager (README? Docs? CLI help?)
+- First impression - what does this tool do?
+- Value proposition - why should I use this?
+
+## Setup Phase (5-15 minutes)
+- Prerequisites (Python version, dependencies)
+- Installation steps (pip install? poetry?)
+- Configuration (environment variables, database setup)
+- First run experience
+- Slack setup (if desired)
+
+## Daily Usage Phase (ongoing)
+- Core workflows (view roadmap, update status, check notifications)
+- Common commands and their outputs
+- Slack integration experience
+- Error handling and recovery
+
+## Power User Phase (advanced)
+- Advanced features
+- Customization options
+- Integration with other tools
+```
+
+**2. Quick Start Guide** (`docs/QUICKSTART_PROJECT_MANAGER.md`)
+```markdown
+# Project Manager - Quick Start (5 minutes)
+
+## What is Project Manager?
+One-sentence description + 30-second video demo or GIF
+
+## Installation
+```bash
+# 3-4 commands max
+pip install coffee-maker
+coffee-roadmap init
+coffee-roadmap view
+```
+
+## Your First Task
+Step-by-step walkthrough of ONE simple task
+Example: "View current roadmap and check progress"
+
+## Next Steps
+- Link to full documentation
+- Link to Slack setup guide
+- Link to common workflows
+```
+
+**3. Slack Integration Guide** (`docs/SLACK_SETUP_GUIDE.md`)
+```markdown
+# Slack Integration - Step by Step
+
+## Prerequisites
+- Project Manager installed and working
+- Slack workspace admin access (or know who to ask)
+
+## Setup Steps (15 minutes)
+1. Create Slack app
+2. Configure bot permissions
+3. Install to workspace
+4. Get bot token
+5. Configure project_manager
+6. Test notification
+7. Customize notification preferences
+
+## What You'll Receive
+- Examples of each notification type with screenshots
+- When notifications are triggered
+- How to respond to interactive notifications
+
+## Troubleshooting
+- Common issues and fixes
+- How to verify setup
+- Where to get help
+```
+
+**4. Feature Documentation** (`docs/PROJECT_MANAGER_FEATURES.md`)
+```markdown
+# Project Manager - Complete Feature Reference
+
+## Core Commands
+For each command:
+- Purpose (what problem does it solve?)
+- Usage (syntax + examples)
+- Output (what to expect)
+- Common options/flags
+- Related commands
+
+Examples:
+- `coffee-roadmap view` - See current roadmap status
+- `coffee-roadmap status <priority>` - Update priority status
+- `coffee-roadmap notify` - Send Slack notification
+- `coffee-roadmap sync` - Sync with daemon
+```
+
+**5. UX Improvements Implementation**
+
+Based on audit findings, implement:
+
+**A. Better CLI Help**
+```python
+# Current (if it exists):
+$ coffee-roadmap --help
+Usage: coffee-roadmap [OPTIONS] COMMAND [ARGS]...
+
+# Improved:
+$ coffee-roadmap --help
+
+Coffee Maker Project Manager - AI-powered roadmap management
+
+QUICK START:
+  coffee-roadmap view              View current roadmap
+  coffee-roadmap status            Update priority status
+  coffee-roadmap notify "message"  Send Slack notification
+
+COMMON WORKFLOWS:
+  Check project status:
+    $ coffee-roadmap view
+    $ coffee-roadmap metrics
+
+  Update roadmap:
+    $ coffee-roadmap status PRIORITY_1 completed
+    $ coffee-roadmap notify "Sprint 1 done!"
+
+MORE INFO:
+  - Full docs: https://docs.coffee-maker.dev/project-manager
+  - Quick start: coffee-roadmap quickstart
+  - Slack setup: coffee-roadmap slack-setup
+```
+
+**B. Interactive Setup Wizard**
+```python
+# coffee_maker/cli/setup.py
+def interactive_setup():
+    """Guide new users through first-time setup."""
+    print("🎉 Welcome to Coffee Maker Project Manager!")
+    print()
+    print("This wizard will help you get started (5 minutes)")
+    print()
+
+    # Step 1: Check prerequisites
+    check_python_version()
+    check_dependencies()
+
+    # Step 2: Configure database
+    setup_database()
+
+    # Step 3: Slack integration (optional)
+    if prompt_yes_no("Set up Slack notifications?"):
+        setup_slack_interactive()
+
+    # Step 4: Verify setup
+    verify_setup()
+
+    # Step 5: Show next steps
+    print("✅ Setup complete!")
+    print()
+    print("Next steps:")
+    print("  1. View roadmap: coffee-roadmap view")
+    print("  2. Read docs: coffee-roadmap docs")
+    print("  3. Try tutorial: coffee-roadmap tutorial")
+```
+
+**C. Better Error Messages**
+```python
+# Before:
+# Error: Database connection failed
+
+# After:
+# ❌ Error: Cannot connect to database
+#
+# Possible causes:
+#   1. Database not initialized (run: coffee-roadmap init)
+#   2. Wrong database path in .env file
+#   3. Missing WAL mode support
+#
+# Quick fix:
+#   $ coffee-roadmap init --reset
+#
+# Need help? Run: coffee-roadmap diagnose
+```
+
+**D. In-app Tutorial**
+```python
+# coffee-roadmap tutorial
+# Interactive walkthrough of common tasks with real commands
+```
+
+**E. Self-diagnosis Tool**
+```python
+# coffee-roadmap diagnose
+# Checks:
+# - Python version
+# - Dependencies installed
+# - Database accessible
+# - Slack token valid (if configured)
+# - ROADMAP.md readable
+# - Git repository valid
+#
+# Output: Clear report with specific fixes for any issues
+```
+
+#### Success Metrics
+
+**User Onboarding**:
+- Time to first successful command: < 5 minutes
+- Setup completion rate: > 90%
+- Common errors encountered: < 2 per new user
+
+**Documentation Quality**:
+- New user can complete setup without external help: > 80%
+- Find answer to common question in < 2 minutes: > 90%
+- Documentation rated "helpful" or better: > 85%
+
+**Usability**:
+- Core workflows can be completed without referring to docs: > 70%
+- Error messages lead to successful resolution: > 80%
+- Slack integration setup success rate: > 85%
+
+#### Implementation Plan
+
+**Phase 1: Discovery & Audit** (1 day)
+- Install project fresh (clean environment)
+- Try to use project_manager as new user
+- Document every friction point
+- Note missing documentation
+- List confusing terminology
+- Identify gaps in error handling
+
+**Phase 2: Documentation** (2 days)
+- Write all 4 core documents (Quick Start, Slack Setup, Features, Journey Map)
+- Create examples and screenshots
+- Record demo videos/GIFs
+- Review with fresh eyes (ideally external reviewer)
+
+**Phase 3: UX Improvements** (2 days)
+- Implement CLI help improvements
+- Add interactive setup wizard
+- Improve error messages (top 10 most common)
+- Add self-diagnosis tool
+- Add tutorial mode
+
+**Phase 4: Validation** (half day)
+- Test with new user (friend/colleague)
+- Gather feedback
+- Iterate on confusing parts
+- Final polish
+
+#### Benefits
+
+- ✅ **Faster adoption**: New users productive in minutes, not hours
+- ✅ **Reduced support burden**: Self-service documentation and diagnosis
+- ✅ **Better first impression**: Professional, polished experience
+- ✅ **Increased confidence**: Clear guidance reduces frustration
+- ✅ **Scalability**: Documentation enables team adoption
+- ✅ **Community growth**: Easy onboarding → more contributors
+- ✅ **Foundation for daemon**: Good UX patterns established before AI takes over
+
+**Note**: This priority can be completed BEFORE daemon implementation. It establishes UX patterns that the daemon can follow when autonomously working on future features.
+
+---
+
 ### 🔴 **PRIORITY 3: Streamlit Analytics Dashboard** ⚡ NEW
 
 **Estimated Duration**: 1-2 weeks
