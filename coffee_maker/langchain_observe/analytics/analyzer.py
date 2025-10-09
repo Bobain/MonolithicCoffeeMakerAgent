@@ -1,5 +1,9 @@
 """Performance analysis and insights from LLM metrics.
 
+⚠️ DEPRECATED: This module uses SQLAlchemy and is deprecated as of Sprint 5 (2025-10-09).
+Use analyzer_sqlite.py instead for native sqlite3 implementation with zero external dependencies.
+This file will be removed in a future version.
+
 This module provides tools to analyze LLM performance, costs, and usage patterns
 from the exported Langfuse data stored in the local database.
 

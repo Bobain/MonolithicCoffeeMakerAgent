@@ -1,5 +1,9 @@
 """Database models for Langfuse export and basic analytics.
 
+⚠️ DEPRECATED: This module uses SQLAlchemy and is deprecated as of Sprint 5 (2025-10-09).
+Use models_sqlite.py instead for native sqlite3 implementation with zero external dependencies.
+This file will be removed in a future version.
+
 This module defines a **simplified schema** focused on Langfuse trace export
 and basic performance analysis. For a more comprehensive analytics warehouse
 with additional features, see db_schema.py.

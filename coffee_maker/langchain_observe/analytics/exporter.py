@@ -1,5 +1,9 @@
 """Export Langfuse traces to local database for analytics.
 
+⚠️ DEPRECATED: This module uses SQLAlchemy and is deprecated as of Sprint 5 (2025-10-09).
+Use exporter_sqlite.py instead for native sqlite3 implementation with zero external dependencies.
+This file will be removed in a future version.
+
 This module provides the LangfuseExporter class which fetches traces from
 Langfuse and stores them in a local SQLite or PostgreSQL database for
 offline analysis, reporting, and visualization.

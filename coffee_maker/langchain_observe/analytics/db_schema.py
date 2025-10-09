@@ -1,5 +1,9 @@
 """Comprehensive analytics warehouse schema for LLM metrics.
 
+⚠️ DEPRECATED: This module uses SQLAlchemy and is deprecated as of Sprint 5 (2025-10-09).
+The analytics module now uses native sqlite3 in models_sqlite.py with zero external dependencies.
+This file will be removed in a future version.
+
 This module defines a **full-featured schema** for comprehensive LLM analytics,
 including prompt variant tracking, agent task results, and advanced features.
 For a simpler schema focused on Langfuse export, see models.py.
