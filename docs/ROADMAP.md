@@ -4486,6 +4486,140 @@ START SESSION:
 
 This principle ensures the daemon operates as a **truly autonomous developer**, not an interactive assistant.
 
+#### 🎯 CRITICAL: Understanding PRIORITIES vs PROJECTS
+
+**⚠️ IMPORTANT DISTINCTION FOR code_developer**:
+
+**PRIORITIES** are **strategic phases/milestones** - they are NOT code to implement!
+- Example: "PRIORITY 1: Analytics & Observability"
+- This is a strategic grouping, not a specific implementation
+
+**PROJECTS** are **actual implementations** - these are what you should code!
+- Example: "Project: Langfuse → SQLite Export & Analysis"
+- Example: "Project: Multi-Model Code Review Agent"
+- These are concrete features with code, tests, and documentation
+
+**DO NOT** try to "implement PRIORITY X" - priorities are already organizational structure!
+
+**DO** implement the **PROJECTS** listed within priorities or in the unimplemented projects list below.
+
+#### 📋 Unimplemented Projects Work Queue (code_developer START HERE)
+
+**CRITICAL**: This is your work queue. Pick the next unimplemented project and build it.
+
+##### ✅ Already Implemented (DO NOT re-implement)
+- ✅ **Analytics & Observability** (PRIORITY 1)
+  - ✅ Langfuse → SQLite Export & Analysis
+  - ✅ SQLite analytics schema
+  - ✅ Query analysis tools
+
+- ✅ **Roadmap Management CLI** (PRIORITY 2 - MVP Phase 1)
+  - ✅ project-manager binary (basic commands)
+  - ✅ NotificationDB for daemon communication
+  - ✅ Basic CLI commands (view, notifications, respond)
+
+- ✅ **Autonomous Development Daemon** (PRIORITY 3 - 90%)
+  - ✅ DevDaemon core loop
+  - ✅ RoadmapParser
+  - ✅ ClaudeCLIInterface
+  - ✅ GitManager
+  - ✅ Session conflict detection
+  - ⏳ E2E testing (10% remaining)
+
+- ✅ **Multi-Model Code Review Agent** (PRIORITY 6 - Option A)
+  - ✅ ~2,345 lines implemented but not committed
+  - ✅ 4 perspectives (Bug Hunter, Architect, Performance, Security)
+  - ✅ Pattern-based analysis
+  - ✅ HTML/Markdown/JSON reports
+  - ✅ Git hooks integration
+  - ⚠️ **ACTION NEEDED**: Commit this code and add tests
+
+##### 🚀 Next Projects to Implement (PICK ONE AND START)
+
+**High Priority** (Business Impact):
+
+1. **📊 Streamlit Analytics Dashboard** (PRIORITY 3)
+   - Location: Create `streamlit_apps/analytics_dashboard/`
+   - Features: LLM cost analysis, token usage trends, error rates
+   - Dependencies: Analytics DB from PRIORITY 1
+   - Estimated: 2-3 days
+   - **Status**: 📝 Planned - READY TO START
+
+2. **📊 Streamlit Error Monitoring Dashboard** (PRIORITY 3.5)
+   - Location: Create `streamlit_apps/error_dashboard/`
+   - Features: Real-time error tracking from Langfuse traces
+   - Dependencies: Analytics DB from PRIORITY 1
+   - Estimated: 1-2 days
+   - **Status**: 📝 Planned - READY TO START
+
+3. **📊 Streamlit Agent Interaction UI** (PRIORITY 4)
+   - Location: Create `streamlit_apps/agent_interface/`
+   - Features: Chat interface with streaming, conversation history
+   - Dependencies: None
+   - Estimated: 2-3 days
+   - **Status**: 📝 Planned - READY TO START
+
+**Medium Priority** (Infrastructure):
+
+4. **📚 Professional Documentation Enhancement** (PRIORITY 5)
+   - Enhance pdoc documentation
+   - Add comprehensive docstrings
+   - Create documentation validation
+   - Estimated: 2-3 days
+   - **Status**: 📝 Planned
+
+5. **🤖 AI-Powered Project Manager CLI** (PRIORITY 2 - Phase 2, 20% remaining)
+   - Add Claude AI integration to project-manager
+   - Interactive chat-style interface
+   - Rich terminal UI
+   - Estimated: 2-3 days
+   - **Status**: 📝 Planned
+
+**Innovative Projects** (PRIORITY 6 - Pick ONE):
+
+6. **🔬 Self-Improving Prompt Lab**
+   - See: `docs/projects/02_self_improving_prompt_lab.md`
+   - A/B testing for prompts, auto-optimization
+   - Estimated: 3-5 days
+   - **Status**: 📝 Planned
+
+7. **🎭 Agent Ensemble Orchestrator**
+   - See: `docs/projects/03_agent_ensemble_orchestrator.md`
+   - Multi-agent coordination, voting, consensus
+   - Estimated: 3-5 days
+   - **Status**: 📝 Planned
+
+8. **🧠 Cost-Aware Smart Router**
+   - See: `docs/projects/04_cost_aware_smart_router.md`
+   - Intelligent model selection based on cost/quality trade-offs
+   - Estimated: 2-3 days
+   - **Status**: 📝 Planned
+
+9. **📈 LLM Performance Profiler**
+   - See: `docs/projects/05_llm_performance_profiler.md`
+   - Performance benchmarking, regression detection
+   - Estimated: 2-3 days
+   - **Status**: 📝 Planned
+
+##### 🎯 Recommended Next Action for code_developer
+
+**IMMEDIATE ACTION**:
+1. **Commit Code Review Agent** (already implemented, just needs commit/tests)
+   - Run tests for coffee_maker/code_reviewer/
+   - Commit the ~2,345 lines
+   - Add to git and create PR
+
+**AFTER THAT, PICK ONE**:
+2. **Streamlit Analytics Dashboard** - Highest business value
+3. **Streamlit Agent Interaction UI** - Best user experience impact
+4. **Self-Improving Prompt Lab** - Most innovative
+
+**DO NOT**:
+- ❌ Try to "implement PRIORITY 1" (already done!)
+- ❌ Try to "implement PRIORITY 2" (it's a milestone, not a project)
+- ❌ Re-implement existing projects
+- ❌ Ask which one to do - just pick one from the list and start!
+
 **Simplified Architecture** (thanks to PRIORITY 2):
 - ✅ **No file watchers needed**: Daemon reads ROADMAP.md from its environment
 - ✅ **No Git sync needed**: Uses `coffee-roadmap` API for status updates
