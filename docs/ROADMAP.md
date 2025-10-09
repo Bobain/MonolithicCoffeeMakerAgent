@@ -8,6 +8,74 @@
 
 ---
 
+## ⚠️ CRITICAL: ROADMAP PRIORITIZATION RULE
+
+**🚨 THE ROADMAP MUST ALWAYS BE PRIORITIZED 🚨**
+
+This roadmap is the **single source of truth** for the autonomous `code_developer` daemon. The daemon reads this file to determine its next task. To ensure smooth autonomous operation:
+
+### Rules for Roadmap Maintenance
+
+1. **Always Keep Priorities Ordered**
+   - The daemon implements priorities in sequential order
+   - "PRIORITY 1" → "PRIORITY 2" → "PRIORITY 2.5" → "PRIORITY 3" → etc.
+   - Next task = First priority with status "📝 Planned"
+
+2. **Update Status Immediately**
+   - ✅ Mark as "✅ Complete" when done
+   - 🔄 Mark as "🔄 In Progress" when actively working
+   - ⏸️ Mark as "⏸️ Blocked" if waiting on external input
+   - 🚧 Mark as "🚧 Manual Review Required" if daemon can't complete autonomously
+
+3. **Be Specific About Deliverables**
+   - Vague priorities cause infinite loops
+   - List concrete files to create (e.g., "Create docs/QUICKSTART.md")
+   - Specify acceptance criteria
+   - Include examples when possible
+
+4. **The "TOP PRIORITY" Section is Sacred**
+   - Always keep section "🔴 TOP PRIORITY FOR code_developer" at the top
+   - This tells the daemon exactly what to work on next
+   - Update this section when priorities change
+
+5. **Add New Priorities at the End**
+   - Don't renumber existing priorities
+   - Use decimal notation for insertions (e.g., PRIORITY 2.5, 2.6)
+   - Maintain sequential order
+
+### Why This Matters
+
+The daemon operates autonomously by:
+1. Reading this ROADMAP.md file
+2. Finding the next "📝 Planned" priority
+3. Implementing it
+4. Updating status
+5. Moving to the next priority
+
+**If the roadmap is not prioritized**, the daemon won't know what to do next and will:
+- Get stuck in loops
+- Skip important work
+- Work on wrong priorities
+- Create confusion and wasted effort
+
+### Example: Well-Prioritized Roadmap
+
+```markdown
+## 🔴 TOP PRIORITY FOR code_developer (START HERE)
+PRIORITY 3: Streamlit Dashboard ← Current focus
+
+### PRIORITY 1: Analytics ✅ Complete
+### PRIORITY 2: CLI ✅ Complete
+### PRIORITY 2.5: Documentation 🚧 Manual Review Required
+### PRIORITY 2.6: Testing 🔄 In Progress (50%)
+### PRIORITY 3: Dashboard 📝 Planned ← Daemon will start this next
+### PRIORITY 4: Agent UI 📝 Planned ← After PRIORITY 3
+```
+
+**Remember**: The daemon trusts this roadmap completely. Keep it organized, prioritized, and up-to-date! 🎯
+
+---
+
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
 **Project**: **AI-Powered Project Manager CLI - Phase 2** (Interactive Chat Interface)
