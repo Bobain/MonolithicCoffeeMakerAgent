@@ -38,17 +38,24 @@ This creates a **natural, professional workflow** where AI agents collaborate ju
    - Respond to daemon (approve dependencies, answer questions)
    - Simple terminal UI (TUI with `rich` library)
    - **User's single interface for everything**
-3. 📊 **Developer Status Dashboard** (enhance PM UI, 1-2 days) - **HIGH PRIORITY**
+3. 📦 **PyPI Package & Binaries** (package for distribution, 1 day) - **CRITICAL TECHNICAL**
+   - Configure pyproject.toml with binary entry points
+   - Create `project-manager` and `code-developer` CLI commands
+   - Package as installable PyPI package (pip install coffee-maker)
+   - Test installation and binary execution
+   - Publish to PyPI (or TestPyPI first)
+   - **User can install and use the binaries system-wide**
+4. 📊 **Developer Status Dashboard** (enhance PM UI, 1-2 days) - **HIGH PRIORITY**
    - Display code_developer real-time status (idle, working, blocked, testing)
    - Show current task progress (percentage, elapsed time, ETA)
    - Display developer questions waiting for PM/user response
    - Show recent activity log (commits, tests, errors)
    - Real-time updates via shared status file or database
    - **User always knows what developer is doing**
-4. 🗃️ **Database Synchronization** (daemon implements this with PM UI oversight!)
-5. 📊 **Analytics & Observability** (daemon implements this!)
-6. 📱 **Streamlit Dashboards** (daemon implements this!)
-7. 🚀 **Advanced PM Features** (AI chat, Slack integration - daemon implements!)
+5. 🗃️ **Database Synchronization** (daemon implements this with PM UI oversight!)
+6. 📊 **Analytics & Observability** (daemon implements this!)
+7. 📱 **Streamlit Dashboards** (daemon implements this!)
+8. 🚀 **Advanced PM Features** (AI chat, Slack integration - daemon implements!)
 
 **Rationale**: Get daemon working ASAP → Daemon autonomously implements everything else → Faster delivery!
 
@@ -708,12 +715,676 @@ code-developer back to CSV export feature."
 
 ---
 
-## 📊 PRIORITY 3: Developer Status Dashboard
+## 📦 PRIORITY 3: PyPI Package & Binaries
+
+**Goal**: Package coffee-maker as installable PyPI package with `project-manager` and `code-developer` command-line tools
+
+**Duration**: 1 day (4-8 hours)
+**Dependencies**: PRIORITY 1 (Daemon core), PRIORITY 2 (PM CLI core)
+**Status**: 📝 Planned
+
+### Why This Is Critical
+
+After implementing PRIORITY 1 & 2, we have:
+- ✅ Daemon core logic (code-developer functionality)
+- ✅ Project Manager CLI logic (project-manager functionality)
+
+**But users can't install and use them yet!**
+- ❌ No `pip install coffee-maker` command
+- ❌ No system-wide `project-manager` binary
+- ❌ No system-wide `code-developer` binary
+- ❌ Can't distribute to others
+
+**This priority makes the binaries installable and distributable!**
+
+---
+
+### Core Requirements
+
+#### 1. Configure pyproject.toml
+
+**Binary Entry Points**:
+```toml
+[project.scripts]
+project-manager = "coffee_maker.cli.project_manager:main"
+code-developer = "coffee_maker.autonomous.daemon_cli:main"
+```
+
+**Package Metadata**:
+```toml
+[project]
+name = "coffee-maker"
+version = "0.1.0"
+description = "Autonomous AI development team: project-manager + code-developer"
+authors = [{name = "Your Name", email = "your.email@example.com"}]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+
+dependencies = [
+    "rich>=13.0.0",        # Terminal UI
+    "click>=8.0.0",        # CLI framework
+    "langfuse>=2.0.0",     # LLM observability
+    "requests>=2.31.0",    # HTTP requests
+    "python-dotenv>=1.0.0" # Environment variables
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=24.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"
+Documentation = "https://bobain.github.io/MonolithicCoffeeMakerAgent/"
+Repository = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"
+```
+
+#### 2. Create CLI Entry Point Modules
+
+**File**: `coffee_maker/cli/project_manager.py`
+```python
+"""Project Manager CLI - User interface for autonomous development team."""
+
+import click
+from rich.console import Console
+
+console = Console()
+
+
+@click.group()
+@click.version_option(version="0.1.0")
+def main():
+    """Coffee Maker Project Manager - Manage your autonomous development team."""
+    pass
+
+
+@main.command()
+def status():
+    """Display daemon and roadmap status."""
+    console.print("[bold green]🎯 Project Manager Status[/]")
+    # Implementation from PRIORITY 2
+    pass
+
+
+@main.command()
+def notifications():
+    """View pending notifications from daemon."""
+    console.print("[bold yellow]📬 Pending Notifications[/]")
+    # Implementation from PRIORITY 2
+    pass
+
+
+@main.command()
+@click.argument("message_id")
+@click.argument("response")
+def respond(message_id: str, response: str):
+    """Respond to daemon question."""
+    console.print(f"[green]✅ Responded to {message_id}: {response}[/]")
+    # Implementation from PRIORITY 2
+    pass
+
+
+@main.command()
+@click.argument("version")
+@click.option("--test", is_flag=True, help="Publish to TestPyPI instead of PyPI")
+@click.option("--dry-run", is_flag=True, help="Build without publishing")
+def release(version: str, test: bool, dry_run: bool):
+    """Release the project to PyPI.
+
+    Example:
+        project-manager release 0.1.0
+        project-manager release 0.2.0 --test
+        project-manager release 0.1.1 --dry-run
+    """
+    console.print(f"[bold cyan]📦 Releasing coffee-maker v{version}...[/]")
+
+    # Step 1: Update version in pyproject.toml
+    console.print("[yellow]1/6 Updating version...[/]")
+
+    # Step 2: Run tests
+    console.print("[yellow]2/6 Running tests...[/]")
+
+    # Step 3: Build package
+    console.print("[yellow]3/6 Building package...[/]")
+
+    # Step 4: Git tag
+    console.print(f"[yellow]4/6 Creating git tag v{version}...[/]")
+
+    if dry_run:
+        console.print("[green]✅ Dry run complete (no publish)[/]")
+        return
+
+    # Step 5: Publish
+    if test:
+        console.print("[yellow]5/6 Publishing to TestPyPI...[/]")
+    else:
+        console.print("[yellow]5/6 Publishing to PyPI...[/]")
+
+    # Step 6: Push tags
+    console.print("[yellow]6/6 Pushing to GitHub...[/]")
+
+    console.print(f"[bold green]✅ Released coffee-maker v{version} successfully![/]")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+**File**: `coffee_maker/autonomous/daemon_cli.py`
+```python
+"""Code Developer Daemon CLI - Autonomous development agent."""
+
+import click
+from rich.console import Console
+
+console = Console()
+
+
+@click.group()
+@click.version_option(version="0.1.0")
+def main():
+    """Coffee Maker Code Developer - Autonomous development daemon."""
+    pass
+
+
+@main.command()
+@click.option("--foreground", is_flag=True, help="Run in foreground (not as daemon)")
+def start(foreground: bool):
+    """Start the autonomous development daemon."""
+    console.print("[bold green]🤖 Starting Code Developer Daemon...[/]")
+    # Implementation from PRIORITY 1
+    pass
+
+
+@main.command()
+def stop():
+    """Stop the running daemon."""
+    console.print("[yellow]⏹️  Stopping Code Developer Daemon...[/]")
+    # Implementation from PRIORITY 1
+    pass
+
+
+@main.command()
+def status():
+    """Check daemon status."""
+    console.print("[cyan]📊 Code Developer Status[/]")
+    # Implementation from PRIORITY 1
+    pass
+
+
+if __name__ == "__main__":
+    main()
+```
+
+#### 3. Build and Test Package
+
+**Build Commands**:
+```bash
+# Install build tools
+pip install build twine
+
+# Build package
+python -m build
+
+# Output:
+# dist/coffee_maker-0.1.0-py3-none-any.whl
+# dist/coffee_maker-0.1.0.tar.gz
+```
+
+**Test Installation (Local)**:
+```bash
+# Install locally in editable mode
+pip install -e .
+
+# Test binaries
+project-manager --version
+code-developer --version
+
+# Test commands
+project-manager status
+code-developer start --foreground
+```
+
+**Test Installation (From Built Package)**:
+```bash
+# Install from wheel
+pip install dist/coffee_maker-0.1.0-py3-none-any.whl
+
+# Test binaries work
+project-manager status
+code-developer status
+```
+
+#### 4. Publish to PyPI
+
+**Publish to TestPyPI (First)**:
+```bash
+# Create ~/.pypirc with credentials
+twine upload --repository testpypi dist/*
+
+# Test installation from TestPyPI
+pip install --index-url https://test.pypi.org/simple/ coffee-maker
+```
+
+**Publish to PyPI (Production)**:
+```bash
+# Upload to PyPI
+twine upload dist/*
+
+# Users can now install:
+# pip install coffee-maker
+```
+
+#### 5. Documentation
+
+**Update README.md** with installation instructions:
+```markdown
+## Installation
+
+Install coffee-maker from PyPI:
+
+```bash
+pip install coffee-maker
+```
+
+This installs two command-line tools:
+- `project-manager` - User interface for managing your autonomous team
+- `code-developer` - Autonomous development daemon
+
+## Quick Start
+
+### 1. Start the autonomous developer:
+```bash
+code-developer start
+```
+
+### 2. Check status:
+```bash
+project-manager status
+```
+
+### 3. View notifications:
+```bash
+project-manager notifications
+```
+
+### 4. Respond to daemon questions:
+```bash
+project-manager respond msg_123 approve
+```
+
+## Usage
+
+See [Documentation](https://bobain.github.io/MonolithicCoffeeMakerAgent/) for detailed usage.
+```
+
+---
+
+### File Structure
+
+After PRIORITY 3, the project structure will be:
+
+```
+MonolithicCoffeeMakerAgent/
+├── coffee_maker/
+│   ├── __init__.py
+│   ├── cli/
+│   │   ├── __init__.py
+│   │   └── project_manager.py      # ⚡ Entry point for project-manager binary
+│   ├── autonomous/
+│   │   ├── __init__.py
+│   │   ├── daemon_cli.py            # ⚡ Entry point for code-developer binary
+│   │   └── minimal_daemon.py        # Daemon core logic
+│   └── ...
+├── pyproject.toml                   # ⚡ Configured with entry points
+├── README.md                        # ⚡ Updated with installation instructions
+├── dist/                            # ⚡ Built packages
+│   ├── coffee_maker-0.1.0-py3-none-any.whl
+│   └── coffee_maker-0.1.0.tar.gz
+└── ...
+```
+
+---
+
+### Implementation Steps
+
+**Step 1: Configure pyproject.toml** (1 hour)
+1. Add [project.scripts] entry points
+2. Update metadata (version, description, authors)
+3. List dependencies and optional dev dependencies
+4. Add project URLs (homepage, docs, repo)
+
+**Step 2: Create CLI Entry Points** (2 hours)
+5. Create `coffee_maker/cli/project_manager.py` with click commands
+6. Create `coffee_maker/autonomous/daemon_cli.py` with click commands
+7. Import and call existing logic from PRIORITY 1 & 2
+8. Add --version options, help text, command documentation
+
+**Step 3: Build Package** (1 hour)
+9. Install build tools (pip install build twine)
+10. Run `python -m build` to create wheel and sdist
+11. Verify dist/ directory contains .whl and .tar.gz files
+
+**Step 4: Test Installation** (2 hours)
+12. Install in fresh virtual environment
+13. Test `project-manager` command works
+14. Test `code-developer` command works
+15. Test all subcommands (status, start, stop, notifications, respond)
+16. Verify binaries are accessible from any directory
+
+**Step 5: Publish (Optional for MVP)** (1 hour)
+17. Create PyPI account (if not exists)
+18. Configure ~/.pypirc with credentials
+19. Upload to TestPyPI first: `twine upload --repository testpypi dist/*`
+20. Test installation from TestPyPI
+21. Upload to PyPI: `twine upload dist/*`
+
+**Step 6: Documentation** (1 hour)
+22. Update README.md with installation instructions
+23. Add quick start guide
+24. Document both binaries (project-manager, code-developer)
+25. Add troubleshooting section
+
+---
+
+### Success Criteria
+
+✅ **Package builds successfully**:
+- `python -m build` creates wheel and sdist
+- No build errors or warnings
+
+✅ **Binaries are installable**:
+- `pip install coffee-maker` works
+- Installs in site-packages correctly
+
+✅ **Commands are accessible**:
+- `project-manager` command available in PATH
+- `code-developer` command available in PATH
+- Both work from any directory
+
+✅ **All commands work**:
+- `project-manager status` - displays status
+- `project-manager notifications` - lists notifications
+- `project-manager respond` - responds to daemon
+- `code-developer start` - starts daemon
+- `code-developer stop` - stops daemon
+- `code-developer status` - shows daemon status
+
+✅ **Published to PyPI** (optional for MVP):
+- Package visible on pypi.org
+- Anyone can `pip install coffee-maker`
+- Installation instructions in README
+
+---
+
+### Testing Checklist
+
+```bash
+# 1. Build package
+python -m build
+ls dist/  # Should show .whl and .tar.gz
+
+# 2. Install in clean environment
+python -m venv test_env
+source test_env/bin/activate
+pip install dist/coffee_maker-0.1.0-py3-none-any.whl
+
+# 3. Test project-manager binary
+project-manager --version  # Should show 0.1.0
+project-manager status
+project-manager notifications
+project-manager respond test_msg approve
+
+# 4. Test code-developer binary
+code-developer --version  # Should show 0.1.0
+code-developer start --foreground  # Should start in foreground
+code-developer status
+code-developer stop
+
+# 5. Test from different directory
+cd /tmp
+project-manager status  # Should still work
+
+# 6. Uninstall
+pip uninstall coffee-maker
+
+# 7. Test from TestPyPI (optional)
+pip install --index-url https://test.pypi.org/simple/ coffee-maker
+```
+
+---
+
+### Release Command Implementation
+
+**Command**: `project-manager release <version> [--test] [--dry-run]`
+
+**Purpose**: Automate the release process from version bump to PyPI publication
+
+**Workflow**:
+```
+1. Update version → 2. Run tests → 3. Build → 4. Git tag → 5. Publish → 6. Push
+```
+
+**Implementation**:
+```python
+# File: coffee_maker/cli/project_manager.py
+
+import subprocess
+import tomli
+import tomli_w
+from pathlib import Path
+
+
+def update_version_in_pyproject(version: str):
+    """Update version in pyproject.toml."""
+    pyproject_path = Path("pyproject.toml")
+
+    with open(pyproject_path, "rb") as f:
+        data = tomli.load(f)
+
+    data["project"]["version"] = version
+
+    with open(pyproject_path, "wb") as f:
+        tomli_w.dump(data, f)
+
+    console.print(f"[green]✅ Updated version to {version}[/]")
+
+
+def run_tests():
+    """Run test suite before release."""
+    result = subprocess.run(["pytest", "tests/", "-v"], capture_output=True)
+
+    if result.returncode != 0:
+        console.print("[red]❌ Tests failed! Aborting release.[/]")
+        raise click.Abort()
+
+    console.print("[green]✅ All tests passed[/]")
+
+
+def build_package():
+    """Build wheel and sdist."""
+    subprocess.run(["python", "-m", "build"], check=True)
+    console.print("[green]✅ Package built successfully[/]")
+
+
+def create_git_tag(version: str):
+    """Create and push git tag."""
+    subprocess.run(["git", "add", "pyproject.toml"], check=True)
+    subprocess.run(["git", "commit", "-m", f"Release v{version}"], check=True)
+    subprocess.run(["git", "tag", f"v{version}"], check=True)
+    console.print(f"[green]✅ Created git tag v{version}[/]")
+
+
+def publish_to_pypi(test: bool = False):
+    """Publish to PyPI or TestPyPI."""
+    if test:
+        subprocess.run(
+            ["twine", "upload", "--repository", "testpypi", "dist/*"],
+            check=True
+        )
+        console.print("[green]✅ Published to TestPyPI[/]")
+    else:
+        subprocess.run(["twine", "upload", "dist/*"], check=True)
+        console.print("[green]✅ Published to PyPI[/]")
+
+
+def push_to_github():
+    """Push commits and tags to GitHub."""
+    subprocess.run(["git", "push"], check=True)
+    subprocess.run(["git", "push", "--tags"], check=True)
+    console.print("[green]✅ Pushed to GitHub[/]")
+
+
+@main.command()
+@click.argument("version")
+@click.option("--test", is_flag=True, help="Publish to TestPyPI")
+@click.option("--dry-run", is_flag=True, help="Build without publishing")
+def release(version: str, test: bool, dry_run: bool):
+    """Release the project to PyPI."""
+    try:
+        # 1. Update version
+        update_version_in_pyproject(version)
+
+        # 2. Run tests
+        run_tests()
+
+        # 3. Build package
+        build_package()
+
+        # 4. Git tag
+        create_git_tag(version)
+
+        if dry_run:
+            console.print("[yellow]Dry run - stopping before publish[/]")
+            return
+
+        # 5. Publish
+        publish_to_pypi(test=test)
+
+        # 6. Push to GitHub
+        push_to_github()
+
+        console.print(f"[bold green]✅ Released v{version} successfully![/]")
+
+        if test:
+            console.print("\n[cyan]Install from TestPyPI:[/]")
+            console.print(f"pip install --index-url https://test.pypi.org/simple/ coffee-maker=={version}")
+        else:
+            console.print("\n[cyan]Users can now install:[/]")
+            console.print(f"pip install coffee-maker=={version}")
+
+    except Exception as e:
+        console.print(f"[red]❌ Release failed: {e}[/]")
+        raise click.Abort()
+```
+
+**Usage Examples**:
+```bash
+# Dry run (build but don't publish)
+project-manager release 0.1.0 --dry-run
+
+# Publish to TestPyPI (test first)
+project-manager release 0.1.0 --test
+
+# Publish to production PyPI
+project-manager release 0.1.0
+
+# Publish new version
+project-manager release 0.2.0
+```
+
+**Checklist Before Release**:
+- [ ] All tests passing (`pytest tests/`)
+- [ ] All code formatted (`black coffee_maker/`)
+- [ ] All linting passed (`ruff check coffee_maker/`)
+- [ ] Documentation updated
+- [ ] CHANGELOG.md updated with changes
+- [ ] Version number follows semver (MAJOR.MINOR.PATCH)
+
+**Release Steps Automated**:
+1. ✅ Update version in pyproject.toml
+2. ✅ Run full test suite (blocks if tests fail)
+3. ✅ Build wheel and sdist packages
+4. ✅ Create git commit and tag (v{version})
+5. ✅ Upload to PyPI/TestPyPI via twine
+6. ✅ Push commit and tags to GitHub
+
+**Safety Features**:
+- Tests must pass or release aborts
+- Git tag prevents re-releasing same version
+- --dry-run option to test without publishing
+- --test option to publish to TestPyPI first
+- Clear error messages if any step fails
+
+**What Users See After Release**:
+```bash
+$ project-manager release 0.1.0
+
+📦 Releasing coffee-maker v0.1.0...
+
+[1/6] Updating version...
+✅ Updated version to 0.1.0
+
+[2/6] Running tests...
+================================ test session starts =================================
+collected 45 items
+
+tests/test_daemon.py ..................                                      [ 40%]
+tests/test_project_manager.py .................                             [ 77%]
+tests/test_integration.py ..........                                        [100%]
+
+================================ 45 passed in 12.3s ==================================
+✅ All tests passed
+
+[3/6] Building package...
+✅ Package built successfully
+
+[4/6] Creating git tag v0.1.0...
+✅ Created git tag v0.1.0
+
+[5/6] Publishing to PyPI...
+Uploading distributions to https://upload.pypi.org/legacy/
+coffee_maker-0.1.0-py3-none-any.whl 100% ━━━━━━━━━━━━━━━━━━━━━━━
+coffee_maker-0.1.0.tar.gz 100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Published to PyPI
+
+[6/6] Pushing to GitHub...
+✅ Pushed to GitHub
+
+✅ Released v0.1.0 successfully!
+
+Users can now install:
+  pip install coffee-maker==0.1.0
+```
+
+---
+
+### Future Enhancements (Post-PRIORITY 3)
+
+- **Auto-update**: Check for new versions on startup
+- **Shell completion**: Add bash/zsh completion scripts
+- **Configuration file**: ~/.coffee-maker/config.toml
+- **Multiple installations**: Support multiple project installations
+- **Version management**: `coffee-maker upgrade` command
+- **GitHub Release**: Create GitHub Release with changelog automatically
+- **Rollback**: `project-manager rollback` if release has issues
+
+---
+
+**This makes coffee-maker installable and distributable - users can now `pip install coffee-maker` and get both binaries system-wide!** 📦🚀
+
+---
+
+## 📊 PRIORITY 4: Developer Status Dashboard
 
 **Goal**: Enhance `project-manager` to display real-time `code-developer` status, progress, and questions
 
 **Duration**: 1-2 days (6-12 hours)
-**Dependencies**: PRIORITY 1 (Daemon), PRIORITY 2 (Project Manager UI)
+**Dependencies**: PRIORITY 1 (Daemon), PRIORITY 2 (PM CLI), PRIORITY 3 (Package & Binaries)
 **Status**: 📝 Planned
 
 ### Why This Is Critical
