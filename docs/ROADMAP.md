@@ -22,10 +22,17 @@
    - Respond to daemon (approve dependencies, answer questions)
    - Simple terminal UI (TUI with `rich` library)
    - **User's single interface for everything**
-3. 🗃️ **Database Synchronization** (daemon implements this with PM UI oversight!)
-4. 📊 **Analytics & Observability** (daemon implements this!)
-5. 📱 **Streamlit Dashboards** (daemon implements this!)
-6. 🚀 **Advanced PM Features** (AI chat, Slack integration - daemon implements!)
+3. 📊 **Developer Status Dashboard** (enhance PM UI, 1-2 days) - **HIGH PRIORITY**
+   - Display code_developer real-time status (idle, working, blocked, testing)
+   - Show current task progress (percentage, elapsed time, ETA)
+   - Display developer questions waiting for PM/user response
+   - Show recent activity log (commits, tests, errors)
+   - Real-time updates via shared status file or database
+   - **User always knows what developer is doing**
+4. 🗃️ **Database Synchronization** (daemon implements this with PM UI oversight!)
+5. 📊 **Analytics & Observability** (daemon implements this!)
+6. 📱 **Streamlit Dashboards** (daemon implements this!)
+7. 🚀 **Advanced PM Features** (AI chat, Slack integration - daemon implements!)
 
 **Rationale**: Get daemon working ASAP → Daemon autonomously implements everything else → Faster delivery!
 
@@ -682,6 +689,386 @@ code-developer back to CSV export feature."
 ---
 
 **Current Status**: Phase 1 (Self-Implementing System) - Building the foundation by having the system implement itself first.
+
+---
+
+## 📊 PRIORITY 3: Developer Status Dashboard
+
+**Goal**: Enhance `project-manager` to display real-time `code-developer` status, progress, and questions
+
+**Duration**: 1-2 days (6-12 hours)
+**Dependencies**: PRIORITY 1 (Daemon), PRIORITY 2 (Project Manager UI)
+**Status**: 📝 Planned
+
+### Why This Is Critical
+
+After implementing PRIORITY 1 (Daemon) and PRIORITY 2 (PM UI), the user has:
+- ✅ Autonomous developer working 24/7
+- ✅ Simple CLI to view roadmap and notifications
+
+**But the user doesn't know**:
+- ❓ What is the developer doing RIGHT NOW?
+- ❓ Is it stuck? Is it making progress?
+- ❓ How long until current task is done?
+- ❓ Are there questions waiting for me?
+
+**This priority solves visibility gap**: User always knows developer status without asking!
+
+---
+
+### Core Features
+
+#### 1. Real-Time Developer Status Display
+
+**Command**: `project-manager developer-status`
+
+**Output**:
+```
+🤖 CODE DEVELOPER STATUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Status: 🟢 WORKING
+Current Task: PRIORITY 3 - Developer Status Dashboard
+Progress: ████████████░░░░░░░░ 60% complete
+
+Started: 2025-10-09 10:30:00 (2h 15m ago)
+Elapsed: 2h 15m
+ETA: ~1h 30m remaining
+
+Current Step: Writing status dashboard UI
+Last Activity: 2 minutes ago - Committed status display logic
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Recent Activity (last 30 min):
+  • 10:45 - Created status.py module
+  • 10:52 - Implemented real-time status tracking
+  • 11:05 - Added progress calculation logic
+  • 11:20 - Committed changes (3 files modified)
+  • 11:30 - Running tests (pytest in progress...)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Questions Waiting for Response: 0
+Pending Notifications: 0
+
+Next: Run tests → Create PR → Move to next priority
+```
+
+#### 2. Developer States
+
+**Possible States**:
+- 🟢 **WORKING**: Actively implementing current task
+- 🟡 **TESTING**: Running tests, waiting for results
+- 🔴 **BLOCKED**: Waiting for user response (dependency approval, design decision)
+- ⚪ **IDLE**: Between tasks, reading roadmap
+- 🔵 **THINKING**: Analyzing codebase, planning implementation
+- 🟣 **REVIEWING**: Creating PR, writing documentation
+- ⚫ **STOPPED**: Daemon not running
+
+**State Transitions**:
+```
+IDLE → THINKING → WORKING → TESTING → REVIEWING → IDLE
+                    ↓
+                 BLOCKED (if needs user input)
+                    ↓
+                 WORKING (after user responds)
+```
+
+#### 3. Progress Tracking
+
+**Progress Indicators**:
+```python
+# Developer reports progress at key milestones
+progress_milestones = {
+    0: "Starting task",
+    10: "Read requirements",
+    20: "Analyzed codebase",
+    30: "Designed solution",
+    40: "Implementing core logic",
+    50: "Half done",
+    60: "Core functionality complete",
+    70: "Adding tests",
+    80: "Tests passing",
+    90: "Creating documentation",
+    95: "Creating PR",
+    100: "Task complete"
+}
+```
+
+**ETA Calculation**:
+```python
+# Based on historical task completion times
+avg_time_per_priority = {
+    "PRIORITY 1": 8 hours,
+    "PRIORITY 2": 6 hours,
+    "PRIORITY 3": 4 hours
+}
+
+# Adjusts dynamically based on actual progress
+elapsed_time = now - started_at
+progress_rate = current_progress / elapsed_time
+estimated_remaining = (100 - current_progress) / progress_rate
+```
+
+#### 4. Activity Log
+
+**Tracked Activities**:
+- File modifications (which files, how many lines changed)
+- Git operations (commits, branch creation, pushes)
+- Test runs (passed, failed, skipped)
+- Questions asked (to PM or user)
+- Dependency requests
+- Errors encountered
+
+**Log Format**:
+```json
+{
+  "timestamp": "2025-10-09T11:30:00Z",
+  "activity_type": "git_commit",
+  "description": "Committed status display logic",
+  "details": {
+    "files_modified": 3,
+    "lines_added": 145,
+    "lines_deleted": 12,
+    "commit_hash": "abc1234"
+  }
+}
+```
+
+#### 5. Questions Dashboard
+
+**Display Pending Questions**:
+```
+❓ QUESTIONS WAITING FOR RESPONSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Q1] Dependency Approval - WAITING 15 minutes
+  Package: pandas>=2.0.0
+  Reason: Required for CSV export with advanced filtering
+  Options: approve, reject
+  Command: project-manager respond q1 approve
+
+[Q2] Design Decision - WAITING 5 minutes
+  Question: Use REST API or GraphQL for data export?
+  Context: REST is simpler, GraphQL is more flexible
+  Options: rest, graphql
+  Command: project-manager respond q2 rest
+
+Total waiting: 2 questions
+Developer is BLOCKED until you respond!
+```
+
+---
+
+### Architecture
+
+#### Status File (`data/developer_status.json`)
+
+```json
+{
+  "status": "working",
+  "current_task": {
+    "priority": 3,
+    "name": "Developer Status Dashboard",
+    "started_at": "2025-10-09T10:30:00Z",
+    "progress": 60,
+    "eta_seconds": 5400
+  },
+  "current_step": "Writing status dashboard UI",
+  "last_activity": {
+    "timestamp": "2025-10-09T11:30:00Z",
+    "type": "git_commit",
+    "description": "Committed status display logic"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "dependency_approval",
+      "message": "May I install 'pandas>=2.0.0'?",
+      "created_at": "2025-10-09T11:15:00Z",
+      "status": "pending"
+    }
+  ],
+  "activity_log": [
+    {
+      "timestamp": "2025-10-09T10:45:00Z",
+      "type": "file_created",
+      "description": "Created status.py module"
+    },
+    {
+      "timestamp": "2025-10-09T10:52:00Z",
+      "type": "code_change",
+      "description": "Implemented real-time status tracking"
+    }
+  ],
+  "metrics": {
+    "tasks_completed_today": 0,
+    "total_commits_today": 4,
+    "tests_passed_today": 12,
+    "tests_failed_today": 0
+  }
+}
+```
+
+#### Integration with code-developer
+
+**Developer reports status**:
+```python
+# In code-developer daemon
+class DeveloperStatus:
+    def __init__(self):
+        self.status_file = Path("data/developer_status.json")
+
+    def update_status(self, status: str, task: Dict, progress: int):
+        """Update status file with current state."""
+        status_data = {
+            "status": status,
+            "current_task": task,
+            "progress": progress,
+            "last_activity": {
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "type": "status_update"
+            }
+        }
+
+        with open(self.status_file, 'w') as f:
+            json.dump(status_data, f, indent=2)
+
+    def report_activity(self, activity_type: str, description: str):
+        """Add activity to log."""
+        # Read current status
+        status = self._load_status()
+
+        # Add activity
+        activity = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "type": activity_type,
+            "description": description
+        }
+        status["activity_log"].append(activity)
+
+        # Keep only last 50 activities
+        status["activity_log"] = status["activity_log"][-50:]
+
+        # Save
+        self._save_status(status)
+
+    def report_progress(self, progress: int, current_step: str):
+        """Update progress percentage."""
+        status = self._load_status()
+        status["current_task"]["progress"] = progress
+        status["current_step"] = current_step
+
+        # Calculate ETA
+        elapsed = datetime.utcnow() - datetime.fromisoformat(
+            status["current_task"]["started_at"].replace("Z", "")
+        )
+        if progress > 0:
+            total_estimated = elapsed.total_seconds() * (100 / progress)
+            remaining = total_estimated - elapsed.total_seconds()
+            status["current_task"]["eta_seconds"] = int(remaining)
+
+        self._save_status(status)
+```
+
+#### Integration with project-manager
+
+**PM CLI displays status**:
+```python
+# In project-manager CLI
+class DeveloperStatusDisplay:
+    def show_status(self):
+        """Display developer status in terminal."""
+        from rich.console import Console
+        from rich.panel import Panel
+        from rich.progress import Progress
+
+        console = Console()
+        status = self._load_status()
+
+        # Status indicator with emoji
+        status_emoji = {
+            "working": "🟢",
+            "testing": "🟡",
+            "blocked": "🔴",
+            "idle": "⚪",
+            "thinking": "🔵"
+        }
+
+        # Progress bar
+        progress = status["current_task"]["progress"]
+
+        # Format output
+        console.print(Panel(
+            f"{status_emoji[status['status']]} {status['status'].upper()}\n"
+            f"Task: {status['current_task']['name']}\n"
+            f"Progress: {progress}%\n"
+            f"ETA: {self._format_eta(status['current_task']['eta_seconds'])}",
+            title="🤖 CODE DEVELOPER STATUS"
+        ))
+```
+
+---
+
+### Implementation Steps
+
+**Day 1** (4-6 hours):
+1. Create `data/developer_status.json` schema
+2. Add status reporting to `code-developer` daemon:
+   - `update_status()` method
+   - `report_activity()` method
+   - `report_progress()` method
+3. Add status display to `project-manager`:
+   - `developer-status` command
+   - Rich terminal formatting
+   - Real-time refresh option
+
+**Day 2** (2-4 hours):
+4. Add activity log tracking (last 50 activities)
+5. Add questions dashboard integration
+6. Add metrics tracking (commits, tests, etc.)
+7. Test full workflow:
+   - Start daemon → Check status → See progress
+   - Developer asks question → Shows in PM
+   - Respond → Developer unblocks
+
+---
+
+### Success Criteria
+
+✅ **User can always see developer status**:
+- Run `project-manager developer-status` → See current state
+- Know if developer is working, blocked, or idle
+
+✅ **User knows progress**:
+- See percentage complete (0-100%)
+- See ETA (estimated time remaining)
+- See recent activities (last 30 min)
+
+✅ **User sees questions immediately**:
+- Questions show up in status view
+- Clear call-to-action (respond command)
+- Developer unblocks after response
+
+✅ **Updates are real-time**:
+- Status file updates every minute (or on state change)
+- PM CLI shows fresh data
+- Optional: `--watch` mode for continuous updates
+
+---
+
+### Future Enhancements (Post-PRIORITY 3)
+
+- **Web UI**: Browser-based status dashboard (instead of terminal)
+- **Push Notifications**: Desktop/mobile alerts when developer asks questions
+- **Historical Tracking**: Graph of progress over time
+- **Multi-Developer**: Track multiple developers working in parallel
+- **Slack Integration**: Developer status posts to Slack channel
+
+---
+
+**This gives the user complete visibility into what the autonomous developer is doing, removing the "black box" feeling and building trust!** 📊🤖
 
 ---
 
