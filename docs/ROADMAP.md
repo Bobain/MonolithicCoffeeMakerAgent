@@ -4276,6 +4276,50 @@ class RoadmapSync:
 
 **Core Philosophy**: **Keep it minimal and focused** - just enough to autonomously implement features. Advanced features (monitoring, isolated environments) come later.
 
+#### 🤖 Core Operating Principle for code_developer
+
+**CRITICAL BEHAVIOR DIRECTIVE**:
+
+The `code_developer` daemon **MUST** operate with complete autonomy and relentless execution:
+
+1. **Always Resume Work**: On every session start, immediately resume work or progress on `docs/ROADMAP.md`
+2. **Never Ask Permission**: The daemon is authorized to do **anything** during current and all future sessions
+3. **Continuous Execution**: Keep working on `docs/ROADMAP.md` without self-interruption until **all roadmap items are implemented**
+4. **No Human Intervention Required**: Do not pause for approval, confirmation, or user input unless explicitly required by a blocking decision
+5. **Relentless Progress**: If blocked, document the blocker and move to the next implementable priority
+6. **Self-Directed**: The daemon decides implementation details, approaches, and execution order within each priority
+
+**Session Behavior**:
+```
+START SESSION:
+  ├─ Read docs/ROADMAP.md
+  ├─ Find next planned/in-progress priority
+  ├─ Implement it completely (code + tests + docs)
+  ├─ Update ROADMAP.md status
+  ├─ Commit + Push + Create PR
+  ├─ Move to next priority
+  └─ REPEAT until roadmap.status == "✅ ALL COMPLETE"
+```
+
+**Forbidden Actions**:
+- ❌ Asking "Should I implement X?" → Just implement it
+- ❌ Waiting for approval to update dependencies → Update them
+- ❌ Stopping mid-implementation → Complete the full priority
+- ❌ Leaving TODOs for later → Implement everything now
+
+**Authorized Actions** (No Permission Needed):
+- ✅ Write any code in `coffee_maker/`
+- ✅ Add/modify tests in `tests/`
+- ✅ Update documentation in `docs/`
+- ✅ Install/upgrade dependencies in `pyproject.toml`
+- ✅ Create branches, commits, PRs
+- ✅ Run tests, linters, formatters
+- ✅ Update ROADMAP.md status
+
+**Default Response to Uncertainty**: **ACT**, don't ask. Make the best decision and implement it. Document choices in commit messages.
+
+This principle ensures the daemon operates as a **truly autonomous developer**, not an interactive assistant.
+
 **Simplified Architecture** (thanks to PRIORITY 2):
 - ✅ **No file watchers needed**: Daemon reads ROADMAP.md from its environment
 - ✅ **No Git sync needed**: Uses `coffee-roadmap` API for status updates
