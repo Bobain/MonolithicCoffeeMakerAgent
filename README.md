@@ -1,5 +1,33 @@
-AI agent toy, written with agents AI.
-No idea yet what it will do for real
+# Coffee Maker Agent - Autonomous Development System
+
+An autonomous development system that reads `ROADMAP.md` and automatically implements features using Claude AI.
+
+## 🤖 What It Does
+
+The Coffee Maker Agent is a **self-implementing AI system** that:
+- Reads your roadmap and implements priorities autonomously
+- Creates feature branches, commits, and pull requests automatically
+- Uses Claude AI to write code following your specifications
+- Runs continuously until all planned features are complete
+
+**Current Status**: PRIORITY 2 (80%) & PRIORITY 3 (90%) - Core autonomous daemon operational!
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# 1. Install dependencies
+poetry install
+
+# 2. Run the autonomous daemon
+python run_daemon.py
+
+# 3. Monitor progress (in another terminal)
+project-manager notifications
+```
+
+**⚠️ Important**: Run the daemon from a separate terminal, not from within Claude Code sessions.
 
 ---
 
@@ -24,15 +52,79 @@ This file is the **SINGLE SOURCE OF TRUTH** for:
 
 ---
 
+## 🎯 Core Components
+
+### 1. Autonomous Development Daemon (`run_daemon.py`)
+Continuously reads ROADMAP.md and implements features autonomously using Claude AI.
+
+**Usage**:
+```bash
+python run_daemon.py              # Interactive mode (asks for approval)
+python run_daemon.py --auto-approve   # Autonomous mode (full automation)
+python run_daemon.py --help        # Show all options
+```
+
+### 2. Project Manager CLI (`project-manager`)
+Manage roadmap and communicate with the daemon.
+
+**Usage**:
+```bash
+project-manager view               # View roadmap
+project-manager notifications      # List pending notifications
+project-manager respond <id> approve   # Approve daemon's work
+```
+
+### 3. Notification System
+SQLite-based communication system between daemon and user with WAL mode for concurrent access.
+
+---
+
+## 📊 Project Statistics
+
+- **Code**: ~5,000 lines of Python (excluding tests)
+- **Tests**: 159 tests passing (0 regressions)
+- **Documentation**: 3,321 lines across multiple documents
+- **Architecture**: Hybrid Shared SQLite with WAL mode
+- **Dependencies**: Poetry-managed, minimal external dependencies
+
+---
+
+## 🏗️ Architecture
+
+```
+coffee_maker/
+├── autonomous/           # Autonomous daemon system
+│   ├── daemon.py        # Core daemon loop
+│   ├── roadmap_parser.py    # ROADMAP.md parser
+│   ├── claude_cli_interface.py  # Claude CLI wrapper
+│   └── git_manager.py   # Git operations
+├── cli/                 # CLI tools
+│   ├── roadmap_cli.py   # project-manager command
+│   └── notifications.py # Notification system
+└── langchain_observe/   # Analytics & observability
+    └── analytics/       # Native sqlite3 analytics
+```
+
+---
+
+## 📚 Documentation
+
+- **[ROADMAP.md](docs/ROADMAP.md)**: Complete project roadmap (single source of truth)
+- **[DAEMON_USAGE.md](docs/DAEMON_USAGE.md)**: Daemon usage guide (540 lines)
+- **[ADR_001](docs/ADR_001_DATABASE_SYNC_STRATEGY.md)**: Database sync architecture decision
+- **[README_DOCS.md](docs/README_DOCS.md)**: Documentation organization
+
+---
+
+## 🔧 Development
+
 For contributor instructions, see [`AGENTS.md`](AGENTS.md).
 
 [**Static github pages**](https://bobain.github.io/MonolithicCoffeeMakerAgent/)
 
-![Boondoggle](ressources/README/coffee_maker.png)
+![Coffee Maker](ressources/README/coffee_maker.png)
 
-<!-- co-author : Gemini 2.5 Pro Preview -->
-
-Don't use this package : it does nothing
+---
 
 # Some help
 
