@@ -2481,6 +2481,32 @@ CI passes ✅ → Daemon continues to next task
 - [ ] Fix vulnerabilities or document reason for delay
 - [ ] Update dependencies with security patches
 
+#### 🚨 Current Active Vulnerabilities (as of 2025-10-09)
+
+**Status**: 5 vulnerabilities detected on default branch (main)
+**Link**: https://github.com/Bobain/MonolithicCoffeeMakerAgent/security/dependabot
+
+**Action Required**:
+- [ ] **1 HIGH severity vulnerability** - Fix immediately (today)
+- [ ] **4 MODERATE severity vulnerabilities** - Fix within 24 hours
+
+**TODO**:
+1. [ ] Access GitHub Security tab to identify specific packages and CVEs
+2. [ ] For HIGH severity:
+   - [ ] Identify affected package and vulnerable version
+   - [ ] Check if we're using the vulnerable functionality
+   - [ ] Update to patched version or apply mitigation
+   - [ ] Run full test suite to verify fix
+   - [ ] Commit with security prefix: `security: Fix CVE-XXXX in <package>`
+3. [ ] For MODERATE severity (repeat for each):
+   - [ ] Identify package and assess impact
+   - [ ] Update to patched versions
+   - [ ] Test and commit fixes
+4. [ ] Verify all alerts resolved on GitHub Security tab
+5. [ ] Document any mitigations or reasons for delay
+
+**Priority**: 🚨 **HIGH severity must be fixed before any new feature work**
+
 **Commands**:
 ```bash
 # View security alerts via GitHub web UI
