@@ -96,16 +96,15 @@ class ClaudeCLI:
         """
         timeout = timeout or self.timeout
 
-        # Build command: echo "prompt" | claude
-        # Claude CLI reads from stdin when not in interactive mode
-        cmd = [self.cli_path]
+        # Build command: claude -p "prompt"
+        # -p/--print flag enables non-interactive mode
+        cmd = [self.cli_path, "-p", prompt]
 
         logger.info(f"Executing Claude CLI: {prompt[:100]}...")
 
         try:
             result = subprocess.run(
                 cmd,
-                input=prompt,  # Pass prompt via stdin
                 cwd=working_dir,
                 capture_output=True,
                 text=True,
