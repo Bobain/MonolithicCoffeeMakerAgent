@@ -1,30 +1,81 @@
-"""Database schema for LLM metrics warehouse.
+"""Comprehensive analytics warehouse schema for LLM metrics.
 
-This module defines SQLAlchemy models for storing LLM analytics data.
-Supports both SQLite (default) and PostgreSQL.
+This module defines a **full-featured schema** for comprehensive LLM analytics,
+including prompt variant tracking, agent task results, and advanced features.
+For a simpler schema focused on Langfuse export, see models.py.
 
-The schema includes tables for:
-- llm_generations: Individual LLM API calls with metrics
-- llm_traces: Complete execution traces
-- llm_events: Fallback events and errors
-- rate_limit_counters: Multi-process safe rate limit tracking
-- scheduled_requests: Request scheduling queue
-- agent_task_results: Agent performance metrics
-- prompt_variants: Prompt versions for A/B testing
-- prompt_executions: Prompt execution results
-- export_metadata: Export run tracking
+## Purpose
+
+This schema is designed for:
+- **Analytics Warehouse**: Complete LLM usage tracking and analysis
+- **Prompt Engineering**: A/B testing with prompt variants
+- **Agent Monitoring**: Track agent task execution and results
+- **Advanced Features**: Export metadata, scheduling, WAL mode
+
+## Tables
+
+### Core Tables
+- **llm_generations**: Individual LLM API calls with detailed metrics
+- **llm_traces**: Complete execution traces with full context
+- **llm_events**: Fallback events, errors, and state changes
+
+### Advanced Features
+- **rate_limit_counters**: Multi-process safe rate limit tracking
+- **scheduled_requests**: Request scheduling queue for rate limiting
+- **agent_task_results**: Agent performance and output tracking
+- **prompt_variants**: Prompt versions for A/B testing and optimization
+- **prompt_executions**: Execution results for each prompt variant
+- **export_metadata**: Track export runs and sync state
+
+## When to Use This vs models.py
+
+**Use db_schema.py when**:
+- Building comprehensive analytics warehouse
+- Need prompt variant tracking and A/B testing
+- Require agent task result tracking
+- Want export metadata and scheduling features
+- Need advanced analytics capabilities
+
+**Use models.py when**:
+- Just exporting Langfuse traces (simpler schema)
+- Running basic performance analysis only
+- Need minimal, lightweight schema
+- Don't need prompt variants or agent tracking
+
+## Features
+
+### Multi-Process Safety
+Enable WAL mode for SQLite to support concurrent writes:
+```python
+enable_sqlite_wal(engine)
+```
+
+### Platform Independence
+Custom type decorators (GUID, JSON) work on both SQLite and PostgreSQL.
+
+## Database Support
+
+Supports both SQLite (default, with WAL mode) and PostgreSQL backends.
 
 Example:
     Create all tables:
     >>> from sqlalchemy import create_engine
     >>> from coffee_maker.langchain_observe.analytics.db_schema import Base
     >>>
-    >>> engine = create_engine("sqlite:///llm_metrics.db")
+    >>> engine = create_engine("sqlite:///llm_warehouse.db")
     >>> Base.metadata.create_all(engine)
 
     Enable WAL mode for SQLite (multi-process safe):
     >>> from coffee_maker.langchain_observe.analytics.db_schema import enable_sqlite_wal
     >>> enable_sqlite_wal(engine)
+
+    Setup with PostgreSQL:
+    >>> engine = create_engine("postgresql://user:pass@localhost/llm_warehouse")
+    >>> Base.metadata.create_all(engine)
+
+See Also:
+    - models.py: Simplified schema for Langfuse export
+    - setup_metrics_db.py: Script to initialize the database
 """
 
 from datetime import datetime

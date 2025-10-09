@@ -1,12 +1,40 @@
-"""Database models for LLM analytics and metrics storage.
+"""Database models for Langfuse export and basic analytics.
 
-This module defines SQLAlchemy ORM models for storing:
-- Langfuse traces and generations
-- LLM performance metrics
-- Cost and usage statistics
-- Rate limiting counters
+This module defines a **simplified schema** focused on Langfuse trace export
+and basic performance analysis. For a more comprehensive analytics warehouse
+with additional features, see db_schema.py.
 
-The schema supports both SQLite (default) and PostgreSQL backends.
+## Purpose
+
+This schema is optimized for:
+- **Langfuse Export**: Direct mapping from Langfuse API to local database
+- **Basic Analytics**: LLM performance, costs, and usage analysis
+- **Simplicity**: Minimal tables focused on core use cases
+
+## Tables
+
+- **Trace**: Complete LLM execution traces
+- **Generation**: Individual LLM API calls with metrics
+- **Span**: Intermediate steps/operations within traces
+- **PerformanceMetric**: Pre-aggregated performance metrics
+- **RateLimitCounter**: Multi-process safe rate limit tracking
+
+## When to Use This vs db_schema.py
+
+**Use models.py when**:
+- Exporting Langfuse traces to local database
+- Running basic performance analysis (PerformanceAnalyzer)
+- Need simple, lightweight schema
+
+**Use db_schema.py when**:
+- Building comprehensive analytics warehouse
+- Need prompt variant tracking and A/B testing
+- Require agent task result tracking
+- Want export metadata and scheduling features
+
+## Database Support
+
+Supports both SQLite (default) and PostgreSQL backends.
 
 Example:
     Create tables in SQLite:
@@ -22,6 +50,11 @@ Example:
     >>>
     >>> with Session(engine) as session:
     ...     recent = session.query(Generation).order_by(Generation.created_at.desc()).limit(10).all()
+
+See Also:
+    - db_schema.py: Comprehensive analytics warehouse schema
+    - exporter.py: LangfuseExporter for populating this schema
+    - analyzer.py: PerformanceAnalyzer for querying this schema
 """
 
 from datetime import datetime
