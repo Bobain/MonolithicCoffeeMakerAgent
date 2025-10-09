@@ -231,85 +231,590 @@ When published on PyPI, the `coffee-maker` package will provide **two command-li
 
 **Purpose**: Single interface for user to interact with roadmap and daemon
 
-**Commands**:
-```bash
-# View roadmap and daemon status
-project-manager status
+#### Commands (All Phases)
 
-# View pending notifications from daemon
+##### Roadmap Management
+```bash
+# View full roadmap
+project-manager view
+
+# View specific priority
+project-manager view <priority-number>
+project-manager view 3
+
+# View roadmap summary
+project-manager view --summary
+
+# Search roadmap
+project-manager search <keyword>
+project-manager search "analytics"
+
+# Export roadmap
+project-manager export --format [markdown|json|html|pdf]
+project-manager export --format html --output roadmap.html
+```
+
+##### Notification Management
+```bash
+# List all pending notifications from daemon
 project-manager notifications
 
-# Respond to daemon questions
-project-manager respond <msg_id> <answer>
+# List notifications by priority
+project-manager notifications --priority [critical|high|normal]
 
-# Manage roadmap
-project-manager view
-project-manager edit
+# View specific notification details
+project-manager notification <id>
+project-manager notification 5
 
-# Control daemon
-project-manager start-daemon
-project-manager stop-daemon
-project-manager pause-daemon
+# Respond to daemon notification
+project-manager respond <notif_id> <response>
+project-manager respond 5 approve
+project-manager respond 5 reject --reason "Use Option B instead"
+
+# Mark notification as read
+project-manager mark-read <notif_id>
+
+# Clear all completed notifications
+project-manager notifications clear
 ```
 
-**Configuration** (`pyproject.toml`):
+##### Daemon Control
+```bash
+# Start daemon (background mode)
+project-manager start-daemon
+project-manager start-daemon --auto-approve  # Auto-approve all (dangerous!)
+
+# Stop daemon (graceful shutdown)
+project-manager stop-daemon
+
+# Stop daemon (force kill)
+project-manager stop-daemon --force
+
+# Pause daemon (finish current task, then wait)
+project-manager pause-daemon
+
+# Resume paused daemon
+project-manager resume-daemon
+
+# Restart daemon
+project-manager restart-daemon
+
+# Check daemon status
+project-manager status
+project-manager status --watch  # Live updates every 5s
+```
+
+##### Analytics & Reporting
+```bash
+# View development metrics
+project-manager metrics
+project-manager metrics --period [day|week|month]
+
+# View daemon activity log
+project-manager activity
+project-manager activity --since "2 days ago"
+
+# View roadmap health score
+project-manager health
+```
+
+##### Configuration
+```bash
+# Initialize project
+project-manager init
+# → Creates data/ directory
+# → Initializes ROADMAP.md
+# → Configures notification system
+# → Sets up databases
+
+# Show current configuration
+project-manager config show
+
+# Edit configuration
+project-manager config set <key> <value>
+project-manager config set daemon.timeout 3600
+project-manager config set daemon.model "claude-sonnet-4"
+
+# Reset configuration to defaults
+project-manager config reset
+```
+
+##### Interactive Mode (Phase 2 - AI-Powered)
+```bash
+# Start interactive chat session with AI PM
+project-manager chat
+
+# Within chat session:
+> add priority for CSV export feature
+> analyze roadmap and suggest optimizations
+> what should I work on next?
+> update PRIORITY 3 status to in-progress
+> help
+> exit
+```
+
+#### Feature Breakdown by Phase
+
+**Phase 1 (MVP) - ✅ CURRENTLY IMPLEMENTED**:
+- ✅ `view` - Display roadmap (full or specific priority)
+- ✅ `notifications` - List pending notifications
+- ✅ `respond` - Respond to daemon questions
+- ✅ `status` - Show daemon status (placeholder)
+- ✅ Basic text-based output
+- ✅ File-based notification system
+- ✅ SQLite database for notifications
+
+**Phase 2 (AI-Powered) - 📝 PLANNED (20% remaining)**:
+- [ ] `chat` - Interactive AI-powered chat interface
+- [ ] Claude AI integration for natural language commands
+- [ ] Rich terminal UI with `rich` library
+- [ ] `start-daemon` / `stop-daemon` - Daemon process management
+- [ ] `metrics` - Development velocity analytics
+- [ ] `health` - Roadmap health scoring
+- [ ] `export` - Multi-format export (HTML, PDF)
+- [ ] `search` - Semantic search across roadmap
+- [ ] Real-time status updates with --watch
+- [ ] AI-assisted roadmap editing
+- [ ] Suggestion engine (what to work on next)
+- [ ] Change history and undo functionality
+
+#### Configuration Options
+
+**Location**: `~/.coffee-maker/config.yml`
+
+```yaml
+# Daemon settings
+daemon:
+  model: "claude-sonnet-4"           # Claude model to use
+  timeout: 3600                       # Max seconds per task (1 hour)
+  auto_approve: false                 # Auto-approve all (dangerous!)
+  sleep_interval: 30                  # Seconds between roadmap checks
+  create_prs: true                    # Auto-create PRs
+  max_retries: 3                      # Max retry attempts on failure
+
+# Notification settings
+notifications:
+  db_path: "data/notifications.db"    # Notification database
+  retention_days: 30                  # Auto-delete old notifications
+
+# Roadmap settings
+roadmap:
+  path: "docs/ROADMAP.md"             # Roadmap file location
+  backup_on_edit: true                # Create backup before edits
+  validate_on_update: true            # Validate structure on updates
+
+# UI settings
+ui:
+  theme: "dark"                       # Terminal color theme
+  show_tips: true                     # Show helpful tips
+  animation: true                     # Enable animations
+
+# Analytics settings
+analytics:
+  db_path: "data/analytics.db"        # Analytics database
+  track_metrics: true                 # Enable metrics tracking
+```
+
+#### Output Formats
+
+**Text Output** (Phase 1):
+```
+Coffee Maker Agent - ROADMAP
+================================================================================
+
+PRIORITY 1: Analytics & Observability ✅ COMPLETE
+  Status: Complete
+  Duration: 2-3 weeks
+
+PRIORITY 2: Roadmap Management CLI 🔄 IN PROGRESS (80%)
+  Status: In Progress
+  Duration: 4-5 days
+  ...
+```
+
+**Rich Terminal UI** (Phase 2):
+```
+╭─── Coffee Maker Agent ─────────────────────────────────────╮
+│                                                             │
+│  📋 Roadmap Status                     🤖 Daemon: Running  │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│                                                             │
+│  🔴 PRIORITY 1: Analytics         ✅ Complete              │
+│  🔴 PRIORITY 2: Roadmap CLI       🔄 80% (In Progress)     │
+│  🔴 PRIORITY 3: Daemon            📝 Planned               │
+│                                                             │
+│  📬 Notifications (3 pending)                               │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│                                                             │
+│  🔴 #5 CRITICAL: Dependency approval needed                │
+│  🟠 #6 HIGH: Test failure in analytics module              │
+│  🟢 #7 NORMAL: PRIORITY 1 complete                         │
+│                                                             │
+│  💡 Tip: Use 'project-manager respond 5 approve' to        │
+│          unblock the daemon                                │
+│                                                             │
+╰─────────────────────────────────────────────────────────────╯
+```
+
+**JSON Output**:
+```json
+{
+  "roadmap": {
+    "priorities": [
+      {
+        "number": 1,
+        "title": "Analytics & Observability",
+        "status": "complete",
+        "progress": 100
+      }
+    ]
+  },
+  "daemon": {
+    "status": "running",
+    "current_task": "Implementing PRIORITY 2",
+    "uptime": 3600
+  },
+  "notifications": {
+    "pending": 3,
+    "critical": 1
+  }
+}
+```
+
+#### Entry Point Configuration
+
+**Location**: `pyproject.toml`
+
 ```toml
 [project.scripts]
-project-manager = "coffee_maker.cli.project_manager:main"
+project-manager = "coffee_maker.cli.roadmap_cli:main"
 ```
 
-**User Experience**:
-- Terminal UI with `rich` library
-- Real-time daemon status display
-- Interactive notification system
-- Roadmap viewer/editor
-- One command to rule them all!
+**User Experience Goals**:
+- 🎯 Single interface for everything
+- 🚀 Zero learning curve (intuitive commands)
+- 📊 Rich visual feedback
+- 💬 Natural language interaction (Phase 2)
+- ⚡ Fast response times
+- 🛡️ Safe by default (confirmation prompts)
 
 ---
 
 ### 2. `code-developer` - Autonomous Daemon 🤖
 
-**Purpose**: Autonomous development daemon that implements roadmap (runs underlying Claude CLI)
+**Purpose**: Autonomous development daemon that implements roadmap projects (wraps Claude CLI)
 
-**Commands**:
+#### Commands (All Features)
+
+##### Daemon Lifecycle
 ```bash
-# Start daemon (runs continuously)
+# Start daemon (background mode)
 code-developer start
 
-# Start in foreground (for debugging)
+# Start in foreground (debugging mode, see logs)
 code-developer start --foreground
 
-# Stop daemon
+# Start with options
+code-developer start --auto-approve              # Auto-approve all (dangerous!)
+code-developer start --model claude-opus-4       # Use specific model
+code-developer start --timeout 7200              # 2 hour timeout
+code-developer start --no-pr                     # Don't create PRs
+code-developer start --max-iterations 5          # Stop after 5 projects
+
+# Stop daemon (graceful - finish current task)
 code-developer stop
 
-# Check status
+# Stop daemon (force kill)
+code-developer stop --force
+
+# Stop after current task
+code-developer stop --after-task
+
+# Restart daemon
+code-developer restart
+```
+
+##### Status & Monitoring
+```bash
+# Check daemon status
 code-developer status
+# → Shows: running/stopped/paused, current task, uptime, progress
 
-# View logs
-code-developer logs --tail 100
+# Live status updates
+code-developer status --watch
+# → Refreshes every 5 seconds
 
+# Detailed status
+code-developer status --verbose
+# → Shows: current file, git branch, last commit, tests status
+
+# View daemon logs
+code-developer logs
+code-developer logs --tail 100              # Last 100 lines
+code-developer logs --follow                # Live tail mode
+code-developer logs --since "1 hour ago"    # Filter by time
+code-developer logs --level [debug|info|warning|error]
+
+# View task history
+code-developer history
+code-developer history --limit 10           # Last 10 tasks
+```
+
+##### Control & Management
+```bash
 # Pause daemon (finish current task, then wait)
 code-developer pause
 
-# Resume daemon
+# Resume paused daemon
 code-developer resume
+
+# Skip current task (mark as failed, move to next)
+code-developer skip
+
+# Retry failed task
+code-developer retry
+
+# Clear task queue
+code-developer clear-queue
 ```
 
-**Configuration** (`pyproject.toml`):
+##### Configuration & Setup
+```bash
+# Initialize daemon (first time setup)
+code-developer init
+# → Checks Claude CLI installation
+# → Verifies gh CLI authentication
+# → Creates data directories
+# → Sets up logging
+
+# Show current configuration
+code-developer config show
+
+# Edit configuration
+code-developer config set <key> <value>
+code-developer config set timeout 7200
+code-developer config set model "claude-sonnet-4"
+code-developer config set auto_approve false
+
+# Validate environment
+code-developer check
+# → Verifies Claude CLI works
+# → Checks gh CLI authentication
+# → Tests Git repository access
+# → Validates ROADMAP.md exists
+```
+
+##### Debugging & Troubleshooting
+```bash
+# Run in debug mode (verbose logging)
+code-developer start --debug
+
+# Test daemon without running (dry-run)
+code-developer test
+# → Parses roadmap
+# → Shows what would be executed
+# → Validates all prerequisites
+
+# View current task details
+code-developer current
+
+# View error details
+code-developer errors
+code-developer errors --last     # Last error only
+```
+
+#### Feature Breakdown
+
+**Core Features** (✅ Implemented - 90%):
+- ✅ Autonomous loop (continuously reads roadmap)
+- ✅ RoadmapParser (finds next unimplemented project)
+- ✅ Claude CLI wrapper (spawns `claude code -p` subprocess)
+- ✅ GitManager (creates branches, commits, pushes)
+- ✅ Notification system (asks user for approvals)
+- ✅ Session conflict detection (won't run inside Claude session)
+- ✅ Non-interactive execution (`claude -p` flag)
+- ✅ Branch handling (auto-creates feature branches)
+- ✅ Basic logging
+- ⏳ E2E testing (10% remaining)
+
+**Advanced Features** (📝 Planned):
+- [ ] PR creation with `gh` CLI
+- [ ] Roadmap status updates (mark complete)
+- [ ] Demo creation after completion
+- [ ] Test result monitoring
+- [ ] Automatic rollback on test failure
+- [ ] Smart retry logic with exponential backoff
+- [ ] Parallel task execution (multiple projects)
+- [ ] Resource monitoring (CPU, memory limits)
+- [ ] Cost tracking integration
+- [ ] Slack notifications
+- [ ] Web dashboard integration
+
+#### Daemon Behavior & Architecture
+
+**Continuous Loop**:
+```python
+while True:
+    # 1. Read ROADMAP.md
+    roadmap = RoadmapParser("docs/ROADMAP.md")
+
+    # 2. Find next unimplemented project
+    next_project = roadmap.get_next_unimplemented_project()
+
+    if not next_project:
+        logger.info("All projects complete! Sleeping...")
+        sleep(30)
+        continue
+
+    # 3. Ask user for approval (unless --auto-approve)
+    if not auto_approve:
+        notify_user(f"Ready to implement: {next_project}")
+        response = wait_for_user_response()
+        if response != "approve":
+            continue
+
+    # 4. Create feature branch
+    branch = create_branch(f"feature/{next_project.id}")
+
+    # 5. Execute Claude CLI with project spec
+    prompt = f"Implement project: {next_project.spec}"
+    result = run_claude_cli(prompt, timeout=3600)
+
+    # 6. Verify tests pass
+    if not run_tests():
+        notify_user("Tests failed! Rolling back...")
+        rollback()
+        continue
+
+    # 7. Commit and push
+    commit_changes(f"feat: Implement {next_project.title}")
+    push_branch()
+
+    # 8. Create PR (if enabled)
+    if create_prs:
+        create_pull_request()
+
+    # 9. Update roadmap status
+    update_roadmap_status(next_project, "complete")
+
+    # 10. Create demo
+    create_demo(next_project)
+
+    # 11. Notify user
+    notify_user(f"✅ {next_project.title} complete!")
+```
+
+**Safety Mechanisms**:
+1. **Session Detection**: Won't run inside active Claude Code session (conflict check)
+2. **File Locks**: Uses file locks to prevent concurrent ROADMAP.md edits
+3. **Timeout Protection**: Max execution time per task (default 1 hour)
+4. **Test Gating**: Rolls back if tests fail
+5. **Permission-First**: Asks before major actions (unless --auto-approve)
+6. **Graceful Shutdown**: SIGINT/SIGTERM handler for clean shutdown
+7. **Git Safety**: All changes committed to branches, never direct to main
+8. **Automatic Rollback**: Failed tasks don't corrupt repository
+
+**Claude CLI Integration**:
+```python
+class ClaudeCLI:
+    def execute(self, prompt: str, timeout: int = 3600):
+        """Execute Claude CLI in non-interactive mode."""
+
+        # Use -p flag for non-interactive execution
+        cmd = ["claude", "code", "-p", prompt]
+
+        # Set environment
+        env = os.environ.copy()
+        env["CLAUDE_MODEL"] = self.model
+
+        # Run with timeout
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env
+        )
+
+        # Wait with timeout
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+            return {
+                "success": process.returncode == 0,
+                "output": stdout.decode(),
+                "error": stderr.decode()
+            }
+        except subprocess.TimeoutExpired:
+            process.kill()
+            raise TimeoutError(f"Task exceeded {timeout}s")
+```
+
+**Configuration Options**:
+
+**Location**: `~/.coffee-maker/daemon.yml`
+
+```yaml
+# Daemon behavior
+daemon:
+  model: "claude-sonnet-4"           # Claude model to use
+  timeout: 3600                      # Max seconds per task (1 hour)
+  auto_approve: false                # Skip user approval (dangerous!)
+  sleep_interval: 30                 # Seconds between roadmap checks
+  max_iterations: -1                 # Max projects (-1 = unlimited)
+
+# Git settings
+git:
+  create_prs: true                   # Auto-create pull requests
+  base_branch: "main"                # Base branch for PRs
+  auto_push: true                    # Auto-push branches
+  delete_merged: true                # Delete branches after merge
+
+# Safety settings
+safety:
+  require_tests: true                # Must pass tests before commit
+  rollback_on_failure: true          # Auto-rollback on test failure
+  max_retries: 3                     # Max retry attempts
+  backup_before_run: true            # Backup repo before starting
+
+# Logging
+logging:
+  level: "INFO"                      # DEBUG, INFO, WARNING, ERROR
+  file: "logs/daemon.log"            # Log file location
+  max_size: "10MB"                   # Max log file size
+  backup_count: 5                    # Number of log backups
+
+# Notifications
+notifications:
+  enabled: true                      # Enable user notifications
+  db_path: "data/notifications.db"   # Notification database
+
+# Claude CLI
+claude_cli:
+  path: "claude"                     # Path to Claude CLI binary
+  flags: ["-p"]                      # Default flags (non-interactive)
+
+# Performance
+performance:
+  parallel_tasks: 1                  # Number of parallel tasks (future)
+  cpu_limit: 80                      # Max CPU usage (%)
+  memory_limit: 2048                 # Max memory (MB)
+```
+
+#### Entry Point Configuration
+
+**Location**: `pyproject.toml`
+
 ```toml
 [project.scripts]
 code-developer = "coffee_maker.autonomous.daemon_cli:main"
 ```
 
-**Daemon Behavior**:
-- Runs as background process (daemon mode)
-- Wraps Claude CLI (`claude code`) in subprocess
-- Reads `docs/ROADMAP.md` continuously
-- Implements priorities autonomously
-- **ALWAYS asks permission** (core principle!)
-- Creates demos after completion
-- Notifies user via `project-manager`
-- Never stops without user command
+**Daemon Goals**:
+- 🤖 Fully autonomous (no human intervention needed)
+- 🔁 Continuous operation (never stops)
+- 🛡️ Safe by default (permission-first, rollback on failure)
+- 📊 Observable (rich logging, status monitoring)
+- ⚡ Efficient (smart task selection, resource limits)
+- 🧪 Testable (dry-run mode, E2E tests)
 
 ---
 
