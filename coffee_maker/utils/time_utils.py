@@ -13,8 +13,15 @@ Example:
     >>> formatted = format_duration(3665)  # "1h 1m 5s"
 """
 
+import time
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
+
+# Time constants (in seconds)
+SECONDS_IN_MINUTE = 60
+SECONDS_IN_HOUR = 3600
+SECONDS_IN_DAY = 86400
+SECONDS_IN_WEEK = 604800
 
 
 def get_time_threshold(
@@ -289,3 +296,57 @@ def time_ago(
     else:
         months = int(seconds / 2592000)
         return f"{months} month{'s' if months != 1 else ''} ago"
+
+
+def get_timestamp_threshold(
+    timeframe: str,
+    reference_time: Optional[float] = None,
+) -> float:
+    """Get Unix timestamp threshold for a timeframe.
+
+    Useful for filtering data by time periods using Unix timestamps.
+    Eliminates duplicate time threshold calculation across modules.
+
+    Args:
+        timeframe: One of "minute", "hour", "day", or "all"
+        reference_time: Reference Unix timestamp (default: current time)
+
+    Returns:
+        Unix timestamp threshold
+
+    Raises:
+        ValueError: If timeframe is invalid
+
+    Example:
+        >>> # Get threshold for last day
+        >>> threshold = get_timestamp_threshold("day")
+        >>> # Returns timestamp from 24 hours ago
+        >>>
+        >>> # Get threshold for last hour
+        >>> threshold = get_timestamp_threshold("hour")
+        >>> # Returns timestamp from 1 hour ago
+        >>>
+        >>> # Get all data
+        >>> threshold = get_timestamp_threshold("all")
+        >>> # Returns 0 (Unix epoch)
+    """
+    if reference_time is None:
+        reference_time = time.time()
+
+    # Special case: all time
+    if timeframe == "all":
+        return 0
+
+    # Timeframe to seconds mapping
+    timeframe_map = {
+        "minute": SECONDS_IN_MINUTE,
+        "hour": SECONDS_IN_HOUR,
+        "day": SECONDS_IN_DAY,
+    }
+
+    offset = timeframe_map.get(timeframe)
+    if offset is None:
+        valid_options = list(timeframe_map.keys()) + ["all"]
+        raise ValueError(f"Invalid timeframe: {timeframe}. Valid options: {valid_options}")
+
+    return reference_time - offset

@@ -1,35 +1,51 @@
-from langchain_openai import llms
+import logging
 from functools import partial
-import openai
-import time
+from typing import Callable, Type
 
-from coffee_maker.langchain_observe.llm_providers.gemini import set_api_limits
+import openai
+from langchain_openai import llms
+
+from coffee_maker.langchain_observe.retry_utils import RetryExhausted, with_retry
 
 PROVIDER_NAME = "openai"
 Llm = llms.OpenAI
 
-{"max_tokens": 4096}
-"gpt-5-codex"
+logger = logging.getLogger(__name__)
 
 
-def set_api_limits(providers_fallback):
+def set_api_limits(providers_fallback: Callable) -> Type[llms.OpenAI]:
+    """Set API rate limits on OpenAI provider with retry logic.
+
+    Args:
+        providers_fallback: Fallback function to call when retry exhausted
+
+    Returns:
+        Modified OpenAI class with retry logic
+    """
+
     def _run_with_api_limits(self, **kwargs):
-        attempt = 0
-        while attempt < 3:
-            try:
-                return self.invoke(**kwargs)
-            except openai.error.RateLimitError as e:
-                print("Rate limit reached, waiting before retrying...")
-                time.sleep(2**attempt)  # exponential backoff
-                attempt += 1
-        return providers_fallback("openai", self, **kwargs)
+        """Invoke OpenAI with automatic retry on rate limits."""
+
+        @with_retry(
+            max_attempts=3,
+            backoff_base=2.0,
+            retriable_exceptions=(openai.error.RateLimitError,),
+        )
+        def _invoke_with_retry():
+            return self.invoke(**kwargs)
+
+        try:
+            return _invoke_with_retry()
+        except RetryExhausted as e:
+            logger.warning(f"OpenAI rate limit retry exhausted, falling back: {e.original_error}")
+            return providers_fallback("openai", self, **kwargs)
 
     setattr(llms.OpenAI, "invoke", partial(_run_with_api_limits, providers_fallback=providers_fallback))
     return llms.OpenAI
 
 
-def update_info():
-    pass
+def update_info() -> None:
+    """Update provider information (placeholder)."""
 
 
 # Example code - don't run at import time

@@ -6,6 +6,10 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
+from langfuse import observe
+
+from coffee_maker.utils.time_utils import get_timestamp_threshold
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,6 +37,7 @@ class CostCalculator:
         self._cumulative_cost_by_model: Dict[str, float] = defaultdict(float)
         self._cumulative_cost_total: float = 0.0
 
+    @observe(capture_input=False, capture_output=False)
     def calculate_cost(self, model: str, input_tokens: int, output_tokens: int) -> Dict[str, float]:
         """Calculate cost for a request.
 
@@ -118,6 +123,7 @@ class CostCalculator:
 
         return cost_info
 
+    @observe(capture_input=False, capture_output=False)
     def get_cumulative_cost(self, model: Optional[str] = None, timeframe: str = "all") -> float:
         """Get total spending (optionally filtered by model/timeframe).
 
@@ -132,16 +138,8 @@ class CostCalculator:
         Returns:
             Total cost in USD
         """
-        # Calculate time threshold
-        now = time.time()
-        if timeframe == "day":
-            threshold = now - 86400  # 24 hours
-        elif timeframe == "hour":
-            threshold = now - 3600  # 1 hour
-        elif timeframe == "minute":
-            threshold = now - 60  # 1 minute
-        else:  # "all"
-            threshold = 0
+        # Calculate time threshold using centralized utility
+        threshold = get_timestamp_threshold(timeframe)
 
         # Filter records
         filtered_records = [
@@ -150,6 +148,7 @@ class CostCalculator:
 
         return sum(r.total_cost for r in filtered_records)
 
+    @observe(capture_input=False, capture_output=False)
     def get_cost_by_model(self, timeframe: str = "all") -> Dict[str, float]:
         """Get cost breakdown by model.
 
@@ -159,16 +158,8 @@ class CostCalculator:
         Returns:
             Dictionary mapping model names to total cost
         """
-        # Calculate time threshold
-        now = time.time()
-        if timeframe == "day":
-            threshold = now - 86400
-        elif timeframe == "hour":
-            threshold = now - 3600
-        elif timeframe == "minute":
-            threshold = now - 60
-        else:
-            threshold = 0
+        # Calculate time threshold using centralized utility
+        threshold = get_timestamp_threshold(timeframe)
 
         # Filter records
         filtered_records = [r for r in self._cost_history if r.timestamp >= threshold]
@@ -180,6 +171,7 @@ class CostCalculator:
 
         return dict(costs_by_model)
 
+    @observe(capture_input=False, capture_output=False)
     def get_cost_stats(self, timeframe: str = "all") -> Dict:
         """Get comprehensive cost statistics.
 
@@ -192,16 +184,8 @@ class CostCalculator:
         total_cost = self.get_cumulative_cost(timeframe=timeframe)
         cost_by_model = self.get_cost_by_model(timeframe=timeframe)
 
-        # Calculate time threshold
-        now = time.time()
-        if timeframe == "day":
-            threshold = now - 86400
-        elif timeframe == "hour":
-            threshold = now - 3600
-        elif timeframe == "minute":
-            threshold = now - 60
-        else:
-            threshold = 0
+        # Calculate time threshold using centralized utility
+        threshold = get_timestamp_threshold(timeframe)
 
         filtered_records = [r for r in self._cost_history if r.timestamp >= threshold]
 

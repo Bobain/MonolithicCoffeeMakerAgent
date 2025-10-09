@@ -28,10 +28,13 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
+from langfuse import observe
 from sqlalchemy import create_engine, func
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
 from coffee_maker.langchain_observe.analytics.models import Generation, Trace
+from coffee_maker.langchain_observe.retry_utils import with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +64,12 @@ class PerformanceAnalyzer:
         self.Session = sessionmaker(bind=self.engine)
         logger.info(f"PerformanceAnalyzer initialized with database: {db_url}")
 
+    @observe
+    @with_retry(
+        max_attempts=3,
+        backoff_base=1.5,
+        retriable_exceptions=(OperationalError, TimeoutError),
+    )
     def get_llm_performance(self, days: int = 7, model: Optional[str] = None, user_id: Optional[str] = None) -> Dict:
         """Get LLM performance metrics.
 
@@ -153,6 +162,12 @@ class PerformanceAnalyzer:
                 "time_range": {"from": from_timestamp, "to": to_timestamp},
             }
 
+    @observe
+    @with_retry(
+        max_attempts=3,
+        backoff_base=1.5,
+        retriable_exceptions=(OperationalError, TimeoutError),
+    )
     def get_performance_by_model(self, days: int = 7) -> Dict[str, Dict]:
         """Get performance breakdown by model.
 
@@ -180,6 +195,12 @@ class PerformanceAnalyzer:
 
             return results
 
+    @observe
+    @with_retry(
+        max_attempts=3,
+        backoff_base=1.5,
+        retriable_exceptions=(OperationalError, TimeoutError),
+    )
     def get_most_expensive_prompts(self, limit: int = 10, days: int = 7) -> List[Dict]:
         """Get most expensive prompts by total cost.
 
@@ -229,6 +250,12 @@ class PerformanceAnalyzer:
                 for g in generations
             ]
 
+    @observe
+    @with_retry(
+        max_attempts=3,
+        backoff_base=1.5,
+        retriable_exceptions=(OperationalError, TimeoutError),
+    )
     def get_slowest_requests(self, limit: int = 10, days: int = 7) -> List[Dict]:
         """Get slowest requests by latency.
 
@@ -267,6 +294,12 @@ class PerformanceAnalyzer:
                 for g in generations
             ]
 
+    @observe
+    @with_retry(
+        max_attempts=3,
+        backoff_base=1.5,
+        retriable_exceptions=(OperationalError, TimeoutError),
+    )
     def get_usage_by_user(self, days: int = 30) -> Dict[str, Dict]:
         """Get usage statistics by user.
 
@@ -300,6 +333,12 @@ class PerformanceAnalyzer:
 
             return results
 
+    @observe
+    @with_retry(
+        max_attempts=3,
+        backoff_base=1.5,
+        retriable_exceptions=(OperationalError, TimeoutError),
+    )
     def get_cost_over_time(self, days: int = 30, bucket_hours: int = 24, model: Optional[str] = None) -> List[Dict]:
         """Get cost trend over time.
 
@@ -362,6 +401,12 @@ class PerformanceAnalyzer:
             # Sort by time
             return sorted(buckets.values(), key=lambda x: x["time_bucket"])
 
+    @observe
+    @with_retry(
+        max_attempts=3,
+        backoff_base=1.5,
+        retriable_exceptions=(OperationalError, TimeoutError),
+    )
     def get_error_analysis(self, days: int = 7) -> Dict:
         """Analyze errors and failures.
 
