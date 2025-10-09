@@ -1,10 +1,40 @@
 # Coffee Maker Agent - Prioritized Roadmap
 
-**Last Updated**: 2025-10-09 🚨 **PRIORITIES REORGANIZED** | PRIORITY 2-6 MVP ✅ COMPLETE
+**Last Updated**: 2025-10-09 🚨 **NEW TOP PRIORITY SET**
 **Current Branch**: `feature/priority-1.5`
 **Status**: PRIORITY 2-6 ✅ 100% COMPLETE | 🚀 **5 Major Components Implemented in Single Session**
 **Quick-Start**: ⚡ CLI: `project-manager view` | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py` | Code Review: see `coffee_maker/code_reviewer/README.md`
 **Achievement**: 🎉 **MASSIVE PROGRESS** - CLI, Daemon, Web UI, Documentation Infrastructure, and Multi-Model Code Review Agent all operational!
+
+---
+
+## 🔴 TOP PRIORITY FOR code_developer (START HERE)
+
+**Project**: **AI-Powered Project Manager CLI - Phase 2** (Interactive Chat Interface)
+
+**Goal**: Build `project-manager chat` - an interactive console chat (like Claude CLI) that becomes the ONLY interface needed
+
+**Why This is #1**:
+- Once complete, users will use ONLY `project-manager` for everything (no more Claude CLI)
+- It becomes the primary interface to manage roadmap AND control code-developer daemon
+- Interactive chat with Claude API integration for natural language understanding
+- Beautiful terminal UI with Rich library (colors, boxes, streaming)
+
+**What to Build**:
+- Interactive REPL loop (like Claude CLI)
+- Claude API integration (Anthropic SDK)
+- Natural language understanding
+- Daemon control commands (`/implement`, `/status`)
+- Roadmap management (`/add`, `/update`, `/view`)
+- Rich terminal UI with streaming responses
+
+**Location**: See line 5044-5330 in this file for complete specification
+
+**Status**: 📝 Planned - **START NOW**
+
+**Estimated**: 2-3 days (16-24 hours)
+
+---
 
 ## 🎯 Long-Term Vision
 
@@ -5041,42 +5071,124 @@ This principle ensures the daemon operates as a **truly autonomous developer**, 
 
 ##### 🚀 Next Projects to Implement (PICK ONE AND START)
 
-**High Priority** (Business Impact):
+**🔴 TOP PRIORITY - MUST IMPLEMENT FIRST** (Replaces Claude CLI as primary interface):
 
-1. **📊 Streamlit Analytics Dashboard** (PRIORITY 3)
+1. **🤖 AI-Powered Project Manager CLI - Phase 2** (PRIORITY 2 - 20% remaining) ⚡ **CRITICAL**
+   - **Goal**: Make project-manager the ONLY interface needed (replace Claude CLI)
+   - **Location**: Enhance `coffee_maker/cli/roadmap_cli.py`
+   - **Current Status**: Phase 1 MVP complete (basic commands work)
+   - **Phase 2 Features to Implement**:
+
+     **Core AI Integration**:
+     - [ ] Claude API integration (Anthropic Python SDK)
+     - [ ] Interactive chat session manager
+     - [ ] Natural language understanding (parse user intent)
+     - [ ] Context-aware responses (roadmap state awareness)
+     - [ ] Streaming response support
+
+     **Chat Commands** (within `project-manager chat` session):
+     - [ ] `/add <description>` - Add priority with AI assistance
+     - [ ] `/update <priority> <field> <value>` - Update roadmap
+     - [ ] `/analyze` - AI roadmap health analysis
+     - [ ] `/suggest` - Get AI recommendations
+     - [ ] `/implement <priority>` - Start implementation (calls code-developer)
+     - [ ] `/help` - Interactive help
+     - [ ] `/exit` - Exit chat session
+
+     **Natural Language Examples**:
+     ```
+     You: "add a priority for CSV export feature"
+     PM: "I'll add PRIORITY 9: CSV Data Export. Should it be high priority?"
+
+     You: "yes, make it high priority and estimate 2 days"
+     PM: "✅ Added PRIORITY 9 (High, 2 days). Updated roadmap."
+
+     You: "what should I work on next?"
+     PM: "Based on dependencies, I recommend PRIORITY 3 (Analytics Dashboard).
+          It unblocks 2 other priorities and has high business value."
+
+     You: "implement PRIORITY 3"
+     PM: "Starting code-developer daemon for PRIORITY 3...
+          I'll notify you when it needs approval or completes."
+     ```
+
+     **Rich Terminal UI**:
+     - [ ] Colored output with `rich` library
+     - [ ] Progress bars for roadmap completion
+     - [ ] Formatted tables for priority lists
+     - [ ] Syntax highlighting for code blocks
+     - [ ] Status indicators (✅ ✓ ⚠️ 📝 🔄)
+     - [ ] Interactive prompts (yes/no confirmations)
+
+     **Daemon Integration & Monitoring**:
+     - [ ] `start-daemon` command (launches code-developer)
+     - [ ] `stop-daemon` command
+     - [ ] Real-time daemon status display
+     - [ ] Notification relay (daemon → user)
+     - [ ] Response forwarding (user → daemon)
+     - [ ] **Continuous Background Monitoring** (critical requirement):
+       - Monitor daemon status every 5-10 seconds in background thread
+       - Detect if daemon stops unexpectedly (crashes, hangs)
+       - Alert user if daemon is inactive for >30 seconds
+       - Show daemon health in status bar
+       - Track daemon heartbeat (last activity timestamp)
+       - Notify user of significant daemon events (started task, finished task, blocked)
+       - Auto-restart daemon if configured (optional safety feature)
+
+     **Intelligence Features**:
+     - [ ] Roadmap health scoring algorithm
+     - [ ] Dependency analysis (what blocks what)
+     - [ ] Timeline estimation (velocity-based)
+     - [ ] Smart recommendations (what to work on next)
+     - [ ] Auto-validation (status transitions, estimates)
+
+   - **Dependencies**:
+     - Anthropic Python SDK (`anthropic>=0.8.0`)
+     - Rich library (`rich>=13.0.0`)
+     - Existing NotificationDB (already implemented)
+
+   - **Success Criteria**:
+     - ✅ User can chat with project-manager in natural language
+     - ✅ project-manager can add/update roadmap via AI
+     - ✅ project-manager can start/stop code-developer daemon
+     - ✅ project-manager shows real-time daemon status
+     - ✅ User never needs to use Claude CLI directly
+
+   - **Estimated**: 2-3 days (16-24 hours)
+   - **Status**: 📝 Planned - **START THIS FIRST**
+   - **Why First**: This becomes the primary interface. Once complete, user uses ONLY project-manager for everything.
+
+---
+
+**High Priority** (Business Impact) - Work on these AFTER project-manager Phase 2:
+
+2. **📊 Streamlit Analytics Dashboard** (PRIORITY 3)
    - Location: Create `streamlit_apps/analytics_dashboard/`
    - Features: LLM cost analysis, token usage trends, error rates
    - Dependencies: Analytics DB from PRIORITY 1
    - Estimated: 2-3 days
-   - **Status**: 📝 Planned - READY TO START
+   - **Status**: 📝 Planned
 
-2. **📊 Streamlit Error Monitoring Dashboard** (PRIORITY 3.5)
+3. **📊 Streamlit Error Monitoring Dashboard** (PRIORITY 3.5)
    - Location: Create `streamlit_apps/error_dashboard/`
    - Features: Real-time error tracking from Langfuse traces
    - Dependencies: Analytics DB from PRIORITY 1
    - Estimated: 1-2 days
-   - **Status**: 📝 Planned - READY TO START
+   - **Status**: 📝 Planned
 
-3. **📊 Streamlit Agent Interaction UI** (PRIORITY 4)
+4. **📊 Streamlit Agent Interaction UI** (PRIORITY 4)
    - Location: Create `streamlit_apps/agent_interface/`
    - Features: Chat interface with streaming, conversation history
    - Dependencies: None
    - Estimated: 2-3 days
-   - **Status**: 📝 Planned - READY TO START
+   - **Status**: 📝 Planned
 
 **Medium Priority** (Infrastructure):
 
-4. **📚 Professional Documentation Enhancement** (PRIORITY 5)
+5. **📚 Professional Documentation Enhancement** (PRIORITY 5)
    - Enhance pdoc documentation
    - Add comprehensive docstrings
    - Create documentation validation
-   - Estimated: 2-3 days
-   - **Status**: 📝 Planned
-
-5. **🤖 AI-Powered Project Manager CLI** (PRIORITY 2 - Phase 2, 20% remaining)
-   - Add Claude AI integration to project-manager
-   - Interactive chat-style interface
-   - Rich terminal UI
    - Estimated: 2-3 days
    - **Status**: 📝 Planned
 
@@ -5108,22 +5220,297 @@ This principle ensures the daemon operates as a **truly autonomous developer**, 
 
 ##### 🎯 Recommended Next Action for code_developer
 
-**IMMEDIATE ACTION**:
-1. **Commit Code Review Agent** (already implemented, just needs commit/tests)
-   - Run tests for coffee_maker/code_reviewer/
-   - Commit the ~2,345 lines
-   - Add to git and create PR
+**🔴 CRITICAL - MUST DO FIRST**:
+1. **AI-Powered Project Manager CLI - Phase 2** ⚡ **TOP PRIORITY**
+   - **Goal**: Build interactive console chat (like Claude CLI) for project-manager
+   - **Location**: `coffee_maker/cli/roadmap_cli.py` + new `coffee_maker/cli/chat_interface.py`
+   - **What to build**:
 
-**AFTER THAT, PICK ONE**:
-2. **Streamlit Analytics Dashboard** - Highest business value
-3. **Streamlit Agent Interaction UI** - Best user experience impact
-4. **Self-Improving Prompt Lab** - Most innovative
+     ```bash
+     # User runs this command:
+     $ project-manager chat
+
+     # Opens interactive chat session (like Claude CLI):
+     ╭─── Project Manager Chat ─────────────────────────────╮
+     │                                                       │
+     │  Coffee Maker Agent - Project Manager v0.1.0         │
+     │  Type your message or use /help for commands         │
+     │                                                       │
+     ╰───────────────────────────────────────────────────────╯
+
+     You: what's the current status?
+
+     PM: 📊 Current Roadmap Status:
+
+         ✅ PRIORITY 1: Analytics (Complete)
+         🔄 PRIORITY 2: PM CLI (80% - working on Phase 2 now!)
+         📝 PRIORITY 3: Daemon (Planned)
+
+         Next recommended: Complete PRIORITY 2 Phase 2 (this chat!)
+
+     You: add a priority for CSV export
+
+     PM: I'll add a new priority for CSV export.
+
+         Questions:
+         - What priority number should it be?
+         - High/Medium/Low priority?
+         - Estimated duration?
+
+     You: priority 9, high, 2 days
+
+     PM: ✅ Added PRIORITY 9: CSV Data Export
+         - Priority: High
+         - Estimated: 2 days
+         - Status: Planned
+
+         Updated roadmap successfully!
+
+     You: /implement PRIORITY 9
+
+     PM: Starting code-developer daemon for PRIORITY 9...
+
+         🤖 Daemon Status: Starting
+         📝 Reading roadmap...
+         🌳 Creating branch: feature/priority-9
+
+         I'll notify you when it needs approval.
+         Use /status to check daemon progress.
+
+     You: /status
+
+     PM: 🤖 Daemon Status: Running
+
+         Current Task: Implementing PRIORITY 9 (CSV Export)
+         Progress: 30% (implementing core export logic)
+         Uptime: 15 minutes
+         Branch: feature/priority-9
+
+         Last Update: Writing csv_exporter.py (2 min ago)
+
+     You: /exit
+
+     PM: 👋 Goodbye! Daemon is still running.
+         Use 'project-manager status' to check on it.
+
+     # ========================================
+     # CONTINUOUS MONITORING EXAMPLE
+     # ========================================
+
+     # While user is chatting, project-manager monitors daemon
+     # in background thread and shows status bar at top:
+
+     ╭─── Project Manager Chat ─────────────────────────────╮
+     │  🤖 Daemon: Running | Task: PRIORITY 9 | 45% | ❤️ 2s │  ← Status bar
+     ╰───────────────────────────────────────────────────────╯
+
+     You: what are you working on?
+
+     PM: I'm currently implementing PRIORITY 9 (CSV Export).
+
+         Progress: 45% complete
+         Current File: csv_exporter.py
+         Last Activity: 2 seconds ago
+         Estimated Time Remaining: 20 minutes
+
+     # If daemon stops unexpectedly:
+
+     ╭─── Project Manager Chat ─────────────────────────────╮
+     │  ⚠️ Daemon: STOPPED | Last seen: 35s ago | INACTIVE │
+     ╰───────────────────────────────────────────────────────╯
+
+     PM: ⚠️ ALERT: code-developer daemon stopped unexpectedly!
+
+         Last activity: 35 seconds ago
+         Last known task: PRIORITY 9 (45% complete)
+         Status: Inactive (possible crash or hang)
+
+         Would you like me to:
+         1. Restart the daemon
+         2. View daemon logs
+         3. Check for errors
+
+     You: 1
+
+     PM: Restarting code-developer daemon...
+
+         ✅ Daemon restarted successfully
+         🔄 Resuming PRIORITY 9 from last checkpoint
+
+     # If daemon completes a task:
+
+     PM: 🎉 NOTIFICATION: code-developer completed PRIORITY 9!
+
+         ✅ CSV Export feature implemented
+         ✅ Tests passing (12/12)
+         ✅ Branch pushed: feature/priority-9
+         📝 PR created: #45
+
+         Would you like to review the changes?
+     ```
+
+   - **Key Implementation Details**:
+     - Interactive REPL loop (like Claude CLI)
+     - Streaming responses with `rich` library
+     - Claude API integration (Anthropic SDK)
+     - Command parsing (`/add`, `/update`, `/implement`, `/status`, `/exit`)
+     - Natural language understanding (Claude parses user intent)
+     - Maintains conversation context
+     - Can start/stop code-developer daemon
+     - Shows real-time daemon status
+     - Beautiful formatting with colors and boxes
+
+   - **Architecture**:
+     ```python
+     # coffee_maker/cli/chat_interface.py
+     import threading
+     import time
+     from anthropic import Anthropic
+     from rich.live import Live
+     from rich.console import Console
+
+     class ProjectManagerChat:
+         def __init__(self):
+             self.client = Anthropic()
+             self.conversation_history = []
+             self.roadmap_parser = RoadmapParser()
+             self.daemon_manager = DaemonManager()
+             self.daemon_status = {"running": False, "last_heartbeat": None}
+             self.monitoring_thread = None
+             self.stop_monitoring = False
+
+         def start_session(self):
+             """Main REPL loop (like Claude CLI)"""
+             # Start background daemon monitoring
+             self.start_daemon_monitoring()
+
+             self.print_welcome()
+
+             while True:
+                 # Show status bar with daemon health
+                 self.show_status_bar()
+
+                 user_input = self.get_user_input()
+
+                 if user_input.startswith('/'):
+                     # Command mode
+                     self.handle_command(user_input)
+                 else:
+                     # Natural language mode (send to Claude)
+                     response = self.get_ai_response(user_input)
+                     self.stream_response(response)
+
+         def start_daemon_monitoring(self):
+             """Start background thread to monitor daemon"""
+             self.monitoring_thread = threading.Thread(
+                 target=self._monitor_daemon_loop,
+                 daemon=True
+             )
+             self.monitoring_thread.start()
+
+         def _monitor_daemon_loop(self):
+             """Background monitoring loop (runs every 5 seconds)"""
+             while not self.stop_monitoring:
+                 # Check daemon status
+                 status = self.daemon_manager.get_status()
+
+                 # Update local status
+                 self.daemon_status = {
+                     "running": status.get("running", False),
+                     "last_heartbeat": status.get("last_activity"),
+                     "current_task": status.get("current_task"),
+                     "progress": status.get("progress", 0)
+                 }
+
+                 # Detect issues
+                 if self.daemon_status["running"]:
+                     seconds_since_heartbeat = time.time() - self.daemon_status["last_heartbeat"]
+                     if seconds_since_heartbeat > 30:
+                         # Daemon is hung or crashed
+                         self.alert_daemon_stopped()
+
+                 # Sleep before next check
+                 time.sleep(5)
+
+         def alert_daemon_stopped(self):
+             """Alert user that daemon stopped unexpectedly"""
+             console = Console()
+             console.print("\n⚠️ ALERT: code-developer daemon stopped!", style="bold red")
+             console.print(f"Last activity: {seconds_since}s ago")
+             console.print("\nWould you like me to restart it? (yes/no)")
+
+         def show_status_bar(self):
+             """Show daemon status bar at top of chat"""
+             if self.daemon_status["running"]:
+                 task = self.daemon_status.get("current_task", "Idle")
+                 progress = self.daemon_status.get("progress", 0)
+                 heartbeat = time.time() - self.daemon_status["last_heartbeat"]
+                 status = f"🤖 Daemon: Running | Task: {task} | {progress}% | ❤️ {heartbeat:.0f}s"
+             else:
+                 status = "🤖 Daemon: Stopped"
+
+             console.print(status, style="dim")
+
+         def get_ai_response(self, message: str):
+             """Send to Claude API for understanding"""
+             # Include daemon status in context
+             daemon_context = f"Daemon status: {self.daemon_status}"
+
+             system_prompt = f"""
+             You are the Project Manager for Coffee Maker Agent.
+             Current roadmap state: {self.roadmap_parser.get_summary()}
+             {daemon_context}
+
+             Help the user manage the roadmap, answer questions,
+             and coordinate with the code-developer daemon.
+             """
+
+             response = self.client.messages.create(
+                 model="claude-sonnet-4",
+                 system=system_prompt,
+                 messages=[...self.conversation_history,
+                          {"role": "user", "content": message}]
+             )
+             return response
+
+         def stream_response(self, response):
+             """Stream response with rich formatting"""
+             with Live(auto_refresh=True) as live:
+                 for chunk in response:
+                     # Pretty print with colors
+                     ...
+
+         def stop_session(self):
+             """Clean shutdown - stop monitoring thread"""
+             self.stop_monitoring = True
+             if self.monitoring_thread:
+                 self.monitoring_thread.join(timeout=2)
+     ```
+
+   - **Success Criteria**:
+     - ✅ Looks and feels like Claude CLI (interactive chat)
+     - ✅ Understands natural language via Claude API
+     - ✅ Can manage roadmap (add, update, view)
+     - ✅ Can control code-developer daemon (start/stop/status)
+     - ✅ **Continuously monitors code-developer in background thread**
+     - ✅ Alerts user if daemon stops/crashes/hangs
+     - ✅ Shows real-time daemon status in status bar
+     - ✅ Beautiful terminal UI with colors
+     - ✅ User never needs Claude CLI anymore
+
+   - **Estimated**: 2-3 days
+   - **Status**: 📝 **START THIS NOW** - It's #1 in the work queue above
+
+**AFTER project-manager Phase 2 is complete**:
+2. **Commit Code Review Agent** (already implemented, just needs commit/tests)
+3. **Then pick**: Streamlit Analytics Dashboard OR Self-Improving Prompt Lab
 
 **DO NOT**:
 - ❌ Try to "implement PRIORITY 1" (already done!)
 - ❌ Try to "implement PRIORITY 2" (it's a milestone, not a project)
+- ❌ Skip the AI-Powered PM CLI - it's THE priority
 - ❌ Re-implement existing projects
-- ❌ Ask which one to do - just pick one from the list and start!
+- ❌ Ask which one to do - the order is clear above!
 
 **Simplified Architecture** (thanks to PRIORITY 2):
 - ✅ **No file watchers needed**: Daemon reads ROADMAP.md from its environment
