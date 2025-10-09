@@ -1,16 +1,18 @@
+from typing import Callable
+
+from langchain.agents import Tool
+from langchain_community.agent_toolkits.github.toolkit import GitHubToolkit
+from langchain_community.utilities.github import GitHubAPIWrapper
+from langfuse import observe
+
 from coffee_maker.utils.github import (
     get_pr_file_content as _get_pr_file_content,
     get_pr_modified_files as _get_pr_modified_files,
     post_suggestion_in_pr_review as _post_suggestion_in_pr_review,
 )
 
-from langfuse import observe
-from langchain.agents import Tool
-from langchain_community.agent_toolkits.github.toolkit import GitHubToolkit
-from langchain_community.utilities.github import GitHubAPIWrapper
 
-
-def make_func_a_tool(name, func):
+def make_func_a_tool(name: str, func: Callable) -> Tool:
     import json
 
     @observe

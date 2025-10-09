@@ -1,15 +1,26 @@
 # restart_mcp_server.py
-import time
-import psutil
 import logging
-import sys
 import socket
-from typing import Optional
+import sys
+import time
 from multiprocessing import Process  # Import the Process class
+from typing import Optional
+
+import psutil
 
 # --- Logging Configuration when used as a function and not a class ---
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 LOGGER = logging.getLogger(__name__)
+
+# Timing constants (in seconds)
+PORT_RELEASE_WAIT_SECONDS = 1.0
+"""Time to wait for OS to release port after killing process."""
+
+SERVER_POLL_INTERVAL_SECONDS = 0.5
+"""Interval between server readiness checks."""
+
+DEFAULT_SERVER_TIMEOUT_SECONDS = 10
+"""Default timeout for waiting for server to become ready."""
 
 
 def kill_process_on_port(port: int, logger=LOGGER):
@@ -29,7 +40,7 @@ def kill_process_on_port(port: int, logger=LOGGER):
             logger.info("Process already terminated before we could kill it.")
 
         logger.info("Giving the OS a moment to release the port...")
-        time.sleep(1)
+        time.sleep(PORT_RELEASE_WAIT_SECONDS)
     else:
         logger.info(f"No existing server found on port {port}.")
 
@@ -57,7 +68,7 @@ def run_daemon(function_to_run: callable, port: int, logger=LOGGER):
     print("Note: Since this is a daemon process, it will exit when this main script exits.")
 
 
-def wait_for_server_ready(host: str, port: int, timeout: int = 10) -> bool:
+def wait_for_server_ready(host: str, port: int, timeout: int = DEFAULT_SERVER_TIMEOUT_SECONDS) -> bool:
     """
     Waits for a network server to become available on a specific host and port.
 
@@ -77,7 +88,7 @@ def wait_for_server_ready(host: str, port: int, timeout: int = 10) -> bool:
                 return True
         except (socket.timeout, ConnectionRefusedError):
             # Server is not ready yet, wait a bit before retrying
-            time.sleep(0.5)
+            time.sleep(SERVER_POLL_INTERVAL_SECONDS)
     LOGGER.error(f"Server on port {port} did not become ready within {timeout} seconds.")
     return False
 

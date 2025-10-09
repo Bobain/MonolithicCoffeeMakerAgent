@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "coffee_maker"
-version = "0.1.0"
+version = "0.1.1"
 description = "An agent that roast, grind, brew and serve your coffee. or not..."
 authors = ["Bobain and some code agents"]
 license = "Apache 2.0"
@@ -33,6 +33,9 @@ pytest-html = "^4.1.1"
 pdoc = "^15.0.4"
 
 
+[tool.poetry.scripts]
+project-manager = "coffee_maker.cli.roadmap_cli:main"
+
 [tool.poetry.urls]
 "Homepage" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"
 "Repository" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"
@@ -42,6 +45,7 @@ pdoc = "^15.0.4"
 [tool.pytest.ini_options]
 markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+    "slow: marks tests as slow running tests (deselect with '-m \"not slow\"')",
 ]
 
 [build-system]

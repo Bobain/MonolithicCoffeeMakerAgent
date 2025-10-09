@@ -1,0 +1,45 @@
+# pdoc configuration for Coffee Maker Agent
+# Documentation: https://pdoc.dev/docs/pdoc.html
+
+# Modules to document
+modules:
+  - coffee_maker
+
+# Output directory
+output_directory: docs/api
+
+# Template directory (optional)
+# template_directory: docs/templates
+
+# Show source code
+show_source: true
+
+# Include private members
+include_private: false
+
+# Footer text
+footer_text: |
+  Generated with [pdoc](https://pdoc.dev)
+
+  Coffee Maker Agent - Production-ready LLM orchestration framework
+
+# Edit URL template
+edit_url_template: https://github.com/Bobain/MonolithicCoffeeMakerAgent/edit/main/{path}
+
+# Logo (optional)
+# logo: docs/logo.png
+
+# Favicon (optional)
+# favicon: docs/favicon.ico
+
+# Math rendering
+math: true
+
+# Mermaid diagrams
+mermaid: true
+
+# Search
+search: true
+
+# Dark mode
+dark_mode: true

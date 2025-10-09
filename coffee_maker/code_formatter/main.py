@@ -296,7 +296,6 @@ if __name__ == "__main__":
     )
 
     from langchain.agents import AgentExecutor
-    from coffee_maker.langchain_observe.agents import get_llm
     from langchain.callbacks.base import BaseCallbackHandler
 
     # Create a custom callback handler to display LLM thinking process
@@ -323,9 +322,13 @@ if __name__ == "__main__":
             """Run when tool errors."""
             print(f"✗ {error}")
 
-    # Get LLM with streaming enabled
-    llm_with_streaming = get_llm(streaming=True)
-    react_agent, tools = create_react_formatter_agent(langfuse_client, llm_with_streaming)
+    # Get LLM with streaming enabled - use AutoPickerLLMRefactored for rate limiting and fallback
+    from coffee_maker.langchain_observe.create_auto_picker import create_auto_picker_for_react_agent
+
+    auto_picker_llm = create_auto_picker_for_react_agent(tier="tier1", streaming=True)
+    react_agent, tools, llm_instance = create_react_formatter_agent(
+        langfuse_client, auto_picker_llm, use_auto_picker=False  # Already using AutoPickerLLMRefactored
+    )
 
     # Create an agent executor with streaming enabled
     streaming_handler = StreamingCallbackHandler()
@@ -345,6 +348,18 @@ if __name__ == "__main__":
         config={"callbacks": [streaming_handler]},
     )
     logger.info(f"\nAgent completed. Response: {response}")
+
+    # Print AutoPickerLLMRefactored statistics
+    from coffee_maker.langchain_observe.auto_picker_llm_refactored import AutoPickerLLMRefactored
+
+    if isinstance(llm_instance, AutoPickerLLMRefactored):
+        stats = llm_instance.get_stats()
+        logger.info("\n=== AutoPickerLLMRefactored Statistics ===")
+        logger.info(f"Total requests: {stats['total_requests']}")
+        logger.info(f"Primary model requests: {stats['primary_requests']} ({stats['primary_usage_percent']:.1f}%)")
+        logger.info(f"Fallback requests: {stats['fallback_requests']} ({stats['fallback_usage_percent']:.1f}%)")
+        logger.info(f"Rate limit waits: {stats['rate_limit_waits']}")
+        logger.info(f"Rate limit fallbacks: {stats['rate_limit_fallbacks']}")
 
     # # Run the async function:
     # agent = basic agent with complex prompt and strict expected outputs that are then parsed and used to call
