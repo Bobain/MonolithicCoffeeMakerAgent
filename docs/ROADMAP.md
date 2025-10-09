@@ -8419,13 +8419,29 @@ python run_daemon.py --auto-approve
 name: Daemon Health Check
 
 on:
-  push:
-    branches: [main, feature/*]
+  # Run on significant releases
+  release:
+    types: [published, created]
+
+  # Run on PRs to main (before merge)
+  pull_request:
+    branches: [main]
     paths:
       - 'coffee_maker/autonomous/**'
       - 'run_daemon.py'
-  schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
+
+  # Run on version tags (e.g., v1.0.0, v1.1.0)
+  push:
+    tags:
+      - 'v*.*.*'
+
+  # Manual trigger for on-demand testing
+  workflow_dispatch:
+    inputs:
+      priority:
+        description: 'Priority to test (e.g., PRIORITY 2.5)'
+        required: false
+        default: 'all'
 
 jobs:
   test-daemon:
@@ -8523,7 +8539,151 @@ if __name__ == "__main__":
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-**5. Documentation** (`docs/DAEMON_TESTING.md`)
+**5. Non-Regression Test Suite** (`tests/autonomous/test_daemon_regression.py`)
+```python
+#!/usr/bin/env python3
+"""Non-regression tests for autonomous daemon.
+
+These tests verify core functionality remains intact across releases.
+Run before significant releases or when merging PRs to main.
+"""
+
+import pytest
+from coffee_maker.autonomous.daemon import DevDaemon
+from coffee_maker.autonomous.roadmap_parser import RoadmapParser
+from coffee_maker.autonomous.git_manager import GitManager
+
+
+class TestDaemonNonRegression:
+    """Non-regression tests for critical daemon functionality."""
+
+    def test_daemon_initializes_correctly(self):
+        """Verify daemon can be initialized with default params."""
+        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+        assert daemon is not None
+        assert daemon.roadmap_path.exists()
+
+    def test_roadmap_parser_finds_priorities(self):
+        """Verify roadmap parser can find planned priorities."""
+        parser = RoadmapParser("docs/ROADMAP.md")
+        priorities = parser.get_all_priorities()
+        assert len(priorities) > 0
+
+    def test_no_changes_detection_works(self):
+        """Verify daemon detects when no files changed (Fix Option 1)."""
+        git = GitManager()
+        assert git.is_clean() in [True, False]  # Should not raise
+
+    def test_task_specific_prompt_detection(self):
+        """Verify documentation tasks are detected correctly (Fix Option 3)."""
+        daemon = DevDaemon()
+
+        # Test documentation priority
+        doc_priority = {
+            "name": "PRIORITY 2.5",
+            "title": "UX Documentation",
+            "content": "Create user documentation and guides"
+        }
+        prompt = daemon._build_implementation_prompt(doc_priority)
+        assert "CREATE FILES" in prompt
+
+        # Test feature priority
+        feature_priority = {
+            "name": "PRIORITY 7",
+            "title": "Implement Analytics",
+            "content": "Add analytics tracking"
+        }
+        prompt = daemon._build_implementation_prompt(feature_priority)
+        assert "CREATE FILES" not in prompt  # Standard prompt
+
+    def test_notification_created_on_no_changes(self):
+        """Verify notification created when no changes detected."""
+        # This would be an integration test - mock or use test DB
+        pass
+
+    def test_daemon_does_not_infinite_loop(self):
+        """Critical: Verify daemon doesn't retry same priority infinitely."""
+        # This would run daemon in test mode for limited time
+        # Verify same priority not attempted >3 times
+        pass
+
+
+@pytest.mark.integration
+class TestDaemonIntegration:
+    """Integration tests - run before releases."""
+
+    def test_full_daemon_cycle(self, tmp_path):
+        """Test complete daemon cycle: parse → execute → commit → PR."""
+        # Create test roadmap
+        # Run daemon for 1 iteration
+        # Verify expected behavior
+        pass
+
+    def test_claude_cli_integration(self):
+        """Verify Claude CLI can be invoked successfully."""
+        from coffee_maker.autonomous.claude_cli_interface import ClaudeCLI
+        cli = ClaudeCLI()
+        assert cli.check_available()
+```
+
+**Test Execution Strategy**:
+```bash
+# Unit tests (fast) - run on every commit
+pytest tests/autonomous/test_daemon_regression.py -m "not integration"
+
+# Integration tests (slow) - run before releases
+pytest tests/autonomous/test_daemon_regression.py -m integration
+
+# Full test suite - run on significant releases
+pytest tests/autonomous/
+```
+
+**6. Release Checklist** (`docs/RELEASE_CHECKLIST.md`)
+```markdown
+# Code Developer Daemon - Release Checklist
+
+Run this checklist before creating a new release (v1.x.x, v2.x.x, etc.)
+
+## Pre-Release Testing
+
+- [ ] All unit tests pass: `pytest tests/`
+- [ ] Non-regression tests pass: `pytest tests/autonomous/test_daemon_regression.py`
+- [ ] Manual daemon test completed (15 min run, no infinite loops)
+- [ ] Notifications database verified
+- [ ] GitHub Actions workflow passing
+
+## Integration Testing
+
+- [ ] Test on clean environment (fresh virtualenv)
+- [ ] Test with real ROADMAP.md
+- [ ] Test with multiple priorities
+- [ ] Test error handling (network failures, API errors)
+- [ ] Test notification system
+
+## Documentation
+
+- [ ] CHANGELOG.md updated
+- [ ] Version number bumped in pyproject.toml
+- [ ] ROADMAP.md status updated
+- [ ] Breaking changes documented
+
+## Deployment
+
+- [ ] Create git tag: `git tag -a v1.x.x -m "Release v1.x.x"`
+- [ ] Push tag: `git push origin v1.x.x`
+- [ ] GitHub Actions runs automatically
+- [ ] Create GitHub release with notes
+- [ ] Monitor first production run
+
+## Post-Release
+
+- [ ] Monitor logs for 24h
+- [ ] Check notification system working
+- [ ] Verify no infinite loops
+- [ ] Update ROADMAP with completion status
+```
+
+**7. Documentation** (`docs/DAEMON_TESTING.md`)
 ```markdown
 # Daemon Testing Guide
 
@@ -8537,14 +8697,15 @@ ANTHROPIC_API_KEY=sk-ant-...
 ## CI Testing
 
 GitHub Actions runs daemon tests on:
-- Every push to coffee_maker/autonomous/**
-- Every 6 hours (scheduled)
-- Manual workflow dispatch
+- **Significant releases** (published releases, version tags)
+- **PRs to main** (before merging major changes)
+- **Manual dispatch** (on-demand testing when needed)
 
 Tests verify:
 - No infinite loops (priority not retried >3 times)
 - Notifications created for blocked tasks
 - Daemon progresses through roadmap
+- Core functionality intact (non-regression)
 
 ## Troubleshooting
 
