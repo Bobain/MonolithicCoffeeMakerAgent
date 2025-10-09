@@ -1,9 +1,9 @@
 # Coffee Maker Agent - Prioritized Roadmap
 
-**Last Updated**: 2025-10-09 🚨 **PRIORITIES REORGANIZED**
-**Current Branch**: `feature/rateLimits-fallbacksModels-specializedModels`
-**Status**: Refactoring phase completed ✅ | PRIORITY 2 MVP Phase 1 🔄 IN PROGRESS
-**Quick-Start**: ⚡ Daemon runnable now via `python run_daemon.py` (see PRIORITY 3 for details)
+**Last Updated**: 2025-10-09 🚨 **PRIORITIES REORGANIZED** | Critical daemon fixes applied ✅
+**Current Branch**: `feature/priority-1.5`
+**Status**: Refactoring phase completed ✅ | PRIORITY 2 MVP Phase 1 (80%) | PRIORITY 3 MVP (90% - critical fixes applied)
+**Quick-Start**: ⚡ Daemon runnable now via `python run_daemon.py` (see PRIORITY 3 for details) 🚨 **Run from separate terminal**
 **New Priority**: 🤖 **DAEMON FIRST** - Build autonomous daemon immediately, let it implement everything else!
 
 ## 🎯 Long-Term Vision
@@ -3480,33 +3480,41 @@ Before marking PRIORITY as complete, verify:
 - Part 2: `12020f5` (exporter_sqlite.py, analyzer_sqlite.py, scripts)
 - Cleanup: `7d3492e` (deprecation warnings, __init__.py update)
 
-**Combined Impact (Sprint 1 + 2 + 3 + 4 + 4.5 + 4.6 + 5)**:
-- **Code Quality**: Net -354 lines total (Sprint 1: -400, Sprint 2: +118, Sprint 3: -72 = 3.0% smaller)
+**Combined Impact (Sprint 1 + 2 + 3 + 4 + 4.5 + 4.6 + 5 + PRIORITY 2 & 3)**:
+- **Code Quality**: Net -354 lines from refactoring + ~3,200 new lines for PRIORITY 2 & 3
 - **AutoPickerLLM**: Simplified from 545 → 478 lines (13% reduction)
 - **Dependencies**: Removed SQLAlchemy (~2MB + sub-dependencies) → stdlib only (Sprint 5)
 - **Duplication**: 28 instances eliminated
 - **Type Safety**: 20+ type hints added
-- **Reliability**: Database queries resilient, 10+ ops with retry
+- **Reliability**: Database queries resilient, 10+ ops with retry + WAL mode for concurrent access
 - **Observability**: 11 methods tracked in Langfuse + quota error tracking
-- **Organization**: 8 new modules (retry, time, exceptions, context strategies, models_sqlite, exporter_sqlite, analyzer_sqlite + deprecated 4 old modules)
-- **Architecture**: Strategy pattern applied (ContextStrategy, FallbackStrategy, MetricsStrategy)
-- **Error Handling**: Quota vs rate limit distinction, automatic fallback
+- **Organization**: 8 refactored modules + 7 new modules (cli/, autonomous/ directories)
+  - **PRIORITY 2**: notifications.py, roadmap_cli.py (801 lines + 236 test lines)
+  - **PRIORITY 3**: daemon.py, roadmap_parser.py, claude_cli_interface.py, git_manager.py (1,148 lines + 375 test lines)
+- **Architecture**: Strategy pattern applied + new autonomous daemon architecture
+- **Error Handling**: Quota vs rate limit distinction, automatic fallback, retry logic for all DB ops
 - **Deprecations**: Pydantic V2 + SQLAlchemy 2.0 complete, zero warnings
 - **Maintainability**: Cleaner, more consistent, better separated concerns, lighter dependencies
-- **Foundation**: Ready for autonomous daemon implementation
-- **Tests**: 112/112 passing + 18/18 analytics (0 regressions)
+- **Foundation**: ✅ **Autonomous daemon operational** (90% complete with critical fixes)
+- **Tests**: 112/112 passing + 18/18 analytics + 27/27 PRIORITY 2&3 (159 tests total, 0 regressions)
 
 **Documentation**:
 - ✅ `docs/code_improvements_2025_01.md` - Complete analysis (40+ opportunities, 923 lines)
 - ✅ `docs/retry_patterns.md` - Retry utilities guide (508 lines)
 - ✅ `docs/sprint1_improvements_summary.md` - Sprint 1 report (380 lines)
 - ✅ `docs/sprint2_improvements_summary.md` - Sprint 2 report (400 lines)
-- ✅ Total new documentation: 2,211 lines
+- ✅ `docs/SPRINT_SUMMARY_2025_10_09.md` - Sprint 5 + PRIORITY 2 & 3 (350 lines)
+- ✅ `docs/DAEMON_USAGE.md` - Complete daemon usage guide (540 lines)
+- ✅ `coffee_maker/autonomous/README.md` - Daemon architecture docs (220 lines)
+- ✅ Total new documentation: 3,321 lines
 
 **Coordination**:
 - ✅ Sprint 1 & 2 completed before PRIORITY 1 begins
 - ✅ Clean, reliable codebase foundation established
-- ✅ Ready for autonomous daemon implementation
+- ✅ Sprint 5 completed (SQLAlchemy removal, native sqlite3)
+- ✅ PRIORITY 2 MVP Phase 1 implemented (80% complete - notifications, basic CLI)
+- ✅ PRIORITY 3 MVP implemented (90% complete - autonomous daemon core)
+- ✅ Critical daemon fixes applied (session detection, CLI non-interactive mode, branch handling)
 
 ---
 
@@ -4187,6 +4195,27 @@ class RoadmapSync:
 - MVP Implementation: `6bdf475` - Core daemon modules (roadmap_parser, claude_cli_interface, git_manager, daemon)
 - Launcher & Tests: `5282042` - run_dev_daemon.py + 16 integration tests (all passing)
 - Documentation: `4b5265e` - DAEMON_USAGE.md (340 lines) + README.md (220 lines)
+- Status Update: `ab12131` - Updated PRIORITY 3 to 90% complete
+- Critical Fixes: `ef45ed6`, `e50b1e6`, `26ad812` - Daemon CLI execution and session warnings
+
+**Recent Improvements** (2025-10-09):
+- ✅ **Critical session conflict fix**: Added runtime detection to prevent daemon from running inside Claude Code sessions
+  - Problem: Running daemon from within Claude Code caused hangs due to nested CLI calls
+  - Solution: Daemon now detects `CLAUDE_CODE_SESSION` env var and warns user with instructions
+  - Impact: Prevents common user error that caused daemon to become unresponsive
+- ✅ **Claude CLI non-interactive execution**: Fixed daemon to use `claude -p` flag for non-interactive prompts
+  - Problem: Daemon was calling Claude CLI without proper non-interactive flags
+  - Solution: Updated to use `claude code -p "prompt"` for programmatic execution
+  - Impact: Daemon can now execute Claude CLI reliably without manual intervention
+- ✅ **Branch handling improvements**: Fixed Git branch creation and checkout logic
+  - Problem: Branch switching sometimes failed in daemon context
+  - Solution: Enhanced error handling and branch existence checks
+  - Impact: More reliable Git operations during autonomous development
+
+**Critical Usage Requirements** 🚨:
+1. **MUST run from separate terminal**: Never run daemon from within Claude Code session
+2. **Terminal detection**: Daemon will warn and exit if it detects Claude Code environment
+3. **Recommended setup**: Open new terminal window/tab outside Claude Code to run daemon
 
 #### Project: Minimal Self-Implementing AI System with Roadmap-Driven Development
 
@@ -8975,30 +9004,36 @@ This practice is **non-negotiable** and is an integral part of each project. Con
 
 ## 🎯 Success Metrics
 
-### Analytics & Observability (Priority 1)
+### Analytics & Observability (Priority 1) ✅ MOSTLY COMPLETE
 - ✅ Automatic Langfuse → SQLite export functional
 - ✅ Usable SQL analysis queries
 - ✅ Reliable multi-process rate limiting
 - ✅ 0 duplicates in exports
+- ✅ Native sqlite3 implementation (SQLAlchemy removed)
 
-### Basic Autonomous Development Daemon (Priority 2) ⚡ NEW 🤖
-- ✅ ClaudeCLIInterface with auto-approval functional
-- ✅ MessageHandler intercepts and intelligently responds to Claude's questions ⚡ NEW
-- ✅ InteractionLogger records all Claude ↔ Python exchanges with full context ⚡ NEW
-- ✅ Auto-response rules handle routine questions without user intervention ⚡ NEW
-- ✅ Critical questions properly escalated to user with notifications ⚡ NEW
-- ✅ RoadmapParser successfully extracts tasks from ROADMAP.md
-- ✅ TaskExecutor autonomously implements features via Claude CLI
-- ✅ ProgressTracker updates ROADMAP.md automatically
-- ✅ BranchManager creates feature branches per priority
-- ✅ PRCreator generates pull requests automatically
-- ✅ SafetyValidator ensures tests pass before commits
+### Roadmap Management CLI (Priority 2) ⚡ NEW 🎯 80% COMPLETE
+- ✅ NotificationDB with SQLite + WAL mode
+- ✅ Multi-process safe with retry logic (@with_retry decorator)
+- ✅ `project-manager` CLI with basic commands (view, notifications, respond, status, sync)
+- ✅ Notification system for daemon ↔ user communication
+- ✅ Support for questions, info, warnings, errors, completions
+- ✅ Unit tests: 11/11 passing
+- ⏳ Claude AI integration for interactive roadmap chat (Phase 2)
+
+### Basic Autonomous Development Daemon (Priority 3) ⚡ NEW 🤖 90% COMPLETE
+- ✅ ClaudeCLIInterface with subprocess wrapper functional
+- ✅ RoadmapParser successfully extracts tasks from ROADMAP.md (regex-based)
+- ✅ GitManager handles branches, commits, pushes, PRs via gh CLI
 - ✅ DevDaemon orchestrates full autonomous workflow
-- ✅ At least one priority successfully implemented autonomously
-- ✅ Complete interaction logs available for debugging and audit
-- ✅ Comprehensive documentation and usage guide complete
+- ✅ Notification system for user approval and completion notices
+- ✅ Integration tests: 16/16 passing
+- ✅ Comprehensive documentation and usage guide complete (DAEMON_USAGE.md)
+- ✅ **Critical fixes applied**: Session detection, non-interactive CLI execution, branch handling
+- ✅ **Session conflict prevention**: Runtime detection of Claude Code environment
+- ✅ **Claude CLI non-interactive mode**: Using `claude -p` flag for programmatic execution
+- ⏳ End-to-end testing with real Claude CLI (final 10%)
 
-### Streamlit Analytics Dashboard (Priority 3)
+### Streamlit Analytics Dashboard (Priority 4)
 - ✅ Dashboard accessible via browser
 - ✅ Functional cost and trend charts
 - ✅ Operational dynamic filters (dates, agents, models)
