@@ -49,7 +49,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from coffee_maker.langchain_observe.analytics import PerformanceAnalyzer
+from coffee_maker.langchain_observe.analytics.analyzer_sqlite import PerformanceAnalyzer
 from coffee_maker.langchain_observe.analytics.config import ExportConfig
 
 logging.basicConfig(

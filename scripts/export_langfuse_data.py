@@ -37,7 +37,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from coffee_maker.langchain_observe.analytics import ExportConfig, LangfuseExporter
+from coffee_maker.langchain_observe.analytics.config import ExportConfig
+from coffee_maker.langchain_observe.analytics.exporter_sqlite import LangfuseExporter
 
 logging.basicConfig(
     level=logging.INFO,
