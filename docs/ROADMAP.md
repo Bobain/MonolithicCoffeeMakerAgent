@@ -7849,6 +7849,250 @@ This transforms the daemon from a **sequential executor** into an **intelligent 
 **Dependency**: Should be done after PRIORITY 2 (Project Manager CLI) MVP is complete
 **Why Important**: New users need clear onboarding - we're too close to the code to see friction points
 
+---
+
+#### 🚨 **KNOWN ISSUE: Daemon Infinite Loop** (Discovered: 2025-10-09)
+
+**Problem Description**:
+The autonomous daemon (run_daemon.py) is stuck in an infinite loop when trying to implement PRIORITY 2.5:
+
+1. ✅ Claude CLI executes successfully (exit code 0)
+2. ❌ BUT: No files are created or modified
+3. ❌ Pre-commit hooks report: "no files to check"
+4. ❌ Git commit fails: nothing to commit
+5. 🔄 Daemon retries same priority after 30s → infinite loop
+
+**Log Evidence**:
+```
+2025-10-09 18:08:29 [INFO] Claude CLI completed with code 0
+2025-10-09 18:08:30 [ERROR] Failed to commit: black...(no files to check)Skipped
+2025-10-09 18:08:30 [ERROR] Failed to commit changes
+2025-10-09 18:08:30 [WARNING] ⚠️  Implementation failed for PRIORITY 2.5
+2025-10-09 18:08:30 [INFO] 💤 Sleeping 30s before next iteration...
+```
+
+**Root Cause Analysis**:
+
+1. **Vague Task Description**: PRIORITY 2.5 asks for "UX audit & improvements" which is analytical, not concrete
+2. **Insufficient Prompt Context**: The daemon's implementation prompt (`daemon.py:328-353`) says:
+   ```python
+   prompt = f"""Read docs/ROADMAP.md and implement {priority['name']}: {priority['title']}.
+   Follow the roadmap guidelines and deliverables...
+   Begin implementation now."""
+   ```
+   - Not explicit about CREATING FILES
+   - Doesn't specify which deliverables to create first
+   - Claude might be doing analysis without persisting results
+
+3. **No Change Detection**: `git_manager.py:150-174` commit logic assumes changes exist:
+   ```python
+   if add_all:
+       self._run_git("add", "-A")  # ← finds nothing
+   self._run_git("commit", "-m", message)  # ← fails
+   ```
+
+4. **No Retry Logic**: `daemon.py:255-326` doesn't distinguish between:
+   - "Implementation failed" (errors)
+   - "Nothing to implement" (already done or unclear)
+   - "Partial implementation" (needs human review)
+
+---
+
+#### 💡 **Proposed Technical Fixes**
+
+**Fix Option 1: Enhanced Pre-Flight Checks** (Recommended - Low Risk)
+
+Add detection for "no changes" scenario in `daemon.py`:
+
+```python
+def _implement_priority(self, priority: dict) -> bool:
+    """Implement a priority with better change detection."""
+
+    # ... existing code ...
+
+    # Execute Claude CLI
+    result = self.claude.execute_prompt(prompt, timeout=3600)
+
+    if not result.success:
+        logger.error(f"Claude CLI failed: {result.stderr}")
+        return False
+
+    logger.info("✅ Claude CLI execution complete")
+
+    # NEW: Check if any files were changed
+    if self.git.is_clean():
+        logger.warning("⚠️  Claude CLI completed but no files changed")
+        logger.warning("Possible reasons:")
+        logger.warning("  1. Priority already implemented")
+        logger.warning("  2. Task too vague for autonomous implementation")
+        logger.warning("  3. Requires human judgment/review")
+
+        # Create notification for human review
+        self.notifications.create_notification(
+            type=NOTIF_TYPE_INFO,
+            title=f"{priority['name']}: Needs Manual Review",
+            message=f"""Claude CLI completed successfully but made no file changes.
+
+Possible actions:
+1. Review priority description - is it concrete enough?
+2. Manually implement this priority
+3. Mark as "Manual Only" in ROADMAP
+4. Skip and move to next priority
+
+Priority: {priority['name']}
+Status: Requires human decision
+""",
+            priority=NOTIF_PRIORITY_HIGH,
+            context={"priority_name": priority["name"], "reason": "no_changes"}
+        )
+
+        # Return "success" to avoid infinite retry
+        # Human will decide next steps via notification
+        return True
+
+    # Continue with commit...
+```
+
+**Fix Option 2: Smarter Commit Logic** (Medium Risk)
+
+Enhance `git_manager.py` to handle empty commits gracefully:
+
+```python
+def commit(self, message: str, add_all: bool = True, allow_empty: bool = False) -> bool:
+    """Commit changes with better empty handling.
+
+    Args:
+        message: Commit message
+        add_all: Whether to add all changes
+        allow_empty: Allow empty commit (for marking progress)
+
+    Returns:
+        Tuple of (success: bool, had_changes: bool)
+    """
+    try:
+        if add_all:
+            self._run_git("add", "-A")
+
+        # Check if there are changes to commit
+        result = self._run_git("status", "--porcelain", check=False)
+        has_changes = len(result.stdout.strip()) > 0
+
+        if not has_changes and not allow_empty:
+            logger.warning("No changes to commit")
+            return (False, False)  # Return tuple: (success, had_changes)
+
+        commit_args = ["commit", "-m", message]
+        if not has_changes and allow_empty:
+            commit_args.append("--allow-empty")
+
+        self._run_git(*commit_args)
+        logger.info(f"Committed: {message[:50]}...")
+        return (True, has_changes)
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Failed to commit: {e.stderr}")
+        return (False, False)
+```
+
+**Fix Option 3: Task-Specific Prompts** (High Value - Requires More Work)
+
+Create specialized prompt builder for different priority types:
+
+```python
+def _build_implementation_prompt(self, priority: dict) -> str:
+    """Build context-aware prompt based on priority type."""
+
+    # Detect priority type
+    if "documentation" in priority["title"].lower() or "ux" in priority["title"].lower():
+        return self._build_documentation_prompt(priority)
+    elif "test" in priority["title"].lower():
+        return self._build_testing_prompt(priority)
+    else:
+        return self._build_feature_prompt(priority)
+
+def _build_documentation_prompt(self, priority: dict) -> str:
+    """Build explicit documentation creation prompt."""
+    return f"""Read docs/ROADMAP.md and implement {priority['name']}: {priority['title']}.
+
+THIS IS A DOCUMENTATION PRIORITY. You MUST create the following files:
+
+Required Deliverables (from ROADMAP):
+1. docs/USER_JOURNEY_PROJECT_MANAGER.md
+2. docs/QUICKSTART_PROJECT_MANAGER.md
+3. docs/SLACK_SETUP_GUIDE.md
+4. docs/PROJECT_MANAGER_FEATURES.md
+
+Instructions:
+- CREATE each file listed above
+- Use the templates provided in ROADMAP as starting points
+- Fill in real content based on existing codebase
+- Be specific, not generic
+- Include actual commands and examples
+- Test examples before documenting them
+
+Start with file #1 (USER_JOURNEY_PROJECT_MANAGER.md) and work through all 4 files.
+
+When done:
+- Update ROADMAP.md status to "✅ Complete"
+- List all files created in your summary
+
+Begin implementation now - CREATE THE FILES."""
+```
+
+**Fix Option 4: Skip Mechanism** (Quick Mitigation)
+
+Add ability to skip problematic priorities:
+
+```python
+# In roadmap_parser.py
+def mark_priority_skipped(self, priority_name: str, reason: str):
+    """Mark a priority as skipped for manual implementation."""
+    # Update ROADMAP with "⏭️ Skipped (Manual)" status
+    pass
+
+# In daemon.py
+def _implement_priority(self, priority: dict) -> bool:
+    # ... after detecting no changes ...
+
+    # Check if this priority has been retried too many times
+    retry_count = self._get_retry_count(priority["name"])
+
+    if retry_count >= 3:
+        logger.error(f"Priority {priority['name']} failed 3 times - skipping")
+        self.parser.mark_priority_skipped(
+            priority["name"],
+            "Autonomous implementation failed - requires manual work"
+        )
+        return True  # Return success to move to next priority
+```
+
+---
+
+#### 🎯 **Recommended Action Plan**
+
+1. **Immediate (5 minutes)**: Implement **Fix Option 1** (Enhanced Pre-Flight Checks)
+   - Prevents infinite loop
+   - Creates notification for human review
+   - Low risk, high value
+
+2. **Short-term (30 minutes)**: Implement **Fix Option 3** (Task-Specific Prompts)
+   - Explicitly tells Claude to CREATE files
+   - Solves root cause for documentation priorities
+   - Reusable for future priorities
+
+3. **Medium-term (1 hour)**: Implement **Fix Option 4** (Skip Mechanism)
+   - Safety valve for problematic priorities
+   - Prevents wasted compute/API calls
+   - Allows daemon to progress
+
+4. **Long-term (2-3 hours)**: Add **Retry Strategy**
+   - Exponential backoff
+   - Different prompt variations on retry
+   - Human escalation after N attempts
+   - Success rate metrics
+
+---
+
 #### Project: Put yourself in new user's shoes - UX audit & improvements
 
 **Core Philosophy**: Act as a first-time user trying to understand and use the project_manager and Slack notification system. Identify gaps, confusion points, and documentation needs.
