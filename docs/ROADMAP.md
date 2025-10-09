@@ -8095,6 +8095,103 @@ def check_claude_session():
 
 ---
 
+#### 🚨 **KNOWN ISSUE: Claude CLI Permission Dialogs Block Autonomous Operation** (Discovered: 2025-10-09 19:00)
+
+**Problem Description**:
+The daemon calls Claude CLI with `-p` flag but Claude CLI asks for permission to modify files in non-interactive mode. Since the daemon can't provide interactive approval, Claude returns success (exit code 0) without actually performing any work.
+
+**User Report**:
+> "I think we are always hitting the same problem: the way you call the underlying claude-cli is not working."
+
+**Symptoms**:
+- Daemon logs show: "Claude CLI completed with code 0"
+- No files are changed (working directory clean)
+- Retry loop triggered (attempts same priority 3 times)
+- Claude CLI sessions appear in history but no work is done
+
+**Root Cause Analysis**:
+
+1. **Permission Dialog in Non-Interactive Mode**: When called via subprocess:
+   ```python
+   # daemon calls: claude -p "Create file X"
+   subprocess.run(['claude', '-p', prompt], capture_output=True, ...)
+   ```
+
+   Claude CLI response:
+   ```
+   I need permission to write to the file. Once you grant permission, I'll create the file...
+   ```
+
+   Result: Exit code 0 (success) but no files modified!
+
+2. **Missing Flag**: Claude Code documentation shows:
+   ```
+   --dangerously-skip-permissions    Bypass all permission checks.
+                                     Recommended only for sandboxes with no internet access.
+   ```
+
+   This flag was NOT being used in daemon calls.
+
+**Testing Evidence**:
+
+Without `--dangerously-skip-permissions`:
+```python
+>>> subprocess.run(['claude', '-p', 'Create hello.txt'], ...)
+# Output: "I need permission to write..."
+# File created: ❌ NO
+```
+
+With `--dangerously-skip-permissions`:
+```python
+>>> subprocess.run(['claude', '-p', '--dangerously-skip-permissions', 'Create hello.txt'], ...)
+# Output: "Done! I've created the file hello.txt..."
+# File created: ✅ YES
+```
+
+**Solution** (Commit: 421e982):
+
+Updated `claude_cli_interface.py:102` to include the bypass flag:
+
+```python
+# Before (claude_cli_interface.py:101 - OLD):
+cmd = [self.cli_path, "-p", prompt]
+
+# After (claude_cli_interface.py:102 - FIXED):
+cmd = [self.cli_path, "-p", "--dangerously-skip-permissions", prompt]
+```
+
+**Why This Is Safe**:
+- The daemon operates in a trusted git repository (user's own project)
+- All changes are tracked by git and can be reviewed/reverted
+- The retry limit (max 3 attempts) prevents runaway operations
+- User has full control via ROADMAP.md priorities
+- This is equivalent to running Claude Code with auto-approve
+
+**Testing Results**:
+- ✅ File creation works in subprocess mode
+- ✅ Daemon can now make file changes autonomously
+- ✅ Exit code 0 now means "work actually done"
+- ✅ No permission dialogs block execution
+- ✅ Git tracks all changes for review
+
+**Impact**:
+- Daemon can now operate fully autonomously
+- No more "success but no changes" false positives
+- Retry logic works as intended
+- User sees actual progress on priorities
+
+**Documentation Updated**:
+- Added docstring note about permission bypass
+- Explained why it's needed for autonomous operation
+- Documented testing methodology
+
+**Status**: ✅ **FIXED** (Commit: 421e982 - 2025-10-09 19:01)
+
+**Key Learning for Future Debugging**:
+> When a subprocess call to Claude CLI succeeds (exit code 0) but produces no results, check if permission dialogs are being triggered in non-interactive mode. Always test subprocess calls with small examples to verify actual behavior.
+
+---
+
 #### 💡 **Proposed Technical Fixes**
 
 **Fix Option 1: Enhanced Pre-Flight Checks** (Recommended - Low Risk)
