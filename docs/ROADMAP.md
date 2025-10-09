@@ -953,6 +953,466 @@ CI passes ✅ → Daemon continues to next task
 
 ---
 
+### 12. 🔐 Security Vulnerability Monitoring (Daily Task)
+
+**When**: Daily, first thing in the morning
+**Why**: Security vulnerabilities can be exploited - fix immediately
+
+**Priority**: 🚨 **TOP PRIORITY** - Security issues block all other work
+
+**Daily Checklist**:
+- [ ] Check GitHub Security tab for Dependabot alerts
+- [ ] Review severity (Critical > High > Moderate > Low)
+- [ ] For each vulnerability: Assess impact and create fix plan
+- [ ] Fix vulnerabilities or document reason for delay
+- [ ] Update dependencies with security patches
+
+**Commands**:
+```bash
+# View security alerts via GitHub web UI
+open https://github.com/Bobain/MonolithicCoffeeMakerAgent/security
+
+# Check for vulnerable dependencies (local scan)
+pip-audit
+
+# Check specific package for vulnerabilities
+pip-audit | grep <package-name>
+
+# Update vulnerable package
+pip install --upgrade <package-name>
+
+# Check if update breaks anything
+pytest tests/ -v
+```
+
+**Workflow for Security Alerts**:
+
+1. **Identify Alert**:
+   - Go to GitHub → Security → Dependabot alerts
+   - Note severity, affected package, vulnerable version range
+   - Read CVE details and impact assessment
+
+2. **Assess Impact**:
+   ```bash
+   # Check where vulnerable package is used
+   grep -r "import <package>" coffee_maker/ tests/
+
+   # Check if we're affected by the vulnerability
+   # (some CVEs only affect specific use cases)
+   ```
+
+3. **Determine Action**:
+   - **Critical/High severity**: Fix immediately (drop everything)
+   - **Moderate severity**: Fix within 24 hours
+   - **Low severity**: Fix within 1 week
+
+4. **Fix Options**:
+
+   **Option A: Update Dependency** (Preferred)
+   ```bash
+   # Update to patched version
+   pip install --upgrade <package>==<safe-version>
+
+   # Update requirements.txt
+   pip freeze | grep <package> >> requirements.txt
+
+   # Test everything
+   pytest tests/ -v
+   black coffee_maker/ tests/
+   mypy coffee_maker/
+   ```
+
+   **Option B: Wait for Third-Party Fix**
+   If vulnerability is in a dependency we can't easily update:
+   ```markdown
+   # Create tracking issue
+   Title: [SECURITY] Waiting for <package> security patch
+
+   Description:
+   - CVE: CVE-2024-XXXXX
+   - Severity: High
+   - Affected package: <package> <version>
+   - Our mitigation: <describe workaround>
+   - Tracking: <link to upstream issue>
+   - ETA: <expected patch date>
+   ```
+
+   **Option C: Replace Dependency**
+   If patch isn't available and risk is high:
+   ```bash
+   # Find alternative package
+   pip search <alternative>
+
+   # Ask user permission to replace dependency
+   # (DAEMON MUST ASK PERMISSION - Section 9)
+   ```
+
+   **Option D: Mitigate Risk**
+   If we can't update immediately:
+   ```python
+   # Add input validation
+   # Disable vulnerable feature
+   # Add rate limiting
+   # Add monitoring/alerts
+   ```
+
+5. **Test Fix**:
+   ```bash
+   # Run full test suite
+   pytest tests/ -v --cov=coffee_maker
+
+   # Check for breaking changes
+   python -m coffee_maker.cli.project_manager --version
+
+   # Manual smoke test of critical features
+   ```
+
+6. **Document Fix**:
+   ```bash
+   git add requirements.txt
+   git commit -m "security: Fix CVE-2024-XXXXX in <package>
+
+   - Updated <package> from <old> to <new>
+   - CVE severity: <High/Moderate/Low>
+   - Impact: <describe what was vulnerable>
+   - Tests: All passing
+
+   Fixes: #<issue-number>"
+
+   git push
+   ```
+
+7. **Verify on GitHub**:
+   - GitHub Security tab should show alert as resolved
+   - Dependabot should close the alert automatically
+   - If not, manually dismiss with explanation
+
+**🤖 DAEMON REQUIREMENT**:
+The autonomous daemon **MUST** check security alerts daily and prioritize fixes:
+
+1. **Every morning (00:00 UTC)**:
+   - Check GitHub Security tab (via GitHub API)
+   - Count alerts by severity
+   - If Critical/High alerts exist: **PAUSE ALL OTHER WORK**
+
+2. **Security-First Priority**:
+   ```
+   Critical/High vulnerability detected → STOP current task
+   ↓
+   Assess vulnerability impact
+   ↓
+   IF fix available: Apply update + test + commit + push
+   IF no fix: Document mitigation + notify user
+   ↓
+   Verify alert resolved on GitHub
+   ↓
+   Resume previous task
+   ```
+
+3. **User Notification**:
+   ```
+   🚨 SECURITY ALERT: Critical vulnerability detected
+
+   Package: requests==2.28.0
+   CVE: CVE-2024-12345
+   Severity: HIGH (8.5/10)
+
+   Impact: Server-Side Request Forgery (SSRF)
+   Fix available: requests==2.31.0
+
+   Action: Updating dependency and running tests...
+   [Progress bar]
+   ✅ Fixed and verified. All tests passing.
+
+   Commit: abc1234
+   Branch: security/fix-requests-ssrf
+   PR: #456
+   ```
+
+**Automation Script** (Future):
+```python
+# File: scripts/check_security_alerts.py
+"""
+Daily security alert checker.
+Run: python scripts/check_security_alerts.py
+"""
+
+import requests
+import os
+
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+REPO = "Bobain/MonolithicCoffeeMakerAgent"
+
+def check_security_alerts():
+    """Check GitHub Dependabot alerts."""
+    url = f"https://api.github.com/repos/{REPO}/dependabot/alerts"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    response = requests.get(url, headers=headers)
+    alerts = response.json()
+
+    # Filter by severity
+    critical = [a for a in alerts if a['security_advisory']['severity'] == 'critical']
+    high = [a for a in alerts if a['security_advisory']['severity'] == 'high']
+
+    if critical or high:
+        print(f"🚨 {len(critical)} critical, {len(high)} high severity alerts!")
+        return False
+    else:
+        print("✅ No critical/high security alerts")
+        return True
+
+if __name__ == "__main__":
+    check_security_alerts()
+```
+
+**Example: Current Alerts (2025-10-09)**:
+As of the last push, GitHub reported:
+- 1 High severity vulnerability
+- 4 Moderate severity vulnerabilities
+
+**Next actions**:
+1. Review: https://github.com/Bobain/MonolithicCoffeeMakerAgent/security/dependabot
+2. Fix high severity issue immediately
+3. Schedule moderate severity fixes within 24 hours
+
+**Why This Matters**:
+- **Prevents exploits**: Unpatched vulnerabilities = attack surface
+- **Compliance**: Many organizations require <24h fix for high severity
+- **Reputation**: Security issues damage trust
+- **Legal risk**: Data breaches have legal consequences
+- **Supply chain security**: Dependencies can be compromised
+
+**Golden Rule**: When in doubt, fix security issues before features 🔐
+
+---
+
+### 13. 🔄 Daily Refactoring Opportunity Review
+
+**When**: Daily, after completing any feature or update
+**Why**: Small, incremental refactoring prevents technical debt accumulation
+
+**Philosophy**: "Leave code cleaner than you found it" - Every change is an opportunity to improve
+
+**Daily Questions to Ask**:
+
+1. **Does this update create duplication?**
+   ```python
+   # BAD: Duplicated logic in two places
+   def process_user_data(data):
+       if data.get('name'):
+           cleaned_name = data['name'].strip().lower()
+           # ... 20 more lines ...
+
+   def process_admin_data(data):
+       if data.get('name'):
+           cleaned_name = data['name'].strip().lower()  # DUPLICATE!
+           # ... 20 more lines ...
+
+   # GOOD: Extract common logic
+   def clean_name(name: str) -> str:
+       return name.strip().lower()
+
+   def process_user_data(data):
+       if data.get('name'):
+           cleaned_name = clean_name(data['name'])
+   ```
+
+2. **Can this logic be simplified?**
+   ```python
+   # BAD: Overly complex
+   def is_valid_user(user):
+       if user is not None:
+           if user.get('active'):
+               if user.get('verified'):
+                   return True
+       return False
+
+   # GOOD: Simplified
+   def is_valid_user(user):
+       return (user is not None
+               and user.get('active', False)
+               and user.get('verified', False))
+   ```
+
+3. **Are there new patterns that could be utilities?**
+   ```python
+   # If you find yourself writing similar code 3+ times:
+   # → Extract to utility function or decorator
+
+   # Example: Retry pattern repeated across multiple functions
+   # → Already extracted to @with_retry decorator ✅
+   ```
+
+4. **Do function/variable names clearly communicate intent?**
+   ```python
+   # BAD: Unclear names
+   def f(d):
+       r = []
+       for x in d:
+           if x['s'] == 'active':
+               r.append(x)
+       return r
+
+   # GOOD: Clear names
+   def filter_active_users(users: List[Dict]) -> List[Dict]:
+       active_users = []
+       for user in users:
+           if user['status'] == 'active':
+               active_users.append(user)
+       return active_users
+
+   # EVEN BETTER: Using comprehension
+   def filter_active_users(users: List[Dict]) -> List[Dict]:
+       return [u for u in users if u['status'] == 'active']
+   ```
+
+5. **Could this be more type-safe?**
+   ```python
+   # BAD: Weak typing
+   def process_data(data):
+       return data.get('value', 0) * 2
+
+   # GOOD: Strong typing
+   from typing import Dict, Any
+
+   def process_data(data: Dict[str, Any]) -> float:
+       value = data.get('value', 0.0)
+       return float(value) * 2.0
+   ```
+
+6. **Is there dead code or commented-out code?**
+   ```python
+   # BAD: Leaving commented code "just in case"
+   def process_order(order):
+       # Old implementation (keeping for reference)
+       # result = old_way(order)
+       # if result:
+       #     return result
+
+       # New implementation
+       return new_way(order)
+
+   # GOOD: Remove old code (it's in git history!)
+   def process_order(order):
+       return new_way(order)
+   ```
+
+**Daily Workflow**:
+
+1. **Review Today's Changes**:
+   ```bash
+   # What did we change today?
+   git diff HEAD~1 --stat
+
+   # View actual changes
+   git diff HEAD~1
+   ```
+
+2. **Identify Opportunities**:
+   ```bash
+   # Find potential duplication
+   ruff check coffee_maker/ --select UP  # pyupgrade suggestions
+
+   # Find code complexity issues
+   ruff check coffee_maker/ --select C90  # McCabe complexity
+
+   # Find overly long functions
+   ruff check coffee_maker/ --select PLR0915  # too many statements
+   ```
+
+3. **Apply Boy Scout Rule**:
+   > "Always leave the campground cleaner than you found it"
+
+   If you touch a file:
+   - Fix nearby code smells
+   - Improve nearby variable names
+   - Add missing type hints
+   - Add missing docstrings
+   - Remove unused imports
+
+4. **Document Refactoring in Commit**:
+   ```bash
+   git commit -m "refactor: Simplify user validation logic
+
+   - Extracted clean_name() utility (removes duplication)
+   - Simplified is_valid_user() (reduced complexity)
+   - Added type hints to process_data()
+   - Removed commented-out dead code
+
+   No functional changes, all tests passing."
+   ```
+
+**🤖 DAEMON REQUIREMENT**:
+After implementing any feature, the daemon **MUST** review code for refactoring opportunities:
+
+```
+Implement feature → Tests pass → Daemon analyzes changes
+↓
+Questions:
+- Is there duplication? (>2 similar blocks)
+- Is there complexity? (functions >50 lines, nested >3 levels)
+- Are there unclear names? (single letter variables, abbreviations)
+- Is typing incomplete? (missing type hints)
+↓
+IF opportunities found:
+  Create refactoring subtask
+  Apply Boy Scout Rule
+  Test again
+  Commit refactoring separately
+↓
+Move to next task
+```
+
+**Example: Sprint 1 Refactoring Success** ✅
+
+After implementing analytics features, we reviewed and found:
+- **Duplication**: Retry logic repeated 5 times → Extracted `@with_retry` decorator
+- **Complexity**: 800+ lines of deprecated code → Removed
+- **Naming**: Unclear function names → Renamed for clarity
+- **Result**: Cleaner codebase, easier maintenance
+
+**Metrics to Track**:
+```bash
+# Code complexity (aim for <10 per function)
+radon cc coffee_maker/ -s
+
+# Maintainability index (aim for A/B grade)
+radon mi coffee_maker/ -s
+
+# Lines of code (should not grow unnecessarily)
+cloc coffee_maker/
+```
+
+**When NOT to Refactor**:
+- ❌ Right before a deadline
+- ❌ When changing external API contracts (breaking changes)
+- ❌ Large-scale refactoring without planning
+- ❌ "Clever" optimizations without profiling
+
+**When TO Refactor**:
+- ✅ After adding a feature (clean up while context is fresh)
+- ✅ When you notice duplication (3rd occurrence → extract)
+- ✅ When tests are green (safe to refactor)
+- ✅ Small, incremental improvements (not big rewrites)
+
+**Tools**:
+- `ruff check` - Find code quality issues
+- `radon` - Measure complexity and maintainability
+- `black` - Auto-format (eliminates style debates)
+- `mypy` - Type checking (catch errors early)
+
+**Golden Rules**:
+1. 🔒 **Never refactor without tests** - Tests are safety net
+2. 🔬 **One refactoring at a time** - Small, focused changes
+3. 📝 **Separate refactoring commits** - Don't mix with features
+4. ✅ **Tests must stay green** - No functional changes during refactor
+5. 🎯 **Boy Scout Rule** - Always leave code cleaner
+
+**This prevents technical debt accumulation** - 10 minutes daily saves hours later! ⏰
+
+---
+
 ## Summary: Apply These Every Implementation Cycle
 
 1. **Before starting**: Review database sync strategy (PRIORITY 1.5)
@@ -962,10 +1422,13 @@ CI passes ✅ → Daemon continues to next task
 5. **Before commit**: Run tests, linting, formatting
 6. **After commit**: Update ROADMAP.md status
 7. **After push**: Check GitHub Actions CI status and fix any failures ⚡ **NEW**
-8. **After PRIORITY completion**: Create demo + notify user ⚡ **NEW**
-9. **Weekly**: Review for refactoring opportunities
-10. **Monthly**: Dependency updates and security audit
-11. **Daily**: Monitor GitHub CI/CD status (Section 11) ⚡ **NEW**
+8. **After feature/update**: Review for refactoring opportunities (Section 13) 🔄 ⚡ **NEW**
+9. **After PRIORITY completion**: Create demo + notify user ⚡ **NEW**
+10. **Weekly**: Review for refactoring opportunities
+11. **Monthly**: Dependency updates and security audit
+12. **Daily (TOP PRIORITY)**: Check security vulnerabilities and fix immediately (Section 12) 🔐 ⚡ **NEW**
+13. **Daily**: Monitor GitHub CI/CD status (Section 11) ⚡ **NEW**
+14. **Daily**: Review if last update adds refactoring opportunities (Section 13) 🔄 ⚡ **NEW**
 
 **🤖 For Autonomous Daemon** (Critical - Non-Negotiable):
 - ⚠️ **NEVER STOP ASKING PERMISSION** - This is the CORE PRINCIPLE ⚡
