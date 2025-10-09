@@ -8376,6 +8376,205 @@ def interactive_setup():
 
 ---
 
+### 🔴 **PRIORITY 2.6: Daemon Fix Verification & CI Testing** 🚨 **HIGH PRIORITY**
+
+**Estimated Duration**: 2-4 hours
+**Impact**: ⭐⭐⭐⭐⭐ (Critical for continuous development)
+**Status**: 📝 Planned
+**Dependency**: Requires daemon fixes from commit a24d3be
+**Why Important**: Must verify daemon infinite loop fix works before resuming autonomous development
+
+#### Project: Verify Daemon Fixes & Establish CI Testing
+
+**Objectives**:
+1. Test daemon locally with PRIORITY 2.5 to verify no infinite loop
+2. Set up GitHub Actions CI for daemon testing
+3. Define environment variables in GitHub for Claude CLI testing
+4. Create automated daemon health checks
+
+**Deliverables**:
+
+**1. Local Daemon Testing** (15 minutes)
+```bash
+# Kill any running daemon instances
+pkill -f run_daemon.py
+
+# Start daemon with fixes
+python run_daemon.py --auto-approve
+
+# Monitor for:
+# - No infinite loop (should move past PRIORITY 2.5)
+# - Notification created for "no changes" scenario
+# - Clean exit or progress to next priority
+```
+
+**Expected Behavior**:
+- ✅ Daemon detects no changes after Claude CLI completes
+- ✅ Creates notification: "PRIORITY 2.5: Needs Manual Review"
+- ✅ Returns success and sleeps 30s
+- ✅ Moves to next priority (not stuck in loop)
+
+**2. GitHub Actions Workflow** (`.github/workflows/daemon-test.yml`)
+```yaml
+name: Daemon Health Check
+
+on:
+  push:
+    branches: [main, feature/*]
+    paths:
+      - 'coffee_maker/autonomous/**'
+      - 'run_daemon.py'
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+
+jobs:
+  test-daemon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
+
+      - name: Configure Claude CLI
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Install Claude CLI (if not in dependencies)
+          # Configure with API key from secrets
+          echo "Claude CLI configured"
+
+      - name: Run daemon for 5 minutes
+        run: |
+          timeout 300 python run_daemon.py --auto-approve || true
+
+      - name: Check for infinite loop
+        run: |
+          # Analyze logs for repeated attempts
+          # Fail if same priority attempted >3 times
+          python scripts/check_daemon_health.py
+
+      - name: Verify notifications created
+        run: |
+          # Check notifications.db for expected entries
+          python scripts/verify_notifications.py
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: daemon-logs
+          path: |
+            data/notifications.db
+            *.log
+```
+
+**3. Health Check Script** (`scripts/check_daemon_health.py`)
+```python
+#!/usr/bin/env python3
+"""Check daemon logs for infinite loop patterns."""
+
+import re
+import sys
+from pathlib import Path
+
+def check_for_infinite_loop(log_content: str) -> bool:
+    """Detect if daemon is stuck in infinite loop.
+
+    Returns:
+        True if infinite loop detected
+    """
+    # Pattern: Same priority attempted multiple times
+    pattern = r"Starting implementation of (PRIORITY \S+)"
+    attempts = {}
+
+    for match in re.finditer(pattern, log_content):
+        priority = match.group(1)
+        attempts[priority] = attempts.get(priority, 0) + 1
+
+    # Fail if any priority attempted >3 times
+    for priority, count in attempts.items():
+        if count > 3:
+            print(f"❌ INFINITE LOOP: {priority} attempted {count} times")
+            return True
+
+    print("✅ No infinite loop detected")
+    return False
+
+if __name__ == "__main__":
+    # Read daemon logs
+    # Check for infinite loop
+    # Exit 1 if detected
+    pass
+```
+
+**4. GitHub Repository Secrets**:
+```bash
+# Set in GitHub repo: Settings → Secrets and variables → Actions
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+**5. Documentation** (`docs/DAEMON_TESTING.md`)
+```markdown
+# Daemon Testing Guide
+
+## Local Testing
+
+1. Kill existing daemon: `pkill -f run_daemon.py`
+2. Start daemon: `python run_daemon.py --auto-approve`
+3. Monitor logs for infinite loops
+4. Check notifications: `poetry run project-manager notifications`
+
+## CI Testing
+
+GitHub Actions runs daemon tests on:
+- Every push to coffee_maker/autonomous/**
+- Every 6 hours (scheduled)
+- Manual workflow dispatch
+
+Tests verify:
+- No infinite loops (priority not retried >3 times)
+- Notifications created for blocked tasks
+- Daemon progresses through roadmap
+
+## Troubleshooting
+
+If daemon gets stuck:
+1. Check logs for "no files changed" warnings
+2. Verify notification created
+3. Review priority description for vagueness
+4. Consider manual implementation
+```
+
+**Success Criteria**:
+- ✅ Daemon runs locally without infinite loop on PRIORITY 2.5
+- ✅ GitHub Actions workflow created and passing
+- ✅ Health check scripts detect infinite loops
+- ✅ Environment variables configured in GitHub
+- ✅ Documentation complete
+
+**Risk Assessment**:
+- **Low risk**: Testing doesn't change production code
+- **High value**: Prevents future infinite loops
+- **Quick win**: Can be done in 2-4 hours
+
+**Next Steps After Completion**:
+1. Resume daemon with confidence
+2. Monitor GitHub Actions for issues
+3. Iterate on health checks as needed
+4. Consider adding metrics dashboard
+
+---
+
 ### 🔴 **PRIORITY 3: Streamlit Analytics Dashboard** ⚡ NEW
 
 **Estimated Duration**: 1-2 weeks
