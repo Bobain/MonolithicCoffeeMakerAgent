@@ -7896,6 +7896,88 @@ The autonomous daemon (run_daemon.py) is stuck in an infinite loop when trying t
    - "Nothing to implement" (already done or unclear)
    - "Partial implementation" (needs human review)
 
+**Status**: ✅ **FIXED** (Commit: a24d3be)
+
+---
+
+#### 🚨 **KNOWN ISSUE: False Positive Claude Session Detection** (Discovered: 2025-10-09)
+
+**Problem Description**:
+The daemon's Claude session detection always returns `True`, preventing daemon from running even from separate terminals.
+
+**User Report**:
+> "It also looks like there is a problem in the detection of another claude session: it is always detected even if nothing is running"
+
+**Root Cause Analysis**:
+
+1. **Wrong Environment Variables**: Checked for non-existent vars
+   ```python
+   # run_daemon.py:49-52 (OLD)
+   claude_env_vars = [
+       "CLAUDE_SESSION_ID",      # ❌ Doesn't exist
+       "CLAUDE_CLI_SESSION",     # ❌ Doesn't exist
+   ]
+   ```
+
+2. **Too Broad Process Check**: Matched ANY Claude process
+   ```python
+   # run_daemon.py:59-62 (OLD)
+   result = subprocess.run(["pgrep", "-f", "claude"], ...)
+   if result.returncode == 0:
+       return True  # ❌ Always True if ANY Claude process exists
+   ```
+
+3. **False Positives**: Detected sessions incorrectly
+   - Matched background Claude processes
+   - Matched Claude Code running in different terminals
+   - Matched unrelated processes with "claude" in name
+   - Always returned `True` → blocked legitimate daemon runs
+
+**Testing Evidence**:
+```bash
+$ pgrep -f "claude"
+79598  # ← Always finds SOMETHING with "claude"
+
+$ env | grep -i claude
+CLAUDECODE=1                    # ✅ Actual variable (when inside Claude Code)
+CLAUDE_CODE_ENTRYPOINT=cli      # ✅ Actual variable (when using CLI)
+```
+
+**Fix Applied** (Commit: c30c399):
+
+```python
+def check_claude_session():
+    """Check if running inside a Claude Code session."""
+    import os
+
+    # Check for ACTUAL Claude Code environment variables
+    claude_env_vars = [
+        "CLAUDECODE",              # ✅ Set to "1" when inside Claude Code
+        "CLAUDE_CODE_ENTRYPOINT",  # ✅ Set to "cli" when using Claude Code CLI
+    ]
+
+    for var in claude_env_vars:
+        if os.environ.get(var):
+            return True
+
+    # Removed pgrep check - too broad and unreliable
+    return False
+```
+
+**Testing Results**:
+- ✅ Correctly detects when INSIDE Claude Code terminal (`CLAUDECODE=1`)
+- ✅ Returns `False` when running from separate terminal
+- ✅ No false positives from unrelated Claude processes
+- ✅ More reliable session detection
+
+**Impact**:
+- Daemon can now run from separate terminals without warnings
+- Still correctly warns when actually inside Claude Code
+- Eliminates false positives
+- Improves developer experience
+
+**Status**: ✅ **FIXED** (Commit: c30c399)
+
 ---
 
 #### 💡 **Proposed Technical Fixes**
