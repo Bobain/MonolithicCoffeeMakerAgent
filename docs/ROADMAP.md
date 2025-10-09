@@ -901,18 +901,32 @@ After implementing PRIORITY 1 & 2, we have:
 
 **While waiting for PRIORITY 3**, you can run the daemon using the temporary convenience script:
 
-```bash
-# Interactive mode (asks for approval)
-python run_daemon.py
+⚠️  **CRITICAL REQUIREMENT**: The daemon MUST run from a **separate terminal**, NOT from within Claude Code!
 
-# Autonomous mode (auto-approve)
-python run_daemon.py --auto-approve
+**Why?** The daemon spawns Claude CLI sessions to implement features. Running it from within an existing Claude Code session creates a nested/recursive conflict that causes it to hang indefinitely.
 
-# See all options
-python run_daemon.py --help
-```
+**Correct Usage:**
 
-This script provides immediate access to the code-developer functionality without waiting for the full PyPI package setup.
+1. **Exit Claude Code** (if currently in a session)
+2. **Open a NEW terminal** (completely separate)
+3. **Navigate to project and activate environment:**
+   ```bash
+   cd /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent
+   source /Users/bobain/Library/Caches/pypoetry/virtualenvs/coffee-maker-efk4LJvC-py3.11/bin/activate
+   ```
+4. **Run the daemon:**
+   ```bash
+   # Interactive mode (asks for approval)
+   python run_daemon.py
+
+   # Autonomous mode (auto-approve)
+   python run_daemon.py --auto-approve
+
+   # See all options
+   python run_daemon.py --help
+   ```
+
+The script includes runtime detection and will warn you if it detects a Claude session.
 
 ---
 
