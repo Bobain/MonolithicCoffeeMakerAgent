@@ -48,6 +48,9 @@ class ClaudeCLI:
     This class provides methods to execute Claude CLI commands programmatically,
     enabling the daemon to invoke Claude Code for autonomous development.
 
+    The CLI is invoked with --dangerously-skip-permissions to bypass permission
+    dialogs in non-interactive mode, allowing autonomous file operations.
+
     Attributes:
         cli_path: Path to claude command (defaults to 'claude')
         timeout: Default timeout in seconds
@@ -96,9 +99,10 @@ class ClaudeCLI:
         """
         timeout = timeout or self.timeout
 
-        # Build command: claude -p "prompt"
+        # Build command: claude -p --dangerously-skip-permissions "prompt"
         # -p/--print flag enables non-interactive mode
-        cmd = [self.cli_path, "-p", prompt]
+        # --dangerously-skip-permissions bypasses permission dialogs (required for autonomous operation)
+        cmd = [self.cli_path, "-p", "--dangerously-skip-permissions", prompt]
 
         logger.info(f"Executing Claude CLI: {prompt[:100]}...")
 
