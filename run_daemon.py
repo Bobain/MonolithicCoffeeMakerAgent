@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
 """Quick-start script for running the code-developer daemon.
 
-⚠️  IMPORTANT: Run this daemon from a SEPARATE TERMINAL, NOT from within Claude Code!
+The daemon uses the Anthropic API to autonomously implement features from your
+ROADMAP.md file.
 
-The daemon spawns Claude CLI sessions to implement features. Running it from
-within an existing Claude Code session will cause it to hang due to nested
-session conflicts.
+REQUIREMENTS:
+1. ANTHROPIC_API_KEY environment variable must be set
+2. Poetry environment must be activated
 
-CORRECT USAGE:
-1. Open a NEW terminal (separate from Claude Code)
-2. Activate the poetry environment
-3. Run this script
-
-WRONG USAGE:
-❌ Running from within Claude Code terminal
-❌ Running while Claude Code is using the same working directory
+RECOMMENDED:
+- Run from a separate terminal (not from within Claude Code)
+- This provides better isolation and debugging
 
 This is a temporary convenience script until PRIORITY 3 (PyPI Package & Binaries)
 is complete and the proper `code-developer` CLI command is available.
@@ -29,6 +25,14 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed, env vars must be set manually
 
 # Add project to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -127,29 +131,32 @@ Note: This is a temporary script. After PRIORITY 3 is complete,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # Check if running inside Claude session
+    # Check for required environment variables
+    import os
+
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        print("=" * 70)
+        print("❌ ERROR: ANTHROPIC_API_KEY not set!")
+        print("=" * 70)
+        print("\nThe daemon requires an Anthropic API key to function.")
+        print("\n🔧 SOLUTION:")
+        print("  1. Get your API key from: https://console.anthropic.com/")
+        print("  2. Set the environment variable:")
+        print("     export ANTHROPIC_API_KEY='your-api-key-here'")
+        print("  3. Run the daemon again")
+        print("\n" + "=" * 70 + "\n")
+        sys.exit(1)
+
+    # Check if running inside Claude session (warning only, not blocking)
     if check_claude_session():
         print("=" * 70)
-        print("⚠️  WARNING: Claude Code session detected!")
+        print("⚠️  INFO: Running inside Claude Code session")
         print("=" * 70)
-        print("\n⚠️  Running the daemon from within Claude Code will cause it to HANG!")
-        print("\nThe daemon needs to spawn Claude CLI sessions, which conflicts with")
-        print("running inside an existing Claude Code session.")
-        print("\n🔧 SOLUTION:")
-        print("  1. Exit this Claude Code session (type 'exit' or press Ctrl+D)")
-        print("  2. Open a NEW terminal (completely separate)")
-        print("  3. Activate poetry environment:")
-        print("     source /Users/bobain/Library/Caches/pypoetry/virtualenvs/coffee-maker-efk4LJvC-py3.11/bin/activate")
-        print("  4. Run daemon again from the new terminal")
-        print("\n" + "=" * 70)
-
-        response = input("\n⚠️  Continue anyway? (NOT recommended) [y/N]: ").strip().lower()
-        if response not in ["y", "yes"]:
-            print("\n✅ Good choice! Exiting safely.")
-            print("Please run this daemon from a separate terminal.\n")
-            sys.exit(0)
-        else:
-            print("\n⚠️  Proceeding... (expect the daemon to hang)\n")
+        print("\nYou're running the daemon from within Claude Code.")
+        print("This works fine now (we use the Anthropic SDK directly),")
+        print("but running from a separate terminal provides better isolation.")
+        print("\n💡 TIP: For better debugging, run from a separate terminal.")
+        print("=" * 70 + "\n")
 
     # Create and run daemon
     print("=" * 70)
