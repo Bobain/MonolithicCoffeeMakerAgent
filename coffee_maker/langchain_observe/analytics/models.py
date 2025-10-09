@@ -69,7 +69,7 @@ class Trace(Base):
     name = Column(String(255), nullable=True)
     user_id = Column(String(255), nullable=True, index=True)
     session_id = Column(String(255), nullable=True, index=True)
-    metadata = Column(JSON, nullable=True)
+    trace_metadata = Column(JSON, nullable=True)
     input = Column(JSON, nullable=True)
     output = Column(JSON, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
@@ -147,7 +147,7 @@ class Generation(Base):
     completion_end_time = Column(DateTime, nullable=True)
 
     # Additional fields
-    metadata = Column(JSON, nullable=True)
+    generation_metadata = Column(JSON, nullable=True)
     level = Column(String(50), nullable=True)
     status_message = Column(Text, nullable=True)
 
@@ -191,7 +191,7 @@ class Span(Base):
     name = Column(String(255), nullable=True)
     input = Column(JSON, nullable=True)
     output = Column(JSON, nullable=True)
-    metadata = Column(JSON, nullable=True)
+    span_metadata = Column(JSON, nullable=True)
     level = Column(String(50), nullable=True)
     status_message = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)

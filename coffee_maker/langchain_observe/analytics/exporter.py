@@ -221,7 +221,7 @@ class LangfuseExporter:
                 name=trace_data.get("name"),
                 user_id=trace_data.get("userId"),
                 session_id=trace_data.get("sessionId"),
-                metadata=trace_data.get("metadata"),
+                trace_metadata=trace_data.get("metadata"),
                 input=trace_data.get("input"),
                 output=trace_data.get("output"),
                 created_at=self._parse_timestamp(trace_data.get("timestamp")),
@@ -232,7 +232,7 @@ class LangfuseExporter:
         else:
             # Update existing trace
             trace.name = trace_data.get("name") or trace.name
-            trace.metadata = trace_data.get("metadata") or trace.metadata
+            trace.trace_metadata = trace_data.get("metadata") or trace.trace_metadata
             trace.output = trace_data.get("output") or trace.output
             trace.updated_at = datetime.utcnow()
 
@@ -299,7 +299,7 @@ class LangfuseExporter:
                 created_at=self._parse_timestamp(gen_data.get("timestamp")),
                 completion_start_time=start_time,
                 completion_end_time=end_time,
-                metadata=gen_data.get("metadata"),
+                generation_metadata=gen_data.get("metadata"),
                 level=gen_data.get("level"),
                 status_message=gen_data.get("statusMessage"),
             )
@@ -325,7 +325,7 @@ class LangfuseExporter:
                 name=span_data.get("name"),
                 input=span_data.get("input"),
                 output=span_data.get("output"),
-                metadata=span_data.get("metadata"),
+                span_metadata=span_data.get("metadata"),
                 level=span_data.get("level"),
                 status_message=span_data.get("statusMessage"),
                 created_at=self._parse_timestamp(span_data.get("timestamp")),

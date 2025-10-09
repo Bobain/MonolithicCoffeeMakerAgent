@@ -1,8 +1,9 @@
 # Coffee Maker Agent - Roadmap Globale Priorisée
 
-**Dernière mise à jour**: 2025-10-08
+**Dernière mise à jour**: 2025-10-09
 **Branche actuelle**: `feature/rateLimits-fallbacksModels-specializedModels`
 **Status**: Phase de refactoring terminée ✅
+**Nouveauté**: 2 nouveaux projets Streamlit ajoutés (Analytics Dashboard + Agent UI) ⚡
 
 ---
 
@@ -117,7 +118,144 @@ scripts/
 
 ---
 
-### 🔴 **PRIORITÉ 3: Documentation Professionnelle**
+### 🔴 **PRIORITÉ 3: Streamlit Analytics Dashboard** ⚡ NOUVEAU
+
+**Durée estimée**: 1-2 semaines
+**Impact**: ⭐⭐⭐⭐⭐
+**Status**: 📝 Planifié
+**Dépendance**: Requiert PRIORITÉ 2 (Analytics & Observabilité) complété
+
+#### Projet: Dashboard Streamlit pour Analyse LLM & Coûts
+
+**Objectifs**:
+- Dashboard interactif pour analyser l'utilisation des LLMs
+- Visualisation des coûts par modèle, agent, et tâche
+- Graphiques de performance et tendances
+- Export de rapports personnalisés
+
+**Fonctionnalités clés**:
+- 📊 **Vue d'ensemble**: Métriques globales (coûts totaux, tokens, requêtes)
+- 📈 **Tendances**: Graphiques temporels d'utilisation et coûts
+- 🔍 **Analyse par modèle**: Comparaison GPT-4, Claude, Gemini, etc.
+- 🤖 **Analyse par agent**: Performances et coûts par agent
+- 💰 **Budget tracking**: Alertes et prédictions de dépassement
+- 📥 **Export**: PDF, CSV, rapports personnalisés
+
+**Architecture**:
+```
+streamlit_apps/
+├── analytics_dashboard/
+│   ├── app.py                    # Main Streamlit app
+│   ├── pages/
+│   │   ├── 01_overview.py        # Vue d'ensemble
+│   │   ├── 02_cost_analysis.py   # Analyse coûts détaillée
+│   │   ├── 03_model_comparison.py # Comparaison modèles
+│   │   ├── 04_agent_performance.py # Performance agents
+│   │   └── 05_exports.py         # Export rapports
+│   ├── components/
+│   │   ├── charts.py             # Composants graphiques
+│   │   ├── metrics.py            # Widgets métriques
+│   │   └── filters.py            # Filtres temporels/agents
+│   └── queries/
+│       └── analytics_queries.py  # Requêtes SQLite/PostgreSQL
+```
+
+**Livrables**:
+- [ ] Dashboard Streamlit multi-pages
+- [ ] Connexion à la base analytics (SQLite/PostgreSQL)
+- [ ] Visualisations interactives (Plotly/Altair)
+- [ ] Filtres dynamiques (dates, agents, modèles)
+- [ ] Export de rapports (PDF, CSV)
+- [ ] Configuration et authentification
+- [ ] Documentation utilisateur
+
+**Bénéfices**:
+- ✅ Visibilité immédiate sur les coûts LLM
+- ✅ Identification rapide des agents coûteux
+- ✅ Optimisation basée sur données réelles
+- ✅ Démonstration du ROI du framework
+- ✅ Interface accessible (non-technique)
+
+**Timeline**:
+- Semaine 1: Setup + Pages principales + Graphiques (8-12h)
+- Semaine 2: Filtres + Export + Tests + Documentation (6-10h)
+- **Total**: 14-22h
+
+---
+
+### 🔴 **PRIORITÉ 4: Streamlit Agent Interaction UI** ⚡ NOUVEAU
+
+**Durée estimée**: 1-2 semaines
+**Impact**: ⭐⭐⭐⭐⭐
+**Status**: 📝 Planifié
+**Dépendance**: Aucune (peut être fait en parallèle)
+
+#### Projet: Interface Streamlit pour Interaction avec les Agents
+
+**Objectifs**:
+- Interface graphique pour interagir avec les agents Coffee Maker
+- Chat interactif avec streaming des réponses
+- Configuration dynamique des agents (modèles, stratégies)
+- Historique de conversations et export
+- Démo et testing des capacités des agents
+
+**Fonctionnalités clés**:
+- 💬 **Chat interface**: Conversation fluide avec agents
+- 🔄 **Streaming**: Affichage en temps réel des réponses
+- ⚙️ **Configuration**: Choix du modèle, température, stratégies
+- 📝 **Historique**: Sauvegarde et rechargement de conversations
+- 🎯 **Agents prédéfinis**: Templates pour différents use cases
+- 📊 **Métriques live**: Tokens, coût, latence par requête
+- 🎨 **Multi-agents**: Support de conversations multi-agents
+
+**Architecture**:
+```
+streamlit_apps/
+├── agent_interface/
+│   ├── app.py                    # Main Streamlit app
+│   ├── pages/
+│   │   ├── 01_chat.py            # Interface de chat
+│   │   ├── 02_agent_config.py    # Configuration agents
+│   │   ├── 03_history.py         # Historique conversations
+│   │   └── 04_playground.py      # Testing & expérimentation
+│   ├── components/
+│   │   ├── chat_interface.py     # Composant chat
+│   │   ├── agent_selector.py     # Sélection d'agent
+│   │   ├── model_config.py       # Configuration modèle
+│   │   └── metrics_display.py    # Affichage métriques
+│   ├── agents/
+│   │   ├── agent_manager.py      # Gestion instances d'agents
+│   │   └── agent_templates.py    # Templates prédéfinis
+│   └── storage/
+│       └── conversation_storage.py # Sauvegarde conversations
+```
+
+**Livrables**:
+- [ ] Interface de chat avec streaming
+- [ ] Configuration dynamique des agents
+- [ ] Support de multiples agents (code reviewer, architect, etc.)
+- [ ] Historique persistant des conversations
+- [ ] Métriques en temps réel (tokens, coût, latence)
+- [ ] Export de conversations (Markdown, JSON)
+- [ ] Templates d'agents prédéfinis
+- [ ] Documentation utilisateur
+
+**Bénéfices**:
+- ✅ Facilite l'utilisation des agents (non-développeurs)
+- ✅ Démo interactive des capacités du framework
+- ✅ Testing rapide de prompts et configurations
+- ✅ Expérience utilisateur moderne et intuitive
+- ✅ Accélération de l'adoption du framework
+- ✅ Collecte de feedback utilisateur
+
+**Timeline**:
+- Semaine 1: Chat interface + Streaming + Config (10-14h)
+- Semaine 2: Historique + Export + Templates + Tests (8-12h)
+- **Total**: 18-26h
+
+---
+
+### 🔴 **PRIORITÉ 5: Documentation Professionnelle**
 
 **Durée estimée**: 1-2 semaines
 **Impact**: ⭐⭐⭐⭐
@@ -159,11 +297,12 @@ scripts/
 
 ---
 
-### 🟡 **PRIORITÉ 4: Projets Innovants** (à choisir selon intérêt)
+### 🟡 **PRIORITÉ 6: Projets Innovants** (à choisir selon intérêt)
 
 **Durée estimée**: 3-4 semaines **par projet**
 **Impact**: ⭐⭐⭐⭐⭐
 **Status**: 📝 Documentation complète créée
+**Dépendance**: Recommandé après les Streamlit apps (Priorités 3 & 4)
 
 Choisir **1 projet** à implémenter en premier, selon l'intérêt et les besoins:
 
@@ -366,31 +505,50 @@ coffee_maker/llm_profiler/
 - Rate limiting multi-process
 - **Deliverable**: Système d'analytics opérationnel
 
-#### Semaine 4: Documentation 🔴 PRIORITÉ
+---
+
+### **Mois 2: Interfaces Utilisateur Streamlit** ⚡ NOUVEAU
+
+#### Semaine 1-2: Analytics Dashboard 🔴 PRIORITÉ
+- Dashboard Streamlit pour visualisation LLM & coûts
+- Connexion à la base analytics
+- Graphiques interactifs (Plotly/Altair)
+- Export de rapports (PDF, CSV)
+- **Deliverable**: Dashboard analytics opérationnel
+
+#### Semaine 3-4: Agent Interaction UI 🔴 PRIORITÉ
+- Interface de chat avec agents
+- Streaming de réponses en temps réel
+- Configuration dynamique des agents
+- Historique et export de conversations
+- **Deliverable**: Interface web pour interagir avec les agents
+
+---
+
+### **Mois 3: Documentation & Premier Projet Innovant**
+
+#### Semaine 1: Documentation 🔴 PRIORITÉ
 - Amélioration pdoc
 - Validation docstrings
 - **Deliverable**: Documentation API professionnelle
 
----
-
-### **Mois 2: Premier Projet Innovant**
+#### Semaine 2-4: Premier Projet Innovant (optionnel)
 
 Choisir **1 projet** parmi les 5 options selon priorité business:
 
 **Option recommandée**: **Multi-Model Code Review Agent** ⭐
 
-- Semaine 1: Core reviewer + Perspectives
-- Semaine 2: Report generation + Git integration
-- Semaine 3: Tests + Documentation
-- Semaine 4: Production deployment + Feedback
+- Core reviewer + Perspectives
+- Report generation + Git integration
+- Tests + Documentation
 
 ---
 
-### **Mois 3+: Expansion (selon besoins)**
+### **Mois 4+: Expansion (selon besoins)**
 
 Choix possibles:
-- Implémenter un 2ème projet innovant
-- Améliorer le 1er projet avec feedback utilisateurs
+- Implémenter un 2ème projet innovant (Agent Ensemble, Prompt Lab, etc.)
+- Améliorer les Streamlit apps avec feedback utilisateurs
 - Refactoring additionnel (ContextStrategy, MetricsStrategy)
 - Features avancées selon feedback
 
@@ -403,6 +561,20 @@ Choix possibles:
 - ✅ Requêtes SQL d'analyse utilisables
 - ✅ Rate limiting multi-process fiable
 - ✅ 0 doublons dans les exports
+
+### Streamlit Analytics Dashboard
+- ✅ Dashboard accessible via navigateur
+- ✅ Graphiques de coûts et tendances fonctionnels
+- ✅ Filtres dynamiques opérationnels (dates, agents, modèles)
+- ✅ Export de rapports PDF/CSV
+- ✅ Temps de chargement < 3 secondes
+
+### Streamlit Agent Interaction UI
+- ✅ Chat interface réactive avec streaming
+- ✅ Configuration d'agents fonctionnelle
+- ✅ Historique de conversations persistant
+- ✅ Support de multiple agents simultanés
+- ✅ Métriques en temps réel affichées
 
 ### Documentation
 - ✅ 100% des fonctions publiques documentées
@@ -423,7 +595,7 @@ Choix possibles:
 - ❌ **Réécriture complète** - Le refactoring Sprint 1 & 2 est suffisant
 - ❌ **Optimisations prématurées** - Focus sur features business
 - ❌ **Support de tous les LLM providers** - Stick aux 3 actuels (OpenAI, Gemini, Anthropic)
-- ❌ **UI/Frontend** - CLI/Scripts suffisent pour MVP
+- ❌ **UI/Frontend complexe** - Streamlit suffit, pas besoin de React/Vue.js pour le moment
 
 ---
 
@@ -466,20 +638,32 @@ Cette roadmap est **flexible** et peut être ajustée selon:
 
 **Pour commencer immédiatement**:
 
-1. ✅ **Semaine 1-3**: Implémenter **Analytics & Export Langfuse** 🔴
+1. ✅ **Semaine 1-3** (Mois 1): Implémenter **Analytics & Export Langfuse** 🔴
    - Impact business immédiat (mesure de ROI)
    - Fondation pour tous les autres projets
    - Rate limiting multi-process critique
 
-2. ✅ **Semaine 4**: Améliorer **Documentation pdoc** 🔴
+2. ✅ **Semaine 1-2** (Mois 2): **Streamlit Analytics Dashboard** 🔴 ⚡ NOUVEAU
+   - Visualisation immédiate des coûts LLM
+   - Interface accessible pour non-techniques
+   - Démo du ROI du framework
+   - **Dépend de**: Analytics & Export Langfuse complété
+
+3. ✅ **Semaine 3-4** (Mois 2): **Streamlit Agent Interaction UI** 🔴 ⚡ NOUVEAU
+   - Facilite l'utilisation des agents
+   - Testing rapide et démo interactive
+   - Accélère l'adoption du framework
+   - **Peut être fait en parallèle** avec Analytics Dashboard si besoin
+
+4. ✅ **Semaine 1** (Mois 3): Améliorer **Documentation pdoc** 🔴
    - Quick win (11-18h)
    - Améliore l'expérience développeur
    - GitHub Action déjà en place
 
-3. ✅ **Mois 2**: Implémenter **Multi-Model Code Review Agent** ⭐
+5. ⭐ **Semaine 2-4** (Mois 3) - **Optionnel**: Premier **Projet Innovant**
+   - Recommandation: **Multi-Model Code Review Agent**
    - ROI direct et mesurable
    - Cas d'usage concret et utile
-   - Démontre la puissance du framework
 
 **Ensuite**: Réévaluer selon feedback et besoins business.
 
