@@ -121,3 +121,55 @@ class RateLimitExceededError(Exception):
         if retry_after:
             message += f". Retry after {retry_after} seconds"
         super().__init__(message)
+
+
+class QuotaExceededError(Exception):
+    """Raised when API quota/budget is exceeded (ResourceExhausted errors).
+
+    This exception is raised when API quota limits are exceeded, distinct from
+    rate limits. Quota errors indicate the account has hit spending limits,
+    free tier limits, or other budget-related constraints.
+
+    Common scenarios:
+    - Google Gemini: "You exceeded your current quota, please check your plan"
+    - OpenAI: Monthly spending limit reached
+    - Anthropic: Account credit exhausted
+
+    Attributes:
+        provider: Provider name (e.g., "gemini", "openai", "anthropic")
+        model: Model that triggered the quota error
+        quota_type: Type of quota exceeded (e.g., "free_tier", "monthly_budget", "tokens")
+        message_detail: Detailed error message from the provider
+        retry_after: Optional seconds to wait (if provided by API)
+    """
+
+    def __init__(
+        self,
+        provider: str,
+        model: str,
+        quota_type: str = "unknown",
+        message_detail: str = None,
+        retry_after: int = None,
+    ):
+        """Initialize QuotaExceededError.
+
+        Args:
+            provider: Provider name
+            model: Model name
+            quota_type: Type of quota exceeded
+            message_detail: Detailed error message from provider
+            retry_after: Optional seconds to wait before retrying
+        """
+        self.provider = provider
+        self.model = model
+        self.quota_type = quota_type
+        self.message_detail = message_detail
+        self.retry_after = retry_after
+
+        message = f"Quota exceeded for {provider}/{model}: {quota_type}"
+        if message_detail:
+            message += f" - {message_detail}"
+        if retry_after:
+            message += f". Please retry in {retry_after} seconds"
+
+        super().__init__(message)

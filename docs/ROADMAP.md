@@ -24,6 +24,364 @@ Transform **Coffee Maker Agent** into a **self-implementing LLM orchestration fr
 
 ---
 
+## 🔄 Recurring Best Practices
+
+**Philosophy**: Every new feature implementation is an opportunity to improve the entire codebase. These practices should be applied **continuously** throughout development, not as separate tasks.
+
+### 1. 🗃️ Database Synchronization Review ⚡ **CRITICAL**
+
+**When**: Before implementing ANY feature that touches the database
+**Why**: Daemon runs in isolated Docker environment - data must be accessible to both daemon and user
+
+**Checklist**:
+- [ ] Does this feature write to database? → Verify write goes to shared database path
+- [ ] Does this feature read from database? → Verify read comes from shared database path
+- [ ] Will daemon need this data? → Ensure it's in shared `/project/data/` directory
+- [ ] Will user's tools need this data? → Ensure notifications/analytics are synced
+- [ ] Are there concurrent writes? → Apply `@with_retry` decorator + WAL mode
+- [ ] New database table? → Update Data Ownership Matrix in PRIORITY 1.5 design doc
+
+**Common Pitfall**: Creating database in daemon's isolated `/daemon-env/data/` instead of shared `/project/data/`
+
+**Reference**: `docs/PRIORITY_1.5_DATABASE_SYNC_DESIGN.md`
+
+---
+
+### 2. 🧹 Code Refactoring & Simplification
+
+**When**: After implementing any feature, before marking it complete
+**Why**: Technical debt accumulates quickly - clean as you build
+
+**Sprint 1 Example** (Real work done):
+- ✅ 800+ lines removed (deprecated code)
+- ✅ 27 lines duplication eliminated (time threshold calculations)
+- ✅ Manual retry loops → `@with_retry` decorator (11 methods)
+- ✅ Missing observability → `@observe` decorator (11 methods)
+
+**Refactoring Opportunities to Look For**:
+
+**A. Manual Retry Loops → Centralized Utilities**
+```python
+# BEFORE (18 lines, repeated 3x):
+attempt = 0
+while attempt < 3:
+    try:
+        return self.invoke(**kwargs)
+    except RateLimitError as e:
+        print("Rate limit reached...")
+        time.sleep(2**attempt)
+        attempt += 1
+
+# AFTER (cleaner, observable):
+@with_retry(
+    max_attempts=3,
+    backoff_base=2.0,
+    retriable_exceptions=(RateLimitError,),
+)
+def _invoke_with_retry():
+    return self.invoke(**kwargs)
+```
+
+**B. Duplicate Calculations → Reusable Utilities**
+```python
+# BEFORE (9 lines, repeated 3x = 27 lines):
+now = time.time()
+if timeframe == "day":
+    threshold = now - 86400
+elif timeframe == "hour":
+    threshold = now - 3600
+# ... etc
+
+# AFTER (1 line):
+threshold = get_timestamp_threshold(timeframe)
+```
+
+**C. Missing Observability → Add `@observe` Decorator**
+```python
+# Add to all database queries, analytics methods, cost tracking
+@observe
+@with_retry(
+    max_attempts=3,
+    retriable_exceptions=(OperationalError, TimeoutError),
+)
+def get_llm_performance(self, days: int = 7) -> Dict:
+    """Get LLM performance metrics."""
+    # ... existing logic
+```
+
+**Checklist**:
+- [ ] Search for repeated code patterns (copy-paste duplication)
+- [ ] Identify manual retry/backoff logic → replace with `@with_retry`
+- [ ] Find missing `@observe` decorators on critical methods
+- [ ] Look for hard-coded magic numbers → extract to constants
+- [ ] Check for orphaned/commented-out code → delete it
+- [ ] Verify type hints on all public functions
+- [ ] Run `ruff check` and `mypy` - fix all issues
+
+**Reference**: `docs/sprint1_improvements_summary.md`
+
+---
+
+### 3. 📝 Documentation Updating
+
+**When**: Immediately after changing any public API or adding features
+**Why**: Stale documentation is worse than no documentation
+
+**What to Update**:
+- [ ] **Docstrings**: Update function/class docstrings with new parameters
+- [ ] **ROADMAP.md**: Mark features complete, update status
+- [ ] **README.md**: Add new CLI commands, update examples
+- [ ] **Type hints**: Add/update return types and parameter types
+- [ ] **Architecture docs**: Update diagrams if structure changed
+- [ ] **Migration guides**: Document breaking changes
+
+**Example**:
+```python
+# Update docstrings with type hints
+def calculate_cost(
+    self,
+    timeframe: Literal["minute", "hour", "day", "all"] = "all",
+    model: Optional[str] = None,
+) -> Dict[str, float]:
+    """Calculate LLM usage cost for a timeframe.
+
+    Args:
+        timeframe: Time window for cost calculation
+        model: Optional model filter
+
+    Returns:
+        Dictionary with total_cost, input_cost, output_cost
+
+    Example:
+        >>> calc.calculate_cost(timeframe="day", model="gpt-4")
+        {'total_cost': 5.23, 'input_cost': 2.10, 'output_cost': 3.13}
+    """
+```
+
+**Tools**:
+- Run `pdoc` to regenerate API docs: `python scripts/generate_docs.py`
+- Check for TODO/FIXME comments: `grep -r "TODO\|FIXME" coffee_maker/`
+
+---
+
+### 4. 🧪 Test Coverage Maintenance
+
+**When**: Before committing any changes
+**Why**: Tests are living documentation and prevent regressions
+
+**Checklist**:
+- [ ] New feature → Add unit tests
+- [ ] Bug fix → Add regression test
+- [ ] Refactoring → Ensure existing tests still pass
+- [ ] Database changes → Add integration tests
+- [ ] API changes → Update API tests
+
+**Test Philosophy**:
+```python
+# Test BEHAVIOR, not implementation
+# GOOD:
+def test_retry_exhaustion_returns_none():
+    """When retries exhausted, should return None."""
+
+# BAD:
+def test_retry_calls_sleep_three_times():
+    """Should call time.sleep() exactly 3 times."""
+```
+
+**Sprint 1 Results**: 112 tests passing (retry + time + analytics)
+
+**Commands**:
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage
+pytest tests/ --cov=coffee_maker --cov-report=html
+
+# Run specific test file
+pytest tests/unit/test_analytics.py -v
+```
+
+---
+
+### 5. 🎨 Code Formatting & Linting
+
+**When**: Before every commit (automated via pre-commit hooks)
+**Why**: Consistent style improves readability and reduces diff noise
+
+**Tools** (already configured):
+- **black**: Code formatting
+- **ruff**: Fast linting
+- **mypy**: Type checking
+- **isort**: Import sorting
+
+**Commands**:
+```bash
+# Format all code
+black coffee_maker/ tests/
+
+# Lint and auto-fix
+ruff check coffee_maker/ tests/ --fix
+
+# Type check
+mypy coffee_maker/
+
+# Run all pre-commit hooks
+pre-commit run --all-files
+```
+
+**Pre-commit Integration**: Hooks run automatically on `git commit`
+
+---
+
+### 6. 🔍 Performance Profiling
+
+**When**: After implementing compute-intensive features
+**Why**: LLM operations are expensive - optimize early
+
+**What to Profile**:
+- [ ] Database queries (use `EXPLAIN QUERY PLAN`)
+- [ ] LLM token usage (via Langfuse analytics)
+- [ ] Retry/timeout settings (too aggressive?)
+- [ ] Connection pool size (too small/large?)
+
+**Example**:
+```python
+# Profile database query performance
+import time
+start = time.time()
+results = conn.execute("SELECT * FROM traces WHERE ...").fetchall()
+print(f"Query took {time.time() - start:.2f}s")
+
+# Use Langfuse to track LLM costs
+@observe(capture_input=False, capture_output=False)
+def expensive_llm_call():
+    # Langfuse automatically tracks tokens, cost, latency
+    pass
+```
+
+**Tools**:
+- Langfuse dashboard for LLM metrics
+- `cProfile` for Python profiling
+- SQLite `EXPLAIN QUERY PLAN` for queries
+
+---
+
+### 7. 🔐 Security Review
+
+**When**: Before releasing features that touch external APIs or user data
+**Why**: LLM systems handle sensitive data - security first
+
+**Checklist**:
+- [ ] API keys stored in environment variables (not code)
+- [ ] Database paths don't leak sensitive info
+- [ ] User inputs sanitized before database queries
+- [ ] Error messages don't expose internal details
+- [ ] Logs don't contain API keys or secrets
+
+**Example**:
+```python
+# GOOD:
+api_key = os.environ.get("OPENAI_API_KEY")
+logger.info("API request completed")
+
+# BAD:
+api_key = "sk-..."  # Hard-coded
+logger.info(f"API request with key {api_key}")
+```
+
+---
+
+### 8. 📊 Analytics & Observability
+
+**When**: For all critical operations (LLM calls, database queries, external APIs)
+**Why**: Can't optimize what you can't measure
+
+**Add Observability**:
+```python
+# LLM operations
+@observe
+def call_llm(prompt: str) -> str:
+    # Langfuse tracks: tokens, cost, latency, model
+    pass
+
+# Database operations
+@observe
+@with_retry(retriable_exceptions=(OperationalError,))
+def get_traces(days: int) -> List[Dict]:
+    # Track query performance and retries
+    pass
+
+# Critical business logic
+@observe(capture_input=True, capture_output=True)
+def process_roadmap_update(changes: Dict) -> bool:
+    # Track input/output for debugging
+    pass
+```
+
+**Sprint 1 Results**: 11 critical methods now observable in Langfuse
+
+---
+
+### 9. 🗂️ Dependency Management
+
+**When**: Monthly review or when adding new dependencies
+**Why**: Outdated dependencies have security vulnerabilities
+
+**Commands**:
+```bash
+# Check for outdated packages
+pip list --outdated
+
+# Update specific package
+pip install --upgrade langchain
+
+# Update all packages (carefully!)
+pip install --upgrade -r requirements.txt
+
+# Security audit
+pip-audit
+```
+
+**Best Practices**:
+- Pin major versions: `langchain>=0.1.0,<0.2.0`
+- Use `requirements-dev.txt` for dev dependencies
+- Keep virtual environment clean
+
+---
+
+### 10. 🎯 Roadmap Synchronization
+
+**When**: After completing any feature or making architectural decisions
+**Why**: ROADMAP.md is the source of truth for the autonomous daemon
+
+**What to Update**:
+- [ ] Mark completed priorities with ✅
+- [ ] Update timelines based on actual effort
+- [ ] Add new priorities discovered during implementation
+- [ ] Update dependency chains (PRIORITY X → PRIORITY Y)
+- [ ] Document architectural decisions (ADRs)
+- [ ] Update estimates based on learnings
+
+**Tool**: Use `coffee-roadmap` CLI (PRIORITY 2) for all roadmap updates
+
+---
+
+## Summary: Apply These Every Implementation Cycle
+
+1. **Before starting**: Review database sync strategy (PRIORITY 1.5)
+2. **During implementation**: Add `@observe` and `@with_retry` decorators
+3. **During implementation**: Extract duplicated code to utilities
+4. **After implementation**: Update documentation and type hints
+5. **Before commit**: Run tests, linting, formatting
+6. **After commit**: Update ROADMAP.md status
+7. **Weekly**: Review for refactoring opportunities
+8. **Monthly**: Dependency updates and security audit
+
+**Goal**: Every feature leaves the codebase cleaner than before ✨
+
+---
+
 ## 📋 Project Status
 
 ### ✅ Completed Projects
@@ -191,6 +549,126 @@ scripts/
 - Week 1: DB setup + Core exporter (13-20h)
 - Week 2: Analytics + Metrics (8-12h)
 - Week 3: Tests + Documentation (5-8h)
+
+---
+
+### 🔴 **PRIORITY 1.5: Database Synchronization Architecture** 🚨 **DESIGN-FIRST BLOCKER**
+
+**Estimated Duration**: 2-3 days (design phase only)
+**Impact**: ⭐⭐⭐⭐⭐ (Critical infrastructure)
+**Status**: 📝 Planned
+**Type**: Design-only priority (no implementation, integrated into other priorities)
+**Why Critical**: **BLOCKS PRIORITY 2 & 3** - Must resolve database sync before implementation
+
+#### The Problem 🚨
+
+We will have **two separate database instances**:
+
+```
+User's Project Environment          Daemon's Isolated Docker Environment
+─────────────────────────           ─────────────────────────────────────
+/project/data/                      /daemon-env/data/
+  ├── langfuse_traces.db     ≠≠≠      ├── langfuse_traces.db
+  ├── notifications.db       ≠≠≠      ├── notifications.db
+  └── analytics.db           ≠≠≠      └── analytics.db
+
+CONFLICT: Two separate databases with potentially overlapping/conflicting data!
+```
+
+**Specific Issues**:
+1. **Notifications**: Daemon writes → Slack bot reads from user's DB (doesn't see it!)
+2. **Analytics**: Daemon generates traces → User dashboard reads from user's DB (doesn't see them!)
+3. **Roadmap State**: User updates roadmap → Daemon reads from daemon's DB (stale data!)
+
+#### Architecture Options (4 Strategies)
+
+**Option A: Shared SQLite via Docker Volume** ✅ **Recommended for MVP**
+- Docker volume mounts user's data directory
+- Single source of truth, real-time updates
+- ⚠️ SQLite locking issues with concurrent writes
+- Simple, good enough for single-developer local use
+
+**Option B: Separate DBs + Unidirectional Sync**
+- Daemon writes to isolated DB, periodically syncs to user DB
+- Clean isolation, easy cleanup
+- ❌ Sync complexity, data lag, storage duplication
+
+**Option C: Network-Accessible PostgreSQL**
+- Both connect to shared PostgreSQL instance
+- True concurrent access, scales to teams
+- ❌ Complex setup, heavier, overkill for local dev
+
+**Option D: Hybrid (Split by Data Type)**
+- Shared: analytics, notifications (Docker volume)
+- Isolated: daemon internal state (isolated SQLite)
+- Best of both worlds but more complex
+
+#### Recommended Phased Approach
+
+**Phase 1: MVP - Shared SQLite** (PRIORITY 1-3)
+```yaml
+# docker-compose.yml
+services:
+  daemon:
+    volumes:
+      - ./data:/project/data:rw  # Share data directory
+    environment:
+      - ANALYTICS_DB=/project/data/analytics.db
+      - NOTIFICATIONS_DB=/project/data/notifications.db
+```
+
+**Database Guardrails for MVP**:
+1. **WAL Mode**: Enable Write-Ahead Logging for SQLite (`PRAGMA journal_mode=WAL`)
+2. **Timeout**: Set busy timeout to 5000ms (`PRAGMA busy_timeout=5000`)
+3. **Retry Logic**: Wrap all writes with `@with_retry` decorator
+4. **Connection Pooling**: Use SQLAlchemy connection pool (max 5 connections)
+5. **Read-Heavy Pattern**: Daemon mostly reads, user mostly writes
+
+**Phase 2: PostgreSQL Migration** (PRIORITY 4+ or later)
+- Migrate when scaling to team collaboration or production
+- Proper concurrent access with row-level security
+- Migration script: SQLite → PostgreSQL
+
+#### Deliverables (Design Phase)
+
+- [x] **Problem Analysis Document** ✅ (`docs/PRIORITY_1.5_DATABASE_SYNC_DESIGN.md`)
+- [ ] **Architecture Decision Record (ADR)** - Final choice with rationale
+- [ ] **Data Ownership Matrix** - Strategy for each table
+- [ ] **Concurrency Strategy** - How to handle concurrent writes
+- [ ] **Implementation Guidelines** - Concrete code for PRIORITY 2 & 3
+- [ ] **Testing Strategy** - How to test database access patterns
+- [ ] **Migration Plan** - SQLite → PostgreSQL (if phased)
+
+#### Timeline
+
+**Day 1: Problem Analysis + Requirements** (4-6h)
+- Document all use cases (local dev, team, production)
+- List all database tables and sync requirements
+- Create data ownership matrix (draft)
+
+**Day 2: Architecture Evaluation** (6-8h)
+- Prototype architectural options with code
+- Test concurrent access scenarios
+- Benchmark SQLite vs PostgreSQL performance
+- Make recommendation
+
+**Day 3: Decision + Documentation** (4-6h)
+- Finalize architecture decision (with approval)
+- Write ADR and implementation guidelines
+- Document migration path (if phased)
+- Review and sign-off
+
+**Total**: 14-20h (2-3 days) - **Design only, implementation in other priorities**
+
+#### Integration with Other Priorities
+
+This is a **design-only priority**. Implementation happens in:
+- **PRIORITY 1** (Analytics): Define DB schema with sync strategy
+- **PRIORITY 2** (Roadmap CLI): Follow decided database access pattern
+- **PRIORITY 3** (Daemon): Follow decided database access pattern
+- **All notification priorities**: Use decided sync mechanism
+
+**Reference**: `docs/PRIORITY_1.5_DATABASE_SYNC_DESIGN.md` (comprehensive 450+ line design document)
 
 ---
 

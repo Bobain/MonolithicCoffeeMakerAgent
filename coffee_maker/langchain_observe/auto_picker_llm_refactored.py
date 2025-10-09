@@ -8,7 +8,11 @@ from langchain_core.language_models import BaseLLM
 from langchain_core.outputs import Generation, LLMResult
 
 from coffee_maker.langchain_observe.langfuse_logger import LangfuseLogger
-from coffee_maker.langchain_observe.response_parser import extract_token_usage, is_rate_limit_error
+from coffee_maker.langchain_observe.response_parser import (
+    extract_token_usage,
+    is_quota_exceeded_error,
+    is_rate_limit_error,
+)
 from coffee_maker.langchain_observe.strategies.context import ContextStrategy, create_context_strategy
 from coffee_maker.langchain_observe.strategies.fallback import FallbackStrategy, SequentialFallback
 from coffee_maker.langchain_observe.strategies.metrics import MetricsStrategy, NoOpMetrics
@@ -56,6 +60,7 @@ class AutoPickerLLMRefactored(BaseLLM):
             "primary_requests": 0,
             "fallback_requests": 0,
             "rate_limit_fallbacks": 0,
+            "quota_fallbacks": 0,
             "context_fallbacks": 0,
         }
 
@@ -291,13 +296,31 @@ class AutoPickerLLMRefactored(BaseLLM):
             # ScheduledLLM already handled retries, so any error means this model exhausted
             logger.error(f"Model {model_name} failed after all retries: {e}")
 
+            # Check for quota exceeded errors (distinct from rate limits)
+            is_quota, quota_type, retry_after = is_quota_exceeded_error(e)
+
+            # Determine error type for metrics and stats
+            if is_quota:
+                error_type = "quota_exceeded"
+                self.stats["quota_fallbacks"] = self.stats.get("quota_fallbacks", 0) + 1
+                logger.warning(
+                    f"Quota exceeded for {model_name} ({quota_type}). "
+                    f"Will try fallback models. Retry after: {retry_after}s"
+                )
+            elif is_rate_limit_error(e):
+                error_type = "rate_limit"
+                self.stats["rate_limit_fallbacks"] += 1
+            else:
+                error_type = "other"
+
             # Record error metrics
-            error_type = "rate_limit" if is_rate_limit_error(e) else "other"
             self.metrics_strategy.record_error(model=model_name, error_type=error_type, error_message=str(e))
 
-            # Check if this is a rate limit error for stats
-            if is_rate_limit_error(e):
-                self.stats["rate_limit_fallbacks"] += 1
+            # Log quota error to Langfuse if available
+            if is_quota and self._langfuse_logger:
+                self._langfuse_logger.log_quota_error(
+                    model=model_name, quota_type=quota_type, error_message=str(e), retry_after=retry_after
+                )
 
             # Return None to try next fallback
             return None

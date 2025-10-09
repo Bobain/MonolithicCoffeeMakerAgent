@@ -89,3 +89,29 @@ class LangfuseLogger:
             )
         except Exception as e:
             logger.warning(f"Failed to log context fallback to Langfuse: {e}")
+
+    def log_quota_error(self, model: str, quota_type: str, error_message: str, retry_after: int = 0) -> None:
+        """Log quota exceeded error to Langfuse.
+
+        Args:
+            model: Model that hit quota limit
+            quota_type: Type of quota ("free_tier", "monthly_budget", "account_credit", "unknown")
+            error_message: Full error message from provider
+            retry_after: Seconds to wait before retry (0 if not specified)
+        """
+        if not self.client:
+            return
+
+        try:
+            self.client.event(
+                name="quota_exceeded",
+                level="ERROR",
+                metadata={
+                    "model": model,
+                    "quota_type": quota_type,
+                    "error_message": error_message,
+                    "retry_after_seconds": retry_after,
+                },
+            )
+        except Exception as e:
+            logger.warning(f"Failed to log quota error to Langfuse: {e}")
