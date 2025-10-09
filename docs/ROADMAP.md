@@ -427,8 +427,8 @@ pip-audit
 
 ### 🔄 In Progress
 
-#### 2. **Code Improvements Sprints 1-4.5** ⚡
-**Status**: ✅ **ALL FIVE SPRINTS COMPLETED**
+#### 2. **Code Improvements Sprints 1-4.6** ⚡
+**Status**: ✅ **ALL SIX SPRINTS COMPLETED**
 **Started**: 2025-01-09
 **Completed**: 2025-10-09
 **Current Branch**: `feature/rateLimits-fallbacksModels-specializedModels`
@@ -438,7 +438,8 @@ pip-audit
 **Sprint 3 Commit**: `8431b96` (2025-10-09)
 **Sprint 4 Commit**: `026807d` (2025-10-09)
 **Sprint 4.5 Commit**: `8827dac` (2025-10-09)
-**Documentation Commits**: `6eb5b3c`, `e64387c`, `cda502b`
+**Sprint 4.6 Commit**: `e5c6bc7` (2025-10-09)
+**Documentation Commits**: `6eb5b3c`, `e64387c`, `cda502b`, `45bf34e`
 
 **Sprint 1 Results** ✅ **COMPLETED**:
 - ✅ **800+ lines removed** (deprecated code + duplication)
@@ -522,7 +523,18 @@ pip-audit
 **Sprint 4.5 Commit**: `8827dac`
 **Date**: 2025-10-09
 
-**Combined Impact (Sprint 1 + 2 + 3 + 4 + 4.5)**:
+**Sprint 4.6 Results** ✅ **COMPLETED**:
+- ✅ **SQLAlchemy 2.0 migration** (declarative_base import updated)
+- ✅ **Zero deprecation warnings** (full library compliance)
+- ✅ **18/18 analytics tests passing** (clean test output)
+
+**Sprint 4.6 Changes**:
+1. ✅ SQLAlchemy 2.0: Updated import from `sqlalchemy.ext.declarative` to `sqlalchemy.orm`
+
+**Sprint 4.6 Commit**: `e5c6bc7`
+**Date**: 2025-10-09
+
+**Combined Impact (Sprint 1 + 2 + 3 + 4 + 4.5 + 4.6)**:
 - **Code Quality**: Net -354 lines total (Sprint 1: -400, Sprint 2: +118, Sprint 3: -72 = 3.0% smaller)
 - **AutoPickerLLM**: Simplified from 545 → 478 lines (13% reduction)
 - **Duplication**: 28 instances eliminated
@@ -532,7 +544,7 @@ pip-audit
 - **Organization**: 4 new modules (retry, time, exceptions, context strategies)
 - **Architecture**: Strategy pattern applied (ContextStrategy, FallbackStrategy, MetricsStrategy)
 - **Error Handling**: Quota vs rate limit distinction, automatic fallback
-- **Deprecations**: Pydantic V2 migration complete (4 models), 3 warnings eliminated
+- **Deprecations**: Pydantic V2 + SQLAlchemy 2.0 complete, zero warnings
 - **Maintainability**: Cleaner, more consistent, better separated concerns
 - **Foundation**: Ready for autonomous daemon implementation
 - **Tests**: 112/112 passing + 18/18 analytics (0 regressions)
