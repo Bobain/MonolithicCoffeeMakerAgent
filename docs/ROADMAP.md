@@ -16,10 +16,11 @@
 
 **New Priority Order**:
 1. 🤖 **Autonomous Development Daemon** (minimal MVP, 3-5 days) - **YOU ARE HERE**
-2. 🗃️ **Database Synchronization** (daemon implements this!)
-3. 🎯 **Project Manager CLI** (daemon implements this!)
-4. 📊 **Analytics & Observability** (daemon implements this!)
-5. 📱 **Streamlit Dashboards** (daemon implements this!)
+2. 📬 **Minimal Notification UI** (daemon-user communication, 1 day) - **CRITICAL FOR DAEMON**
+3. 🗃️ **Database Synchronization** (daemon implements this with oversight!)
+4. 🎯 **Project Manager CLI** (full-featured roadmap management)
+5. 📊 **Analytics & Observability** (daemon implements this!)
+6. 📱 **Streamlit Dashboards** (daemon implements this!)
 
 **Rationale**: Get daemon working ASAP → Daemon autonomously implements everything else → Faster delivery!
 
@@ -29,6 +30,8 @@
 
 ## 🎯 Global Vision
 
+### Phase 1: Self-Implementing System (Current)
+
 Transform **Coffee Maker Agent** into a **self-implementing LLM orchestration framework** with:
 - ✅ **Solid infrastructure** (refactoring completed)
 - 🔄 **Ongoing cleanup** (codebase simplification in progress by parallel Claude instance)
@@ -37,9 +40,200 @@ Transform **Coffee Maker Agent** into a **self-implementing LLM orchestration fr
 - 📚 **Professional documentation** (enhanced pdoc)
 - 🤖 **Intelligent agents** (5 innovative projects)
 
-**Revolutionary approach**: After implementing Priority 2 (Autonomous Daemon), you only plan features in the roadmap - Claude builds them autonomously!
+**Revolutionary approach**: After implementing Priority 1 (Autonomous Daemon), you only plan features in the roadmap - Claude builds them autonomously!
 
-**Current Status**: Another Claude instance is actively simplifying the codebase and removing redundancies to create the cleanest possible foundation for the autonomous daemon.
+**Current Status**: Building minimal autonomous daemon to prove the self-implementing concept.
+
+---
+
+### Phase 2: Universal Python Library 🌍 **FUTURE VISION**
+
+**Transform into**: `roadmap-driven-dev` - A Python library that enables **ANY project** to be coded through roadmap-based conversations on top of user's existing code.
+
+**Vision**: What we're building for ourselves becomes a product that helps thousands of developers build software through natural conversation instead of manual coding.
+
+#### The Future Product
+
+```python
+# Any developer can use this in their project:
+from roadmap_driven_dev import AutonomousDaemon
+
+# Initialize in any Python project
+daemon = AutonomousDaemon(
+    roadmap_path="docs/ROADMAP.md",
+    codebase_root=".",
+    model="claude-sonnet-4",
+    user_involvement="review_prs"  # or "approve_each_step", "full_autonomy"
+)
+
+# Daemon reads YOUR roadmap, understands YOUR codebase, implements YOUR features
+daemon.run()
+
+# Developer just:
+# 1. Writes roadmap in natural language
+# 2. Reviews PRs
+# 3. Merges when satisfied
+```
+
+#### Key Features (Future)
+
+1. **Language-Agnostic**: Works with any programming language (Python, TypeScript, Rust, Go, etc.)
+2. **Codebase-Aware**: Understands existing patterns, follows project conventions
+3. **Roadmap-Driven**: Natural language planning → Automatic implementation
+4. **Human-in-the-Loop**: Configurable supervision levels (full autonomy ↔ approve each step)
+5. **Git-Native**: Branches, commits, PRs follow Git best practices
+6. **Test-Driven**: Automatically runs tests, rolls back on failure
+7. **Cost-Optimized**: Uses cheaper models for simple tasks, advanced models for complex work
+8. **Team-Ready**: Multiple developers + daemon collaborate via PRs
+
+#### Example Use Cases
+
+**Startup Building MVP**:
+```markdown
+# startup-roadmap.md
+PRIORITY 1: User authentication with JWT
+PRIORITY 2: PostgreSQL schema for users, products, orders
+PRIORITY 3: REST API endpoints (CRUD for all entities)
+PRIORITY 4: React frontend with authentication flow
+```
+→ Daemon implements all 4 priorities in 2 weeks while founders focus on customers
+
+**Open Source Project**:
+```markdown
+# roadmap.md
+PRIORITY 1: Add TypeScript support (currently JavaScript only)
+PRIORITY 2: Migrate from Webpack to Vite
+PRIORITY 3: Add comprehensive test coverage (currently 30%)
+```
+→ Daemon implements while maintainer reviews PRs
+
+**Enterprise Migration**:
+```markdown
+# migration-roadmap.md
+PRIORITY 1: Audit all Python 2 code (10,000+ files)
+PRIORITY 2: Migrate to Python 3.11 (automated refactoring)
+PRIORITY 3: Update all dependencies to latest versions
+PRIORITY 4: Add type hints to all public APIs
+```
+→ Daemon handles tedious migration work
+
+#### Architecture (Future)
+
+```
+roadmap-driven-dev/
+├── core/
+│   ├── daemon.py                 # Universal daemon (works with any project)
+│   ├── roadmap_parser.py         # Parse any roadmap format (Markdown, YAML, JSON)
+│   ├── codebase_analyzer.py      # Understand any codebase structure
+│   └── pattern_detector.py       # Learn project conventions automatically
+│
+├── integrations/
+│   ├── claude_cli.py             # Claude Code CLI integration
+│   ├── openai.py                 # OpenAI API integration (fallback)
+│   ├── local_llm.py              # Local model support (Ollama, etc.)
+│   └── git_provider.py           # GitHub, GitLab, Bitbucket support
+│
+├── languages/
+│   ├── python.py                 # Python-specific patterns
+│   ├── typescript.py             # TypeScript-specific patterns
+│   ├── rust.py                   # Rust-specific patterns
+│   └── generic.py                # Generic language support
+│
+└── templates/
+    ├── roadmap_templates/        # Roadmap templates for common use cases
+    ├── project_templates/        # Project structure templates
+    └── pr_templates/             # PR description templates
+```
+
+#### Monetization Strategy (Future)
+
+1. **Open Source Core**: Free forever (like this project)
+2. **Pro Features** ($49/month):
+   - Team collaboration (multiple developers + daemon)
+   - Advanced analytics (cost tracking, velocity metrics)
+   - Priority support
+   - Custom model fine-tuning on your codebase
+3. **Enterprise** ($499/month):
+   - Self-hosted deployment
+   - Security audits
+   - SLA guarantees
+   - Dedicated support
+
+#### Path to Product
+
+**Phase 1** (Current - 2025 Q1):
+- Build autonomous daemon for this project
+- Prove the concept works end-to-end
+- Document everything thoroughly
+
+**Phase 2** (2025 Q2):
+- Extract core components into separate library
+- Add configuration system (works with any project)
+- Test on 3-5 different project types (web app, CLI tool, library, etc.)
+
+**Phase 3** (2025 Q3):
+- Polish API, write documentation
+- Create website + marketing materials
+- Beta release to select developers
+
+**Phase 4** (2025 Q4):
+- Public launch on GitHub + PyPI
+- Build community (Discord, tutorials, examples)
+- Iterate based on user feedback
+
+**Phase 5** (2026):
+- Pro tier launch
+- Enterprise partnerships
+- Scale to 1000+ projects using the library
+
+#### Success Metrics (Future Product)
+
+- **Adoption**: 1000+ GitHub stars, 100+ projects using it
+- **Quality**: >80% of daemon PRs merged without major changes
+- **Impact**: Developers ship features 3-5x faster
+- **Revenue**: $10K+ MRR from Pro/Enterprise tiers
+- **Community**: Active Discord with 500+ developers
+
+#### Competitive Advantage
+
+**vs GitHub Copilot**: We implement entire features, not just autocomplete
+**vs Cursor AI**: We work autonomously, not just assistance
+**vs Devin AI**: We're open source, transparent, and extensible
+**vs Junior Developers**: We're 24/7, consistent, and cost-effective
+
+**Our Moat**:
+- Roadmap-driven approach (natural language → full implementation)
+- Human-in-the-loop flexibility (configurable supervision)
+- Built on battle-tested patterns (this project is the proof!)
+- Open source core (community trust + contributions)
+
+---
+
+### Why This Vision Matters
+
+**Current Problem**: Software development is slow because:
+- Writing code is tedious (boilerplate, tests, docs)
+- Onboarding new developers takes weeks
+- Maintaining legacy code is painful
+- Simple features take days instead of hours
+
+**Our Solution**:
+```
+Natural Language Roadmap → Autonomous Implementation → Human Review → Merge
+```
+
+**Impact**:
+- 🚀 Ship features 3-5x faster
+- 💰 Reduce development costs by 50-70%
+- 🧠 Developers focus on architecture, not typing
+- 📈 Startups compete with bigger teams
+- 🌍 More software gets built, faster
+
+**This is the future of software development. We're building it now.** 🤖
+
+---
+
+**Current Status**: Phase 1 (Self-Implementing System) - Building the foundation by having the system implement itself first.
 
 ---
 
@@ -367,6 +561,66 @@ pip-audit
 - Use `requirements-dev.txt` for dev dependencies
 - Keep virtual environment clean
 
+#### 🤖 DAEMON REQUIREMENT: New Dependency Approval ⚡ **CRITICAL**
+
+**Rule**: The autonomous daemon **MUST ask for user permission** before adding any new dependency.
+
+**Why This Is Critical**:
+
+1. **Security** 🔐 - Dependencies can contain malicious code (supply chain attacks)
+2. **License Compliance** ⚖️ - GPL in proprietary code = legal violation
+3. **Cost Management** 💰 - Some dependencies have API usage costs
+4. **Codebase Bloat** 📦 - `pandas` (200MB) when `csv` suffices
+5. **Maintenance Burden** 🔧 - More dependencies = more updates, more breaking changes
+6. **Version Conflicts** ⚠️ - New dependency may conflict with existing ones
+
+**Implementation Pattern**:
+```python
+def request_dependency_approval(self, package: str, reason: str) -> bool:
+    """Request user approval before installing dependency."""
+    notification = f"""
+🤖 DAEMON REQUEST: New Dependency Approval
+
+Package: {package}
+Reason: {reason}
+
+Please review:
+- Check package on PyPI (security, license, maintainers)
+- Verify license compatibility
+- Approve: /approve-dependency {package}
+- Reject: /reject-dependency {package}
+"""
+    self.send_notification(notification)
+    return self.wait_for_user_response(timeout=3600)  # 1 hour
+```
+
+**Example**:
+```
+🤖 DAEMON: May I install 'psycopg2-binary>=2.9.9'?
+Reason: Required for PostgreSQL connection (PRIORITY 2)
+License: LGPL-3.0
+Size: ~5MB
+
+👤 USER: /reject-dependency psycopg2-binary
+Reason: We're using SQLite MVP, not PostgreSQL yet.
+
+🤖 DAEMON: Acknowledged. Using sqlite3 (standard library).
+```
+
+**Pre-Approved Dependencies** (no permission needed):
+- Standard library modules (no install)
+- Already in `requirements.txt`
+- Testing/linting (dev dependencies)
+
+**This protects users from**:
+- ✅ Malicious packages
+- ✅ License violations
+- ✅ Unexpected costs
+- ✅ Bloat/conflicts
+- ✅ Maintenance burden
+
+**Non-negotiable for autonomous systems.** 🔐
+
 ---
 
 ### 10. 🎯 Roadmap Synchronization
@@ -396,6 +650,13 @@ pip-audit
 6. **After commit**: Update ROADMAP.md status
 7. **Weekly**: Review for refactoring opportunities
 8. **Monthly**: Dependency updates and security audit
+
+**🤖 For Autonomous Daemon** (Critical):
+- ⚠️ **ALWAYS ask permission before adding new dependencies**
+- Explain why the dependency is needed
+- Provide alternatives (standard library, existing dependencies)
+- Wait for user approval (1 hour timeout)
+- Never install dependencies without explicit approval
 
 **Goal**: Every feature leaves the codebase cleaner than before ✨
 
@@ -3215,6 +3476,312 @@ SLACK_SIGNING_SECRET=your-signing-secret  # For signature verification
 - ✅ **Team visibility**: Other team members can see Claude's progress
 - ✅ **Quick responses**: Interactive buttons for instant replies
 - ✅ **Multi-channel flexibility**: Use console or Slack, whichever is convenient
+
+---
+
+**Implementation Decision Questions & Work-Around Strategy** ⚡ **INTELLIGENT BLOCKING**
+
+**Problem**: Sometimes Claude encounters decisions that require human judgment (e.g., "Should we use SQLAlchemy or sqlite3?"). The daemon should:
+1. **Ask the question intelligently** (with analysis and recommendations)
+2. **Continue working on other tasks** while waiting for an answer
+3. **Resume blocked task** once decision is made
+
+**Solution: Question Queue + Task Dependency Tracking**
+
+```python
+from coffee_maker.autonomous.decision_queue import DecisionQueue, TaskDependency
+
+class IntelligentDaemon:
+    """Daemon that asks questions and works around blocked tasks"""
+
+    def __init__(self):
+        self.decision_queue = DecisionQueue()
+        self.task_graph = TaskDependency()
+
+    def encounter_decision_point(self, question: str, context: dict):
+        """Claude encounters a decision that needs user input"""
+
+        # 1. Create decision request with full analysis
+        decision = self.decision_queue.create_decision(
+            question=question,
+            priority="PRIORITY_1",  # Current task
+            context=context,
+            analysis={
+                "options": [
+                    {
+                        "name": "Option 1: Keep SQLAlchemy",
+                        "pros": ["Elegant queries", "Type safety", "PostgreSQL migration"],
+                        "cons": ["Heavy dependency", "Complexity"],
+                        "recommendation_score": 6  # out of 10
+                    },
+                    {
+                        "name": "Option 2: Use native sqlite3",
+                        "pros": ["Zero dependencies", "Lighter", "Sufficient for use case"],
+                        "cons": ["Manual SQL", "Less type safety"],
+                        "recommendation_score": 8  # out of 10
+                    }
+                ],
+                "recommended": "Option 2",
+                "reasoning": "Analytics module is isolated, sqlite3 is sufficient"
+            },
+            estimated_impact="4-6 hours to implement chosen option"
+        )
+
+        # 2. Notify user with structured decision request
+        self.notifier.send_decision_request(decision)
+
+        # 3. Mark current task as blocked
+        self.task_graph.mark_blocked(
+            task="PRIORITY_1: Analytics Module",
+            blocked_by=decision.id,
+            blocking_since=datetime.now()
+        )
+
+        # 4. Find work-around tasks (tasks that don't depend on this decision)
+        independent_tasks = self.task_graph.find_independent_tasks(
+            blocked_task="PRIORITY_1"
+        )
+
+        # 5. Continue working on independent tasks
+        logger.info(f"Task blocked on decision {decision.id}")
+        logger.info(f"Found {len(independent_tasks)} independent tasks to work on")
+
+        for task in independent_tasks:
+            logger.info(f"Working on: {task.name}")
+            self.execute_task(task)
+
+        # 6. Periodically check if decision is answered
+        while not decision.is_answered():
+            time.sleep(60)  # Check every minute
+
+            # Continue working on other things
+            if independent_tasks:
+                next_task = independent_tasks.pop(0)
+                self.execute_task(next_task)
+
+        # 7. Resume blocked task once decision is made
+        user_decision = decision.get_answer()
+        logger.info(f"Decision received: {user_decision}")
+
+        self.task_graph.unblock(task="PRIORITY_1")
+        self.resume_task("PRIORITY_1", decision=user_decision)
+```
+
+**Decision Request Notification Format**:
+
+```markdown
+╔════════════════════════════════════════════════════════════╗
+║ 🤖 CLAUDE - IMPLEMENTATION DECISION REQUIRED               ║
+╠════════════════════════════════════════════════════════════╣
+║ Priority: PRIORITY 1 - Analytics & Observability           ║
+║ Task: Implement Langfuse export module                     ║
+║ Decision Point: Database library choice                    ║
+║ Time: 2025-10-09 14:45:00                                  ║
+╠════════════════════════════════════════════════════════════╣
+║ QUESTION:                                                   ║
+║ Should we use SQLAlchemy or native sqlite3 for the        ║
+║ analytics module?                                          ║
+║                                                            ║
+║ ANALYSIS:                                                   ║
+║                                                            ║
+║ Option 1: Keep SQLAlchemy ⭐⭐⭐⭐⭐⭐ (6/10)                  ║
+║ Pros:                                                       ║
+║   • Elegant ORM with relationship mapping                 ║
+║   • Type-safe database operations                         ║
+║   • Easy PostgreSQL migration path                        ║
+║ Cons:                                                       ║
+║   • Heavy dependency (~2MB + sub-dependencies)            ║
+║   • Only used in analytics module (isolated)              ║
+║   • Adds complexity for simple CRUD operations            ║
+║                                                            ║
+║ Option 2: Use native sqlite3 ⭐⭐⭐⭐⭐⭐⭐⭐ (8/10) ✅ RECOMMENDED ║
+║ Pros:                                                       ║
+║   • Zero external dependencies (stdlib)                   ║
+║   • Lighter weight solution                               ║
+║   • Sufficient for analytics use case                     ║
+║   • Simpler for isolated module                           ║
+║ Cons:                                                       ║
+║   • Manual SQL query writing                              ║
+║   • Less type safety                                      ║
+║   • Need to rewrite ~500 lines                            ║
+║                                                            ║
+║ RECOMMENDATION: Option 2 (Use sqlite3)                    ║
+║ Reasoning: The analytics module is only used by           ║
+║ standalone scripts, not core application. sqlite3         ║
+║ provides sufficient functionality without the weight      ║
+║ of SQLAlchemy.                                             ║
+║                                                            ║
+║ ESTIMATED EFFORT: 4-6 hours                                ║
+╠════════════════════════════════════════════════════════════╣
+║ YOUR DECISION:                                              ║
+║                                                            ║
+║ [1] Option 1: Keep SQLAlchemy                             ║
+║ [2] Option 2: Use sqlite3 (recommended)                   ║
+║ [3] Option 3: Defer decision, continue with other work    ║
+║ [4] Custom: (type alternative approach)                   ║
+╠════════════════════════════════════════════════════════════╣
+║ WHILE YOU DECIDE:                                           ║
+║ I'll continue working on these independent tasks:          ║
+║   • PRIORITY 2: Project Manager CLI (Phase 1 - MVP)       ║
+║   • PRIORITY 2.5: UX Documentation                         ║
+║   • Code refactoring (Sprints 5-6)                        ║
+║                                                            ║
+║ The blocked task (Analytics module) will resume once      ║
+║ you provide your decision.                                ║
+╚════════════════════════════════════════════════════════════╝
+
+Enter choice [1-4]: _
+```
+
+**Task Dependency Graph**:
+
+```python
+class TaskDependency:
+    """Tracks task dependencies and finds independent work"""
+
+    def __init__(self):
+        # Task dependency graph
+        self.dependencies = {
+            "PRIORITY_1": {
+                "depends_on": [],  # No dependencies
+                "blocked_by": None,  # Can be decision ID
+                "sub_tasks": [
+                    "analytics_db_schema",
+                    "analytics_exporter",
+                    "analytics_analyzer",
+                    "analytics_tests"
+                ]
+            },
+            "PRIORITY_2": {
+                "depends_on": [],  # Independent
+                "sub_tasks": ["cli_framework", "roadmap_parser", "notification_db"]
+            },
+            "PRIORITY_2.5": {
+                "depends_on": ["PRIORITY_2.cli_framework"],  # Needs CLI first
+                "sub_tasks": ["ux_audit", "documentation", "setup_wizard"]
+            },
+            "PRIORITY_3": {
+                "depends_on": ["PRIORITY_2"],  # Needs project manager CLI
+                "sub_tasks": ["daemon_core", "claude_interface", "git_manager"]
+            }
+        }
+
+    def find_independent_tasks(self, blocked_task: str) -> List[str]:
+        """Find tasks that don't depend on the blocked task"""
+        independent = []
+
+        for task, info in self.dependencies.items():
+            # Skip the blocked task itself
+            if task == blocked_task:
+                continue
+
+            # Check if task depends on blocked task
+            depends_on_blocked = any(
+                blocked_task in dep for dep in info["depends_on"]
+            )
+
+            if not depends_on_blocked and not info.get("blocked_by"):
+                # This task can be worked on!
+                independent.append(task)
+
+                # Also add sub-tasks that are independent
+                for sub_task in info.get("sub_tasks", []):
+                    independent.append(f"{task}.{sub_task}")
+
+        return independent
+```
+
+**Example Workflow**:
+
+```python
+# Daemon is working on PRIORITY 1 (Analytics)
+daemon.start_task("PRIORITY_1")
+
+# Claude encounters decision point while implementing analytics module
+decision = daemon.encounter_decision_point(
+    question="Should we use SQLAlchemy or native sqlite3?",
+    context={
+        "current_code_size": "~500 lines using SQLAlchemy",
+        "usage": "Only in standalone scripts",
+        "current_dependencies": ["sqlalchemy==2.0.x"]
+    }
+)
+
+# Daemon creates structured decision request with analysis
+# Notifies user via Slack/terminal
+# Marks PRIORITY_1 as blocked
+
+# Meanwhile, daemon finds independent work:
+independent_tasks = [
+    "PRIORITY_2: Project Manager CLI",
+    "PRIORITY_2.5: UX Documentation",
+    "Code refactoring: Sprint 5"
+]
+
+# Daemon starts working on PRIORITY 2 while waiting for decision
+daemon.start_task("PRIORITY_2")
+
+# ... hours later, user responds: "Option 2"
+decision.set_answer("Option 2: Use sqlite3")
+
+# Daemon is notified of decision
+daemon.on_decision_answered(decision)
+
+# Daemon completes current task (PRIORITY 2.cli_framework)
+# Then returns to blocked task (PRIORITY_1) with user's decision
+daemon.resume_task("PRIORITY_1", decision="Option 2")
+
+# Continues implementing analytics module with sqlite3
+```
+
+**Decision Database Schema**:
+
+```sql
+CREATE TABLE decision_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    priority TEXT NOT NULL,           -- Which priority this affects
+    task TEXT NOT NULL,                -- Specific task blocked
+    question TEXT NOT NULL,            -- Question for user
+    context JSON,                      -- Context/analysis data
+    options JSON,                      -- Array of options with pros/cons
+    recommended_option TEXT,           -- Claude's recommendation
+    reasoning TEXT,                    -- Why this recommendation
+    estimated_impact TEXT,             -- Time/effort estimate
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    answered_at DATETIME,
+    user_answer TEXT,                  -- User's choice
+    status TEXT DEFAULT 'pending',     -- pending/answered/expired
+    workaround_tasks JSON              -- Tasks daemon worked on while waiting
+);
+
+CREATE TABLE blocked_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_name TEXT NOT NULL,
+    blocked_by_decision_id INTEGER REFERENCES decision_queue(id),
+    blocked_since DATETIME DEFAULT CURRENT_TIMESTAMP,
+    resumed_at DATETIME,
+    total_blocked_duration_seconds INTEGER
+);
+```
+
+**Benefits**:
+- ✅ **Intelligent blocking**: Daemon doesn't waste time waiting
+- ✅ **Structured decisions**: User gets full analysis, not just raw question
+- ✅ **Work continuity**: Other tasks progress while blocked task waits
+- ✅ **Audit trail**: All decisions logged with context
+- ✅ **Resumable**: Daemon seamlessly resumes blocked task with user's decision
+- ✅ **Transparency**: User sees what daemon is doing while waiting
+- ✅ **Efficiency**: Maximizes productive time, minimizes idle time
+
+**Integration with Notification System**:
+
+Decision requests use the same notification infrastructure (Slack, terminal, email) but with specialized formatting that includes:
+- Full analysis with pros/cons
+- Recommendation with reasoning
+- Impact estimate
+- While-you-decide status (what daemon is working on)
+
+This transforms the daemon from a **sequential executor** into an **intelligent parallel worker** that maximizes productivity even when blocked.
 
 ---
 
