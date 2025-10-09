@@ -8394,18 +8394,15 @@ def interactive_setup():
 
 **Deliverables**:
 
-**1. Local Daemon Testing** (15 minutes)
+**1. Resume Daemon** (Verify fix works in production)
 ```bash
-# Kill any running daemon instances
-pkill -f run_daemon.py
+# Resume suspended daemon (if running)
+fg
 
-# Start daemon with fixes
+# OR restart daemon
 python run_daemon.py --auto-approve
 
-# Monitor for:
-# - No infinite loop (should move past PRIORITY 2.5)
-# - Notification created for "no changes" scenario
-# - Clean exit or progress to next priority
+# Monitor behavior - daemon should move past PRIORITY 2.5
 ```
 
 **Expected Behavior**:
@@ -8413,6 +8410,8 @@ python run_daemon.py --auto-approve
 - ✅ Creates notification: "PRIORITY 2.5: Needs Manual Review"
 - ✅ Returns success and sleeps 30s
 - ✅ Moves to next priority (not stuck in loop)
+
+**Note**: All tests run automatically in GitHub Actions when merging to main
 
 **2. GitHub Actions Workflow** (`.github/workflows/daemon-test.yml`)
 ```yaml
@@ -8626,17 +8625,21 @@ class TestDaemonIntegration:
         assert cli.check_available()
 ```
 
-**Test Execution Strategy**:
-```bash
-# Unit tests (fast) - run on every commit
-pytest tests/autonomous/test_daemon_regression.py -m "not integration"
+**Test Execution** (Automated via GitHub Actions):
+```yaml
+# GitHub Actions runs these automatically on merge/release:
 
-# Integration tests (slow) - run before releases
-pytest tests/autonomous/test_daemon_regression.py -m integration
+# Step 1: Unit tests (fast)
+- run: pytest tests/autonomous/test_daemon_regression.py -m "not integration"
 
-# Full test suite - run on significant releases
-pytest tests/autonomous/
+# Step 2: Integration tests (on releases only)
+- run: pytest tests/autonomous/test_daemon_regression.py -m integration
+
+# Step 3: Daemon health check
+- run: python scripts/check_daemon_health.py
 ```
+
+**No manual testing required** - GitHub Actions handles everything automatically
 
 **6. Release Checklist** (`docs/RELEASE_CHECKLIST.md`)
 ```markdown
@@ -8687,12 +8690,12 @@ Run this checklist before creating a new release (v1.x.x, v2.x.x, etc.)
 ```markdown
 # Daemon Testing Guide
 
-## Local Testing
+## Production Monitoring
 
-1. Kill existing daemon: `pkill -f run_daemon.py`
-2. Start daemon: `python run_daemon.py --auto-approve`
-3. Monitor logs for infinite loops
-4. Check notifications: `poetry run project-manager notifications`
+1. Daemon runs continuously: `python run_daemon.py --auto-approve`
+2. Monitor logs for issues
+3. Check notifications: `poetry run project-manager notifications`
+4. **Testing**: GitHub Actions runs all tests automatically on merge to main
 
 ## CI Testing
 
@@ -8717,10 +8720,12 @@ If daemon gets stuck:
 ```
 
 **Success Criteria**:
-- ✅ Daemon runs locally without infinite loop on PRIORITY 2.5
-- ✅ GitHub Actions workflow created and passing
-- ✅ Health check scripts detect infinite loops
-- ✅ Environment variables configured in GitHub
+- ✅ Daemon resumes and moves past PRIORITY 2.5 (no infinite loop)
+- ✅ GitHub Actions workflow created (`.github/workflows/daemon-test.yml`)
+- ✅ Health check scripts created (`scripts/check_daemon_health.py`)
+- ✅ Non-regression tests created (`tests/autonomous/test_daemon_regression.py`)
+- ✅ Environment variables configured in GitHub (Settings → Secrets → ANTHROPIC_API_KEY)
+- ✅ **Tests run automatically on merge to main** (no manual testing needed)
 - ✅ Documentation complete
 
 **Risk Assessment**:
