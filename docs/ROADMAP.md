@@ -50,15 +50,16 @@ Transform **Coffee Maker Agent** into a **self-implementing LLM orchestration fr
 
 ### 🔄 In Progress
 
-#### 2. **Code Improvements Sprint 1 & 2** ⚡
-**Status**: ✅ **BOTH SPRINTS COMPLETED**
+#### 2. **Code Improvements Sprints 1, 2 & 3** ⚡
+**Status**: ✅ **ALL THREE SPRINTS COMPLETED**
 **Started**: 2025-01-09
-**Completed**: 2025-01-09
+**Completed**: 2025-10-09
 **Current Branch**: `feature/rateLimits-fallbacksModels-specializedModels`
 **Lead**: Parallel Claude Instance
-**Sprint 1 Commit**: `e79a90f`
-**Sprint 2 Commit**: `88b6d9e`
-**Documentation Commit**: `6eb5b3c`
+**Sprint 1 Commit**: `e79a90f` (2025-01-09)
+**Sprint 2 Commit**: `88b6d9e` (2025-01-09)
+**Sprint 3 Commit**: `8431b96` (2025-10-09)
+**Documentation Commits**: `6eb5b3c`, `e64387c`
 
 **Sprint 1 Results** ✅ **COMPLETED**:
 - ✅ **800+ lines removed** (deprecated code + duplication)
@@ -89,16 +90,36 @@ Transform **Coffee Maker Agent** into a **self-implementing LLM orchestration fr
 4. ✅ Type Hints: Added to make_func_a_tool(), get_llm(), enable_sqlite_wal()
 5. ✅ Code Organization: Consolidated ContextLengthError from 2 locations to single module
 
-**Combined Impact (Sprint 1 + 2)**:
-- **Code Quality**: Net -282 lines (800 removed, 518 added = 2.4% smaller)
+**Sprint 3 Results** ✅ **COMPLETED**:
+- ✅ **72 lines removed** from AutoPickerLLM (545 → 478 lines, 13% reduction)
+- ✅ **ContextStrategy pattern integrated** (strategy-based context management)
+- ✅ **4 methods removed** (_check_context_length, _get_large_context_models, _initialize_large_context_models, _estimate_tokens)
+- ✅ **Removed lazy-initialization logic** and private state (_large_context_models field)
+- ✅ **Removed enable_context_fallback flag** (always enabled via strategy)
+- ✅ **18/18 analytics tests passing** (smoke test successful)
+
+**Sprint 3 Changes**:
+1. ✅ Context Strategy Integration: Added context_strategy parameter to AutoPickerLLM.__init__
+2. ✅ Refactored Context Checking: Replaced _check_context_length() with context_strategy.check_fits()
+3. ✅ Refactored Model Selection: Replaced _get_large_context_models() with context_strategy.get_larger_context_models()
+4. ✅ Simplified Architecture: Removed 4 methods and 1 private field
+5. ✅ Better Separation of Concerns: Context management now fully delegated to ContextStrategy
+
+**Sprint 3 Commit**: `8431b96`
+**Date**: 2025-10-09
+
+**Combined Impact (Sprint 1 + 2 + 3)**:
+- **Code Quality**: Net -354 lines total (Sprint 1: -400, Sprint 2: +118, Sprint 3: -72 = 3.0% smaller)
+- **AutoPickerLLM**: Simplified from 545 → 478 lines (13% reduction)
 - **Duplication**: 28 instances eliminated
 - **Type Safety**: 20+ type hints added
 - **Reliability**: Database queries resilient, 10+ ops with retry
 - **Observability**: 11 methods tracked in Langfuse
-- **Organization**: 3 new utility modules (retry, time, exceptions)
-- **Maintainability**: Cleaner, more consistent codebase
+- **Organization**: 4 new modules (retry, time, exceptions, context strategies)
+- **Architecture**: Strategy pattern applied (ContextStrategy, FallbackStrategy, MetricsStrategy)
+- **Maintainability**: Cleaner, more consistent, better separated concerns
 - **Foundation**: Ready for autonomous daemon implementation
-- **Tests**: 112/112 passing (0 regressions)
+- **Tests**: 112/112 passing + 18/18 analytics (0 regressions)
 
 **Documentation**:
 - ✅ `docs/code_improvements_2025_01.md` - Complete analysis (40+ opportunities, 923 lines)
@@ -544,11 +565,38 @@ class RoadmapSync:
 - [ ] API documentation for daemon integration
 - [ ] Configuration guide
 
-**Timeline**:
-- Day 1: CLI framework + Chat interface (8-10h)
-- Day 2: Roadmap editor + Commands (8-10h)
-- Day 3: Sync manager + API + Tests (6-8h)
-- **Total**: 22-28h (2-3 days)
+**Timeline** (Updated for expanded scope):
+- **Day 1**: CLI framework + Claude AI integration + Chat interface (8-10h)
+  - Setup `rich` for terminal UI
+  - Anthropic API integration
+  - Basic chat loop with streaming responses
+  - Session management
+
+- **Day 2**: Roadmap parser + Editor + Core commands (8-10h)
+  - Markdown/YAML parser for ROADMAP.md
+  - AST-based editor (add, update, delete sections)
+  - Commands: `/add`, `/update`, `/view`
+  - Input validation
+
+- **Day 3**: AI Intelligence + Analytics commands (8-10h)
+  - Natural language understanding
+  - Commands: `/analyze`, `/suggest`, `/metrics`
+  - Roadmap health scoring
+  - Dependency analysis
+
+- **Day 4**: History + Export + Sync (6-8h)
+  - Change history tracking (SQLite)
+  - Commands: `/history`, `/undo`, `/export`
+  - Sync manager (daemon environment)
+  - Conflict detection
+
+- **Day 5**: Programmatic API + Tests + Documentation (6-8h)
+  - Python API for daemon integration
+  - Unit tests (pytest)
+  - Integration tests
+  - CLI documentation and examples
+
+- **Total**: 36-46h (4-5 days) ⚡ UPDATED for AI-powered features
 
 ---
 
@@ -891,18 +939,20 @@ while not queue.empty():
     queue.mark_complete(notification.id, user_response)
 ```
 
-**Slack Integration Example**:
+**Unified Slack Integration** ⚡ NEW - Dual Interface:
+
+Slack notifications can interact with **BOTH** the daemon and the project manager CLI:
 
 ```python
-# Slack receives interactive message:
+# Slack receives interactive message with dual routing:
 {
-  "text": "🤖 *Claude CLI - Input Required*",
+  "text": "🤖 *Coffee Maker - Input Required*",
   "blocks": [
     {
       "type": "section",
       "text": {
         "type": "mrkdwn",
-        "text": "*Priority:* PRIORITY 2 - Analytics & Observability\n*Phase:* Implementation"
+        "text": "*From:* Autonomous Daemon\n*Priority:* PRIORITY 2 - Analytics & Observability\n*Phase:* Implementation"
       }
     },
     {
@@ -915,16 +965,205 @@ while not queue.empty():
     {
       "type": "actions",
       "elements": [
-        {"type": "button", "text": {"type": "plain_text", "text": "✅ Yes"}, "value": "yes"},
-        {"type": "button", "text": {"type": "plain_text", "text": "❌ No"}, "value": "no"},
-        {"type": "button", "text": {"type": "plain_text", "text": "⏭️ Skip"}, "value": "skip"}
+        {"type": "button", "text": {"type": "plain_text", "text": "✅ Yes"}, "value": "daemon:yes"},
+        {"type": "button", "text": {"type": "plain_text", "text": "❌ No"}, "value": "daemon:no"},
+        {"type": "button", "text": {"type": "plain_text", "text": "⏭️ Skip"}, "value": "daemon:skip"}
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "💬 *Or interact with Project Manager:*"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {"type": "button", "text": {"type": "plain_text", "text": "📝 Update Roadmap"}, "value": "pm:/update"},
+        {"type": "button", "text": {"type": "plain_text", "text": "📊 View Status"}, "value": "pm:/view"},
+        {"type": "button", "text": {"type": "plain_text", "text": "📈 Show Metrics"}, "value": "pm:/metrics"}
       ]
     }
   ]
 }
 
-# User clicks button → Instant response to daemon
+# User interaction routing:
+# 1. Click "No" button → Routes to daemon: daemon.respond("no")
+# 2. Click "Update Roadmap" → Routes to PM: coffee_roadmap.execute("/update PRIORITY 2 status in-progress")
+# 3. Type message in thread → Routes to PM chat: coffee_roadmap.chat("Add priority for...")
 ```
+
+**Dual-Routing Architecture**:
+
+```python
+from coffee_maker.notifications import UnifiedNotificationHub
+
+# Unified notification hub routes messages to daemon OR project manager
+hub = UnifiedNotificationHub(
+    daemon=daemon,
+    project_manager=coffee_roadmap_cli,
+    notification_db="data/notifications.db"  # Store all notifications
+)
+
+# Slack webhook receives user action
+@app.route("/slack/actions", methods=["POST"])
+def slack_actions():
+    payload = request.json
+    action_value = payload["actions"][0]["value"]
+
+    # Route based on prefix
+    if action_value.startswith("daemon:"):
+        # Route to daemon
+        response = action_value.split(":", 1)[1]  # "yes", "no", "skip"
+        hub.route_to_daemon(response)
+
+    elif action_value.startswith("pm:"):
+        # Route to project manager CLI
+        command = action_value.split(":", 1)[1]  # "/update", "/view", etc.
+        result = hub.route_to_project_manager(command)
+
+        # Post result back to Slack
+        return jsonify({
+            "text": f"✅ Project Manager: {result}"
+        })
+
+# User can also chat directly in Slack thread
+@app.route("/slack/events", methods=["POST"])
+def slack_events():
+    event = request.json["event"]
+
+    if event["type"] == "message":
+        user_message = event["text"]
+
+        # Determine routing (daemon vs PM)
+        if "roadmap" in user_message.lower() or any(cmd in user_message for cmd in ["/add", "/update", "/view"]):
+            # Route to project manager
+            response = hub.route_to_project_manager(user_message)
+        else:
+            # Route to daemon
+            response = hub.route_to_daemon(user_message)
+
+        # Post AI response to Slack
+        post_to_slack(event["channel"], response)
+```
+
+**Notification Database Schema** ⚡ NEW:
+
+```sql
+-- Store all notifications for both daemon and PM
+CREATE TABLE notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    source TEXT NOT NULL,  -- 'daemon' or 'project_manager'
+    type TEXT NOT NULL,    -- 'question', 'status', 'alert', 'info'
+    title TEXT,
+    message TEXT NOT NULL,
+    context JSON,          -- Additional context (priority, phase, etc.)
+    channels JSON,         -- Channels sent to ['slack', 'terminal', 'desktop']
+    status TEXT DEFAULT 'pending',  -- 'pending', 'answered', 'timeout', 'dismissed'
+    user_response TEXT,
+    response_time_seconds FLOAT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Slack interactions log
+CREATE TABLE slack_interactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    notification_id INTEGER REFERENCES notifications(id),
+    user_id TEXT,          -- Slack user ID
+    action TEXT,           -- Button clicked or message sent
+    routed_to TEXT,        -- 'daemon' or 'project_manager'
+    result TEXT,           -- Response from daemon/PM
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Slack as Project Manager Interface** ⚡ NEW USE CASE:
+
+Users can **fully interact with project manager via Slack**:
+
+```
+# Slack conversation:
+
+User (in #coffee-maker channel):
+@coffee-bot add a priority for implementing webhooks
+
+Coffee Bot (Project Manager AI):
+📋 I'll add a new priority for webhooks. Analyzing current roadmap...
+
+Current priorities: 1-8
+Suggested placement: PRIORITY 9
+Estimated impact: ⭐⭐⭐⭐
+
+╔════════════════════════════════════════════╗
+║ 🔴 PRIORITY 9: Webhook System             ║
+╠════════════════════════════════════════════╣
+║ Duration: 1-2 weeks                        ║
+║ Impact: ⭐⭐⭐⭐                               ║
+║ Status: 📝 Planned                          ║
+║                                             ║
+║ Objectives:                                 ║
+║ • Incoming webhook support                 ║
+║ • Outgoing webhook notifications           ║
+║ • Retry and failure handling               ║
+╚════════════════════════════════════════════╝
+
+[✅ Add to Roadmap] [✏️ Edit] [❌ Cancel]
+
+User: (clicks "Add to Roadmap")
+
+Coffee Bot:
+✅ Added PRIORITY 9 to ROADMAP.md
+✅ Synced to daemon environment
+✅ Daemon will pick this up after PRIORITY 8
+
+---
+
+User: /view PRIORITY 2
+
+Coffee Bot:
+📋 PRIORITY 2: Roadmap Management CLI
+
+Status: 🔄 In Progress (60% complete)
+Started: 2025-10-09
+Estimated completion: 2025-10-11
+
+Completed deliverables:
+✅ CLI framework
+✅ Claude AI integration
+✅ Chat interface
+🔄 Roadmap parser (in progress)
+📝 Commands (pending)
+
+---
+
+User: /metrics
+
+Coffee Bot:
+📊 Roadmap Metrics:
+
+Development Velocity:
+• Avg time per priority: 2.5 weeks
+• Priorities completed: 2/9 (22%)
+• Current sprint: PRIORITY 2 (60% done)
+• Projected completion: 2025-12-20 (11 weeks)
+
+[View Full Report] [Export PDF]
+```
+
+**Benefits of Unified Notification System**:
+- ✅ **Slack as full interface**: Manage roadmap from Slack
+- ✅ **Database-backed**: All notifications stored and queryable
+- ✅ **Dual routing**: Same Slack bot talks to daemon AND project manager
+- ✅ **Mobile-friendly**: Manage project from phone via Slack app
+- ✅ **Async collaboration**: Team can interact with project manager
+- ✅ **Audit trail**: All interactions logged in database
+- ✅ **Flexible**: Terminal, desktop, Slack, email - all work together
 
 **Benefits of Notification System**:
 - ✅ **Multi-channel flexibility**: Choose notification method that fits workflow
@@ -941,17 +1180,42 @@ while not queue.empty():
 
 The entire notification and autonomous daemon system is instrumented with **Langfuse** and **structured logging**.
 
-**Updated Architecture with Observability**:
+**Updated Architecture with Unified Notifications** ⚡ NEW:
 
 ```
-coffee_maker/autonomous/
-├── notifications/
-│   ├── observability/                 # ⚡ NEW
-│   │   ├── __init__.py
-│   │   ├── langfuse_tracker.py        # Langfuse trace/span management
-│   │   ├── logger.py                  # Structured logging (structlog)
-│   │   └── metrics.py                 # Performance metrics
-│   └── ...
+coffee_maker/
+├── autonomous/
+│   └── notifications/
+│       ├── __init__.py
+│       ├── unified_hub.py             # ⚡ NEW - Routes to daemon OR PM
+│       ├── notifier.py                # Multi-channel notifications
+│       ├── input_handler.py           # User input collection
+│       ├── queue.py                   # Notification queue
+│       ├── channels/
+│       │   ├── terminal.py
+│       │   ├── desktop.py
+│       │   ├── webhook.py             # Slack, Discord, Teams
+│       │   └── email.py
+│       ├── database/
+│       │   ├── __init__.py
+│       │   ├── schema.py              # ⚡ NEW - notifications + slack_interactions tables
+│       │   └── models.py              # ⚡ NEW - SQLAlchemy models
+│       └── observability/
+│           ├── langfuse_tracker.py
+│           ├── logger.py
+│           └── metrics.py
+
+├── cli/
+│   ├── roadmap_cli.py                 # Project Manager CLI
+│   └── slack_integration.py           # ⚡ NEW - Slack bot interface
+
+# Slack Bot Server (Flask/FastAPI)
+slack_bot/
+├── app.py                             # ⚡ NEW - Slack webhook server
+├── routes/
+│   ├── actions.py                     # Button click handlers
+│   └── events.py                      # Message handlers
+└── routing.py                         # ⚡ NEW - Route to daemon or PM
 ```
 
 **Langfuse Integration Example**:
