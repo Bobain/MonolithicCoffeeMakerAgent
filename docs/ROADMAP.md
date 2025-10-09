@@ -839,6 +839,120 @@ Reason: We're using SQLite MVP, not PostgreSQL yet.
 
 ---
 
+### 11. 🔄 GitHub CI/CD Monitoring (Daily Task)
+
+**When**: Daily, after pushing to GitHub
+**Why**: Catch CI failures early before they block development
+
+**Daily Checklist**:
+- [ ] Check if branch is pushed to remote (`git status`, `git branch -r`)
+- [ ] Verify GitHub Actions are passing
+- [ ] Review any failing tests or linting errors
+- [ ] Fix issues immediately (don't let them accumulate)
+- [ ] Ensure PR status checks are green before merging
+
+**Commands**:
+```bash
+# Check remote branch status
+git status
+git branch -r | grep feature/your-branch
+
+# Push if not synced
+git push origin feature/your-branch
+
+# Check GitHub Actions via CLI (requires gh CLI)
+gh run list --branch feature/your-branch --limit 5
+
+# View specific workflow run
+gh run view <run-id>
+
+# View logs for failed run
+gh run view <run-id> --log-failed
+```
+
+**GitHub Actions to Monitor**:
+- ✅ **Tests**: All pytest tests passing
+- ✅ **Linting**: black, ruff, mypy checks
+- ✅ **Type Checking**: mypy strict mode
+- ✅ **Security**: pip-audit for vulnerabilities
+- ✅ **Build**: Package builds successfully
+
+**If CI Fails**:
+
+1. **Read the error logs**:
+   ```bash
+   gh run view <run-id> --log-failed
+   ```
+
+2. **Reproduce locally**:
+   ```bash
+   # Run the same checks that GitHub Actions runs
+   pytest tests/ -v
+   black --check coffee_maker/ tests/
+   ruff check coffee_maker/ tests/
+   mypy coffee_maker/
+   ```
+
+3. **Fix the issue**:
+   - Fix failing tests
+   - Fix linting/formatting errors
+   - Fix type errors
+   - Update dependencies if needed
+
+4. **Push the fix**:
+   ```bash
+   git add .
+   git commit -m "fix: Resolve CI failures - <brief description>"
+   git push
+   ```
+
+5. **Verify fix**:
+   ```bash
+   gh run list --branch feature/your-branch --limit 1
+   ```
+
+**Automation Tips**:
+```bash
+# Add alias to check CI status
+alias ci-status='gh run list --branch $(git branch --show-current) --limit 5'
+
+# Check CI in watch mode (updates every 10s)
+watch -n 10 'gh run list --branch $(git branch --show-current) --limit 1'
+```
+
+**🤖 DAEMON REQUIREMENT**:
+The autonomous daemon **MUST** check CI status after every push and fix any failures before moving to next task. If CI fails:
+1. Read error logs
+2. Fix the issue
+3. Push fix
+4. Wait for CI to pass
+5. Only then proceed to next task
+
+**Example Workflow**:
+```
+Daemon pushes code → GitHub Actions run → CI fails (test failure)
+↓
+Daemon detects failure via `gh run list`
+↓
+Daemon reads logs via `gh run view --log-failed`
+↓
+Daemon fixes the test
+↓
+Daemon pushes fix
+↓
+Daemon waits for CI to pass (polls every 30s)
+↓
+CI passes ✅ → Daemon continues to next task
+```
+
+**Why This Matters**:
+- **Prevents broken main**: Don't merge PRs with failing CI
+- **Fast feedback**: Fix issues while context is fresh
+- **Professional quality**: Passing CI is minimum bar
+- **Team productivity**: Broken CI blocks everyone
+
+---
+
 ## Summary: Apply These Every Implementation Cycle
 
 1. **Before starting**: Review database sync strategy (PRIORITY 1.5)
@@ -847,9 +961,11 @@ Reason: We're using SQLite MVP, not PostgreSQL yet.
 4. **After implementation**: Update documentation and type hints
 5. **Before commit**: Run tests, linting, formatting
 6. **After commit**: Update ROADMAP.md status
-7. **After PRIORITY completion**: Create demo + notify user ⚡ **NEW**
-8. **Weekly**: Review for refactoring opportunities
-9. **Monthly**: Dependency updates and security audit
+7. **After push**: Check GitHub Actions CI status and fix any failures ⚡ **NEW**
+8. **After PRIORITY completion**: Create demo + notify user ⚡ **NEW**
+9. **Weekly**: Review for refactoring opportunities
+10. **Monthly**: Dependency updates and security audit
+11. **Daily**: Monitor GitHub CI/CD status (Section 11) ⚡ **NEW**
 
 **🤖 For Autonomous Daemon** (Critical - Non-Negotiable):
 - ⚠️ **NEVER STOP ASKING PERMISSION** - This is the CORE PRINCIPLE ⚡
