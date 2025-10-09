@@ -35,6 +35,10 @@ See Also:
     - :mod:`coffee_maker.langchain_observe.analytics.metrics`: Performance metrics
 """
 
+from coffee_maker.langchain_observe.analytics.config import ExportConfig
+from coffee_maker.langchain_observe.analytics.exporter import LangfuseExporter
+from coffee_maker.langchain_observe.analytics.analyzer import PerformanceAnalyzer
+
 __all__ = [
     "LangfuseExporter",
     "PerformanceAnalyzer",
