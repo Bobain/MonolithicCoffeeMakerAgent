@@ -3513,10 +3513,10 @@ This is a **design-only priority**. Implementation happens in:
 **Dependency**: None (must be built BEFORE autonomous daemon)
 **Why First**: Single source of truth for ROADMAP.md - simplifies daemon implementation
 
-**MVP Phase 1 Progress** ✅ **60% COMPLETE**:
+**MVP Phase 1 Progress** ✅ **80% COMPLETE**:
 - ✅ Created `coffee_maker/cli/` directory structure
-- ✅ Implemented `notifications.py` (NotificationDB with WAL mode, retry logic)
-- ✅ Implemented `roadmap_cli.py` (project-manager CLI)
+- ✅ Implemented `notifications.py` (NotificationDB with WAL mode, retry logic, 435 lines)
+- ✅ Implemented `roadmap_cli.py` (project-manager CLI, 366 lines)
 - ✅ Added CLI entry point to pyproject.toml (`project-manager` command)
 - ✅ Implemented basic commands:
   * `view` - View roadmap (full or specific priority)
@@ -3525,8 +3525,12 @@ This is a **design-only priority**. Implementation happens in:
   * `status` - Daemon status (placeholder for MVP)
   * `sync` - Sync with daemon environment (placeholder for MVP)
 - ✅ Database guardrails: WAL mode, 30s timeout, @with_retry decorator
-- ⏳ Testing in real workflow (next step)
-- ⏳ Documentation (next step)
+- ✅ Unit tests: 11/11 passing (test_notifications.py, 236 lines)
+- ⏳ Documentation (final step for MVP Phase 1)
+
+**Commits**:
+- Phase 1 Implementation: `18699eb`
+- Phase 1 Tests: (next commit)
 
 #### Project: AI-Powered Project Manager CLI (coffee-roadmap)
 
