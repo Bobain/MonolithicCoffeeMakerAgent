@@ -30,6 +30,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from coffee_maker.langchain_observe.analytics.config import ExportConfig
 from coffee_maker.langchain_observe.analytics.models import Base, Generation, Span, Trace
+from coffee_maker.langchain_observe.retry_utils import RetryExhausted, with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -140,8 +141,8 @@ class LangfuseExporter:
         stats = {"traces": 0, "generations": 0, "spans": 0, "errors": 0}
 
         try:
-            # Fetch traces from Langfuse
-            # Note: Langfuse API uses pagination, we'll fetch in batches
+            # Fetch traces from Langfuse with automatic retry
+            # Will retry up to 3 times on network failures
             traces_list = self._fetch_traces_from_langfuse(from_timestamp, to_timestamp)
 
             with self.Session() as session:
@@ -149,6 +150,11 @@ class LangfuseExporter:
                     try:
                         self._export_trace(session, trace_data)
                         stats["traces"] += 1
+                    except RetryExhausted as e:
+                        logger.error(
+                            f"Failed to export trace {trace_data.get('id')} after all retries: {e.original_error}"
+                        )
+                        stats["errors"] += 1
                     except Exception as e:
                         logger.error(f"Error exporting trace {trace_data.get('id')}: {e}")
                         stats["errors"] += 1
@@ -167,14 +173,26 @@ class LangfuseExporter:
                 f"{stats['errors']} errors"
             )
 
+        except RetryExhausted as e:
+            logger.error(f"Export failed after all retries: {e.original_error}")
+            stats["errors"] += 1
         except Exception as e:
             logger.error(f"Export failed: {e}")
             stats["errors"] += 1
 
         return stats
 
+    @with_retry(
+        max_attempts=3,
+        backoff_base=2.0,
+        retriable_exceptions=(ConnectionError, TimeoutError, Exception),
+    )
     def _fetch_traces_from_langfuse(self, from_timestamp: datetime, to_timestamp: datetime) -> List[Dict]:
-        """Fetch traces from Langfuse API.
+        """Fetch traces from Langfuse API with automatic retry on failures.
+
+        This method is wrapped with retry logic to handle transient network failures
+        when communicating with the Langfuse API. Will retry up to 3 times with
+        exponential backoff (1s, 2s, 4s).
 
         Args:
             from_timestamp: Start of time range
@@ -182,26 +200,23 @@ class LangfuseExporter:
 
         Returns:
             List of trace dictionaries from Langfuse
+
+        Raises:
+            RetryExhausted: If all retry attempts fail after network errors
         """
-        traces = []
+        logger.debug(f"Fetching traces from Langfuse: {from_timestamp.isoformat()} to {to_timestamp.isoformat()}")
 
-        try:
-            # Fetch traces using Langfuse client
-            # The Langfuse client handles pagination automatically
-            trace_list = self.langfuse.get_traces(
-                from_timestamp=from_timestamp.isoformat(),
-                to_timestamp=to_timestamp.isoformat(),
-                limit=self.config.export_batch_size,
-            )
+        # Fetch traces using Langfuse client
+        # The Langfuse client handles pagination automatically
+        trace_list = self.langfuse.get_traces(
+            from_timestamp=from_timestamp.isoformat(),
+            to_timestamp=to_timestamp.isoformat(),
+            limit=self.config.export_batch_size,
+        )
 
-            for trace in trace_list.data:
-                traces.append(trace.dict())
+        traces = [trace.dict() for trace in trace_list.data]
 
-            logger.info(f"Fetched {len(traces)} traces from Langfuse")
-
-        except Exception as e:
-            logger.error(f"Error fetching traces from Langfuse: {e}")
-
+        logger.info(f"Successfully fetched {len(traces)} traces from Langfuse")
         return traces
 
     def _export_trace(self, session: Session, trace_data: Dict):
@@ -246,19 +261,37 @@ class LangfuseExporter:
             session: SQLAlchemy session
             trace_id: Trace ID
         """
-        try:
-            # Fetch observations from Langfuse
-            trace = self.langfuse.get_trace(trace_id)
+        # Fetch observations from Langfuse with retry
+        trace = self._fetch_trace_details(trace_id)
 
-            # Export generations
-            for obs in trace.observations:
-                if obs.type == "GENERATION":
-                    self._export_generation(session, trace_id, obs.dict())
-                elif obs.type == "SPAN":
-                    self._export_span(session, trace_id, obs.dict())
+        # Export generations and spans
+        for obs in trace.observations:
+            if obs.type == "GENERATION":
+                self._export_generation(session, trace_id, obs.dict())
+            elif obs.type == "SPAN":
+                self._export_span(session, trace_id, obs.dict())
 
-        except Exception as e:
-            logger.error(f"Error exporting observations for trace {trace_id}: {e}")
+    @with_retry(
+        max_attempts=3,
+        backoff_base=2.0,
+        retriable_exceptions=(ConnectionError, TimeoutError, Exception),
+    )
+    def _fetch_trace_details(self, trace_id: str):
+        """Fetch detailed trace information from Langfuse with retry.
+
+        Args:
+            trace_id: Trace ID to fetch
+
+        Returns:
+            Trace object with observations
+
+        Raises:
+            RetryExhausted: If all retry attempts fail
+        """
+        logger.debug(f"Fetching trace details for {trace_id}")
+        trace = self.langfuse.get_trace(trace_id)
+        logger.debug(f"Successfully fetched trace {trace_id} with {len(trace.observations)} observations")
+        return trace
 
     def _export_generation(self, session: Session, trace_id: str, gen_data: Dict):
         """Export a single generation.
