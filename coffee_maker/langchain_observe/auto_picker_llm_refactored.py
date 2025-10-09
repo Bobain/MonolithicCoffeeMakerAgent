@@ -7,17 +7,13 @@ from typing import Any, Dict, List, Optional, Tuple
 from langchain_core.language_models import BaseLLM
 from langchain_core.outputs import Generation, LLMResult
 
+from coffee_maker.langchain_observe.langfuse_logger import LangfuseLogger
+from coffee_maker.langchain_observe.response_parser import extract_token_usage, is_rate_limit_error
 from coffee_maker.langchain_observe.strategies.fallback import FallbackStrategy, SequentialFallback
 from coffee_maker.langchain_observe.strategies.metrics import MetricsStrategy, NoOpMetrics
 from coffee_maker.langchain_observe.token_estimator import estimate_tokens
-from coffee_maker.langchain_observe.langfuse_logger import LangfuseLogger
-from coffee_maker.langchain_observe.response_parser import extract_token_usage, is_rate_limit_error
 
 logger = logging.getLogger(__name__)
-
-
-class ContextLengthError(Exception):
-    """Raised when input exceeds model's context length."""
 
 
 class AutoPickerLLMRefactored(BaseLLM):

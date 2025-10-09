@@ -686,7 +686,7 @@ class ExportMetadata(Base):
     langfuse_project_id = Column(String(255))
 
 
-def enable_sqlite_wal(engine):
+def enable_sqlite_wal(engine: Engine) -> None:
     """Enable SQLite WAL mode for better multi-process concurrency.
 
     WAL (Write-Ahead Logging) mode allows multiple processes to read and

@@ -9,10 +9,6 @@ from coffee_maker.langchain_observe.token_estimator import estimate_tokens
 logger = logging.getLogger(__name__)
 
 
-class ContextLengthError(Exception):
-    """Raised when input exceeds all available models' context length."""
-
-
 class ContextStrategy(ABC):
     """Base class for context length management."""
 

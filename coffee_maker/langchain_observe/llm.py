@@ -12,22 +12,24 @@
 #   }
 #   quota_dimensions {
 #     key: "location"
+import datetime
 import logging
 import os
-import datetime
-from dotenv import load_dotenv
+from typing import Any, Optional
 
-load_dotenv()
 import langfuse
+from dotenv import load_dotenv
+from langchain_core.language_models import BaseChatModel
 
 from coffee_maker.langchain_observe.utils import get_callers_modules
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 SUPPORTED_PROVIDERS = dict()
 
-__DEFAULT_PROVIDER = "gemini"
-
-__DEFAULT_PROVIDER = "openai"
+# Default LLM provider (configurable via environment variable)
+__DEFAULT_PROVIDER = os.getenv("DEFAULT_LLM_PROVIDER", "openai")
 
 
 try:
@@ -91,7 +93,12 @@ default_provider = (
 logger.info(f"{default_provider=}")
 
 
-def get_llm(langfuse_client: langfuse.Langfuse = None, provider: str = None, model: str = None, **llm_kwargs):
+def get_llm(
+    langfuse_client: Optional[langfuse.Langfuse] = None,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+    **llm_kwargs: Any,
+) -> BaseChatModel:
     """Get a basic LLM instance without scheduling.
 
     Args:
