@@ -107,12 +107,23 @@ class ClaudeCLI:
         logger.info(f"Executing Claude CLI: {prompt[:100]}...")
 
         try:
+            # Prevent interactive prompts by:
+            # 1. stdin=DEVNULL - No input available
+            # 2. Set CI=true env var - Signals non-interactive environment
+            import os
+
+            env = os.environ.copy()
+            env["CI"] = "true"  # Many CLIs check this for non-interactive mode
+            env["DEBIAN_FRONTEND"] = "noninteractive"  # Suppress prompts
+
             result = subprocess.run(
                 cmd,
                 cwd=working_dir,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
+                stdin=subprocess.DEVNULL,  # No interactive input
+                env=env,
             )
 
             logger.info(f"Claude CLI completed with code {result.returncode}")
@@ -167,12 +178,21 @@ class ClaudeCLI:
         logger.info(f"Executing: {' '.join(cmd)}")
 
         try:
+            # Prevent interactive prompts
+            import os
+
+            env = os.environ.copy()
+            env["CI"] = "true"
+            env["DEBIAN_FRONTEND"] = "noninteractive"
+
             result = subprocess.run(
                 cmd,
                 cwd=working_dir,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
+                stdin=subprocess.DEVNULL,
+                env=env,
             )
 
             return CLIResult(

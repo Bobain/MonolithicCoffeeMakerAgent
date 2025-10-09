@@ -8192,6 +8192,101 @@ cmd = [self.cli_path, "-p", "--dangerously-skip-permissions", prompt]
 
 ---
 
+#### 🚨 **PERSISTENT ISSUE: Claude CLI Still Hangs on Interactive Prompts** (Discovered: 2025-10-09 19:08)
+
+**Problem Description**:
+Even with `--dangerously-skip-permissions` flag, Claude CLI is still showing interactive warnings/dialogs and blocking the daemon:
+
+```
+2025-10-09 19:08:32 [INFO] Executing Claude CLI: Read docs/ROADMAP.md and implement PRIORITY 2.5...
+⚠️  THIS IS A...
+^[[O^[[I^[[O^[[I^[[O^[[I  ← Hanging with control characters (ANSI escape sequences)
+```
+
+**Root Cause**:
+Claude CLI detects it's running in a TTY and shows interactive prompts even in subprocess mode with flags.
+
+**Attempted Fix #1** (Commit: TBD):
+Added stdin=subprocess.DEVNULL and CI environment variables:
+```python
+env = os.environ.copy()
+env['CI'] = 'true'  # Signal non-interactive environment
+env['DEBIAN_FRONTEND'] = 'noninteractive'
+
+subprocess.run(
+    cmd,
+    stdin=subprocess.DEVNULL,  # No input available
+    env=env,
+    ...
+)
+```
+
+**Status**: ⏳ Testing
+
+**Fallback Solution - PRIORITY 2.8: Use Anthropic SDK Directly**:
+
+If the CLI approach continues to be problematic, we should replace the Claude CLI subprocess calls with direct Anthropic API calls using the Python SDK. This would be:
+
+1. **More Reliable**: No subprocess/TTY/interactive prompt issues
+2. **More Efficient**: Direct API calls, no CLI overhead
+3. **More Controllable**: Full control over parameters, streaming, error handling
+4. **Better Observability**: Direct access to token usage, timing, etc.
+
+**Implementation Plan**:
+
+```python
+# coffee_maker/autonomous/claude_api_interface.py (NEW)
+from anthropic import Anthropic
+
+class ClaudeAPI:
+    """Direct Anthropic API interface (replaces ClaudeCLI)."""
+
+    def __init__(self, model="claude-sonnet-4"):
+        self.client = Anthropic()  # Uses ANTHROPIC_API_KEY env var
+        self.model = model
+
+    def execute_prompt(self, prompt: str, system_prompt: str = None) -> str:
+        """Execute prompt via Anthropic API."""
+        message = self.client.messages.create(
+            model=self.model,
+            max_tokens=8000,
+            messages=[{"role": "user", "content": prompt}],
+            system=system_prompt,
+        )
+        return message.content[0].text
+
+    def execute_with_tools(self, prompt: str, tools: list) -> dict:
+        """Execute prompt with tool use (for file operations)."""
+        # Use Anthropic's tool calling API
+        # Claude can call Edit, Write, Read, Bash tools directly
+        ...
+```
+
+**Benefits**:
+- ✅ No subprocess issues
+- ✅ No interactive prompt issues
+- ✅ No TTY detection issues
+- ✅ Direct control over Claude's behavior
+- ✅ Can implement streaming responses
+- ✅ Better error handling
+- ✅ Token usage tracking built-in
+
+**Migration**:
+```python
+# daemon.py - minimal change required
+# Before:
+self.claude = ClaudeCLI()
+result = self.claude.execute_prompt(prompt)
+
+# After:
+self.claude = ClaudeAPI()  # Drop-in replacement
+result = self.claude.execute_prompt(prompt)
+```
+
+**Status**: 📝 Planned (if stdin=DEVNULL fix doesn't work)
+
+---
+
 #### 🔄 **IMPROVEMENT NEEDED: Crash Recovery with Context Reset** (Identified: 2025-10-09 19:05)
 
 **Requirement**:
