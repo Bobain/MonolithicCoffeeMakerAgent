@@ -72,12 +72,12 @@ Transform **Coffee Maker Agent** into a **self-implementing LLM orchestration fr
 4. ✅ Analytics Analyzer: Added `@with_retry` + `@observe` to 7 database methods
 5. ✅ Deprecated Code: Deleted 800 lines from `_deprecated/` directory
 
-**Sprint 2 Objectives** 🔄 **IN PROGRESS**:
-- [x] Consolidate `ContextLengthError` to `exceptions.py` ✅ **COMPLETED**
-- [x] Extract hard-coded sleep constants ✅ **COMPLETED**
-- [ ] Add type hints to remaining functions
-- [ ] Fix duplicate default provider definition
-- [ ] Refactor port polling with retry
+**Sprint 2 Objectives** ✅ **COMPLETED**:
+- [x] Consolidate `ContextLengthError` to `exceptions.py` ✅
+- [x] Extract hard-coded sleep constants ✅
+- [x] Add type hints to remaining functions ✅
+- [x] Fix duplicate default provider definition ✅
+- [ ] Refactor port polling with retry (deferred to Sprint 3)
 
 **Impact**:
 - **Reliability**: Database queries now resilient to deadlocks/timeouts
