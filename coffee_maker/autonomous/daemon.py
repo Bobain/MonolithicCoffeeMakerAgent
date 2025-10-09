@@ -91,6 +91,8 @@ class DevDaemon:
 
         # State
         self.running = False
+        self.attempted_priorities = {}  # Track retry attempts: {priority_name: count}
+        self.max_retries = 3  # Maximum attempts before skipping a priority
 
         logger.info("DevDaemon initialized")
         logger.info(f"Roadmap: {self.roadmap_path}")
@@ -264,7 +266,48 @@ class DevDaemon:
         priority_name = priority["name"]
         priority_title = priority["title"]
 
-        logger.info(f"🚀 Starting implementation of {priority_name}")
+        # Check if we've already attempted this priority too many times
+        attempt_count = self.attempted_priorities.get(priority_name, 0)
+
+        if attempt_count >= self.max_retries:
+            logger.warning(f"⏭️  Skipping {priority_name} - already attempted {attempt_count} times with no changes")
+            logger.warning(f"This priority requires manual intervention")
+
+            # Create final notification
+            self.notifications.create_notification(
+                type=NOTIF_TYPE_INFO,
+                title=f"{priority_name}: Max Retries Reached",
+                message=f"""The daemon has attempted to implement this priority {attempt_count} times but no files were changed.
+
+This priority requires manual implementation:
+
+Priority: {priority_name}
+Title: {priority_title}
+Status: Skipped after {attempt_count} attempts
+
+Action Required:
+1. Manually implement this priority, OR
+2. Mark as "Manual Only" in ROADMAP.md, OR
+3. Clarify the deliverables to make them more concrete
+
+The daemon will skip this priority in future iterations.
+""",
+                priority=NOTIF_PRIORITY_HIGH,
+                context={
+                    "priority_name": priority_name,
+                    "priority_number": priority.get("number"),
+                    "reason": "max_retries_reached",
+                    "attempts": attempt_count,
+                },
+            )
+
+            return False  # Return False so the daemon moves on
+
+        # Increment attempt counter
+        self.attempted_priorities[priority_name] = attempt_count + 1
+        logger.info(
+            f"🚀 Starting implementation of {priority_name} (attempt {self.attempted_priorities[priority_name]}/{self.max_retries})"
+        )
 
         # Create branch
         branch_name = f"feature/{priority_name.lower().replace(' ', '-').replace(':', '')}"
