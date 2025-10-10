@@ -66,7 +66,7 @@ class DevDaemon:
         auto_approve: bool = False,
         create_prs: bool = True,
         sleep_interval: int = 30,
-        model: str = "claude-sonnet-4",
+        model: str = "sonnet",
         use_claude_cli: bool = False,
         claude_cli_path: str = "/opt/homebrew/bin/claude",
     ):

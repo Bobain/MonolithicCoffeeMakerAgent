@@ -82,7 +82,7 @@ class ClaudeCLIInterface:
     def __init__(
         self,
         claude_path: str = "/opt/homebrew/bin/claude",
-        model: str = "claude-sonnet-4",
+        model: str = "sonnet",
         max_tokens: int = 8000,
         timeout: int = 3600,
     ):

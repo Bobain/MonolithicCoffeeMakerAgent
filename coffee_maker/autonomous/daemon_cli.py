@@ -79,7 +79,7 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
 
     parser.add_argument("--sleep", type=int, default=30, help="Seconds to sleep between iterations (default: 30)")
 
-    parser.add_argument("--model", default="claude-sonnet-4", help="Claude model to use (default: claude-sonnet-4)")
+    parser.add_argument("--model", default="sonnet", help="Claude model to use (default: sonnet)")
 
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging output")
 
