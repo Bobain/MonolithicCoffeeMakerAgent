@@ -11348,6 +11348,191 @@ If daemon gets stuck:
 
 ---
 
+### 🔴 **PRIORITY 2.65: Daemon End-to-End Validation (Outside Claude Session)** ⚡ **VALIDATION**
+
+**Estimated Duration**: 1-2 hours
+**Impact**: ⭐⭐⭐⭐⭐ (Critical - validates daemon actually works for users)
+**Status**: ✅ Partially Complete - Bug fixed, needs full E2E test
+**Dependency**: None (can be done immediately)
+**Why Important**: Must validate daemon works outside Claude session before marking as production-ready
+
+#### Issues Found During Testing
+
+**Testing Performed** (Oct 10, 2025):
+- ✅ Daemon initialization: Works
+- ✅ Prerequisites check: Works
+- ✅ ROADMAP parsing: Works
+- ✅ Claude CLI availability: Works
+- ✅ Prompt generation: Works
+- 🐛 **BUG FOUND & FIXED**: Model name "claude-sonnet-4" → "sonnet"
+
+**Bug Details**:
+```
+Error: API Error: 404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-sonnet-4"}}
+Root Cause: Model "claude-sonnet-4" doesn't exist
+Fix: Changed default to "sonnet" (correct alias)
+Fixed in commit: c13eb6f
+```
+
+**Limitation**: Testing was performed inside a Claude Code session, which may interfere with full daemon operation.
+
+#### Deliverables
+
+**1. Full E2E Test Outside Claude Session**
+
+Run daemon in a **separate terminal** (not inside Claude Code) to validate complete workflow:
+
+```bash
+# Terminal 1 (separate from Claude Code)
+cd /path/to/MonolithicCoffeeMakerAgent
+poetry run code-developer --verbose --no-pr
+
+# Expected behavior:
+# 1. ✅ Initializes successfully
+# 2. ✅ Finds next planned priority (PRIORITY 2.6)
+# 3. ✅ Creates notification for approval
+# 4. ✅ Waits for user response
+
+# Terminal 2 (check notifications)
+poetry run project-manager notifications
+
+# Terminal 2 (approve)
+poetry run project-manager respond <NOTIF_ID> approve
+
+# Terminal 1 should then:
+# 5. ✅ Create feature branch
+# 6. ✅ Execute Claude CLI
+# 7. ✅ Commit changes
+# 8. ✅ (Skip PR since --no-pr)
+# 9. ✅ Mark priority complete
+# 10. ✅ Sleep and continue to next priority
+```
+
+**2. Verify All Model References**
+
+Check and update all remaining "claude-sonnet-4" references:
+
+```bash
+# Find all occurrences
+grep -r "claude-sonnet-4" --include="*.py" --include="*.md" coffee_maker/ docs/
+
+# Update to either:
+# - "sonnet" (recommended - simple alias)
+# - "claude-sonnet-4-5-20250929" (full version - more specific)
+
+# Files already fixed:
+# ✅ coffee_maker/autonomous/daemon_cli.py
+# ✅ coffee_maker/autonomous/daemon.py
+# ✅ coffee_maker/autonomous/claude_cli_interface.py
+
+# Files that may need updating:
+# ⏳ coffee_maker/autonomous/claude_api_interface.py
+# ⏳ coffee_maker/cli/ai_service.py
+# ⏳ coffee_maker/code_reviewer/ (multiple files)
+# ⏳ streamlit_apps/ (multiple files)
+# ⏳ Documentation files (ROADMAP.md, etc.)
+```
+
+**3. Document Testing Limitations**
+
+Add to docs/DAEMON_TESTING.md:
+
+```markdown
+## Testing Limitations
+
+### Cannot Test Inside Claude Code Session
+
+The daemon **cannot be fully tested** inside a Claude Code session because:
+1. Environment variables conflict (CLAUDECODE=1, CLAUDE_CODE_ENTRYPOINT=cli)
+2. Claude CLI may already be in use
+3. Resource contention between sessions
+
+### Correct Testing Approach
+
+**Option A: Separate Terminal** (Recommended)
+```bash
+# Open a new terminal (NOT in Claude Code)
+cd /path/to/project
+poetry run code-developer --verbose
+```
+
+**Option B: Dedicated Repository Copy**
+```bash
+# Create isolated copy for daemon testing
+cp -r project/ daemon-test/
+cd daemon-test/
+poetry run code-developer --auto-approve
+```
+
+**Option C: Manual Tests Directory**
+```bash
+# Run manual E2E tests (requires --run-e2e flag)
+pytest tests/manual_tests/test_daemon_e2e.py -v -s --run-e2e
+```
+```
+
+**4. Update CLAUDE_CLI_MODE.md**
+
+Document the model name issue and correct usage:
+
+```markdown
+## Model Configuration
+
+### Default Model
+
+The daemon uses `model="sonnet"` by default. This is the Claude CLI alias for the latest Sonnet model.
+
+### Available Models
+
+Check available models:
+```bash
+claude -p --help | grep model
+```
+
+Use specific model:
+```bash
+code-developer --model sonnet                    # Latest Sonnet (recommended)
+code-developer --model opus                      # Latest Opus
+code-developer --model claude-sonnet-4-5-20250929  # Specific version
+```
+
+### Common Issues
+
+**Error: 404 model not found**
+```
+API Error: 404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-sonnet-4"}}
+```
+
+**Cause**: Invalid model name (e.g., "claude-sonnet-4" doesn't exist)
+
+**Solution**: Use correct model alias or full name:
+- ✅ `--model sonnet`
+- ✅ `--model claude-sonnet-4-5-20250929`
+- ❌ `--model claude-sonnet-4` (doesn't exist)
+```
+
+**Success Criteria**:
+- ✅ Daemon runs successfully outside Claude session
+- ✅ All "claude-sonnet-4" references updated or documented
+- ✅ Testing limitations documented
+- ✅ E2E test completes without errors
+- ✅ User can confidently run daemon in production
+
+**Acceptance Test**:
+```bash
+# User runs daemon for first time
+poetry run code-developer --auto-approve
+
+# Expected:
+# ✅ No 404 model errors
+# ✅ Claude CLI executes successfully
+# ✅ Daemon implements at least one priority
+# ✅ Creates commit and branch
+# ✅ Sleeps and continues to next priority
+```
+
+---
+
 ### 🔴 **PRIORITY 2.7: Daemon Crash Recovery & Context Management** 🔄 **RELIABILITY**
 
 **Estimated Duration**: 4-6 hours
