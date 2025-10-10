@@ -615,6 +615,194 @@ PM: "✅ Added US-XXX: Email & Question Notifications to ROADMAP with complete D
 
 ---
 
+## 📝 READY TO IMPLEMENT: US-014 - Intelligent Request Categorization and Document Routing
+
+**Project**: **🧠 US-014 - PM Context Awareness: Auto-Detect Feature vs Methodology Changes**
+
+**Status**: 📝 **PLANNED** (2025-10-10 - Requirements defined)
+
+**User Story**:
+> "As a project manager, I need to be able to interpret the user's context: what part of what he is saying are user stories, and what parts concerns the collaboration methodologies, or both. I can ask him to make sure I understood as I need to get sure which documents should be updated (roadmap, collaboration methodology, etc)"
+
+**Business Context**:
+When users communicate with PM, their input can be:
+- **Feature requests** → Add to `ROADMAP.md` as user stories
+- **Process/methodology changes** → Document in `COLLABORATION_METHODOLOGY.md`
+- **Both** → Update both documents
+- **Ambiguous** → PM needs to ask clarifying questions
+
+Currently, PM may not always correctly identify which type of input it's receiving, leading to:
+- Information being documented in the wrong place
+- Methodology changes lost or treated as features
+- Features mistakenly documented as process changes
+
+**What PM Should Do**:
+
+**Step 1: Analyze user input**
+```
+User says: "I want email notifications when tasks complete"
+→ PM detects: FEATURE REQUEST (action to build)
+→ Route to: ROADMAP.md
+
+User says: "PM should always use plain language with me"
+→ PM detects: METHODOLOGY CHANGE (how we work)
+→ Route to: COLLABORATION_METHODOLOGY.md
+
+User says: "PM should detect when I'm describing a feature vs methodology change"
+→ PM detects: BOTH (feature to build + how PM should work)
+→ Route to: ROADMAP.md + COLLABORATION_METHODOLOGY.md
+```
+
+**Step 2: Ask clarifying questions when ambiguous**
+```
+User says: "I need better status updates"
+
+PM responds: "I want to make sure I understand correctly:
+
+Is this:
+A) A new feature to build (e.g., automated status report emails)?
+B) A change to how I communicate status (e.g., different format)?
+C) Both (build feature + change process)?
+
+This helps me know whether to update ROADMAP.md,
+COLLABORATION_METHODOLOGY.md, or both."
+```
+
+**Step 3: Explicitly state which documents will be updated**
+```
+PM: "Got it! This is a feature request, so I'll:
+1. Create a user story in ROADMAP.md
+2. Document it as US-XXX
+
+Proceeding..."
+```
+
+**Acceptance Criteria** (Definition of Done):
+
+**Detection & Classification**:
+- [ ] PM analyzes user input to detect type: feature, methodology, or both
+- [ ] PM uses contextual clues (keywords, phrasing, intent) to classify
+- [ ] PM correctly identifies ambiguous requests requiring clarification
+
+**Clarifying Questions**:
+- [ ] When ambiguous, PM asks: "Is this a feature to build, or a process change?"
+- [ ] PM presents options clearly (A/B/C format)
+- [ ] PM explains why the question matters (which docs get updated)
+- [ ] User can respond naturally, PM interprets the response
+
+**Document Routing**:
+- [ ] Feature requests → ROADMAP.md (user stories)
+- [ ] Methodology changes → COLLABORATION_METHODOLOGY.md (process updates)
+- [ ] Hybrid requests → Both documents (cross-referenced)
+- [ ] PM explicitly states which documents will be updated before doing so
+
+**Validation & Confirmation**:
+- [ ] PM summarizes what was understood before updating documents
+- [ ] User can correct misinterpretations
+- [ ] PM confirms successful update: "Added to ROADMAP.md as US-XXX"
+
+**Examples Handled Correctly**:
+- [ ] "I want X feature" → Correctly routes to ROADMAP
+- [ ] "PM should always do Y" → Correctly routes to METHODOLOGY
+- [ ] "PM needs ability to detect Z" → Correctly identifies as BOTH
+- [ ] Ambiguous input → PM asks clarifying questions
+
+**Documentation**:
+- [ ] Section added to COLLABORATION_METHODOLOGY.md explaining this behavior
+- [ ] Examples of each category type documented
+- [ ] Guidelines for when to ask clarifying questions
+
+**Implementation Approach**:
+
+**Phase 1: Classification Logic** (1-2 days)
+1. Define classification keywords/patterns:
+   - Feature indicators: "I want", "add feature", "build", "implement"
+   - Methodology indicators: "PM should", "always do", "process", "workflow", "methodology"
+   - Both indicators: "PM needs capability to", "PM should be able to"
+2. Implement classification function in AIService
+3. Test with historical examples
+
+**Phase 2: Clarification Workflow** (1 day)
+1. When confidence < 80%, trigger clarification
+2. Generate contextual clarifying questions
+3. Parse user's clarification response
+4. Re-classify based on clarification
+
+**Phase 3: Document Routing** (1 day)
+1. Based on classification, determine target documents
+2. Explicitly state routing decision to user
+3. Update appropriate documents
+4. Cross-reference when updating both
+
+**Phase 4: Methodology Documentation** (30 min)
+1. Add Section 3.2.1 to COLLABORATION_METHODOLOGY.md
+2. Document classification approach
+3. Provide examples of each category
+
+**Technical Foundation**:
+- `AIService` - Can analyze and classify natural language input
+- `RoadmapEditor` - Can add user stories to ROADMAP.md
+- Chat interface - Can ask follow-up questions
+- File editing capabilities - Can update COLLABORATION_METHODOLOGY.md
+
+**Estimated Effort**: 3-5 days (classification logic, testing, documentation)
+
+**Priority**: HIGH (prevents information loss, improves PM effectiveness)
+
+**Example Scenarios**:
+
+**Scenario 1: Clear Feature Request**
+```
+User: "I want email notifications when code_developer completes tasks"
+
+PM: "I've detected this as a feature request.
+
+I'll create a user story in ROADMAP.md for:
+- Email notification system
+- Trigger on task completion
+- Integration with existing notification system
+
+Proceeding with user story creation..."
+```
+
+**Scenario 2: Clear Methodology Change**
+```
+User: "PM should always confirm which documents will be updated before making changes"
+
+PM: "I've detected this as a methodology change.
+
+I'll update COLLABORATION_METHODOLOGY.md to add:
+- Requirement for PM to explicitly state document routing
+- Confirmation step before updating documents
+
+Proceeding with methodology update..."
+```
+
+**Scenario 3: Ambiguous (Requires Clarification)**
+```
+User: "I need better documentation"
+
+PM: "I want to make sure I understand correctly.
+
+Is this:
+A) A feature request to auto-generate documentation (→ ROADMAP.md)?
+B) A process change for how I should document things (→ COLLABORATION_METHODOLOGY.md)?
+C) Both - build auto-doc feature AND change documentation process?
+
+Understanding this helps me know which documents to update."
+
+User: "Both - build the feature and improve the process"
+
+PM: "Perfect! I'll:
+1. Create user story in ROADMAP.md for auto-documentation feature
+2. Update COLLABORATION_METHODOLOGY.md with improved documentation process
+3. Cross-reference the two
+
+Proceeding..."
+```
+
+---
+
 ## 🚀 RELEASE STRATEGY & VERSIONING
 
 ### ✅ What's Deliverable TODAY (Version 0.1.0 - MVP)

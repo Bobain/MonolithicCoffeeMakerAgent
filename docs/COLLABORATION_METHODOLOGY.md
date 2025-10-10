@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 1.4
+**Version**: 1.5
 **Last Updated**: 2025-10-10
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -295,6 +295,186 @@ PM: "Actually, the system is already deliverable as v0.1.0 MVP today!
      A) Document current deliverable (v0.1.0)
      B) Add US-009 for future enhancement (v0.2.0)"
 ```
+
+#### 3.2.1 Request Categorization and Document Routing (US-014)
+
+**🚨 MANDATORY PRACTICE 🚨**
+
+**Principle**: PM must intelligently categorize user input and route information to the correct documents.
+
+**Why This Matters**:
+- Feature requests belong in `ROADMAP.md` (what to build)
+- Process/methodology changes belong in `COLLABORATION_METHODOLOGY.md` (how we work)
+- Some requests affect both documents
+- Misrouting leads to lost information or confused documentation
+
+**Three Categories of User Input**:
+
+1. **Feature Request** → Route to `ROADMAP.md`
+   - Keywords: "I want", "add feature", "build", "implement", "create"
+   - Intent: Something to build/develop
+   - Action: Create user story in roadmap
+
+2. **Methodology Change** → Route to `COLLABORATION_METHODOLOGY.md`
+   - Keywords: "PM should", "always do", "process", "workflow", "methodology", "team should"
+   - Intent: Change how team works
+   - Action: Update methodology document
+
+3. **Both** → Route to both documents
+   - Keywords: "PM needs capability to", "PM should be able to"
+   - Intent: Build feature AND change process
+   - Action: Create user story + update methodology
+
+**PM Workflow**:
+
+**Step 1: Analyze user input**
+```
+User: "I want email notifications"
+→ Classification: FEATURE REQUEST
+→ Confidence: HIGH (90%)
+→ Action: Route to ROADMAP.md
+```
+
+**Step 2: Ask clarifying questions if ambiguous (confidence < 80%)**
+```
+User: "I need better documentation"
+
+PM: "I want to make sure I understand correctly.
+
+Is this:
+A) A feature request to auto-generate documentation (→ ROADMAP.md)?
+B) A process change for how I should document things (→ COLLABORATION_METHODOLOGY.md)?
+C) Both - build auto-doc feature AND change documentation process?
+
+Understanding this helps me know which documents to update."
+```
+
+**Step 3: Explicitly state which documents will be updated**
+```
+PM: "Got it! This is a feature request, so I'll:
+1. Create a user story in ROADMAP.md
+2. Document it as the email notifications feature
+
+Proceeding..."
+```
+
+**Examples**:
+
+**Example 1: Clear Feature Request**
+```
+User: "I want the daemon to send me Slack messages when tasks complete"
+
+PM Analysis:
+- Type: FEATURE REQUEST
+- Confidence: 95%
+- Reasoning: "I want" + specific functionality to build
+
+PM Response:
+"I've detected this as a feature request.
+
+I'll create a user story in ROADMAP.md for Slack notifications.
+
+Proceeding with user story creation..."
+```
+
+**Example 2: Clear Methodology Change**
+```
+User: "PM should always confirm which documents will be updated before making changes"
+
+PM Analysis:
+- Type: METHODOLOGY CHANGE
+- Confidence: 98%
+- Reasoning: "PM should" + describes process behavior
+
+PM Response:
+"I've detected this as a methodology change.
+
+I'll update COLLABORATION_METHODOLOGY.md Section 3.2.1 to require:
+- Explicit document routing statements
+- Confirmation before updates
+
+Proceeding with methodology update..."
+```
+
+**Example 3: Hybrid (Both)**
+```
+User: "PM needs to be able to detect when I'm describing a feature vs a methodology change"
+
+PM Analysis:
+- Type: BOTH
+- Confidence: 92%
+- Reasoning: "PM needs capability" = build feature + "PM should behave this way" = process
+
+PM Response:
+"I've detected this affects both feature development and methodology.
+
+I'll:
+1. Create user story in ROADMAP.md for request categorization capability (US-014)
+2. Update COLLABORATION_METHODOLOGY.md Section 3.2.1 with categorization process
+3. Cross-reference the two documents
+
+Proceeding..."
+```
+
+**Example 4: Ambiguous (Requires Clarification)**
+```
+User: "I need status updates"
+
+PM Analysis:
+- Type: AMBIGUOUS
+- Confidence: 45%
+- Reasoning: Could mean build feature OR change report format
+
+PM Response:
+"I want to make sure I understand correctly.
+
+Is this:
+A) A feature request - build automated status reports (→ ROADMAP.md)?
+B) A process change - different format for my status messages (→ COLLABORATION_METHODOLOGY.md)?
+C) Both?
+
+This helps me know which documents to update."
+
+User: "A - build the feature"
+
+PM: "Perfect! I'll create a user story in ROADMAP.md for automated status reports.
+
+Proceeding..."
+```
+
+**Classification Keywords**:
+
+**Feature Indicators**:
+- "I want", "I need", "add", "build", "implement", "create"
+- "feature", "functionality", "capability" (when referring to software)
+- Describes specific output or behavior to implement
+
+**Methodology Indicators**:
+- "PM should", "always", "never", "must", "process", "workflow"
+- "methodology", "how we work", "team practice"
+- Describes behavioral rules or team practices
+
+**Both Indicators**:
+- "PM needs to be able to" (implies building + behavior)
+- "PM should have capability to" (build + process)
+- Explicitly mentions affecting multiple documents
+
+**Confidence Thresholds**:
+- **> 80%**: Proceed with routing automatically
+- **50-80%**: Lean toward classification but mention it: "I've detected this as X, let me know if I misunderstood"
+- **< 50%**: Ask clarifying questions before proceeding
+
+**Why This Rule Was Added**:
+User feedback 2025-10-10: "As a project manager, I need to be able to interpret the user's context: what part of what he is saying are user stories, and what parts concerns the collaboration methodologies, or both. I can ask him to make sure I understood as I need to get sure which documents should be updated (roadmap, collaboration methodology, etc)"
+
+This ensures information is routed correctly and nothing gets lost or misplaced.
+
+**See Also**:
+- US-014 in ROADMAP.md for complete feature specification
+- Section 4.5 for documenting feature discussions
+- Section 5.2 for `/US` command workflow
+
+---
 
 ### 3.3 Role: Developer (code_developer daemon)
 
@@ -1320,6 +1500,7 @@ PM documents decision and informs developer
 | 1.2 | 2025-10-10 | Added Section 4.5 (Documenting Feature Discussions) | Ensure all conversations are documented in ROADMAP |
 | 1.3 | 2025-10-10 | Added Section 4.6 (Plain Language Communication) | PM must use descriptive names, not technical IDs like "US-012" |
 | 1.4 | 2025-10-10 | Added Section 5.2 (`/US` Command Workflow) | Document US-012/US-013 features: similarity check, DoD inference, validation workflow |
+| 1.5 | 2025-10-10 | Added Section 3.2.1 (Request Categorization and Document Routing) | Implement US-014: PM categorizes user input as feature/methodology/both and routes to correct documents |
 
 **To add new version**:
 1. Make changes to document
