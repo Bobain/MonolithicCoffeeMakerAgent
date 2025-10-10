@@ -11,6 +11,7 @@ Simply import this module to load all commands:
 from coffee_maker.cli.commands.add_priority import AddPriorityCommand
 from coffee_maker.cli.commands.analyze_roadmap import AnalyzeRoadmapCommand
 from coffee_maker.cli.commands.update_priority import UpdatePriorityCommand
+from coffee_maker.cli.commands.user_story import UserStoryCommand
 from coffee_maker.cli.commands.view_roadmap import ViewRoadmapCommand
 
 # List of all command classes
@@ -19,6 +20,7 @@ ALL_COMMANDS = [
     UpdatePriorityCommand,
     ViewRoadmapCommand,
     AnalyzeRoadmapCommand,
+    UserStoryCommand,
 ]
 
 __all__ = ["ALL_COMMANDS"]

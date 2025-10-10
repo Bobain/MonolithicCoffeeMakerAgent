@@ -4205,6 +4205,80 @@ Before marking PRIORITY as complete, verify:
 
 ---
 
+## 📋 USER STORY BACKLOG
+
+> **What is this section?**
+> This is where user needs are captured before being translated into technical priorities.
+> User Stories help us understand WHAT users need and WHY, before deciding HOW to implement.
+
+### How to Add User Stories
+
+Use natural language in the chat interface:
+- "As a developer, I want X so that Y"
+- "I need feature Z for reason W"
+- Use `/user-story list` to see all stories
+- Use `/user-story view US-XXX` for details
+
+### Backlog Statistics
+
+- **Total Stories**: 2
+- **Backlog**: 1
+- **In Discussion**: 0
+- **Ready**: 0
+- **Assigned**: 1
+- **Complete**: 0
+
+---
+
+### 🎯 [US-001] Deploy code_developer on GCP
+
+**As a**: System administrator
+**I want**: code_developer running on GCP 24/7
+**So that**: development continues autonomously without my laptop
+
+**Business Value**: ⭐⭐⭐⭐⭐
+**Estimated Effort**: 5 story points (5-7 days)
+**Status**: ✅ Assigned to PRIORITY 4
+**Assigned To**: PRIORITY 4
+
+**Acceptance Criteria**:
+- [ ] code_developer runs continuously on GCP Compute Engine
+- [ ] Automatic restart on failure
+- [ ] Logs accessible via Cloud Logging
+- [ ] project_manager can communicate with GCP instance
+- [ ] Cost stays under $50/month
+
+**Technical Notes**:
+- Use GCP Compute Engine with appropriate machine type
+- Docker container for isolation
+- Cloud Storage for logs and state
+- VPC for secure communication
+
+---
+
+### 🎯 [US-002] View project health at a glance
+
+**As a**: Product owner
+**I want**: A health score for each priority
+**So that**: I can quickly identify risks and bottlenecks
+
+**Business Value**: ⭐⭐⭐⭐
+**Estimated Effort**: 3 story points (2-3 days)
+**Status**: 📝 Backlog
+
+**Acceptance Criteria**:
+- [ ] Each priority shows health score (0-100)
+- [ ] Color-coded health indicators (green/yellow/red)
+- [ ] Identifies specific risks (blocked, stale, unclear deliverables)
+- [ ] Accessible via `/analyze` command
+
+**Technical Notes**:
+- Already implemented in AnalyzeRoadmapCommand
+- Health calculation based on progress, momentum, structure
+- Generates actionable recommendations
+
+---
+
 ## 🚀 Prioritized Roadmap
 
 ### 🔴 **PRIORITY 1: Analytics & Observability** ⚡ FOUNDATION FOR AUTONOMOUS DAEMON

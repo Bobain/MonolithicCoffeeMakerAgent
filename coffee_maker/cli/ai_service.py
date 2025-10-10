@@ -162,6 +162,14 @@ class AIService:
 
         # Intent patterns
         intents = {
+            "user_story": [
+                "as a",
+                "i want",
+                "i need",
+                "user story",
+                "feature request",
+                "so that",
+            ],
             "add_priority": [
                 "add",
                 "create",
@@ -347,6 +355,206 @@ Be strategic - analyze impact, dependencies, and risks.
         except Exception as e:
             logger.warning(f"Failed to extract action: {e}")
             return None
+
+    def extract_user_story(self, user_input: str) -> Optional[Dict]:
+        """Extract User Story components from natural language.
+
+        Uses Claude AI to parse natural language into structured User Story format.
+
+        Args:
+            user_input: Natural language description
+
+        Returns:
+            Dictionary with User Story components:
+            {
+                'role': 'developer',
+                'want': 'deploy on GCP',
+                'so_that': 'runs 24/7',
+                'title': 'Deploy code_developer on GCP'
+            }
+            or None if can't extract
+
+        Example:
+            >>> story = service.extract_user_story(
+            ...     "I want to deploy on GCP so it runs 24/7"
+            ... )
+            >>> print(story['title'])
+            'Deploy code_developer on GCP'
+        """
+        try:
+            prompt = f"""Extract User Story from this input:
+
+{user_input}
+
+Respond ONLY in this exact XML format:
+<user_story>
+<role>system administrator</role>
+<want>deploy code_developer on GCP</want>
+<so_that>it runs 24/7 autonomously</so_that>
+<title>Deploy code_developer on GCP</title>
+</user_story>
+
+If this is NOT a User Story (no clear feature request), respond with: NOT_A_USER_STORY
+
+Remember:
+- role: Who needs this (developer, user, admin, etc.)
+- want: What they want (feature/capability)
+- so_that: Why they want it (benefit/value)
+- title: Short descriptive title (5-10 words)
+"""
+
+            logger.debug(f"Extracting User Story from: {user_input[:100]}...")
+
+            # Call Claude API
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=500,
+                messages=[{"role": "user", "content": prompt}],
+            )
+
+            content = response.content[0].text.strip()
+
+            # Check if it's not a User Story
+            if "NOT_A_USER_STORY" in content:
+                logger.debug("Input is not a User Story")
+                return None
+
+            # Parse XML response
+            role_match = re.search(r"<role>(.+?)</role>", content, re.DOTALL)
+            want_match = re.search(r"<want>(.+?)</want>", content, re.DOTALL)
+            so_that_match = re.search(r"<so_that>(.+?)</so_that>", content, re.DOTALL)
+            title_match = re.search(r"<title>(.+?)</title>", content, re.DOTALL)
+
+            if not all([role_match, want_match, so_that_match, title_match]):
+                logger.warning("Failed to parse User Story XML")
+                return None
+
+            story = {
+                "role": role_match.group(1).strip(),
+                "want": want_match.group(1).strip(),
+                "so_that": so_that_match.group(1).strip(),
+                "title": title_match.group(1).strip(),
+            }
+
+            logger.info(f"Extracted User Story: {story['title']}")
+            return story
+
+        except Exception as e:
+            logger.error(f"User Story extraction failed: {e}")
+            return None
+
+    def generate_prioritization_question(self, story1: Dict, story2: Dict) -> str:
+        """Generate natural question asking user to prioritize between two stories.
+
+        Args:
+            story1: First User Story dict with keys: id, title, role, want, so_that, estimated_effort
+            story2: Second User Story dict with same structure
+
+        Returns:
+            Natural language question for user to answer
+
+        Example:
+            >>> question = service.generate_prioritization_question(
+            ...     {'id': 'US-001', 'title': 'Deploy on GCP', 'estimated_effort': '5-7 days'},
+            ...     {'id': 'US-002', 'title': 'CSV Export', 'estimated_effort': '2-3 days'}
+            ... )
+            >>> print(question)
+            Between these two User Stories, which is more urgent?
+            ...
+        """
+        try:
+            question = f"""
+Between these two User Stories, which is more urgent for you?
+
+**A) {story1.get('title', 'Story 1')}**
+   As a: {story1.get('role', 'user')}
+   I want: {story1.get('want', '...')}
+   Estimated effort: {story1.get('estimated_effort', 'TBD')}
+
+**B) {story2.get('title', 'Story 2')}**
+   As a: {story2.get('role', 'user')}
+   I want: {story2.get('want', '...')}
+   Estimated effort: {story2.get('estimated_effort', 'TBD')}
+
+Your business priorities will help me organize the roadmap effectively.
+Type **A** or **B** to indicate which story is more important to complete first.
+"""
+            return question.strip()
+
+        except Exception as e:
+            logger.error(f"Failed to generate prioritization question: {e}")
+            return "Which story is more important?"
+
+    def analyze_user_story_impact(self, story: Dict, roadmap_summary: Dict, priorities: List[Dict]) -> str:
+        """Analyze roadmap impact of adding a User Story.
+
+        Uses Claude AI to analyze how adding a User Story would affect the roadmap.
+
+        Args:
+            story: User Story dict
+            roadmap_summary: Current roadmap summary
+            priorities: List of existing priorities
+
+        Returns:
+            Impact analysis as formatted markdown string
+
+        Example:
+            >>> analysis = service.analyze_user_story_impact(
+            ...     story={'title': 'Deploy on GCP', 'want': 'deploy on GCP', ...},
+            ...     roadmap_summary={'total': 9, 'completed': 3, ...},
+            ...     priorities=[...]
+            ... )
+        """
+        try:
+            # Build context about current roadmap
+            priorities_text = "\n".join([f"- {p['number']}: {p['title']} ({p['status']})" for p in priorities[:10]])
+
+            prompt = f"""Analyze the roadmap impact of adding this User Story:
+
+**New User Story:**
+- Title: {story.get('title', 'Unknown')}
+- As a: {story.get('role', 'user')}
+- I want: {story.get('want', 'feature')}
+- So that: {story.get('so_that', 'benefit')}
+- Estimated effort: {story.get('estimated_effort', 'TBD')}
+
+**Current Roadmap:**
+Total priorities: {roadmap_summary.get('total', 0)}
+Completed: {roadmap_summary.get('completed', 0)}
+In Progress: {roadmap_summary.get('in_progress', 0)}
+Planned: {roadmap_summary.get('planned', 0)}
+
+**Existing Priorities:**
+{priorities_text}
+
+Analyze:
+1. Which existing priority(ies) could this User Story fit into?
+2. Would this require a new priority?
+3. What priorities might be delayed if we add this?
+4. What dependencies exist?
+5. What are the risks?
+6. What's your recommendation?
+
+Provide a concise analysis in markdown format.
+"""
+
+            logger.debug(f"Analyzing roadmap impact for story: {story.get('title')}")
+
+            # Call Claude API
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=1000,
+                messages=[{"role": "user", "content": prompt}],
+            )
+
+            analysis = response.content[0].text
+
+            logger.info("Roadmap impact analysis generated")
+            return analysis
+
+        except Exception as e:
+            logger.error(f"Impact analysis failed: {e}")
+            return f"Unable to analyze impact: {str(e)}"
 
     def check_available(self) -> bool:
         """Check if AI service is available.

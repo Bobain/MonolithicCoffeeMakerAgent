@@ -334,6 +334,454 @@ class RoadmapEditor:
             logger.error(f"Failed to get priority content: {e}")
             return None
 
+    # ==================== USER STORY METHODS ====================
+
+    def add_user_story(
+        self,
+        story_id: str,
+        title: str,
+        role: str,
+        want: str,
+        so_that: str,
+        business_value: int = 3,
+        estimated_effort: str = "TBD",
+        acceptance_criteria: Optional[List[str]] = None,
+        technical_notes: str = "",
+        status: str = "📝 Backlog",
+        assigned_to: str = "",
+    ) -> bool:
+        """Add new User Story to backlog section.
+
+        Args:
+            story_id: User Story ID (e.g., "US-001")
+            title: Story title
+            role: User role (e.g., "developer", "project manager")
+            want: What the user wants
+            so_that: The benefit/value
+            business_value: 1-5 stars (default: 3)
+            estimated_effort: Story points or time estimate
+            acceptance_criteria: List of acceptance criteria
+            technical_notes: Implementation notes
+            status: Story status (default: "📝 Backlog")
+            assigned_to: Priority number if assigned
+
+        Returns:
+            True if successful
+
+        Raises:
+            ValueError: If story_id already exists
+            IOError: If file operations fail
+
+        Example:
+            >>> editor.add_user_story(
+            ...     story_id="US-001",
+            ...     title="Deploy on GCP",
+            ...     role="system administrator",
+            ...     want="code_developer running on GCP 24/7",
+            ...     so_that="development continues autonomously",
+            ...     business_value=5,
+            ...     estimated_effort="5 story points (5-7 days)"
+            ... )
+            True
+        """
+        try:
+            # Create backup
+            self._create_backup()
+
+            # Read current roadmap
+            content = self.roadmap_path.read_text()
+
+            # Check if story_id already exists
+            if story_id.upper() in content.upper():
+                raise ValueError(f"User Story {story_id} already exists")
+
+            # Build User Story section
+            story_section = self._build_user_story_section(
+                story_id=story_id,
+                title=title,
+                role=role,
+                want=want,
+                so_that=so_that,
+                business_value=business_value,
+                estimated_effort=estimated_effort,
+                acceptance_criteria=acceptance_criteria or [],
+                technical_notes=technical_notes,
+                status=status,
+                assigned_to=assigned_to,
+            )
+
+            # Find insertion point in User Story Backlog section
+            lines = content.split("\n")
+            insert_index = self._find_user_story_insertion_point(lines)
+
+            # If no User Story section exists, create it
+            if insert_index == -1:
+                insert_index = self._create_user_story_backlog_section(lines)
+
+            # Insert new User Story
+            lines.insert(insert_index, story_section)
+
+            # Write back atomically
+            new_content = "\n".join(lines)
+            self._atomic_write(new_content)
+
+            logger.info(f"Added {story_id}: {title}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to add User Story: {e}")
+            raise
+
+    def update_user_story(self, story_id: str, field: str, value: str) -> bool:
+        """Update existing User Story field.
+
+        Args:
+            story_id: User Story ID (e.g., "US-001")
+            field: Field to update (status, business_value, estimated_effort, etc.)
+            value: New value
+
+        Returns:
+            True if successful
+
+        Raises:
+            ValueError: If story not found or field is invalid
+            IOError: If file operations fail
+
+        Example:
+            >>> editor.update_user_story(
+            ...     story_id="US-001",
+            ...     field="status",
+            ...     value="🔄 In Discussion"
+            ... )
+            True
+        """
+        try:
+            # Create backup
+            self._create_backup()
+
+            # Read roadmap
+            content = self.roadmap_path.read_text()
+
+            # Find User Story section
+            pattern = rf"### 🎯 \[{re.escape(story_id)}\]"
+            match = re.search(pattern, content, re.IGNORECASE)
+
+            if not match:
+                raise ValueError(f"{story_id} not found in roadmap")
+
+            # Update field based on type
+            field_lower = field.lower()
+
+            if field_lower == "status":
+                content = re.sub(
+                    rf"(\[{re.escape(story_id)}\].*?\n.*?\*\*Status\*\*:) [^\n]+",
+                    rf"\1 {value}",
+                    content,
+                    flags=re.IGNORECASE | re.DOTALL,
+                )
+            elif field_lower == "business_value":
+                content = re.sub(
+                    rf"(\[{re.escape(story_id)}\].*?\n.*?\*\*Business Value\*\*:) [^\n]+",
+                    rf"\1 {value}",
+                    content,
+                    flags=re.IGNORECASE | re.DOTALL,
+                )
+            elif field_lower == "estimated_effort":
+                content = re.sub(
+                    rf"(\[{re.escape(story_id)}\].*?\n.*?\*\*Estimated Effort\*\*:) [^\n]+",
+                    rf"\1 {value}",
+                    content,
+                    flags=re.IGNORECASE | re.DOTALL,
+                )
+            elif field_lower == "assigned_to":
+                content = re.sub(
+                    rf"(\[{re.escape(story_id)}\].*?\n.*?\*\*Assigned To\*\*:) [^\n]+",
+                    rf"\1 {value}",
+                    content,
+                    flags=re.IGNORECASE | re.DOTALL,
+                )
+            else:
+                raise ValueError(f"Unsupported field: {field}")
+
+            # Write back atomically
+            self._atomic_write(content)
+
+            logger.info(f"Updated {story_id} {field} to {value}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to update User Story: {e}")
+            raise
+
+    def assign_user_story_to_priority(self, story_id: str, priority_number: str) -> bool:
+        """Assign User Story to a priority.
+
+        Args:
+            story_id: User Story ID (e.g., "US-001")
+            priority_number: Priority to assign to (e.g., "PRIORITY 4")
+
+        Returns:
+            True if successful
+
+        Example:
+            >>> editor.assign_user_story_to_priority("US-001", "PRIORITY 4")
+            True
+        """
+        try:
+            # Normalize priority number
+            if not priority_number.startswith("PRIORITY"):
+                priority_number = f"PRIORITY {priority_number}"
+
+            # Update status and assigned_to fields
+            self.update_user_story(story_id, "status", f"✅ Assigned to {priority_number}")
+            self.update_user_story(story_id, "assigned_to", priority_number)
+
+            logger.info(f"Assigned {story_id} to {priority_number}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to assign User Story: {e}")
+            raise
+
+    def get_user_story_summary(self) -> Dict:
+        """Get summary of all User Stories.
+
+        Returns:
+            Dictionary with summary information:
+            - total: Total number of User Stories
+            - stories: List of story dicts (id, title, status, etc.)
+            - backlog: Count of backlog stories
+            - in_discussion: Count of stories in discussion
+            - ready: Count of ready stories
+            - assigned: Count of assigned stories
+            - complete: Count of completed stories
+
+        Example:
+            >>> summary = editor.get_user_story_summary()
+            >>> print(f"Total: {summary['total']}")
+            Total: 5
+        """
+        try:
+            content = self.roadmap_path.read_text()
+
+            # Extract all User Stories
+            # Pattern matches: ### 🎯 [US-XXX] Title
+            pattern = r"### 🎯 \[(US-\d+)\] (.+?)\n.*?\*\*Status\*\*: (.+?)\n"
+            matches = re.findall(pattern, content, re.DOTALL)
+
+            stories = []
+            for match in matches:
+                story_id, title, status = match
+                stories.append({"id": story_id, "title": title.strip(), "status": status.strip()})
+
+            # Count by status
+            backlog = len([s for s in stories if "📝 Backlog" in s["status"]])
+            in_discussion = len([s for s in stories if "🔄 In Discussion" in s["status"]])
+            ready = len([s for s in stories if "📋 Ready" in s["status"]])
+            assigned = len([s for s in stories if "✅ Assigned" in s["status"]])
+            complete = len([s for s in stories if "✅ Complete" in s["status"]])
+
+            return {
+                "total": len(stories),
+                "stories": stories,
+                "backlog": backlog,
+                "in_discussion": in_discussion,
+                "ready": ready,
+                "assigned": assigned,
+                "complete": complete,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to get User Story summary: {e}")
+            return {
+                "total": 0,
+                "stories": [],
+                "backlog": 0,
+                "in_discussion": 0,
+                "ready": 0,
+                "assigned": 0,
+                "complete": 0,
+            }
+
+    def get_user_story_content(self, story_id: str) -> Optional[str]:
+        """Get full content of a specific User Story.
+
+        Args:
+            story_id: User Story ID (e.g., "US-001")
+
+        Returns:
+            User Story section content or None if not found
+
+        Example:
+            >>> content = editor.get_user_story_content("US-001")
+            >>> print(content[:100])
+        """
+        try:
+            content = self.roadmap_path.read_text()
+            lines = content.split("\n")
+
+            # Find User Story section
+            in_story = False
+            story_lines = []
+
+            for line in lines:
+                # Check if this is the start of our story
+                if f"[{story_id}]" in line and line.startswith("###"):
+                    in_story = True
+                    story_lines.append(line)
+                elif in_story:
+                    # Check if we've hit the next story or section
+                    if line.startswith("###") or line.startswith("##"):
+                        break
+                    story_lines.append(line)
+
+            if story_lines:
+                return "\n".join(story_lines)
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to get User Story content: {e}")
+            return None
+
+    def _build_user_story_section(
+        self,
+        story_id: str,
+        title: str,
+        role: str,
+        want: str,
+        so_that: str,
+        business_value: int,
+        estimated_effort: str,
+        acceptance_criteria: List[str],
+        technical_notes: str,
+        status: str,
+        assigned_to: str,
+    ) -> str:
+        """Build formatted User Story section.
+
+        Args:
+            story_id: User Story ID
+            title: Story title
+            role: User role
+            want: What the user wants
+            so_that: The benefit
+            business_value: 1-5 stars
+            estimated_effort: Effort estimate
+            acceptance_criteria: List of criteria
+            technical_notes: Implementation notes
+            status: Story status
+            assigned_to: Assigned priority
+
+        Returns:
+            Formatted User Story section as string
+        """
+        # Generate star rating
+        stars = "⭐" * business_value
+
+        # Build section
+        section = f"""
+### 🎯 [{story_id}] {title}
+
+**As a**: {role}
+**I want**: {want}
+**So that**: {so_that}
+
+**Business Value**: {stars}
+**Estimated Effort**: {estimated_effort}
+**Status**: {status}
+"""
+        if assigned_to:
+            section += f"**Assigned To**: {assigned_to}\n"
+
+        section += "\n**Acceptance Criteria**:\n"
+        if acceptance_criteria:
+            for criterion in acceptance_criteria:
+                section += f"- [ ] {criterion}\n"
+        else:
+            section += "- [ ] TBD\n"
+
+        if technical_notes:
+            section += f"\n**Technical Notes**:\n{technical_notes}\n"
+
+        section += "\n---\n"
+
+        return section
+
+    def _find_user_story_insertion_point(self, lines: List[str]) -> int:
+        """Find where to insert new User Story in backlog section.
+
+        Args:
+            lines: Roadmap lines
+
+        Returns:
+            Line index where User Story should be inserted, or -1 if no backlog section
+        """
+        # Find User Story Backlog section
+        in_backlog = False
+        for i, line in enumerate(lines):
+            if "## 📋 USER STORY BACKLOG" in line:
+                in_backlog = True
+            elif in_backlog and line.startswith("## "):
+                # Found next section, insert before it
+                return i
+            elif in_backlog and line.startswith("### 🎯"):
+                # Found existing User Story, continue to find end
+                continue
+
+        # If we found backlog but no next section, insert at end
+        if in_backlog:
+            return len(lines)
+
+        # No backlog section found
+        return -1
+
+    def _create_user_story_backlog_section(self, lines: List[str]) -> int:
+        """Create User Story Backlog section if it doesn't exist.
+
+        Args:
+            lines: Roadmap lines
+
+        Returns:
+            Line index where section was created
+        """
+        # Find where to insert the section (before PRIORITIES section)
+        for i, line in enumerate(lines):
+            if "## 🎯 PRIORITIES" in line or ("## " in line and "PRIORITY" in line.upper()):
+                # Insert backlog section before priorities
+                backlog_header = [
+                    "",
+                    "---",
+                    "",
+                    "## 📋 USER STORY BACKLOG",
+                    "",
+                    "> **What is this section?**",
+                    "> This is where user needs are captured before being translated into technical priorities.",
+                    "> User Stories help us understand WHAT users need and WHY, before deciding HOW to implement.",
+                    "",
+                    "---",
+                    "",
+                ]
+                lines[i:i] = backlog_header
+                return i + len(backlog_header)
+
+        # If no priorities section, add at end
+        lines.extend(
+            [
+                "",
+                "---",
+                "",
+                "## 📋 USER STORY BACKLOG",
+                "",
+                "> **What is this section?**",
+                "> This is where user needs are captured before being translated into technical priorities.",
+                "> User Stories help us understand WHAT users need and WHY, before deciding HOW to implement.",
+                "",
+                "---",
+                "",
+            ]
+        )
+        return len(lines)
+
     def _create_backup(self):
         """Create timestamped backup of roadmap.
 
