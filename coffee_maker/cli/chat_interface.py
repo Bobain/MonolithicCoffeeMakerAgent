@@ -15,11 +15,14 @@ Example:
 """
 
 import logging
+import os
 from typing import Dict, List
 
 from rich.console import Console
+from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.spinner import Spinner
 from rich.table import Table
 
 from coffee_maker.cli.ai_service import AIService
@@ -47,12 +50,13 @@ class ChatSession:
         >>> session.start()  # Starts interactive session
     """
 
-    def __init__(self, ai_service: AIService, editor: RoadmapEditor):
+    def __init__(self, ai_service: AIService, editor: RoadmapEditor, enable_streaming: bool = True):
         """Initialize chat session.
 
         Args:
             ai_service: AIService instance
             editor: RoadmapEditor instance
+            enable_streaming: If True, use streaming responses (default: True)
         """
         self.ai_service = ai_service
         self.editor = editor
@@ -60,7 +64,11 @@ class ChatSession:
         self.history: List[Dict] = []
         self.active = False
 
-        logger.info("ChatSession initialized")
+        # Check for streaming environment variable
+        env_no_streaming = os.environ.get("PROJECT_MANAGER_NO_STREAMING", "").lower() in ["1", "true", "yes"]
+        self.enable_streaming = enable_streaming and not env_no_streaming
+
+        logger.info(f"ChatSession initialized (streaming={'enabled' if self.enable_streaming else 'disabled'})")
 
     def start(self):
         """Start interactive chat session.
@@ -182,7 +190,7 @@ class ChatSession:
         """Handle natural language input with AI.
 
         Uses AIService to process natural language and optionally
-        execute extracted actions.
+        execute extracted actions. Supports streaming responses.
 
         Args:
             text: Natural language input
@@ -201,24 +209,69 @@ class ChatSession:
 
             logger.debug(f"Processing natural language: {text[:100]}...")
 
-            # Get AI response
-            response = self.ai_service.process_request(user_input=text, context=context, history=self.history)
-
-            # If AI suggests an action, ask for confirmation
-            if response.action:
-                action_desc = self._describe_action(response.action)
-                confirmation = self.console.input(
-                    f"\n[yellow]Action suggested: {action_desc}[/]\n" f"[yellow]Execute this action? [y/n]:[/] "
+            # Use streaming if enabled
+            if self.enable_streaming:
+                return self._handle_natural_language_stream(text, context)
+            else:
+                # Get AI response (blocking)
+                response = self.ai_service.process_request(
+                    user_input=text, context=context, history=self.history, stream=False
                 )
 
-                if confirmation.lower() in ["y", "yes"]:
-                    result = self._execute_action(response.action)
-                    return f"{response.message}\n\n{result}"
+                # If AI suggests an action, ask for confirmation
+                if response.action:
+                    action_desc = self._describe_action(response.action)
+                    confirmation = self.console.input(
+                        f"\n[yellow]Action suggested: {action_desc}[/]\n" f"[yellow]Execute this action? [y/n]:[/] "
+                    )
 
-            return response.message
+                    if confirmation.lower() in ["y", "yes"]:
+                        result = self._execute_action(response.action)
+                        return f"{response.message}\n\n{result}"
+
+                return response.message
 
         except Exception as e:
             logger.error(f"Natural language processing failed: {e}", exc_info=True)
+            return f"❌ Sorry, I encountered an error: {str(e)}"
+
+    def _handle_natural_language_stream(self, text: str, context: Dict) -> str:
+        """Handle natural language with streaming response.
+
+        Args:
+            text: Natural language input
+            context: Roadmap context
+
+        Returns:
+            Complete response message
+        """
+        try:
+            # Show typing indicator briefly
+            with Live(
+                Spinner("dots", text="[cyan]Claude is thinking...[/]"), console=self.console, refresh_per_second=10
+            ):
+                # Brief pause for UX (let user see the indicator)
+                import time
+
+                time.sleep(0.3)
+
+            # Stream response
+            self.console.print("\n[bold green]Claude:[/] ", end="")
+
+            full_response = ""
+            for chunk in self.ai_service.process_request_stream(user_input=text, context=context, history=self.history):
+                self.console.print(chunk, end="")
+                full_response += chunk
+
+            self.console.print()  # Final newline
+
+            # TODO: Extract action from full_response if needed
+            # For now, streaming responses don't support actions
+
+            return full_response
+
+        except Exception as e:
+            logger.error(f"Streaming natural language processing failed: {e}", exc_info=True)
             return f"❌ Sorry, I encountered an error: {str(e)}"
 
     def _build_context(self) -> Dict:

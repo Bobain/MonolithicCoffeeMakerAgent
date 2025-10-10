@@ -86,25 +86,37 @@ class AIService:
 
         logger.info(f"AIService initialized with model: {model}")
 
-    def process_request(self, user_input: str, context: Dict, history: List[Dict]) -> AIResponse:
+    def process_request(self, user_input: str, context: Dict, history: List[Dict], stream: bool = True) -> AIResponse:
         """Process user request with AI.
 
         Args:
             user_input: User's natural language input
             context: Current roadmap context (summary, priorities, etc.)
             history: Conversation history
+            stream: If True, returns a streaming response (default: True)
 
         Returns:
             AIResponse with message and optional action
 
         Example:
+            >>> # Non-streaming (blocking)
             >>> response = service.process_request(
             ...     "Add a priority for authentication",
             ...     context={'roadmap_summary': summary},
-            ...     history=[]
+            ...     history=[],
+            ...     stream=False
             ... )
-            >>> if response.action:
-            ...     print(f"Action: {response.action['type']}")
+            >>> print(response.message)
+
+            >>> # Streaming (progressive)
+            >>> response = service.process_request(
+            ...     "Explain the roadmap",
+            ...     context=context,
+            ...     history=[],
+            ...     stream=True
+            ... )
+            >>> for chunk in response.stream_iterator:
+            ...     print(chunk, end="")
         """
         try:
             # Build system prompt with context
@@ -140,6 +152,47 @@ class AIService:
                 action=None,
                 confidence=0.0,
             )
+
+    def process_request_stream(self, user_input: str, context: Dict, history: List[Dict]):
+        """Process user request with AI streaming.
+
+        Args:
+            user_input: User's natural language input
+            context: Current roadmap context
+            history: Conversation history
+
+        Yields:
+            Text chunks as they arrive from Claude API
+
+        Example:
+            >>> for chunk in service.process_request_stream("Hello", context, []):
+            ...     print(chunk, end="")
+            Hello! How can I help you today?
+        """
+        try:
+            # Build system prompt with context
+            system_prompt = self._build_system_prompt(context)
+
+            # Build conversation messages
+            messages = self._build_messages(user_input, history)
+
+            logger.debug(f"Processing streaming request: {user_input[:100]}...")
+
+            # Stream from Claude API
+            with self.client.messages.stream(
+                model=self.model,
+                max_tokens=self.max_tokens,
+                system=system_prompt,
+                messages=messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    yield text
+
+            logger.info("Streaming response completed")
+
+        except Exception as e:
+            logger.error(f"Streaming request failed: {e}")
+            yield f"\n\n❌ Sorry, I encountered an error: {str(e)}"
 
     def classify_intent(self, user_input: str) -> str:
         """Classify user intent based on input.
