@@ -105,83 +105,104 @@ PRIORITY 2: Project Manager with UI ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
-**Project**: **🚀 US-009 - Process Management & Status Monitoring** ✅ **COMPLETE**
+**Project**: **🧠 US-014 - Intelligent Request Categorization and Document Routing**
 
-**Status**: ✅ **COMPLETE** (Completed 2025-10-10)
+**Status**: 📝 **READY TO IMPLEMENT** (Spec approved 2025-10-10)
 
-**Goal**: ✅ Implemented chat interface that knows code_developer status, can wake/start the daemon, and enables bidirectional communication
+**Goal**: Build intelligent classification system that automatically detects whether user input is a feature request, methodology change, or both, and routes information to the correct documents
 
-**Why This Was Critical**:
-The previous system required manual management of two separate processes with no visibility. This created a poor user experience where:
-- Users didn't know if code_developer was running
-- No way to start/stop daemon from chat
-- No integrated communication flow
-- Had to switch between terminals constantly
+**Why This Is Critical**:
+Currently PM doesn't consistently identify what type of information users are providing:
+- Feature requests may be documented as methodology changes (or vice versa)
+- Information gets lost or placed in wrong documents
+- No clear process for handling hybrid requests (both feature + methodology)
+- PM doesn't ask clarifying questions when ambiguous
 
 **User Story**:
-> "As a project_manager user, I want to know if the code_developer process is up so that I can watch the current progress, ask him to do something, ask him to answer a question, answer a question he asked me, etc. The code_developer can delay his answers for more than 12 hours, as he needs to focus or rest, and have other activities."
+> "As a project manager, I need to be able to interpret the user's context: what part of what he is saying are user stories, and what parts concerns the collaboration methodologies, or both. I can ask him to make sure I understood as I need to get sure which documents should be updated (roadmap, collaboration methodology, etc)"
 
-**What Was Built** (Completed in 1 day):
+**Implementation Plan** (3-5 days):
 
-**Phase 1: Process Detection** ✅ COMPLETE
-- ✅ Created `ProcessManager` class with psutil
-- ✅ PID file management at `~/.coffee_maker/daemon.pid`
-- ✅ Detect if code_developer is running
-- ✅ Get daemon status (idle/working/stopped)
-- ✅ Extract current task from ROADMAP or status file
+**Phase 1: Core Classification Engine** (Day 1 - 6 hours)
+- [ ] Create `RequestClassifier` class with keyword matching
+- [ ] Implement pattern detection (imperative vs prescriptive mood)
+- [ ] Build confidence scoring algorithm
+- [ ] Write comprehensive unit tests (>90% coverage)
+- [ ] Test 20+ classification scenarios
 
-**Phase 2: Process Control** ✅ COMPLETE
-- ✅ Start daemon command (`/start`)
-- ✅ Stop daemon gracefully (`/stop`)
-- ✅ Automatic daemon startup on chat launch
-- ✅ Handle daemon PID file writing on startup
+**Phase 2: AI Service Integration** (Day 2 - 4 hours)
+- [ ] Integrate classifier into `ai_service.py`
+- [ ] Add clarification prompt generation (A/B/C format)
+- [ ] Implement routing logic based on classification
+- [ ] Add explicit document update statements
+- [ ] Write integration tests
 
-**Phase 3: Status Display** ✅ COMPLETE
-- ✅ Show daemon status in chat header (🟢/🟡/🔴)
-- ✅ `/status` command with detailed info (PID, uptime, CPU, memory, current task)
-- ✅ Real-time status updates
-- ✅ Current task display
+**Phase 3: Document Routing** (Day 3 - 6 hours)
+- [ ] Create `DocumentRouter` class
+- [ ] Implement ROADMAP.md update logic
+- [ ] Implement COLLABORATION_METHODOLOGY.md update logic
+- [ ] Add format validation
+- [ ] Handle hybrid requests (update both docs)
 
-**Phase 4: Communication** ✅ COMPLETE
-- ✅ Send commands to daemon via chat
-- ✅ Natural language detection ("ask daemon to...")
-- ✅ Daemon questions appear in chat
-- ✅ Response collection and delivery
-- ✅ Async communication (daemon can reply after 12+ hours)
+**Phase 4: Testing & Documentation** (Day 4-5 - 8 hours)
+- [ ] End-to-end testing with real documents
+- [ ] Test all edge cases
+- [ ] Update documentation (4 docs)
+- [ ] User validation with 10+ test inputs
+- [ ] Mark US-014 complete
 
-**Key Features**:
-- ✅ Real-time daemon status awareness
-- ✅ One-command daemon startup/shutdown
-- ✅ Integrated bidirectional communication
-- ✅ Async messaging (daemon can delay responses)
-- ✅ Graceful handling of daemon "rest periods"
+**Success Criteria** (19 acceptance criteria from US-014):
 
-**Success Criteria** (18/18 - 100% Complete):
-- [x] Chat always shows accurate daemon status
-- [x] Can start/stop daemon from chat interface
-- [x] Commands reliably reach daemon
-- [x] Daemon questions appear in chat
-- [x] System handles 12+ hour response delays gracefully
-- [x] Zero orphaned daemon processes
+**Detection & Classification**:
+- [ ] PM analyzes user input to detect type: feature, methodology, or both
+- [ ] PM uses contextual clues (keywords, phrasing, intent) to classify
+- [ ] PM correctly identifies ambiguous requests requiring clarification
 
-**Technical Specification**: See `docs/US-009_TECHNICAL_SPEC.md`
+**Clarifying Questions**:
+- [ ] When ambiguous, PM asks: "Is this a feature to build, or a process change?"
+- [ ] PM presents options clearly (A/B/C format)
+- [ ] PM explains why question matters (which docs get updated)
+- [ ] User can respond naturally, PM interprets the response
 
-**Implementation Files**:
-- `coffee_maker/process_manager.py` (new)
-- `coffee_maker/cli/chat_interface.py` (update)
-- `coffee_maker/autonomous/daemon_cli.py` (update)
-- `~/.coffee_maker/daemon.pid` (new)
-- `~/.coffee_maker/daemon_status.json` (new)
+**Document Routing**:
+- [ ] Feature requests → ROADMAP.md (user stories)
+- [ ] Methodology changes → COLLABORATION_METHODOLOGY.md (process updates)
+- [ ] Hybrid requests → Both documents (cross-referenced)
+- [ ] PM explicitly states which documents will be updated before doing so
+
+**Technical Specification**: See `docs/US-014_TECHNICAL_SPEC.md` (1,343 lines)
+
+**Files to Create**:
+- `coffee_maker/cli/request_classifier.py` (new - ~250 lines)
+- `coffee_maker/cli/document_router.py` (new - ~200 lines)
+- `tests/test_request_classifier.py` (new - ~300 lines)
+- `tests/test_document_router.py` (new - ~200 lines)
+- `tests/test_e2e_request_classification.py` (new - ~150 lines)
+
+**Files to Modify**:
+- `coffee_maker/cli/ai_service.py` (~150 lines added)
+- `docs/COLLABORATION_METHODOLOGY.md` (already updated with Section 3.2.1)
+
+**Key Technical Decisions**:
+- ✅ Rule-based classification (not ML) - fast, explainable, maintainable
+- ✅ Confidence thresholds: >80% (auto), 50-80% (mention), <50% (ask)
+- ✅ Keyword dictionaries for each category + pattern detection
+- ✅ Classification completes in <100ms
+
+**Target Accuracy**:
+- Feature detection: >92%
+- Methodology detection: >92%
+- Hybrid detection: >85%
+- Overall accuracy: >90%
 
 **Recent Completions**:
-✅ US-006: project-manager chat UX (2025-10-10)
-- Streaming responses, multi-line input, history, auto-completion, syntax highlighting, session persistence
+✅ US-009: Process Management & Status Monitoring (2025-10-10)
+✅ US-010: Living Documentation & Tutorials (2025-10-10)
 
-**Next After US-009**:
-- **US-010: Living Documentation & Tutorials** ⚡ **NEXT PRIORITY**
-- PRIORITY 2.6: CI Testing (ensure daemon stability)
-- PRIORITY 2.7: Daemon Crash Recovery (24/7 reliability)
+**Next After US-014**:
+- US-012/US-013: `/US` Command for natural user story creation
 - US-007: IDE Code Completion (developer productivity)
+- PRIORITY 2.6: CI Testing (ensure daemon stability)
 
 ---
 
