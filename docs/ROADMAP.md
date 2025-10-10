@@ -4224,8 +4224,9 @@ Use natural language in the chat interface:
 
 ### Backlog Statistics
 
-- **Total Stories**: 3
+- **Total Stories**: 4
 - **Backlog**: 2
+- **Critical**: 1 (US-004 - blocking daemon)
 - **In Discussion**: 0
 - **Ready**: 0
 - **Assigned**: 1
@@ -4426,6 +4427,157 @@ Output:
 
 Run DOD tests now? [y/n]
 ```
+
+---
+
+### 🎯 [US-004] Use Claude CLI instead of Anthropic API for code_developer
+
+**As a**: User with a Claude subscription (€200/month)
+**I want**: code_developer to use an isolated Claude CLI session for API calls
+**So that**: I don't need to pay for separate API credits when I already have Claude access through my subscription
+
+**Business Value**: ⭐⭐⭐⭐⭐
+**Estimated Effort**: 3 story points (2-3 days)
+**Status**: 🚨 Critical - Blocking daemon operation
+
+**Acceptance Criteria**:
+- [ ] code_developer uses Claude CLI instead of Anthropic API SDK
+- [ ] Daemon runs in isolated environment/process to avoid conflicts with user's Claude CLI sessions
+- [ ] User can continue using Claude CLI separately (but not simultaneously)
+- [ ] No API credits required - uses existing Claude subscription
+- [ ] Configuration option to choose between Claude CLI and Anthropic API
+- [ ] Clear documentation on when to use each mode
+- [ ] Error handling when Claude CLI is not available
+
+**Definition of Done**:
+- [ ] **Functional**: code_developer works with Claude CLI
+- [ ] **Tested**: DOD tests below pass
+- [ ] **Documented**: Setup instructions for Claude CLI mode
+- [ ] **Cost-Effective**: No API credits needed
+- [ ] **User-Tested**: Daemon runs successfully without API credit errors
+
+**DOD Tests**:
+```yaml
+tests:
+  - name: "Claude CLI mode configuration exists"
+    type: "python"
+    code: |
+      from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+      # Should be able to initialize Claude CLI interface
+      interface = ClaudeCLIInterface()
+      assert interface is not None
+
+  - name: "Can detect Claude CLI availability"
+    type: "python"
+    code: |
+      from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+      interface = ClaudeCLIInterface()
+      # Should check if claude command exists
+      available = interface.is_available()
+      assert isinstance(available, bool)
+
+  - name: "Can send prompt to Claude CLI"
+    type: "python"
+    code: |
+      from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+      interface = ClaudeCLIInterface()
+      if interface.is_available():
+          response = interface.send_prompt("Hello, respond with 'test'")
+          assert isinstance(response, str)
+          assert len(response) > 0
+
+  - name: "Daemon can use Claude CLI mode"
+    type: "command"
+    command: "poetry run code-developer --help"
+    expected_exit_code: 0
+    expected_output_contains: "--use-cli"
+
+  - name: "Documentation exists"
+    type: "file_exists"
+    files:
+      - "docs/CLAUDE_CLI_MODE.md"
+      - "coffee_maker/autonomous/claude_cli_interface.py"
+```
+
+**Technical Notes**:
+- Create `ClaudeCLIInterface` class parallel to `ClaudeAPIInterface`
+- Use subprocess to call `claude` command with prompts
+- Parse Claude CLI output (may need special handling for streaming)
+- Add `--use-cli` flag to code-developer command
+- Detect Claude CLI availability: `which claude` or check if command exists
+- Handle non-interactive mode: use heredoc or pipe for input
+- Isolation: Run daemon in separate terminal or use process management
+
+**Current Blocker**:
+- User has Claude subscription (€200/month) via Claude CLI
+- Anthropic API requires separate credits ($$$)
+- This US removes the blocker by using existing Claude access
+
+**Related Stories**:
+- US-001 (GCP Deploy) - will also need Claude CLI mode for cloud
+- US-003 (PR Tracking) - daemon PRs will use Claude CLI
+
+**Implementation Approach**:
+
+1. **Create Claude CLI Interface** (`coffee_maker/autonomous/claude_cli_interface.py`):
+```python
+class ClaudeCLIInterface:
+    """Interface to Claude via CLI instead of API."""
+
+    def is_available(self) -> bool:
+        """Check if claude command is available."""
+
+    def send_prompt(self, prompt: str, project: str = None) -> str:
+        """Send prompt to Claude CLI and get response."""
+        # Use: echo "prompt" | claude --dangerously-skip-user-approval
+
+    def send_prompt_with_context(self, prompt: str, files: List[str]) -> str:
+        """Send prompt with file context to Claude CLI."""
+```
+
+2. **Update daemon to support CLI mode**:
+```python
+class DevDaemon:
+    def __init__(self, use_claude_cli: bool = False, ...):
+        if use_claude_cli:
+            self.claude = ClaudeCLIInterface()
+        else:
+            self.claude = ClaudeAPIInterface()
+```
+
+3. **Add CLI flag**:
+```bash
+code-developer --use-cli --auto-approve
+# or
+code-developer --mode=cli --auto-approve
+```
+
+**Workflow Example**:
+```bash
+# Before (requires API credits - doesn't work):
+poetry run code-developer --auto-approve
+# Error: API credits insufficient
+
+# After (uses Claude CLI - works!):
+poetry run code-developer --use-cli --auto-approve
+# ✅ Uses existing Claude subscription, no API credits needed
+
+# Configuration via environment:
+export CODE_DEVELOPER_MODE=cli
+poetry run code-developer --auto-approve
+```
+
+**Benefits**:
+- ✅ No additional costs (uses existing €200/month subscription)
+- ✅ Same Claude models available
+- ✅ No API key management needed
+- ✅ Works immediately without credit setup
+
+**Considerations**:
+- User should not use Claude CLI simultaneously (to avoid credential conflicts)
+- Claude CLI has rate limits (but sufficient for daemon use)
+- Need to handle Claude CLI output parsing (may include ANSI codes, formatting)
+- Non-interactive mode required for automation
 
 ---
 
