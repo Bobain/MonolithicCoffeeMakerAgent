@@ -1,0 +1,958 @@
+"""Chat Interface - Interactive chat session with Rich UI.
+
+This module provides an interactive REPL-style chat interface for managing
+the roadmap with Claude AI assistance and rich terminal UI.
+
+IMPORTANT: Communication Guidelines
+    See docs/COLLABORATION_METHODOLOGY.md Section 4.6:
+    - Use plain language, NOT technical shorthand (no "US-012")
+    - Say "the email notification feature" not "US-012"
+    - Always explain features descriptively to users
+
+Example:
+    >>> from coffee_maker.cli.chat_interface import ChatSession
+    >>> from coffee_maker.cli.ai_service import AIService
+    >>> from coffee_maker.cli.roadmap_editor import RoadmapEditor
+    >>>
+    >>> editor = RoadmapEditor(roadmap_path)
+    >>> ai_service = AIService()
+    >>> session = ChatSession(ai_service, editor)
+    >>> session.start()
+"""
+
+import json
+import logging
+import os
+import re
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List
+
+from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.key_binding import KeyBindings
+from rich.console import Console
+from rich.live import Live
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.spinner import Spinner
+from rich.syntax import Syntax
+from rich.table import Table
+
+from coffee_maker.cli.ai_service import AIService
+from coffee_maker.cli.commands import get_command_handler, list_commands
+from coffee_maker.cli.notifications import NotificationDB, NOTIF_PRIORITY_HIGH
+from coffee_maker.cli.roadmap_editor import RoadmapEditor
+from coffee_maker.process_manager import ProcessManager
+
+logger = logging.getLogger(__name__)
+
+
+class ProjectManagerCompleter(Completer):
+    """Auto-completer for project-manager chat.
+
+    Provides Tab completion for:
+    - Slash commands (/help, /view, /add, etc.)
+    - Priority names (PRIORITY 1, PRIORITY 2, etc.)
+    - File paths (when relevant)
+    """
+
+    def __init__(self, editor: RoadmapEditor):
+        """Initialize completer.
+
+        Args:
+            editor: RoadmapEditor instance for priority completion
+        """
+        self.editor = editor
+        self.commands = [
+            "help",
+            "view",
+            "add",
+            "update",
+            "status",
+            "start",
+            "stop",
+            "restart",
+            "exit",
+            "quit",
+            "notifications",
+        ]
+
+    def get_completions(self, document, complete_event):
+        """Generate completions based on current input.
+
+        Args:
+            document: Current document being edited
+            complete_event: Completion event
+
+        Yields:
+            Completion objects
+        """
+        word_before_cursor = document.get_word_before_cursor()
+        text_before_cursor = document.text_before_cursor
+
+        # Complete slash commands
+        if text_before_cursor.startswith("/") or (text_before_cursor == "" and word_before_cursor == ""):
+            for cmd in self.commands:
+                if cmd.startswith(word_before_cursor.lstrip("/")):
+                    yield Completion(
+                        cmd if text_before_cursor.startswith("/") else f"/{cmd}",
+                        start_position=-len(word_before_cursor),
+                        display_meta=f"command",
+                    )
+
+        # Complete priority names when relevant
+        elif any(keyword in text_before_cursor.lower() for keyword in ["priority", "PRIORITY", "view", "update"]):
+            try:
+                priorities = self.editor.list_priorities()
+                for priority in priorities[:15]:  # Limit to 15 for performance
+                    priority_name = priority["name"]
+                    if priority_name.lower().startswith(word_before_cursor.lower()):
+                        yield Completion(
+                            priority_name,
+                            start_position=-len(word_before_cursor),
+                            display_meta=f"{priority['title'][:40]}...",
+                        )
+            except Exception as e:
+                logger.debug(f"Priority completion failed: {e}")
+
+
+class ChatSession:
+    """Interactive chat session manager.
+
+    Manages the interactive REPL loop, command routing, and rich terminal UI
+    for the project manager CLI.
+
+    Attributes:
+        ai_service: AIService instance for natural language processing
+        editor: RoadmapEditor instance for roadmap manipulation
+        console: Rich console for terminal output
+        history: Conversation history
+        active: Session active flag
+
+    Example:
+        >>> session = ChatSession(ai_service, editor)
+        >>> session.start()  # Starts interactive session
+    """
+
+    def __init__(self, ai_service: AIService, editor: RoadmapEditor, enable_streaming: bool = True):
+        """Initialize chat session.
+
+        Args:
+            ai_service: AIService instance
+            editor: RoadmapEditor instance
+            enable_streaming: If True, use streaming responses (default: True)
+        """
+        self.ai_service = ai_service
+        self.editor = editor
+        self.console = Console()
+        self.history: List[Dict] = []
+        self.active = False
+
+        # Check for streaming environment variable
+        env_no_streaming = os.environ.get("PROJECT_MANAGER_NO_STREAMING", "").lower() in ["1", "true", "yes"]
+        self.enable_streaming = enable_streaming and not env_no_streaming
+
+        # Initialize process manager for daemon status
+        self.process_manager = ProcessManager()
+        self.daemon_status_text = ""
+        self._update_status_display()
+
+        # Initialize notification database for bidirectional communication
+        self.notif_db = NotificationDB()
+
+        # Setup prompt-toolkit for advanced input
+        self._setup_prompt_session()
+
+        # Setup session persistence
+        self.session_dir = Path.home() / ".project_manager" / "sessions"
+        self.session_dir.mkdir(parents=True, exist_ok=True)
+        self.session_file = self.session_dir / "default.json"
+
+        # Load previous session if exists
+        self._load_session()
+
+        logger.info(f"ChatSession initialized (streaming={'enabled' if self.enable_streaming else 'disabled'})")
+
+    def _setup_prompt_session(self):
+        """Setup prompt-toolkit session with history, completion, and key bindings."""
+        # History file location
+        history_dir = Path.home() / ".project_manager"
+        history_dir.mkdir(exist_ok=True)
+        history_file = history_dir / "chat_history.txt"
+
+        # Key bindings for multi-line input
+        bindings = KeyBindings()
+
+        @bindings.add("enter")
+        def _(event):
+            """Submit on Enter."""
+            event.current_buffer.validate_and_handle()
+
+        @bindings.add("s-enter")  # Shift+Enter
+        def _(event):
+            """Insert newline on Shift+Enter."""
+            event.current_buffer.insert_text("\n")
+
+        @bindings.add("escape", "enter")  # Alt+Enter (fallback)
+        def _(event):
+            """Insert newline on Alt+Enter (alternative to Shift+Enter)."""
+            event.current_buffer.insert_text("\n")
+
+        # Create prompt session
+        self.prompt_session = PromptSession(
+            history=FileHistory(str(history_file)),
+            completer=ProjectManagerCompleter(self.editor),
+            complete_while_typing=False,  # Complete only on Tab
+            multiline=False,  # Will be controlled by key bindings
+            key_bindings=bindings,
+            enable_history_search=True,  # Ctrl+R for reverse search
+        )
+
+    def _load_session(self):
+        """Load previous conversation history from file."""
+        if self.session_file.exists():
+            try:
+                with open(self.session_file, "r") as f:
+                    data = json.load(f)
+                    self.history = data.get("history", [])
+                    logger.info(f"Loaded {len(self.history)} messages from previous session")
+            except Exception as e:
+                logger.warning(f"Failed to load session: {e}")
+                self.history = []
+
+    def _save_session(self):
+        """Save conversation history to file."""
+        try:
+            with open(self.session_file, "w") as f:
+                json.dump(
+                    {
+                        "history": self.history,
+                        "last_updated": datetime.now().isoformat(),
+                    },
+                    f,
+                    indent=2,
+                )
+            logger.debug(f"Saved {len(self.history)} messages to session")
+        except Exception as e:
+            logger.warning(f"Failed to save session: {e}")
+
+    def _update_status_display(self):
+        """Update daemon status text for display."""
+        status = self.process_manager.get_daemon_status()
+
+        if status["running"]:
+            if status["current_task"]:
+                emoji = "🟢"
+                text = f"Daemon: Active - Working on {status['current_task']}"
+            else:
+                emoji = "🟡"
+                text = "Daemon: Idle - Waiting for tasks"
+        else:
+            emoji = "🔴"
+            text = "Daemon: Stopped"
+
+        self.daemon_status_text = f"{emoji} {text}"
+        logger.debug(f"Status updated: {self.daemon_status_text}")
+
+    def _cmd_daemon_status(self) -> str:
+        """Show detailed daemon status."""
+        import time
+        from datetime import timedelta
+
+        self._update_status_display()
+        status = self.process_manager.get_daemon_status()
+
+        if not status["running"]:
+            return (
+                "❌ **Daemon Status: STOPPED**\n\n"
+                "The code_developer daemon is not currently running.\n\n"
+                "Use `/start` to launch it.\n\n"
+                "💡 **Note**: The daemon can take 12+ hours to respond to tasks.\n"
+                "   Like a human developer, he needs focus time and rest periods!"
+            )
+
+        # Calculate uptime
+        uptime_seconds = time.time() - status["uptime"]
+        uptime = str(timedelta(seconds=int(uptime_seconds)))
+
+        # Format current task
+        task = status["current_task"] or "None (Idle)"
+
+        return (
+            f"🟢 **Daemon Status: RUNNING**\n\n"
+            f"- **PID**: {status['pid']}\n"
+            f"- **Status**: {status['status'].upper()}\n"
+            f"- **Current Task**: {task}\n"
+            f"- **Uptime**: {uptime}\n"
+            f"- **CPU**: {status['cpu_percent']:.1f}%\n"
+            f"- **Memory**: {status['memory_mb']:.1f} MB\n\n"
+            "💡 **Tip**: code_developer may take time to respond (12+ hours is normal).\n"
+            "   He needs focus time and rest, just like a human developer!\n\n"
+            "Use `/stop` to shut down the daemon gracefully."
+        )
+
+    def _cmd_daemon_start(self) -> str:
+        """Start the daemon."""
+        if self.process_manager.is_daemon_running():
+            self._update_status_display()
+            return "✅ Daemon is already running!"
+
+        self.console.print("[cyan]Starting code_developer daemon...[/]")
+
+        success = self.process_manager.start_daemon(background=True)
+
+        if success:
+            self._update_status_display()
+            return (
+                "✅ **Daemon Started Successfully!**\n\n"
+                "The code_developer daemon is now running in the background.\n\n"
+                "He'll start working on priorities from the roadmap and will\n"
+                "respond to your messages when he has time.\n\n"
+                "⏰ **Response Time**: May take 12+ hours (needs focus time)\n\n"
+                "Use `/status` to check what he's working on."
+            )
+        else:
+            return (
+                "❌ **Failed to Start Daemon**\n\n"
+                "Could not start the code_developer daemon.\n\n"
+                "**Troubleshooting**:\n"
+                "- Check that you have a valid ANTHROPIC_API_KEY in .env\n"
+                "- Ensure no other daemon is running\n"
+                "- Check logs for errors\n\n"
+                "Try running manually: `poetry run code-developer`"
+            )
+
+    def _cmd_daemon_stop(self) -> str:
+        """Stop the daemon."""
+        if not self.process_manager.is_daemon_running():
+            self._update_status_display()
+            return "⚠️  Daemon is not running."
+
+        self.console.print("[cyan]Stopping daemon gracefully...[/]")
+
+        success = self.process_manager.stop_daemon(timeout=10)
+
+        if success:
+            self._update_status_display()
+            return (
+                "✅ **Daemon Stopped Successfully**\n\n"
+                "The code_developer daemon has been shut down gracefully.\n\n"
+                "Use `/start` to launch it again when needed."
+            )
+        else:
+            return (
+                "❌ **Failed to Stop Daemon**\n\n"
+                "Could not stop the daemon gracefully.\n\n"
+                "You may need to kill the process manually:\n"
+                "1. Run `/status` to get the PID\n"
+                "2. Run `kill <PID>` in terminal"
+            )
+
+    def _cmd_daemon_restart(self) -> str:
+        """Restart the daemon."""
+        import time
+
+        self.console.print("[cyan]Restarting daemon...[/]")
+
+        # Stop if running
+        if self.process_manager.is_daemon_running():
+            self.console.print("[cyan]Stopping current daemon...[/]")
+            self.process_manager.stop_daemon()
+            time.sleep(2)
+
+        # Start fresh
+        self.console.print("[cyan]Starting daemon...[/]")
+        success = self.process_manager.start_daemon()
+
+        self._update_status_display()
+
+        if success:
+            return "✅ Daemon restarted successfully!"
+        else:
+            return "❌ Failed to restart daemon. Check logs."
+
+    def start(self):
+        """Start interactive chat session.
+
+        Displays welcome message and enters REPL loop.
+        Handles user input, routes commands, and displays responses.
+
+        Example:
+            >>> session.start()
+            # Enters interactive mode
+        """
+        self.active = True
+        self._display_welcome()
+        self._load_roadmap_context()
+        self._run_repl_loop()
+
+    def _run_repl_loop(self):
+        """Main REPL loop with periodic status updates and daemon question checking.
+
+        Continuously reads user input and processes it until
+        the session is terminated. Uses prompt-toolkit for advanced
+        input features (multi-line, history, auto-completion).
+
+        Checks for daemon questions on startup and every 10 messages.
+        Updates daemon status every 10 messages.
+        """
+        # Check for daemon questions on startup
+        self._check_daemon_questions()
+
+        message_count = 0
+
+        while self.active:
+            try:
+                # Show prompt with Rich styling hint
+                self.console.print("\n[bold cyan]You:[/] ", end="")
+
+                # Get user input with prompt-toolkit
+                # (supports: ↑/↓ history, Tab completion, Shift+Enter multi-line)
+                user_input = self.prompt_session.prompt("")
+
+                if not user_input.strip():
+                    continue
+
+                # Check for exit commands
+                if user_input.lower() in ["/exit", "/quit", "exit", "quit"]:
+                    self._display_goodbye()
+                    break
+
+                # Check for help command
+                if user_input.lower() in ["/help", "help"]:
+                    self._display_help()
+                    continue
+
+                # Process input
+                response = self._process_input(user_input)
+
+                # Display response
+                self._display_response(response)
+
+                # Add to history
+                self.history.append({"role": "user", "content": user_input})
+                self.history.append({"role": "assistant", "content": response})
+
+                # Auto-save session after each interaction
+                self._save_session()
+
+                # Update status and check for daemon questions every 10 messages
+                message_count += 1
+                if message_count % 10 == 0:
+                    # Update daemon status
+                    old_status = self.daemon_status_text
+                    self._update_status_display()
+
+                    # Alert if status changed
+                    if old_status != self.daemon_status_text:
+                        self.console.print(f"\n[cyan]📊 Status Update: {self.daemon_status_text}[/]\n")
+
+                    # Check for new daemon questions
+                    self._check_daemon_questions()
+
+            except KeyboardInterrupt:
+                self.console.print("\n\n[yellow]Interrupted. Type /exit to quit.[/]")
+            except EOFError:
+                self._display_goodbye()
+                break
+            except Exception as e:
+                logger.error(f"Error in REPL loop: {e}", exc_info=True)
+                self.console.print(f"\n[red]Error: {e}[/]")
+
+    def _process_input(self, user_input: str) -> str:
+        """Process user input (command or natural language).
+
+        Routes input to appropriate handler based on whether it's
+        a slash command or natural language.
+
+        Args:
+            user_input: User input string
+
+        Returns:
+            Response message
+
+        Example:
+            >>> response = session._process_input("/help")
+            >>> response = session._process_input("What should we do next?")
+        """
+        # Check if it's a slash command
+        if user_input.startswith("/"):
+            return self._handle_command(user_input)
+        else:
+            # Natural language - use AI
+            return self._handle_natural_language(user_input)
+
+    def _handle_command(self, command: str) -> str:
+        """Handle slash command.
+
+        Parses command and arguments, then routes to appropriate
+        command handler.
+
+        Args:
+            command: Command string (e.g., "/add New Priority")
+
+        Returns:
+            Response message
+
+        Example:
+            >>> response = session._handle_command("/view 3")
+        """
+        # Parse command and args
+        parts = command.split(maxsplit=1)
+        cmd_name = parts[0][1:].lower()  # Remove '/'
+        args_str = parts[1] if len(parts) > 1 else ""
+        args = args_str.split() if args_str else []
+
+        logger.debug(f"Handling command: {cmd_name} with args: {args}")
+
+        # Handle daemon control commands
+        if cmd_name == "status":
+            return self._cmd_daemon_status()
+        elif cmd_name == "start":
+            return self._cmd_daemon_start()
+        elif cmd_name == "stop":
+            return self._cmd_daemon_stop()
+        elif cmd_name == "restart":
+            return self._cmd_daemon_restart()
+
+        # Get command handler for other commands
+        handler = get_command_handler(cmd_name)
+
+        if handler:
+            try:
+                return handler.execute(args, self.editor)
+            except Exception as e:
+                logger.error(f"Command execution failed: {e}", exc_info=True)
+                return f"❌ Command failed: {str(e)}"
+        else:
+            return f"❌ Unknown command: /{cmd_name}\n" f"Type /help to see available commands."
+
+    def _handle_natural_language(self, text: str) -> str:
+        """Handle natural language input with AI.
+
+        Uses AIService to process natural language and optionally
+        execute extracted actions. Supports streaming responses.
+
+        Args:
+            text: Natural language input
+
+        Returns:
+            Response message
+
+        Example:
+            >>> response = session._handle_natural_language(
+            ...     "Add a priority for authentication"
+            ... )
+        """
+        try:
+            # Build context from current roadmap
+            context = self._build_context()
+
+            logger.debug(f"Processing natural language: {text[:100]}...")
+
+            # Use streaming if enabled
+            if self.enable_streaming:
+                return self._handle_natural_language_stream(text, context)
+            else:
+                # Get AI response (blocking)
+                response = self.ai_service.process_request(
+                    user_input=text, context=context, history=self.history, stream=False
+                )
+
+                # If AI suggests an action, ask for confirmation
+                if response.action:
+                    action_desc = self._describe_action(response.action)
+                    confirmation = self.console.input(
+                        f"\n[yellow]Action suggested: {action_desc}[/]\n" f"[yellow]Execute this action? [y/n]:[/] "
+                    )
+
+                    if confirmation.lower() in ["y", "yes"]:
+                        result = self._execute_action(response.action)
+                        return f"{response.message}\n\n{result}"
+
+                return response.message
+
+        except Exception as e:
+            logger.error(f"Natural language processing failed: {e}", exc_info=True)
+            return f"❌ Sorry, I encountered an error: {str(e)}"
+
+    def _handle_natural_language_stream(self, text: str, context: Dict) -> str:
+        """Handle natural language with streaming response and daemon awareness.
+
+        Args:
+            text: Natural language input
+            context: Roadmap context
+
+        Returns:
+            Complete response message
+        """
+        try:
+            # Detect daemon-related commands
+            daemon_keywords = [
+                "ask daemon",
+                "tell daemon",
+                "daemon implement",
+                "daemon work on",
+                "daemon start working",
+                "daemon please",
+                "ask code_developer",
+                "tell code_developer",
+            ]
+
+            if any(keyword in text.lower() for keyword in daemon_keywords):
+                return self._send_command_to_daemon(text)
+
+            # Detect status queries
+            status_keywords = [
+                "daemon status",
+                "what is daemon doing",
+                "is daemon working",
+                "daemon progress",
+                "what's daemon working on",
+                "code_developer status",
+            ]
+
+            if any(keyword in text.lower() for keyword in status_keywords):
+                return self._cmd_daemon_status()
+
+            # Normal AI-powered response with streaming
+            # Show typing indicator briefly
+            with Live(
+                Spinner("dots", text="[cyan]Claude is thinking...[/]"), console=self.console, refresh_per_second=10
+            ):
+                # Brief pause for UX (let user see the indicator)
+                import time
+
+                time.sleep(0.3)
+
+            # Stream response
+            self.console.print("\n[bold green]Claude:[/] ", end="")
+
+            full_response = ""
+            for chunk in self.ai_service.process_request_stream(user_input=text, context=context, history=self.history):
+                self.console.print(chunk, end="")
+                full_response += chunk
+
+            self.console.print()  # Final newline
+
+            # TODO: Extract action from full_response if needed
+            # For now, streaming responses don't support actions
+
+            return full_response
+
+        except Exception as e:
+            logger.error(f"Streaming natural language processing failed: {e}", exc_info=True)
+            return f"❌ Sorry, I encountered an error: {str(e)}"
+
+    def _build_context(self) -> Dict:
+        """Build context dictionary from current roadmap.
+
+        Returns:
+            Context dictionary with roadmap summary
+
+        Example:
+            >>> context = session._build_context()
+            >>> print(context['roadmap_summary']['total'])
+            9
+        """
+        summary = self.editor.get_priority_summary()
+
+        return {
+            "roadmap_summary": summary,
+            "current_session": len(self.history),
+        }
+
+    def _describe_action(self, action: Dict) -> str:
+        """Describe an action in human-readable format.
+
+        Args:
+            action: Action dictionary
+
+        Returns:
+            Human-readable description
+
+        Example:
+            >>> desc = session._describe_action({
+            ...     'type': 'add_priority',
+            ...     'priority': '10',
+            ...     'title': 'Authentication'
+            ... })
+        """
+        action_type = action.get("type", "unknown")
+
+        if action_type == "add_priority":
+            return f"Add new priority: {action.get('title', 'Unknown')}"
+        elif action_type == "update_priority":
+            return (
+                f"Update {action.get('priority', 'Unknown')} "
+                f"{action.get('field', 'status')} to {action.get('value', 'Unknown')}"
+            )
+        elif action_type == "start_daemon":
+            return f"Start daemon on {action.get('priority', 'next priority')}"
+        else:
+            return f"Execute {action_type}"
+
+    def _execute_action(self, action: Dict) -> str:
+        """Execute an action extracted from AI response.
+
+        Args:
+            action: Action dictionary
+
+        Returns:
+            Result message
+
+        Example:
+            >>> result = session._execute_action({
+            ...     'type': 'update_priority',
+            ...     'priority': '3',
+            ...     'field': 'status',
+            ...     'value': '✅ Complete'
+            ... })
+        """
+        try:
+            action_type = action.get("type")
+
+            if action_type == "add_priority":
+                # Use add command
+                handler = get_command_handler("add")
+                if handler:
+                    title = action.get("title", "New Priority")
+                    return handler.execute([title], self.editor)
+
+            elif action_type == "update_priority":
+                # Use update command
+                handler = get_command_handler("update")
+                if handler:
+                    priority = action.get("priority", "")
+                    field = action.get("field", "status")
+                    value = action.get("value", "")
+                    return handler.execute([priority, field, value], self.editor)
+
+            return "❌ Action execution not implemented yet"
+
+        except Exception as e:
+            logger.error(f"Action execution failed: {e}", exc_info=True)
+            return f"❌ Failed to execute action: {str(e)}"
+
+    def _display_welcome(self):
+        """Display welcome message with rich formatting."""
+        features = (
+            "✨ [bold]New Features:[/] ✨\n"
+            "  • [cyan]Streaming responses[/] - Text appears progressively\n"
+            "  • [cyan]↑/↓[/] - Navigate input history\n"
+            "  • [cyan]Tab[/] - Auto-complete commands and priorities\n"
+            "  • [cyan]Shift+Enter[/] - Multi-line input\n"
+            "  • [cyan]Ctrl+R[/] - Reverse history search\n\n"
+        )
+
+        panel = Panel.fit(
+            "[bold cyan]Coffee Maker - AI Project Manager[/]\n\n"
+            "Powered by Claude AI - Your intelligent roadmap assistant\n\n"
+            f"{features}"
+            "Type [bold]/help[/] for commands or just chat naturally\n\n"
+            "[dim]Session started. Type /exit to quit.[/]",
+            title="🤖 Welcome",
+            border_style="cyan",
+        )
+        self.console.print(panel)
+
+        # Show daemon status
+        self.console.print(f"\n[cyan]{self.daemon_status_text}[/]")
+        self.console.print("[dim]Use /status for detailed info, /start to launch daemon, /stop to shut down[/]\n")
+
+    def _display_goodbye(self):
+        """Display goodbye message and save session."""
+        self.active = False
+        self._save_session()  # Final save on exit
+        self.console.print("\n[bold cyan]Thank you for using Coffee Maker Project Manager![/]")
+        self.console.print(f"[dim]Session saved ({len(self.history)} messages). All changes have been saved.[/]\n")
+
+    def _display_response(self, response: str):
+        """Display AI response with enhanced syntax highlighting.
+
+        Args:
+            response: Response text (supports markdown)
+
+        Example:
+            >>> session._display_response("**Success!** Priority added.")
+        """
+        self.console.print("\n[bold green]Claude:[/]")
+
+        # Extract and render code blocks with syntax highlighting
+        try:
+            self._display_response_with_syntax(response)
+        except Exception as e:
+            logger.warning(f"Syntax highlighting failed: {e}, falling back to markdown")
+            # Fallback to basic markdown
+            try:
+                md = Markdown(response)
+                self.console.print(md)
+            except Exception:
+                # Final fallback to plain text
+                self.console.print(response)
+
+    def _display_response_with_syntax(self, response: str):
+        """Display response with enhanced code syntax highlighting.
+
+        Args:
+            response: Response text with markdown code blocks
+        """
+        # Pattern to match code blocks: ```language\ncode\n```
+        code_block_pattern = r"```(\w+)?\n(.*?)```"
+
+        last_end = 0
+        parts = []
+
+        # Find all code blocks
+        for match in re.finditer(code_block_pattern, response, re.DOTALL):
+            # Add text before code block
+            if match.start() > last_end:
+                text_part = response[last_end : match.start()]
+                if text_part.strip():
+                    parts.append(("text", text_part))
+
+            # Add code block
+            language = match.group(1) or "python"  # Default to python
+            code = match.group(2).strip()
+            parts.append(("code", code, language))
+
+            last_end = match.end()
+
+        # Add remaining text after last code block
+        if last_end < len(response):
+            remaining = response[last_end:]
+            if remaining.strip():
+                parts.append(("text", remaining))
+
+        # Render parts
+        if not parts:
+            # No code blocks found, render as markdown
+            md = Markdown(response)
+            self.console.print(md)
+        else:
+            for part in parts:
+                if part[0] == "text":
+                    # Render text as markdown
+                    md = Markdown(part[1])
+                    self.console.print(md)
+                elif part[0] == "code":
+                    # Render code with syntax highlighting
+                    code, language = part[1], part[2]
+                    syntax = Syntax(
+                        code,
+                        language,
+                        theme="monokai",
+                        line_numbers=True,
+                        word_wrap=False,
+                    )
+                    self.console.print(syntax)
+
+    def _display_help(self):
+        """Display help with all available commands."""
+        table = Table(
+            title="Available Commands",
+            show_header=True,
+            header_style="bold cyan",
+        )
+        table.add_column("Command", style="cyan", no_wrap=True)
+        table.add_column("Description", style="white")
+
+        # Get all registered commands
+        commands = list_commands()
+
+        # Add commands to table
+        for name, handler in sorted(commands.items()):
+            table.add_row(f"/{name}", handler.description)
+
+        # Add built-in commands
+        table.add_row("/help", "Show this help message")
+        table.add_row("/exit", "Exit chat session")
+
+        self.console.print(table)
+        self.console.print("\n[italic]You can also use natural language![/]")
+        self.console.print('[dim]Example: "Add a priority for user authentication"[/]\n')
+
+    def _send_command_to_daemon(self, command: str) -> str:
+        """Send command to daemon via notifications.
+
+        Args:
+            command: Natural language command for daemon
+
+        Returns:
+            Confirmation message
+        """
+        # Check if daemon is running
+        if not self.process_manager.is_daemon_running():
+            return (
+                "⚠️  **Daemon Not Running**\n\n"
+                "I can't send commands to the daemon because it's not running.\n\n"
+                "Would you like me to start it? Use `/start` to launch the daemon."
+            )
+
+        # Create notification for daemon
+        notif_id = self.notif_db.create_notification(
+            type="command",
+            title="Command from project-manager",
+            message=command,
+            priority=NOTIF_PRIORITY_HIGH,
+            context={"timestamp": datetime.now().isoformat(), "source": "project_manager_chat"},
+        )
+
+        return (
+            f"✅ **Command Sent to Daemon** (Notification #{notif_id})\n\n"
+            f"Your message has been delivered to code_developer.\n\n"
+            f"⏰ **Response Time**: He may take 12+ hours to respond.\n"
+            f"   Like a human developer, he needs focus time and rest periods.\n\n"
+            f"💡 **Tip**: Use `/notifications` to check for his response later."
+        )
+
+    def _check_daemon_questions(self):
+        """Check for pending questions from daemon and display them."""
+        try:
+            questions = self.notif_db.get_pending_notifications()
+
+            # Filter for questions from daemon (type="question")
+            daemon_questions = [q for q in questions if q.get("type") == "question"]
+
+            if daemon_questions:
+                self.console.print("\n[yellow]📋 Daemon Has Questions:[/]\n")
+
+                for q in daemon_questions[:5]:  # Show top 5
+                    created = q.get("created_at", "Unknown time")
+                    self.console.print(f"  [bold]#{q['id']}[/]: {q['title']}")
+                    self.console.print(f"  [dim]{created}[/]")
+                    # Truncate message if too long
+                    msg = q["message"]
+                    if len(msg) > 100:
+                        msg = msg[:100] + "..."
+                    self.console.print(f"  {msg}")
+                    self.console.print()
+
+                if len(daemon_questions) > 5:
+                    self.console.print(f"[dim]  ...and {len(daemon_questions) - 5} more[/]\n")
+
+                self.console.print("[dim]Use /notifications to view and respond[/]\n")
+
+        except Exception as e:
+            logger.error(f"Failed to check daemon questions: {e}")
+
+    def _load_roadmap_context(self):
+        """Load roadmap context at session start.
+
+        Loads roadmap summary and displays brief status.
+        """
+        try:
+            summary = self.editor.get_priority_summary()
+
+            self.console.print(
+                f"\n[dim]Loaded roadmap: {summary['total']} priorities "
+                f"({summary['completed']} completed, "
+                f"{summary['in_progress']} in progress, "
+                f"{summary['planned']} planned)[/]\n"
+            )
+
+        except Exception as e:
+            logger.warning(f"Failed to load roadmap context: {e}")
+            self.console.print("\n[yellow]Warning: Could not load roadmap summary[/]\n")

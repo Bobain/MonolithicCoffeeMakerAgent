@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "coffee_maker"
-version = "0.1.1"
+version = "0.1.2"
 description = "An agent that roast, grind, brew and serve your coffee. or not..."
 authors = ["Bobain and some code agents"]
 license = "Apache 2.0"
@@ -21,6 +21,9 @@ langfuse = {version = "^3.5.2", extras = ["langchain"]}
 langchain = {extras = ["anthropic", "community", "core", "google-genai", "openai"], version = "^0.3.27"}
 langchain-core = "^0.3.78"
 google = "^3.0.0"
+prompt-toolkit = "^3.0.47"
+Pygments = "^2.18.0"
+anthropic = "^0.40.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
@@ -33,6 +36,7 @@ pdoc = "^15.0.4"
 
 [tool.poetry.scripts]
 project-manager = "coffee_maker.cli.roadmap_cli:main"
+code-developer = "coffee_maker.autonomous.daemon_cli:main"
 
 [tool.poetry.urls]
 "Homepage" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"
@@ -44,7 +48,11 @@ project-manager = "coffee_maker.cli.roadmap_cli:main"
 markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
     "slow: marks tests as slow running tests (deselect with '-m \"not slow\"')",
+    "manual: marks tests as manual-only (never run in CI, only on user demand)",
 ]
+# Exclude manual tests from automatic test discovery
+testpaths = ["tests"]
+norecursedirs = ["tests/manual_tests", "*.egg", ".git", ".tox", "dist", "build"]
 
 [build-system]
 requires = ["poetry-core"]

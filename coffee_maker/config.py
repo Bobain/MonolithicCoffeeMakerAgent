@@ -6,7 +6,77 @@ This module contains global configuration constants used throughout the project.
 ⚠️ CRITICAL PATHS - DO NOT MODIFY THESE WITHOUT UNDERSTANDING IMPACT
 """
 
+import os
+import re
 from pathlib import Path
+
+
+# ============================================================================
+# ENVIRONMENT LOADING - Load .env file with export support
+# ============================================================================
+#
+# ⚠️ SECURITY WARNING: NEVER COMMIT .env FILES TO GIT
+#
+# The .env file contains sensitive API keys and secrets.
+# - .env is already in .gitignore (DO NOT REMOVE)
+# - Use .env.example as a template (safe to commit)
+# - Each developer must create their own .env file locally
+#
+# If you accidentally commit .env:
+# 1. Immediately revoke all API keys in the file
+# 2. Remove from git history: git rm --cached .env
+# 3. Create new API keys
+# 4. Update your local .env with new keys
+#
+# ============================================================================
+
+
+def load_env_with_exports(env_file: Path = None) -> None:
+    """Load environment variables from .env file, handling 'export' keyword.
+
+    This custom loader supports both formats:
+    - Standard: VARIABLE="value"
+    - Shell export: export VARIABLE="value"
+
+    ⚠️ SECURITY: The .env file is in .gitignore and should NEVER be committed.
+
+    Args:
+        env_file: Path to .env file (defaults to PROJECT_ROOT/.env)
+    """
+    if env_file is None:
+        env_file = Path(__file__).parent.parent / ".env"
+
+    if not env_file.exists():
+        return  # .env is optional
+
+    try:
+        with open(env_file, "r") as f:
+            for line in f:
+                line = line.strip()
+
+                # Skip empty lines and comments
+                if not line or line.startswith("#"):
+                    continue
+
+                # Handle export keyword
+                if line.startswith("export "):
+                    line = line[7:]  # Remove "export "
+
+                # Parse KEY="VALUE" or KEY=VALUE
+                match = re.match(r'^([A-Z_][A-Z0-9_]*)=["\']?([^"\']*)["\']?$', line)
+                if match:
+                    key, value = match.groups()
+                    os.environ[key] = value
+
+    except Exception as e:
+        # Don't fail if .env can't be loaded
+        import logging
+
+        logging.warning(f"Could not load .env file: {e}")
+
+
+# Load environment variables from .env
+load_env_with_exports()
 
 # Project root directory
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -100,21 +170,33 @@ def validate_single_roadmap() -> None:
 
     This function ensures that no alternative roadmap files have been created.
     It's called during import to catch issues early.
+
+    Allowed roadmap-related files:
+    - ROADMAP.md (the single source of truth)
+    - ROADMAP_OVERVIEW.md (high-level summary documentation)
     """
 
     # Search for any file with "roadmap" in the name (case insensitive)
     roadmap_files = list(DOCS_DIR.glob("*[Rr][Oo][Aa][Dd][Mm][Aa][Pp]*.md"))
 
-    # Filter out the official ROADMAP.md
-    unofficial_roadmaps = [f for f in roadmap_files if f != ROADMAP_PATH]
+    # Whitelist of allowed roadmap-related files
+    allowed_roadmap_files = {
+        ROADMAP_PATH,  # The single source of truth
+        DOCS_DIR / "ROADMAP_OVERVIEW.md",  # High-level summary documentation
+    }
+
+    # Filter out allowed files
+    unofficial_roadmaps = [f for f in roadmap_files if f not in allowed_roadmap_files]
 
     if unofficial_roadmaps:
         files_list = "\n".join(f"  - {f.relative_to(PROJECT_ROOT)}" for f in unofficial_roadmaps)
         raise RuntimeError(
-            f"ERROR: Multiple roadmap files detected!\n\n"
-            f"Only {ROADMAP_PATH.relative_to(PROJECT_ROOT)} is allowed.\n\n"
+            f"ERROR: Unauthorized roadmap files detected!\n\n"
+            f"Only these files are allowed:\n"
+            f"  - docs/ROADMAP.md (source of truth)\n"
+            f"  - docs/ROADMAP_OVERVIEW.md (summary documentation)\n\n"
             f"Found unauthorized roadmap files:\n{files_list}\n\n"
-            f"Please delete these files and use only the official ROADMAP.md.\n"
+            f"Please delete these files and use only the official files.\n"
             f"See docs/README_DOCS.md for documentation guidelines."
         )
 

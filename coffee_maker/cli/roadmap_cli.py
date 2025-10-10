@@ -49,6 +49,20 @@ from coffee_maker.cli.notifications import (
 )
 from coffee_maker.config import ROADMAP_PATH
 
+# Import chat components for Phase 2
+try:
+    from coffee_maker.cli.ai_service import AIService
+    from coffee_maker.cli.chat_interface import ChatSession
+    from coffee_maker.cli.roadmap_editor import RoadmapEditor
+
+    # Import all command handlers to register them
+    from coffee_maker.cli.commands import all_commands  # noqa: F401
+
+    CHAT_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Chat features not available: {e}")
+    CHAT_AVAILABLE = False
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -237,14 +251,62 @@ def cmd_sync(args):
     return 0
 
 
+def cmd_chat(args):
+    """Start interactive chat session with AI (Phase 2).
+
+    Args:
+        args: Parsed command-line arguments
+    """
+    if not CHAT_AVAILABLE:
+        print("❌ Chat feature not available")
+        print("\nMissing dependencies or ANTHROPIC_API_KEY not set.")
+        print("\nPlease ensure:")
+        print("  1. All dependencies are installed: poetry install")
+        print("  2. ANTHROPIC_API_KEY is set in .env file")
+        return 1
+
+    try:
+        # Initialize components
+        editor = RoadmapEditor(ROADMAP_PATH)
+        ai_service = AIService()
+
+        # Check AI service availability
+        if not ai_service.check_available():
+            print("❌ AI service not available")
+            print("\nPlease check:")
+            print("  - ANTHROPIC_API_KEY is valid")
+            print("  - Internet connection is active")
+            return 1
+
+        # Start chat session
+        session = ChatSession(ai_service, editor)
+        session.start()
+
+        return 0
+
+    except ValueError as e:
+        print(f"❌ Configuration error: {e}")
+        print("\nPlease set ANTHROPIC_API_KEY in your .env file")
+        return 1
+    except Exception as e:
+        logger.error(f"Chat session failed: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return 1
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         prog="project-manager",
-        description="Coffee Maker Agent - Project Manager CLI (MVP Phase 1)",
+        description="Coffee Maker Agent - Project Manager CLI with AI (Phase 2)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Start interactive AI chat (Phase 2) ⭐ NEW
+  project-manager chat
+
   # View full roadmap
   project-manager view
 
@@ -262,18 +324,20 @@ Examples:
   # Check daemon status
   project-manager status
 
-MVP Phase 1 (Current):
+Phase 1 (Complete):
   ✅ View roadmap (read-only)
   ✅ List notifications
   ✅ Respond to notifications
-  ⏳ Daemon status (placeholder)
-  ⏳ Sync (placeholder)
+  ✅ Basic CLI commands
 
-Phase 2 (Future):
-  - Claude AI integration
-  - Rich terminal UI
-  - Roadmap editing
-  - Slack integration
+Phase 2 (Current): ⭐ NEW
+  ✅ Interactive AI chat session
+  ✅ Natural language roadmap management
+  ✅ Rich terminal UI
+  ✅ Intelligent roadmap analysis
+  ✅ Command handlers (/add, /update, /view, /analyze)
+
+Use 'project-manager chat' for the best experience!
         """,
     )
 
@@ -297,6 +361,9 @@ Phase 2 (Future):
     # Sync command
     subparsers.add_parser("sync", help="Sync with daemon environment")
 
+    # Chat command (Phase 2)
+    subparsers.add_parser("chat", help="Start interactive AI chat session (Phase 2)")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -310,6 +377,7 @@ Phase 2 (Future):
         "notifications": cmd_notifications,
         "respond": cmd_respond,
         "sync": cmd_sync,
+        "chat": cmd_chat,  # Phase 2
     }
 
     handler = commands.get(args.command)
