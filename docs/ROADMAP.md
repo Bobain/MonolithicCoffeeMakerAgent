@@ -457,40 +457,85 @@ Every user story needs a Definition of Done (DoD) to ensure quality and complete
 4. User validates and confirms
 
 **Integration with US-012**:
-This feature enhances the `/US` command workflow (US-012). After user describes their need, PM should:
-- Extract user story structure (US-012)
-- **Infer Definition of Done from description (US-013)** ← New
-- Present both for validation
-- User validates and refines
-- Propagate to ROADMAP with complete DoD
+This feature enhances the `/US` command workflow (US-012). When user describes their need, PM should:
+1. Extract user story structure (US-012)
+2. **Check for similar existing user stories (US-013)** ← New
+3. **Check if already shipped or partially done (US-013)** ← New
+4. **Identify what's missing if partially done (US-013)** ← New
+5. **Rephrase findings for user validation (US-013)** ← New
+6. User validates the user story itself first
+7. **ONLY THEN infer Definition of Done (US-013)** ← New
+8. Present DoD for validation
+9. User validates DoD
+10. Propagate to ROADMAP with complete DoD
 
-**Workflow**:
+**Workflow (Complete with Similarity Check)**:
 ```
 User: "/US I want email notifications when daemon finishes tasks"
 
-PM: "I've extracted this user story:
+PM: "I'm checking if this already exists or is similar to something we have...
+
+Found: US-009 includes notification system, but no email support.
+
+I see three options:
+A) Enhance US-009 to add email notifications (already 60% done)
+B) Create new US-XXX for email-specific notifications
+C) US-009 is complete; email is already working (please test)
+
+Which approach would you prefer?"
+
+User: "Create new US, separate from US-009"
+
+PM: "Got it! Here's the user story I've extracted:
 
 **US-XXX: Email Notifications on Task Completion**
-[... user story details ...]
+
+**As a**: User
+**I want**: Email notifications when code_developer completes tasks
+**So that**: I stay informed without checking manually
+
+**Business Value**: ⭐⭐⭐⭐ (High - reduces manual monitoring)
+**Estimated Effort**: 3-5 days (email service, templates, config)
+
+Is this user story correct? Any changes?"
+
+User: "Yes, and also when daemon asks questions"
+
+PM: "Updated user story:
+
+**US-XXX: Email & Question Notifications**
+
+**As a**: User
+**I want**: Email notifications when code_developer completes tasks OR asks questions
+**So that**: I stay informed and can respond quickly
+
+**Business Value**: ⭐⭐⭐⭐⭐ (Critical - enables async workflow)
+**Estimated Effort**: 4-6 days (notification triggers, email templates, config)
+
+Now let me infer the Definition of Done...
 
 **Definition of Done** (inferred from your description):
 - [ ] Email sent when code_developer completes a task
+- [ ] Email sent when code_developer asks a question
 - [ ] Email includes task summary and results
-- [ ] User can configure notification preferences
-- [ ] Email delivered within 1 minute of completion
+- [ ] Email includes question context and link
+- [ ] User can configure notification preferences (frequency, types)
+- [ ] Email delivered within 1 minute of event
 - [ ] Tests verify email sending works
 - [ ] Documentation shows how to configure
 
-Do you have a different Definition of Done in mind, or does this look good?"
+Does this Definition of Done look good, or do you have different criteria?"
 
-User: "Add: Email should include link to PR"
+User: "Add: Email should include link to PR when task completes"
 
 PM: "Updated DoD:
 - [ ] Email sent when code_developer completes a task
-- [ ] Email includes task summary and PR link ← Added
-- [ ] Email includes results
+- [ ] Email includes PR link when task completes ← Added
+- [ ] Email sent when code_developer asks a question
+- [ ] Email includes task summary and results
+- [ ] Email includes question context and link
 - [ ] User can configure notification preferences
-- [ ] Email delivered within 1 minute of completion
+- [ ] Email delivered within 1 minute of event
 - [ ] Tests verify email sending works
 - [ ] Documentation shows how to configure
 
@@ -498,35 +543,53 @@ Is this correct now?"
 
 User: "Yes, perfect"
 
-PM: "✅ Added US-XXX to ROADMAP with complete Definition of Done"
+PM: "✅ Added US-XXX: Email & Question Notifications to ROADMAP with complete Definition of Done"
 ```
 
 **Implementation Approach**:
 
-**Phase 1: DoD Inference** (1-2 hours)
+**Phase 1: Similarity Check & User Story Validation** (2-3 hours)
 1. When user provides US description via `/US` command
-2. PM analyzes description to extract implicit success criteria
+2. PM searches ROADMAP for similar user stories
+3. PM checks if request is already shipped (completed user stories)
+4. PM identifies what's missing if partially done
+5. PM presents findings with options:
+   - Create new user story
+   - Enhance existing user story
+   - Already complete (user should test)
+6. User validates and chooses approach
+7. PM extracts/refines user story structure
+8. User validates the user story itself (before DoD)
+
+**Phase 2: DoD Inference** (1-2 hours)
+1. ONLY AFTER user story is validated, PM infers DoD
+2. PM analyzes validated description to extract implicit success criteria
 3. PM generates DoD checklist based on:
    - Functional requirements mentioned
    - Standard quality criteria (tests, docs, validation)
    - Non-functional requirements (performance, security if applicable)
 
-**Phase 2: DoD Validation** (1 hour)
+**Phase 3: DoD Validation** (1 hour)
 1. PM presents inferred DoD to user
-2. PM asks: "Do you have a different Definition of Done in mind?"
+2. PM asks: "Does this Definition of Done look good, or do you have different criteria?"
 3. User can:
    - Accept as-is
    - Request modifications
    - Provide their own DoD completely
 4. Iterative refinement until user confirms
 
-**Phase 3: DoD Storage** (30 min)
+**Phase 4: DoD Storage** (30 min)
 1. Store validated DoD with user story in ROADMAP
 2. Ensure DoD is visible and checkable
 3. Use checklist format for tracking completion
 
 **Acceptance Criteria** (Definition of Done):
-- [ ] PM infers DoD from user's description during `/US` workflow
+- [ ] PM checks for similar existing user stories before creating new one
+- [ ] PM checks if request is already shipped (in completed user stories)
+- [ ] PM identifies what's missing if partially done
+- [ ] PM presents findings and options to user (new, enhance, or already done)
+- [ ] User validates the user story structure BEFORE DoD work begins
+- [ ] ONLY AFTER user story validation, PM infers DoD from description
 - [ ] Inferred DoD includes functional criteria (what the feature does)
 - [ ] Inferred DoD includes quality criteria (tests, docs, validation)
 - [ ] PM asks user if they have a different DoD in mind
@@ -537,11 +600,16 @@ PM: "✅ Added US-XXX to ROADMAP with complete Definition of Done"
 
 **Technical Foundation**:
 - `AIService` can analyze user descriptions and extract success criteria
+- `RoadmapEditor.get_user_story_summary()` - List all user stories for similarity check
 - ROADMAP.md already has DoD sections in user stories
 - Chat interface supports conversational validation
 - Section 6 of COLLABORATION_METHODOLOGY.md defines DoD template
 
-**Estimated Effort**: 2-3 hours (integrated with US-012 implementation)
+**Estimated Effort**: 5-7 hours (integrated with US-012 implementation)
+- Phase 1 (Similarity Check): 2-3 hours
+- Phase 2 (DoD Inference): 1-2 hours
+- Phase 3 (DoD Validation): 1 hour
+- Phase 4 (DoD Storage): 30 min
 
 **Dependencies**: US-012 (part of same `/US` command workflow)
 
