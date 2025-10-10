@@ -115,6 +115,18 @@ Note: This is a temporary script. After PRIORITY 3 is complete,
     )
 
     parser.add_argument(
+        "--use-cli",
+        action="store_true",
+        help="Use Claude CLI instead of Anthropic API (default: auto-detect)",
+    )
+
+    parser.add_argument(
+        "--claude-path",
+        default="/opt/homebrew/bin/claude",
+        help="Path to claude CLI executable (default: /opt/homebrew/bin/claude)",
+    )
+
+    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -131,21 +143,38 @@ Note: This is a temporary script. After PRIORITY 3 is complete,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # Check for required environment variables
+    # Auto-detect mode: CLI vs API
     import os
+    import shutil
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("=" * 70)
-        print("❌ ERROR: ANTHROPIC_API_KEY not set!")
-        print("=" * 70)
-        print("\nThe daemon requires an Anthropic API key to function.")
-        print("\n🔧 SOLUTION:")
-        print("  1. Get your API key from: https://console.anthropic.com/")
-        print("  2. Set the environment variable:")
-        print("     export ANTHROPIC_API_KEY='your-api-key-here'")
-        print("  3. Run the daemon again")
-        print("\n" + "=" * 70 + "\n")
-        sys.exit(1)
+    use_claude_cli = args.use_cli  # Explicit flag takes precedence
+
+    if not use_claude_cli:
+        # Auto-detect: prefer CLI if API key not available
+        has_api_key = bool(os.environ.get("ANTHROPIC_API_KEY"))
+        has_cli = shutil.which("claude") or os.path.exists(args.claude_path)
+
+        if not has_api_key and has_cli:
+            print("=" * 70)
+            print("ℹ️  Auto-detected: Using Claude CLI (no API key found)")
+            print("=" * 70)
+            use_claude_cli = True
+        elif not has_api_key and not has_cli:
+            print("=" * 70)
+            print("❌ ERROR: No Claude access available!")
+            print("=" * 70)
+            print("\nThe daemon requires either:")
+            print("  1. Anthropic API key (for API mode), OR")
+            print("  2. Claude CLI installed (for CLI mode)")
+            print("\n🔧 SOLUTION 1 (API Mode):")
+            print("  1. Get your API key from: https://console.anthropic.com/")
+            print("  2. Set the environment variable:")
+            print("     export ANTHROPIC_API_KEY='your-api-key-here'")
+            print("\n🔧 SOLUTION 2 (CLI Mode - Recommended):")
+            print("  1. Install Claude CLI from: https://claude.ai/")
+            print("  2. Run with: python run_daemon.py --use-cli")
+            print("\n" + "=" * 70 + "\n")
+            sys.exit(1)
 
     # Check if running inside Claude session (warning only, not blocking)
     if check_claude_session():
@@ -166,6 +195,7 @@ Note: This is a temporary script. After PRIORITY 3 is complete,
     print(f"Mode: {'Autonomous (auto-approve)' if args.auto_approve else 'Interactive (requires approval)'}")
     print(f"PRs: {'Disabled' if args.no_pr else 'Enabled'}")
     print(f"Model: {args.model}")
+    print(f"Claude: {'CLI' if use_claude_cli else 'API'}")
     print("=" * 70)
     print("\nStarting daemon... (Press Ctrl+C to stop)\n")
 
@@ -176,6 +206,8 @@ Note: This is a temporary script. After PRIORITY 3 is complete,
             create_prs=not args.no_pr,
             sleep_interval=args.sleep,
             model=args.model,
+            use_claude_cli=use_claude_cli,
+            claude_cli_path=args.claude_path,
         )
 
         daemon.run()
