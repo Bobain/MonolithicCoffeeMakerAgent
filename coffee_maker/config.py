@@ -100,21 +100,33 @@ def validate_single_roadmap() -> None:
 
     This function ensures that no alternative roadmap files have been created.
     It's called during import to catch issues early.
+
+    Allowed roadmap-related files:
+    - ROADMAP.md (the single source of truth)
+    - ROADMAP_OVERVIEW.md (high-level summary documentation)
     """
 
     # Search for any file with "roadmap" in the name (case insensitive)
     roadmap_files = list(DOCS_DIR.glob("*[Rr][Oo][Aa][Dd][Mm][Aa][Pp]*.md"))
 
-    # Filter out the official ROADMAP.md
-    unofficial_roadmaps = [f for f in roadmap_files if f != ROADMAP_PATH]
+    # Whitelist of allowed roadmap-related files
+    allowed_roadmap_files = {
+        ROADMAP_PATH,  # The single source of truth
+        DOCS_DIR / "ROADMAP_OVERVIEW.md",  # High-level summary documentation
+    }
+
+    # Filter out allowed files
+    unofficial_roadmaps = [f for f in roadmap_files if f not in allowed_roadmap_files]
 
     if unofficial_roadmaps:
         files_list = "\n".join(f"  - {f.relative_to(PROJECT_ROOT)}" for f in unofficial_roadmaps)
         raise RuntimeError(
-            f"ERROR: Multiple roadmap files detected!\n\n"
-            f"Only {ROADMAP_PATH.relative_to(PROJECT_ROOT)} is allowed.\n\n"
+            f"ERROR: Unauthorized roadmap files detected!\n\n"
+            f"Only these files are allowed:\n"
+            f"  - docs/ROADMAP.md (source of truth)\n"
+            f"  - docs/ROADMAP_OVERVIEW.md (summary documentation)\n\n"
             f"Found unauthorized roadmap files:\n{files_list}\n\n"
-            f"Please delete these files and use only the official ROADMAP.md.\n"
+            f"Please delete these files and use only the official files.\n"
             f"See docs/README_DOCS.md for documentation guidelines."
         )
 

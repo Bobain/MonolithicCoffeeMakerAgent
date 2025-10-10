@@ -3,9 +3,12 @@
 This module provides the command-line interface for the code-developer daemon.
 
 Usage:
-    code-developer                      # Interactive mode (asks for approval)
-    code-developer --auto-approve       # Auto-approve mode (autonomous)
+    code-developer                      # Interactive mode (Claude CLI, default)
+    code-developer --auto-approve       # Autonomous mode (Claude CLI, default)
+    code-developer --use-api            # Use Anthropic API instead (requires credits)
     code-developer --help               # Show help
+
+By default, the daemon uses Claude CLI (subscription). Use --use-api for Anthropic API mode.
 """
 
 import argparse
@@ -56,12 +59,13 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  code-developer                      # Interactive mode
-  code-developer --auto-approve       # Autonomous mode
+  code-developer                      # Interactive mode (Claude CLI, default)
+  code-developer --auto-approve       # Autonomous mode (Claude CLI, default)
+  code-developer --use-api            # Use Anthropic API instead (requires credits)
   code-developer --no-pr              # Skip PR creation
 
-The daemon reads your ROADMAP.md file and autonomously implements features
-using the Anthropic API (Claude).
+The daemon reads your ROADMAP.md file and autonomously implements features.
+By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API mode.
         """,
     )
 
@@ -79,6 +83,18 @@ using the Anthropic API (Claude).
 
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging output")
 
+    parser.add_argument(
+        "--use-api",
+        action="store_true",
+        help="Use Anthropic API instead of Claude CLI (requires API credits)",
+    )
+
+    parser.add_argument(
+        "--claude-path",
+        default="/opt/homebrew/bin/claude",
+        help="Path to claude CLI executable (default: /opt/homebrew/bin/claude)",
+    )
+
     args = parser.parse_args()
 
     # Setup logging
@@ -87,19 +103,46 @@ using the Anthropic API (Claude).
         level=log_level, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
 
-    # Check for required environment variables
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("=" * 70)
-        print("❌ ERROR: ANTHROPIC_API_KEY not set!")
-        print("=" * 70)
-        print("\nThe daemon requires an Anthropic API key to function.")
-        print("\n🔧 SOLUTION:")
-        print("  1. Get your API key from: https://console.anthropic.com/")
-        print("  2. Set the environment variable:")
-        print("     export ANTHROPIC_API_KEY='your-api-key-here'")
-        print("  3. Run the daemon again")
-        print("\n" + "=" * 70 + "\n")
-        sys.exit(1)
+    # Determine mode: CLI is default, API requires --use-api flag
+    use_cli_mode = not args.use_api
+
+    # Check for required prerequisites based on mode
+    if use_cli_mode:
+        # CLI mode (default) - Check if Claude CLI is available
+        if not os.path.isfile(args.claude_path):
+            print("=" * 70)
+            print("⚠️  Claude CLI not found (default mode)")
+            print("=" * 70)
+            print(f"\nClaude CLI not found at: {args.claude_path}")
+            print("\nThe daemon uses Claude CLI by default (uses your Claude subscription).")
+            print("\n📋 CHOOSE AN OPTION:")
+            print("\n  Option A: Install Claude CLI (Recommended)")
+            print("  ─────────────────────────────────────────")
+            print("    1. Install from: https://docs.claude.com/docs/claude-cli")
+            print("    2. Verify: claude --version")
+            print("    3. Run: code-developer --auto-approve")
+            print("\n  Option B: Use Anthropic API (Requires Credits)")
+            print("  ───────────────────────────────────────────────")
+            print("    1. Get API key: https://console.anthropic.com/")
+            print("    2. Set: export ANTHROPIC_API_KEY='your-key'")
+            print("    3. Run: code-developer --use-api --auto-approve")
+            print("\n" + "=" * 70 + "\n")
+            sys.exit(1)
+    else:
+        # API mode (--use-api flag) - Check if API key is set
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            print("=" * 70)
+            print("❌ ERROR: ANTHROPIC_API_KEY not set!")
+            print("=" * 70)
+            print("\nYou're using --use-api but ANTHROPIC_API_KEY is not set.")
+            print("\n🔧 SOLUTION:")
+            print("  1. Get your API key from: https://console.anthropic.com/")
+            print("  2. Set the environment variable:")
+            print("     export ANTHROPIC_API_KEY='your-api-key-here'")
+            print("  3. Run the daemon again with --use-api")
+            print("\nOR remove --use-api to use Claude CLI (default, no API key needed)")
+            print("\n" + "=" * 70 + "\n")
+            sys.exit(1)
 
     # Check if running inside Claude session (warning only, not blocking)
     if check_claude_session():
@@ -119,6 +162,7 @@ using the Anthropic API (Claude).
     print(f"Roadmap: {args.roadmap}")
     print(f"Mode: {'Autonomous (auto-approve)' if args.auto_approve else 'Interactive (requires approval)'}")
     print(f"PRs: {'Disabled' if args.no_pr else 'Enabled'}")
+    print(f"Backend: {'Claude CLI (subscription)' if use_cli_mode else 'Anthropic API (credits)'}")
     print(f"Model: {args.model}")
     print("=" * 70)
     print("\nStarting daemon... (Press Ctrl+C to stop)\n")
@@ -130,6 +174,8 @@ using the Anthropic API (Claude).
             create_prs=not args.no_pr,
             sleep_interval=args.sleep,
             model=args.model,
+            use_claude_cli=use_cli_mode,
+            claude_cli_path=args.claude_path,
         )
 
         daemon.run()

@@ -67,6 +67,8 @@ class DevDaemon:
         create_prs: bool = True,
         sleep_interval: int = 30,
         model: str = "claude-sonnet-4",
+        use_claude_cli: bool = False,
+        claude_cli_path: str = "/opt/homebrew/bin/claude",
     ):
         """Initialize development daemon.
 
@@ -76,17 +78,30 @@ class DevDaemon:
             create_prs: Create pull requests automatically
             sleep_interval: Seconds between iterations (default: 30)
             model: Claude model to use (default: claude-sonnet-4)
+            use_claude_cli: Use Claude CLI instead of Anthropic API (default: False)
+            claude_cli_path: Path to claude CLI executable (default: /opt/homebrew/bin/claude)
         """
         self.roadmap_path = Path(roadmap_path)
         self.auto_approve = auto_approve
         self.create_prs = create_prs
         self.sleep_interval = sleep_interval
         self.model = model
+        self.use_claude_cli = use_claude_cli
 
         # Initialize components
         self.parser = RoadmapParser(str(self.roadmap_path))
         self.git = GitManager()
-        self.claude = ClaudeAPI(model=self.model)
+
+        # Choose between CLI and API based on flag
+        if use_claude_cli:
+            from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+
+            self.claude = ClaudeCLIInterface(claude_path=claude_cli_path, model=model)
+            logger.info("✅ Using Claude CLI mode (subscription)")
+        else:
+            self.claude = ClaudeAPI(model=model)
+            logger.info("✅ Using Claude API mode (requires credits)")
+
         self.notifications = NotificationDB()
 
         # State

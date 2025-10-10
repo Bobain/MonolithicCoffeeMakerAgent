@@ -4224,12 +4224,14 @@ Use natural language in the chat interface:
 
 ### Backlog Statistics
 
-- **Total Stories**: 4
+- **Total Stories**: 6
 - **Backlog**: 2
 - **Critical**: 1 (US-004 - blocking daemon)
 - **In Discussion**: 0
 - **Ready**: 0
 - **Assigned**: 1
+- **Partial**: 2 (US-005 - roadmap summary; US-006 - chat UI polish)
+- **Sprint 7**: 2 (US-004 - Claude CLI; US-006 - Chat UX)
 - **Complete**: 0
 
 ---
@@ -4517,39 +4519,649 @@ tests:
 - US-001 (GCP Deploy) - will also need Claude CLI mode for cloud
 - US-003 (PR Tracking) - daemon PRs will use Claude CLI
 
+**Technical Feasibility Investigation** ✅ **CONFIRMED**:
+
+Investigation conducted on 2025-10-10 - Claude CLI programmatic usage **CONFIRMED WORKING**:
+
+```bash
+# Test 1: Basic programmatic usage
+$ echo "What is 2+2? Respond with just the number." | claude -p
+4
+
+# Test 2: Verify claude path
+$ which claude
+/opt/homebrew/bin/claude
+
+# Test 3: Review available options
+$ claude --help
+# Key options found:
+#   -p, --print               Non-interactive output
+#   --dangerously-skip-permissions  Skip permission dialogs
+#   --output-format          text, json, stream-json
+#   --model                  Specify Claude model
+#   --add-dir                Add directories for tool access
+```
+
+✅ **Verdict**: Claude CLI can be used programmatically via subprocess with pipes.
+
+---
+
 **Implementation Approach**:
 
-1. **Create Claude CLI Interface** (`coffee_maker/autonomous/claude_cli_interface.py`):
+### 1. Create ClaudeCLIInterface Class
+
+**File**: `coffee_maker/autonomous/claude_cli_interface.py` (~250 lines)
+
+This class implements the **same interface** as `ClaudeAPI` so they can be used interchangeably:
+
 ```python
+"""Claude CLI Interface - Use Claude via CLI instead of API."""
+
+import json
+import logging
+import os
+import subprocess
+from dataclasses import dataclass
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class APIResult:
+    """Result from Claude execution (CLI or API).
+
+    This matches the ClaudeAPI.APIResult format so both interfaces
+    can be used interchangeably.
+    """
+    content: str
+    model: str
+    usage: dict  # {"input_tokens": 0, "output_tokens": 0}
+    stop_reason: str
+    error: Optional[str] = None
+
+    @property
+    def success(self) -> bool:
+        """Check if request succeeded."""
+        return self.error is None
+
+
 class ClaudeCLIInterface:
-    """Interface to Claude via CLI instead of API."""
+    """Interface to Claude via CLI instead of Anthropic API.
+
+    Provides the same interface as ClaudeAPI but uses Claude CLI,
+    allowing use of Claude subscription instead of API credits.
+
+    Key Methods (matching ClaudeAPI):
+    - execute_prompt(prompt, system_prompt, working_dir, timeout) -> APIResult
+    - check_available() -> bool
+    - is_available() -> bool
+    """
+
+    def __init__(
+        self,
+        claude_path: str = "/opt/homebrew/bin/claude",
+        model: str = "claude-sonnet-4",
+        max_tokens: int = 8000,
+        timeout: int = 3600,
+    ):
+        """Initialize Claude CLI interface.
+
+        Args:
+            claude_path: Path to claude CLI executable
+            model: Claude model to use
+            max_tokens: Maximum tokens per response
+            timeout: Command timeout in seconds
+        """
+        self.claude_path = claude_path
+        self.model = model
+        self.max_tokens = max_tokens
+        self.timeout = timeout
+
+        if not self.is_available():
+            raise RuntimeError(f"Claude CLI not found at {claude_path}")
+
+        logger.info(f"ClaudeCLIInterface initialized: {claude_path}")
 
     def is_available(self) -> bool:
-        """Check if claude command is available."""
+        """Check if claude CLI command is available."""
+        return os.path.isfile(self.claude_path) and os.access(
+            self.claude_path, os.X_OK
+        )
 
-    def send_prompt(self, prompt: str, project: str = None) -> str:
-        """Send prompt to Claude CLI and get response."""
-        # Use: echo "prompt" | claude --dangerously-skip-user-approval
+    def check_available(self) -> bool:
+        """Check if Claude CLI is available and working.
 
-    def send_prompt_with_context(self, prompt: str, files: List[str]) -> str:
-        """Send prompt with file context to Claude CLI."""
+        Matches ClaudeAPI.check_available() signature.
+        """
+        try:
+            result = subprocess.run(
+                [self.claude_path, "-p", "--dangerously-skip-permissions"],
+                input="Hello",
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+
+            if result.returncode == 0:
+                logger.info("Claude CLI available and working")
+                return True
+            else:
+                logger.error(f"Claude CLI check failed: {result.stderr}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Claude CLI not available: {e}")
+            return False
+
+    def execute_prompt(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        working_dir: Optional[str] = None,
+        timeout: Optional[int] = None,
+    ) -> APIResult:
+        """Execute a prompt using Claude CLI.
+
+        *** MATCHES ClaudeAPI.execute_prompt() SIGNATURE ***
+        This allows drop-in replacement of ClaudeAPI with ClaudeCLIInterface.
+
+        Args:
+            prompt: The prompt to send to Claude
+            system_prompt: Optional system prompt (prepended to prompt)
+            working_dir: Working directory context
+            timeout: Timeout in seconds
+
+        Returns:
+            APIResult with content and metadata
+        """
+        timeout = timeout or self.timeout
+
+        # Build full prompt with context
+        full_prompt = ""
+
+        if working_dir:
+            full_prompt += f"Working directory: {working_dir}\n\n"
+
+        if system_prompt:
+            full_prompt += f"{system_prompt}\n\n"
+
+        full_prompt += prompt
+
+        try:
+            # Build command
+            cmd = [
+                self.claude_path,
+                "-p",  # Print mode (non-interactive)
+                "--model", self.model,
+                "--dangerously-skip-permissions",
+            ]
+
+            logger.info(f"Executing CLI request: {prompt[:100]}...")
+
+            # Execute with prompt via stdin
+            result = subprocess.run(
+                cmd,
+                input=full_prompt,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+            )
+
+            if result.returncode != 0:
+                error_msg = result.stderr or result.stdout
+                logger.error(f"Claude CLI failed: {error_msg}")
+                return APIResult(
+                    content="",
+                    model=self.model,
+                    usage={"input_tokens": 0, "output_tokens": 0},
+                    stop_reason="error",
+                    error=error_msg,
+                )
+
+            content = result.stdout.strip()
+
+            logger.info(f"CLI request completed ({len(content)} chars)")
+
+            # Note: CLI doesn't provide token counts, so we estimate
+            # Rough estimate: 1 token ≈ 4 characters
+            estimated_input_tokens = len(full_prompt) // 4
+            estimated_output_tokens = len(content) // 4
+
+            return APIResult(
+                content=content,
+                model=self.model,
+                usage={
+                    "input_tokens": estimated_input_tokens,
+                    "output_tokens": estimated_output_tokens,
+                },
+                stop_reason="end_turn",
+            )
+
+        except subprocess.TimeoutExpired:
+            logger.error(f"Claude CLI timeout after {timeout}s")
+            return APIResult(
+                content="",
+                model=self.model,
+                usage={"input_tokens": 0, "output_tokens": 0},
+                stop_reason="timeout",
+                error=f"Timeout after {timeout} seconds",
+            )
+        except Exception as e:
+            logger.error(f"Claude CLI execution failed: {e}")
+            return APIResult(
+                content="",
+                model=self.model,
+                usage={"input_tokens": 0, "output_tokens": 0},
+                stop_reason="error",
+                error=str(e),
+            )
 ```
 
-2. **Update daemon to support CLI mode**:
+**Key Design Decision**: ClaudeCLIInterface **matches ClaudeAPI's interface exactly**:
+- Same `execute_prompt()` method signature
+- Same `APIResult` return type
+- Same `check_available()` method
+- This allows **drop-in replacement** - daemon doesn't need to know which backend it's using
+
+---
+
+### 2. Update DevDaemon to Support CLI Mode
+
+**File**: `coffee_maker/autonomous/daemon.py`
+
+**Modifications needed**:
+
 ```python
-class DevDaemon:
-    def __init__(self, use_claude_cli: bool = False, ...):
-        if use_claude_cli:
-            self.claude = ClaudeCLIInterface()
-        else:
-            self.claude = ClaudeAPIInterface()
+# In __init__ method (line 63):
+
+def __init__(
+    self,
+    roadmap_path: str = "docs/ROADMAP.md",
+    auto_approve: bool = False,
+    create_prs: bool = True,
+    sleep_interval: int = 30,
+    model: str = "claude-sonnet-4",
+    use_claude_cli: bool = False,  # NEW PARAMETER
+    claude_cli_path: str = "/opt/homebrew/bin/claude",  # NEW PARAMETER
+):
+    """Initialize development daemon.
+
+    Args:
+        roadmap_path: Path to ROADMAP.md
+        auto_approve: Auto-approve implementation (skip user confirmation)
+        create_prs: Create pull requests automatically
+        sleep_interval: Seconds between iterations (default: 30)
+        model: Claude model to use (default: claude-sonnet-4)
+        use_claude_cli: Use Claude CLI instead of Anthropic API  # NEW
+        claude_cli_path: Path to claude CLI executable  # NEW
+    """
+    self.roadmap_path = Path(roadmap_path)
+    self.auto_approve = auto_approve
+    self.create_prs = create_prs
+    self.sleep_interval = sleep_interval
+    self.model = model
+    self.use_claude_cli = use_claude_cli  # NEW
+
+    # Initialize components
+    self.parser = RoadmapParser(str(self.roadmap_path))
+    self.git = GitManager()
+
+    # NEW: Choose between CLI and API based on flag
+    if use_claude_cli:
+        from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+        self.claude = ClaudeCLIInterface(
+            claude_path=claude_cli_path,
+            model=model
+        )
+        logger.info("✅ Using Claude CLI mode (subscription)")
+    else:
+        from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
+        self.claude = ClaudeAPI(model=model)
+        logger.info("✅ Using Claude API mode (requires credits)")
+
+    self.notifications = NotificationDB()
+
+    # ... rest of init unchanged
 ```
 
-3. **Add CLI flag**:
+**Impact**: Minimal changes to daemon logic. Only the initialization differs.
+
+---
+
+### 3. Update daemon_cli.py
+
+**File**: `coffee_maker/autonomous/daemon_cli.py`
+
+**Modifications needed** (around line 66-102):
+
+```python
+# Add new arguments:
+
+parser.add_argument(
+    "--use-cli",
+    action="store_true",
+    help="Use Claude CLI instead of Anthropic API (uses subscription, not API credits)"
+)
+
+parser.add_argument(
+    "--claude-path",
+    default="/opt/homebrew/bin/claude",
+    help="Path to claude CLI executable (default: /opt/homebrew/bin/claude)"
+)
+
+args = parser.parse_args()
+
+# ... logging setup ...
+
+# Update environment variable check (line 90-102):
+
+# Check for API key only if NOT using CLI mode
+if not args.use_cli:
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        print("=" * 70)
+        print("❌ ERROR: ANTHROPIC_API_KEY not set!")
+        print("=" * 70)
+        print("\nThe daemon requires an Anthropic API key to function.")
+        print("\n🔧 SOLUTION:")
+        print("  1. Get your API key from: https://console.anthropic.com/")
+        print("  2. Set the environment variable:")
+        print("     export ANTHROPIC_API_KEY='your-api-key-here'")
+        print("  3. Run the daemon again")
+        print("\nOR use --use-cli to use Claude CLI instead (no API key needed)")
+        print("\n" + "=" * 70 + "\n")
+        sys.exit(1)
+else:
+    # Check if Claude CLI is available
+    if not os.path.isfile(args.claude_path):
+        print("=" * 70)
+        print(f"❌ ERROR: Claude CLI not found at {args.claude_path}")
+        print("=" * 70)
+        print("\nThe daemon is configured to use Claude CLI but it's not installed.")
+        print("\n🔧 SOLUTION:")
+        print("  1. Install Claude CLI from: https://docs.claude.com/docs/claude-cli")
+        print("  2. Verify installation: claude --version")
+        print("  3. Run the daemon again with --use-cli")
+        print("\nOR remove --use-cli to use Anthropic API instead")
+        print("\n" + "=" * 70 + "\n")
+        sys.exit(1)
+
+# ... rest unchanged ...
+
+# Create and run daemon (line 126-133):
+
+daemon = DevDaemon(
+    roadmap_path=args.roadmap,
+    auto_approve=args.auto_approve,
+    create_prs=not args.no_pr,
+    sleep_interval=args.sleep,
+    model=args.model,
+    use_claude_cli=args.use_cli,  # NEW
+    claude_cli_path=args.claude_path,  # NEW
+)
+
+daemon.run()
+```
+
+---
+
+### 4. Isolation Strategy: Repository Copy Approach
+
+As suggested by user, for the first prototype:
+
+**Setup (one-time)**:
 ```bash
-code-developer --use-cli --auto-approve
-# or
-code-developer --mode=cli --auto-approve
+# 1. Create isolated copy for daemon
+cd /path/to/projects
+git clone /path/to/MonolithicCoffeeMakerAgent MonolithicCoffeeMakerAgent-daemon
+cd MonolithicCoffeeMakerAgent-daemon
+
+# 2. Install dependencies
+poetry install
+
+# 3. Copy environment file (if needed)
+cp ../MonolithicCoffeeMakerAgent/.env .env
+
+# 4. Create roadmap-sync branch (shared sync point)
+git checkout -b roadmap-sync
+git push -u origin roadmap-sync
+
+# 5. Run daemon in CLI mode
+poetry run code-developer --use-cli --auto-approve
+```
+
+**ROADMAP Synchronization Strategy** 🔄 **Git-Based Sync**:
+
+Instead of complex file synchronization systems, use a dedicated **`roadmap-sync` branch** for ROADMAP coordination:
+
+```
+Git Branch Strategy:
+├── main (production)
+├── feature/* (feature branches created by code_developer)
+└── roadmap-sync (ROADMAP synchronization branch)
+    ↑
+    ├─ project_manager pushes ROADMAP updates here
+    ├─ code_developer pulls ROADMAP from here
+    └─ code_developer pushes ROADMAP status updates here
+```
+
+**Workflow - project_manager updates ROADMAP**:
+```bash
+# User repo (Terminal 1)
+cd /path/to/MonolithicCoffeeMakerAgent
+
+# Make changes via project-manager
+poetry run project-manager chat
+> "Mark PRIORITY 3 as complete"
+
+# project_manager auto-commits and pushes to roadmap-sync
+git checkout roadmap-sync
+git add docs/ROADMAP.md
+git commit -m "feat: Mark PRIORITY 3 complete"
+git push origin roadmap-sync
+```
+
+**Workflow - code_developer syncs ROADMAP**:
+```bash
+# Daemon repo (Terminal 2)
+cd /path/to/MonolithicCoffeeMakerAgent-daemon
+
+# code_developer pulls latest ROADMAP before each iteration
+git checkout roadmap-sync
+git pull origin roadmap-sync
+
+# Read updated ROADMAP
+# Implement next priority
+# Update ROADMAP status
+git add docs/ROADMAP.md
+git commit -m "feat: Update ROADMAP - PRIORITY 4 in progress"
+git push origin roadmap-sync
+
+# Create feature branch and PR as normal
+git checkout -b feature/priority-4
+# ... implementation work ...
+git push origin feature/priority-4
+# Create PR from feature/priority-4 → main
+```
+
+**Conflict Resolution**:
+If both project_manager and code_developer modify ROADMAP simultaneously:
+
+```bash
+# code_developer encounters merge conflict
+git pull origin roadmap-sync
+# CONFLICT in docs/ROADMAP.md
+
+# Auto-resolve: prefer project_manager changes (user authority)
+git checkout --theirs docs/ROADMAP.md
+git add docs/ROADMAP.md
+git commit -m "merge: Sync ROADMAP from project_manager"
+git push origin roadmap-sync
+
+# Or: Manual resolution if both changes are important
+# Edit docs/ROADMAP.md to combine changes
+```
+
+**Implementation in code_developer**:
+```python
+# In coffee_maker/autonomous/daemon.py
+
+class DevDaemon:
+    def run(self):
+        """Run daemon with ROADMAP sync."""
+        while self.running:
+            # 1. Sync ROADMAP before iteration
+            self._sync_roadmap_from_branch()
+
+            # 2. Parse ROADMAP
+            self.parser = RoadmapParser(str(self.roadmap_path))
+
+            # 3. Get next priority
+            next_priority = self.parser.get_next_planned_priority()
+
+            # 4. Implement priority
+            if next_priority:
+                self._implement_priority(next_priority)
+
+                # 5. Update ROADMAP status
+                self._update_roadmap_status(next_priority, "✅ Complete")
+
+                # 6. Push ROADMAP update to sync branch
+                self._push_roadmap_to_branch()
+
+    def _sync_roadmap_from_branch(self):
+        """Pull latest ROADMAP from roadmap-sync branch."""
+        try:
+            # Switch to roadmap-sync branch
+            self.git.run_command("git checkout roadmap-sync")
+
+            # Pull latest changes
+            self.git.run_command("git pull origin roadmap-sync")
+
+            logger.info("✅ ROADMAP synced from roadmap-sync branch")
+        except Exception as e:
+            logger.warning(f"⚠️  ROADMAP sync failed: {e}")
+            # Continue with local ROADMAP
+
+    def _push_roadmap_to_branch(self):
+        """Push ROADMAP updates to roadmap-sync branch."""
+        try:
+            # Ensure on roadmap-sync branch
+            self.git.run_command("git checkout roadmap-sync")
+
+            # Stage ROADMAP changes
+            self.git.run_command("git add docs/ROADMAP.md")
+
+            # Commit with clear message
+            message = "feat: Update ROADMAP - daemon status sync"
+            self.git.run_command(f'git commit -m "{message}"')
+
+            # Push to remote
+            self.git.run_command("git push origin roadmap-sync")
+
+            logger.info("✅ ROADMAP updates pushed to roadmap-sync")
+        except Exception as e:
+            logger.warning(f"⚠️  ROADMAP push failed: {e}")
+```
+
+**Benefits**:
+- ✅ **Simple**: Just Git commands, no custom sync system
+- ✅ **Audit Trail**: Full history in Git log
+- ✅ **Conflict Resolution**: Git's merge tools handle conflicts
+- ✅ **Isolation**: Works with repository copy approach
+- ✅ **Rollback**: Can revert ROADMAP changes via Git
+- ✅ **No Polling**: Pull-based, no file watching needed
+
+**Trade-offs**:
+- ⚠️ Requires network access (GitHub)
+- ⚠️ Small delay for sync (acceptable for async daemon)
+- ⚠️ Merge conflicts possible (but Git handles them)
+
+**Why This Is The Permanent Solution** ✅:
+
+This Git-based sync approach is **NOT just a prototype** - it's the recommended long-term solution:
+
+1. **Simple > Complex**: Uses proven Git infrastructure, no custom sync system
+2. **Performance**: 1 pull/push per 2-3 days (daemon iteration) = negligible overhead
+3. **Offline**: Not needed (daemon requires Claude API = always online)
+4. **Conflicts**: Rare (user changes priorities, daemon changes status = orthogonal)
+5. **Scalability**: Easily extends to multiple daemons or team members via branch strategy
+6. **Evolution**: Can add webhooks, CI/CD, branch protection without changing architecture
+
+**Future Enhancements** (additive, not replacement):
+- GitHub webhooks to notify daemon of ROADMAP changes (instant sync)
+- CI/CD to validate ROADMAP syntax before merge (prevent bugs)
+- Branch protection rules for roadmap-sync (require reviews)
+- Web UI to visualize roadmap-sync history (GitHub already provides this)
+- Multiple sync branches for team collaboration (roadmap-sync-alice, roadmap-sync-bob)
+
+---
+
+### 5. Implementation Steps for code_developer
+
+**Step-by-step plan** (2-3 days):
+
+**Day 1: Create ClaudeCLIInterface**
+1. Create `coffee_maker/autonomous/claude_cli_interface.py`
+2. Implement `APIResult` dataclass
+3. Implement `ClaudeCLIInterface` class:
+   - `__init__()`, `is_available()`, `check_available()`
+   - `execute_prompt()` with subprocess call to `claude -p`
+4. Write unit tests:
+   - Test subprocess communication
+   - Test error handling
+   - Test timeout handling
+5. Manual testing: `python -c "from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface; cli = ClaudeCLIInterface(); print(cli.execute_prompt('Hello'))"`
+
+**Day 2: Integrate with DevDaemon**
+1. Modify `coffee_maker/autonomous/daemon.py`:
+   - Add `use_claude_cli` and `claude_cli_path` parameters
+   - Add conditional initialization
+2. Modify `coffee_maker/autonomous/daemon_cli.py`:
+   - Add `--use-cli` and `--claude-path` arguments
+   - Update environment variable checks
+   - Update help text
+3. Test daemon initialization:
+   - `poetry run code-developer --use-cli --help`
+   - `poetry run code-developer --use-cli --roadmap docs/ROADMAP.md`
+4. Integration testing:
+   - Create test ROADMAP with simple priority
+   - Run daemon with `--use-cli`
+   - Verify it can read roadmap and call Claude CLI
+
+**Day 3: Documentation and Edge Cases**
+1. Create `docs/CLAUDE_CLI_MODE.md`:
+   - When to use CLI mode vs API mode
+   - Setup instructions
+   - Isolation strategy (repository copy)
+   - Troubleshooting
+2. Update README.md with CLI mode instructions
+3. Edge case handling:
+   - Claude CLI not installed
+   - Claude CLI fails mid-execution
+   - ANSI code stripping from output (if needed)
+   - Timeout handling
+4. Run DOD tests (see DOD Tests section above)
+5. User testing:
+   - User creates repository copy
+   - User runs daemon with `--use-cli`
+   - Verify no API credit errors
+   - Verify daemon can implement simple priority
+
+**Verification Commands**:
+```bash
+# Check implementation exists
+ls -la coffee_maker/autonomous/claude_cli_interface.py
+
+# Check CLI flag works
+poetry run code-developer --help | grep "use-cli"
+
+# Check daemon can start
+poetry run code-developer --use-cli --no-pr --roadmap docs/ROADMAP.md
+
+# Check documentation exists
+ls -la docs/CLAUDE_CLI_MODE.md
 ```
 
 **Workflow Example**:
@@ -4578,6 +5190,305 @@ poetry run code-developer --auto-approve
 - Claude CLI has rate limits (but sufficient for daemon use)
 - Need to handle Claude CLI output parsing (may include ANSI codes, formatting)
 - Non-interactive mode required for automation
+
+---
+
+### 🎯 [US-005] High-level roadmap summary with sprint demo dates
+
+**As a**: User
+**I want**: Access to a high-level summary of the roadmap with estimated dates for sprint demos
+**So that**: I can understand project progress, plan stakeholder demos, and communicate timelines
+
+**Business Value**: ⭐⭐⭐⭐
+**Estimated Effort**: 2 story points (1-2 days)
+**Status**: 🔄 Partially Complete - ROADMAP_OVERVIEW.md created, missing sprint dates
+
+**Acceptance Criteria**:
+- [x] High-level roadmap summary document exists (ROADMAP_OVERVIEW.md)
+- [x] Document shows overall progress percentage
+- [x] Document lists all priorities with status
+- [x] Document shows User Story backlog summary
+- [ ] Document includes estimated sprint demo dates
+- [ ] Document shows timeline/gantt view
+- [ ] Command exists to generate/view summary: `project-manager roadmap-summary`
+- [ ] Summary updates automatically when roadmap changes
+
+**Definition of Done**:
+- [x] **Documentation**: ROADMAP_OVERVIEW.md created
+- [ ] **Sprint Dates**: Add estimated demo dates for each phase
+- [ ] **CLI Command**: `project-manager roadmap-summary` command implemented
+- [ ] **Auto-Update**: Summary regenerates when ROADMAP.md changes
+- [ ] **User-Tested**: User can view summary and plan stakeholder demos
+
+**DOD Tests**:
+```yaml
+tests:
+  - name: "ROADMAP_OVERVIEW.md exists"
+    type: "file_exists"
+    files:
+      - "docs/ROADMAP_OVERVIEW.md"
+
+  - name: "Overview contains progress percentage"
+    type: "file_contains"
+    file: "docs/ROADMAP_OVERVIEW.md"
+    expected_patterns:
+      - "Progress.*%"
+      - "Overall Status"
+
+  - name: "Overview contains sprint dates"
+    type: "file_contains"
+    file: "docs/ROADMAP_OVERVIEW.md"
+    expected_patterns:
+      - "Sprint.*Demo"
+      - "Estimated.*Date"
+      - "Timeline"
+
+  - name: "roadmap-summary command exists"
+    type: "command"
+    command: "poetry run project-manager roadmap-summary --help"
+    expected_exit_code: 0
+
+  - name: "Summary shows current progress"
+    type: "python"
+    code: |
+      from coffee_maker.cli.roadmap_editor import RoadmapEditor
+      editor = RoadmapEditor("docs/ROADMAP.md")
+      summary = editor.get_roadmap_summary()
+      assert "total" in summary
+      assert "completed" in summary
+      assert summary["total"] > 0
+```
+
+**Current Implementation** ✅ Partial:
+
+**Already Complete**:
+- ✅ Created `docs/ROADMAP_OVERVIEW.md` (comprehensive high-level summary)
+- ✅ Shows progress percentages (60% overall, per-category breakdowns)
+- ✅ Lists all priorities with status
+- ✅ User Story backlog summary (4 stories, status breakdown)
+- ✅ Architecture diagrams
+- ✅ Next steps and timelines (immediate/short-term/medium-term/long-term)
+
+**Still Missing**:
+- [ ] **Sprint Demo Dates**: Add specific calendar dates for demo milestones
+- [ ] **Timeline Visualization**: Gantt chart or timeline view
+- [ ] **CLI Command**: `project-manager roadmap-summary` to view/generate
+- [ ] **Auto-Update Logic**: Regenerate summary when ROADMAP.md changes
+
+**Technical Notes**:
+
+**Sprint Demo Date Estimation**:
+
+Based on current velocity (assuming US-004 unblocks daemon):
+- 1 priority ≈ 2-3 days (autonomous)
+- Sprint cycle ≈ 2 weeks (10 business days)
+- Demo cadence: Every 2 weeks (end of sprint)
+
+**Proposed Sprint Schedule**:
+
+```markdown
+## 📅 Sprint Demo Schedule
+
+### Sprint 7 - Claude CLI Integration
+**Demo Date**: 2025-10-24 (2 weeks from now)
+**Priorities**: US-004, PRIORITY 2.6
+**Deliverables**:
+- code_developer runs with Claude CLI (no API credits)
+- Daemon stability verification
+- Demo: Autonomous feature implementation end-to-end
+
+### Sprint 8 - Daemon Stability & Monitoring
+**Demo Date**: 2025-11-07 (4 weeks from now)
+**Priorities**: PRIORITY 2.7, PRIORITY 5
+**Deliverables**:
+- Daemon crash recovery
+- Analytics dashboard (Streamlit)
+- Demo: 24/7 daemon operation with monitoring
+
+### Sprint 9 - Advanced Dashboards
+**Demo Date**: 2025-11-21 (6 weeks from now)
+**Priorities**: PRIORITY 5.5, US-003
+**Deliverables**:
+- Error dashboard (Streamlit)
+- PR tracking with DOD tests
+- Demo: Complete observability suite
+
+### Sprint 10 - GCP Deployment
+**Demo Date**: 2025-12-05 (8 weeks from now)
+**Priorities**: PRIORITY 6.5, US-001
+**Deliverables**:
+- code_developer running on GCP
+- 24/7 autonomous operation
+- Demo: Cloud-based autonomous development
+
+### Sprint 11 - Multi-Provider Support
+**Demo Date**: 2025-12-19 (10 weeks from now)
+**Priorities**: PRIORITY 8, US-002
+**Deliverables**:
+- OpenAI, Google, Anthropic provider support
+- Project health dashboard
+- Demo: Provider fallback and cost optimization
+
+### Sprint 12 - Enhanced Communication
+**Demo Date**: 2026-01-09 (12 weeks from now)
+**Priorities**: PRIORITY 9
+**Deliverables**:
+- Improved agent coordination
+- Slack/Discord integration
+- Demo: Full production-ready system
+```
+
+**Implementation Plan**:
+
+1. **Add Sprint Dates to ROADMAP_OVERVIEW.md**:
+   - Insert "Sprint Demo Schedule" section
+   - Include calendar dates, priorities, deliverables
+   - Show dependencies and blockers
+
+2. **Create Timeline Visualization** (optional):
+   - ASCII gantt chart in markdown
+   - Or link to external tool (GitHub Projects, Miro)
+
+3. **Implement CLI Command**:
+   ```python
+   # In coffee_maker/cli/commands/roadmap_summary.py
+   @register_command
+   class RoadmapSummaryCommand(BaseCommand):
+       """Display high-level roadmap summary with sprint dates."""
+
+       @property
+       def name(self) -> str:
+           return "roadmap-summary"
+
+       def execute(self, args: List[str], editor: RoadmapEditor) -> str:
+           # Read ROADMAP_OVERVIEW.md
+           # Display formatted summary
+           # Optionally regenerate if stale
+   ```
+
+4. **Auto-Update on ROADMAP Changes**:
+   - Add git pre-commit hook
+   - Regenerate ROADMAP_OVERVIEW.md when ROADMAP.md changes
+   - Use file modification timestamps
+
+**Benefits**:
+- ✅ Stakeholder communication (clear demo dates)
+- ✅ Timeline planning (sprint-by-sprint visibility)
+- ✅ Progress tracking (percentage complete)
+- ✅ Dependency awareness (what blocks what)
+- ✅ Quick reference (high-level without technical details)
+
+**Related Stories**:
+- Complements all priorities (provides overview)
+- Helps with US-001 (GCP deployment timeline)
+- Useful for US-003 (PR tracking context)
+
+**User Impact**:
+- **High**: Essential for planning stakeholder demos and communicating progress
+- **Frequency**: Daily/weekly reference
+- **Value**: Reduces "where are we?" questions, enables proactive planning
+
+---
+
+### 🎯 [US-006] Claude-CLI level UI/UX for project-manager chat
+
+**As a**: User
+**I want**: project-manager chat to have a polished console UI with the same quality as claude-cli
+**So that**: I have a professional, enjoyable daily workflow experience that feels as good as using Claude directly
+
+**Business Value**: ⭐⭐⭐⭐⭐
+**Estimated Effort**: 3 story points (2-3 days)
+**Status**: 🔄 Partial - Basic chat exists, needs UX polish for claude-cli parity
+**Sprint**: 🎯 **Sprint 7** (Oct 10-24, 2025) - **HIGH PRIORITY**
+
+**Acceptance Criteria**:
+- [x] Basic chat interface exists (chat_interface.py, 394 lines)
+- [x] Rich terminal UI with markdown rendering
+- [x] Command routing (/help, /view, /add, etc.)
+- [ ] **Streaming responses** (text appears progressively like claude-cli)
+- [ ] **Syntax highlighting** for code blocks (better than current markdown)
+- [ ] **Multi-line input support** (Shift+Enter for newlines)
+- [ ] **Input history** (↑/↓ arrow keys to navigate previous commands)
+- [ ] **Auto-completion** (Tab to complete commands and priority names)
+- [ ] **Typing indicators** when AI is thinking
+- [ ] **File preview** when AI references files (show first 10 lines)
+- [ ] **Progress bars** for long operations
+- [ ] **Colored diff** when showing roadmap changes
+- [ ] **Session persistence** (save/restore conversation history)
+
+**Why Sprint 7?**:
+- ✅ Users will use `project-manager chat` **daily** - quality matters
+- ✅ Sprint 7 demo will showcase professional UX
+- ✅ Foundation for all future PM interactions
+- ✅ Demonstrates project maturity and polish
+
+**Technical Implementation** (See ROADMAP for detailed plan):
+
+**Day 1**: Streaming responses + typing indicators
+- Replace blocking responses with Claude API streaming
+- Add `rich.live.Live` for progressive text display
+- Show spinner while AI thinks
+
+**Day 2**: Advanced input (multi-line + history + auto-completion)
+- Add `prompt-toolkit` library
+- Implement Shift+Enter for multi-line input
+- Add ↑/↓ arrow key history navigation
+- Tab completion for commands and entities
+
+**Day 3**: Visual polish + session persistence
+- Syntax highlighting for code blocks (using Pygments)
+- File previews with first 10 lines
+- Colored diffs for roadmap changes
+- Save/restore conversation state
+
+**Demo Preview** (Sprint 7 - Oct 24, 2025):
+```bash
+# Live demonstration of enhanced UX
+poetry run project-manager chat
+
+# 1. Streaming response (like claude-cli)
+> "Analyze the roadmap and suggest next priority"
+[Claude is thinking...]
+Here's my analysis... <text streams word-by-word>
+
+# 2. Multi-line input
+> "Add a priority for:
+<Shift+Enter>
+- User authentication
+<Shift+Enter>
+- OAuth integration"
+✅ Multi-line input accepted
+
+# 3. Auto-completion
+> /v<Tab> → /view
+> /view PRI<Tab> → /view PRIORITY
+
+# 4. History navigation
+> <↑> Shows previous command
+> <↑↑> Shows command before that
+```
+
+**Dependencies**:
+```toml
+prompt-toolkit = "^3.0.43"  # Advanced terminal input
+pygments = "^2.17.0"         # Syntax highlighting
+```
+
+**Files to Modify**:
+- `coffee_maker/cli/chat_interface.py` (streaming, input, formatting)
+- `pyproject.toml` (add dependencies)
+- `docs/PROJECT_MANAGER_CLI_USAGE.md` (document new features)
+
+**Success Criteria**:
+- ✅ User says: "This feels as good as claude-cli"
+- ✅ User prefers project-manager chat over claude-cli for project work
+- ✅ Sprint 7 demo receives positive feedback on UX quality
+- ✅ Daily usage is enjoyable, not just functional
+
+**Related Stories**:
+- Complements US-004 (Claude CLI integration for daemon)
+- Enhances US-005 (roadmap summary will have beautiful display)
+- Enables better UX for US-003 (PR tracking /pr commands)
 
 ---
 
