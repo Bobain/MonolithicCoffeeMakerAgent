@@ -6362,6 +6362,516 @@ response:
 
 ---
 
+### 🎯 [US-009] Process Management and Status Monitoring for code_developer
+
+**As a**: project_manager user
+**I want to**: Know if the code_developer process is running and see its current status
+**So that**: I can watch current progress, send commands, ask questions, and respond to daemon requests
+
+**Business Value**: ⭐⭐⭐⭐⭐
+**Estimated Effort**: 3-5 story points (1 week)
+**Status**: 📝 Planned
+**Sprint**: 🎯 **Sprint 7** (Oct-Nov 2025) - **Critical UX Improvement**
+
+**Problem Statement**:
+Currently, when using project-manager, I have no visibility into whether code_developer is running or what it's doing:
+- I must manually launch code_developer in a separate terminal
+- No way to check if the daemon is running
+- No visibility into current daemon progress
+- No integrated way to send commands to the daemon
+- No consolidated view of daemon questions/notifications
+
+This creates a fragmented experience where I need to:
+- Switch between terminals to check daemon status
+- Manually monitor log files
+- Check ROADMAP.md for updates
+- Poll notifications database separately
+
+**Proposed Solution**:
+Enhance project-manager with integrated process management and status monitoring:
+
+1. **Process Detection & Status**
+   - Automatically detect if code_developer is running
+   - Show daemon status in chat interface (running/stopped/idle/working)
+   - Display current task and progress
+
+2. **Unified Launcher**
+   - Single command to launch both processes
+   - Automatic daemon startup if not running
+   - Graceful shutdown coordination
+
+3. **Progress Monitoring**
+   - Real-time view of what daemon is working on
+   - Progress indicators for long-running tasks
+   - Estimated completion time
+
+4. **Bidirectional Communication**
+   - Send commands to daemon from chat
+   - Ask daemon questions and get responses
+   - Answer daemon questions in-line
+   - Unified notification view
+
+**Acceptance Criteria**:
+- [ ] project-manager detects if code_developer process is running
+- [ ] Status displayed in chat (e.g., "🟢 Daemon: Active - Working on PRIORITY 2.6")
+- [ ] `/status` command shows detailed daemon information
+- [ ] `/start` command launches daemon if not running
+- [ ] `/stop` command gracefully stops the daemon
+- [ ] Can send commands to daemon via chat (e.g., "Ask daemon to implement PRIORITY X")
+- [ ] Can ask daemon questions (e.g., "What's the current progress on US-007?")
+- [ ] Daemon questions appear in chat with response interface
+- [ ] All notifications integrated into chat flow
+- [ ] PID file management for process tracking
+- [ ] Graceful shutdown when Ctrl+C pressed
+
+**Technical Approach**:
+
+**Phase 1: Process Detection** (Days 1-2)
+```python
+# coffee_maker/process_manager.py
+
+import psutil
+from pathlib import Path
+from typing import Optional, Dict
+
+class ProcessManager:
+    """Manages code_developer daemon process."""
+
+    def __init__(self):
+        self.pid_file = Path.home() / ".coffee_maker" / "daemon.pid"
+        self.pid_file.parent.mkdir(exist_ok=True)
+
+    def is_daemon_running(self) -> bool:
+        """Check if daemon process is running."""
+        if not self.pid_file.exists():
+            return False
+
+        try:
+            with open(self.pid_file) as f:
+                pid = int(f.read().strip())
+
+            # Check if process exists
+            process = psutil.Process(pid)
+
+            # Verify it's actually the daemon
+            cmdline = " ".join(process.cmdline())
+            return "code-developer" in cmdline or "daemon_cli.py" in cmdline
+        except (ValueError, psutil.NoSuchProcess, FileNotFoundError):
+            # PID file corrupted or process doesn't exist
+            self.pid_file.unlink(missing_ok=True)
+            return False
+
+    def get_daemon_status(self) -> Dict:
+        """Get detailed daemon status."""
+        if not self.is_daemon_running():
+            return {
+                "running": False,
+                "status": "stopped",
+                "current_task": None,
+                "uptime": None
+            }
+
+        # Get process info
+        with open(self.pid_file) as f:
+            pid = int(f.read().strip())
+
+        process = psutil.Process(pid)
+
+        # Read current task from ROADMAP or status file
+        current_task = self._get_current_task()
+
+        return {
+            "running": True,
+            "pid": pid,
+            "status": "working" if current_task else "idle",
+            "current_task": current_task,
+            "uptime": process.create_time(),
+            "cpu_percent": process.cpu_percent(interval=0.1),
+            "memory_mb": process.memory_info().rss / 1024 / 1024
+        }
+
+    def _get_current_task(self) -> Optional[str]:
+        """Get current task from status file or ROADMAP."""
+        # Check status file first
+        status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
+        if status_file.exists():
+            import json
+            with open(status_file) as f:
+                data = json.load(f)
+                return data.get("current_task")
+
+        # Fallback: Check ROADMAP for in-progress priorities
+        from coffee_maker.cli.roadmap_editor import RoadmapEditor
+        editor = RoadmapEditor("docs/ROADMAP.md")
+        priorities = editor.list_priorities()
+
+        for p in priorities:
+            if "🔄 In Progress" in p.get("status", ""):
+                return p.get("name", "Unknown task")
+
+        return None
+```
+
+**Phase 2: Process Launching** (Days 2-3)
+```python
+# coffee_maker/process_manager.py (continued)
+
+import subprocess
+import signal
+import time
+
+class ProcessManager:
+    # ... previous methods ...
+
+    def start_daemon(self, background: bool = True) -> bool:
+        """Start the code_developer daemon."""
+        if self.is_daemon_running():
+            return True  # Already running
+
+        # Build command
+        cmd = ["poetry", "run", "code-developer"]
+
+        if background:
+            # Launch in background
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True  # Detach from parent
+            )
+
+            # Write PID file
+            with open(self.pid_file, "w") as f:
+                f.write(str(process.pid))
+
+            # Wait briefly to ensure it started
+            time.sleep(2)
+            return self.is_daemon_running()
+        else:
+            # Launch in foreground (for debugging)
+            subprocess.run(cmd)
+            return True
+
+    def stop_daemon(self, timeout: int = 10) -> bool:
+        """Gracefully stop the daemon."""
+        if not self.is_daemon_running():
+            return True  # Already stopped
+
+        with open(self.pid_file) as f:
+            pid = int(f.read().strip())
+
+        try:
+            process = psutil.Process(pid)
+
+            # Send SIGTERM for graceful shutdown
+            process.terminate()
+
+            # Wait for graceful exit
+            try:
+                process.wait(timeout=timeout)
+            except psutil.TimeoutExpired:
+                # Force kill if timeout
+                process.kill()
+
+            # Clean up PID file
+            self.pid_file.unlink(missing_ok=True)
+            return True
+        except psutil.NoSuchProcess:
+            self.pid_file.unlink(missing_ok=True)
+            return True
+```
+
+**Phase 3: Chat Integration** (Days 3-4)
+```python
+# coffee_maker/cli/chat_interface.py (updates)
+
+from coffee_maker.process_manager import ProcessManager
+
+class ChatInterface:
+    def __init__(self):
+        # ... existing init ...
+        self.process_manager = ProcessManager()
+        self._update_status_display()
+
+    def _update_status_display(self):
+        """Update daemon status in chat header."""
+        status = self.process_manager.get_daemon_status()
+
+        if status["running"]:
+            if status["current_task"]:
+                emoji = "🟢"
+                msg = f"Daemon: Active - Working on {status['current_task']}"
+            else:
+                emoji = "🟡"
+                msg = "Daemon: Idle - Waiting for tasks"
+        else:
+            emoji = "🔴"
+            msg = "Daemon: Stopped"
+
+        self.daemon_status = f"{emoji} {msg}"
+
+    def _show_welcome(self):
+        """Show welcome message with daemon status."""
+        # ... existing welcome ...
+
+        # Add daemon status
+        self.console.print(f"\n[cyan]{self.daemon_status}[/]")
+        self.console.print("[dim]Use /status for detailed info[/]\n")
+
+    def _handle_command(self, text: str):
+        """Handle slash commands."""
+        # ... existing commands ...
+
+        if text == "/status":
+            return self._cmd_daemon_status()
+        elif text == "/start":
+            return self._cmd_daemon_start()
+        elif text == "/stop":
+            return self._cmd_daemon_stop()
+
+    def _cmd_daemon_status(self) -> str:
+        """Show detailed daemon status."""
+        status = self.process_manager.get_daemon_status()
+
+        if not status["running"]:
+            return "❌ Daemon is not running. Use /start to launch it."
+
+        from datetime import datetime
+        uptime = datetime.now() - datetime.fromtimestamp(status["uptime"])
+
+        return f"""
+🟢 **Daemon Status**
+- PID: {status['pid']}
+- Status: {status['status'].upper()}
+- Current Task: {status['current_task'] or 'None'}
+- Uptime: {uptime}
+- CPU: {status['cpu_percent']:.1f}%
+- Memory: {status['memory_mb']:.1f} MB
+
+Use /stop to shut down daemon.
+        """.strip()
+
+    def _cmd_daemon_start(self) -> str:
+        """Start the daemon."""
+        if self.process_manager.is_daemon_running():
+            return "✅ Daemon is already running!"
+
+        self.console.print("[cyan]Starting daemon...[/]")
+        success = self.process_manager.start_daemon()
+
+        if success:
+            self._update_status_display()
+            return "✅ Daemon started successfully!"
+        else:
+            return "❌ Failed to start daemon. Check logs."
+
+    def _cmd_daemon_stop(self) -> str:
+        """Stop the daemon."""
+        if not self.process_manager.is_daemon_running():
+            return "⚠️  Daemon is not running."
+
+        self.console.print("[cyan]Stopping daemon gracefully...[/]")
+        success = self.process_manager.stop_daemon()
+
+        if success:
+            self._update_status_display()
+            return "✅ Daemon stopped successfully."
+        else:
+            return "❌ Failed to stop daemon."
+```
+
+**Phase 4: Bidirectional Communication** (Days 4-5)
+```python
+# Enhance existing notification system
+
+class ChatInterface:
+    # ... previous methods ...
+
+    def _handle_natural_language_stream(self, text: str, context: Dict) -> str:
+        """Handle natural language with daemon awareness."""
+
+        # Detect commands for daemon
+        if any(phrase in text.lower() for phrase in [
+            "ask daemon", "tell daemon", "daemon implement",
+            "daemon work on", "daemon start working"
+        ]):
+            return self._send_command_to_daemon(text)
+
+        # Detect status queries
+        if any(phrase in text.lower() for phrase in [
+            "daemon status", "what is daemon doing",
+            "daemon progress", "is daemon working"
+        ]):
+            return self._cmd_daemon_status()
+
+        # Normal AI response
+        return super()._handle_natural_language_stream(text, context)
+
+    def _send_command_to_daemon(self, command: str) -> str:
+        """Send command to daemon via notifications."""
+        # Create notification for daemon
+        notif_id = self.notif_service.create_notification(
+            type="command",
+            title="Command from project-manager",
+            message=command,
+            priority="high"
+        )
+
+        return f"""
+✅ Command sent to daemon (notification #{notif_id})
+
+The daemon will process this when it next checks notifications.
+
+Use /notifications to monitor responses.
+        """.strip()
+
+    def _check_daemon_questions(self):
+        """Check for pending questions from daemon."""
+        questions = self.notif_service.get_pending_notifications(
+            type="question"
+        )
+
+        if questions:
+            self.console.print("\n[yellow]📋 Daemon has questions:[/]\n")
+            for q in questions[:3]:  # Show top 3
+                self.console.print(f"  {q['id']}: {q['title']}")
+            self.console.print("\n[dim]Use /notifications to respond[/]\n")
+```
+
+**Implementation Files**:
+- `coffee_maker/process_manager.py` - New: Process detection and management
+- `coffee_maker/cli/chat_interface.py` - Update: Integrate status display
+- `coffee_maker/cli/roadmap_cli.py` - Update: Add start/stop/status commands
+- `coffee_maker/autonomous/daemon_cli.py` - Update: Write PID file on startup
+- `~/.coffee_maker/daemon.pid` - New: PID file for tracking
+- `~/.coffee_maker/daemon_status.json` - New: Current task tracking
+
+**CLI Command Updates**:
+```bash
+# New commands for roadmap_cli.py
+
+poetry run project-manager status          # Show daemon status
+poetry run project-manager start           # Start daemon if not running
+poetry run project-manager start --daemon  # Start both (unified launcher)
+poetry run project-manager stop            # Stop daemon gracefully
+poetry run project-manager chat            # Chat with status display
+```
+
+**Dependencies**:
+```toml
+# pyproject.toml (already present)
+psutil = "^7.0.0"  # ✅ Already installed
+```
+
+**Example Interactions**:
+
+**Use Case 1: Check Daemon Status**
+```
+User: /status
+
+project-manager:
+🟢 **Daemon Status**
+- PID: 12345
+- Status: WORKING
+- Current Task: PRIORITY 2.6 - CI Testing
+- Uptime: 2 hours, 15 minutes
+- CPU: 15.3%
+- Memory: 245.7 MB
+
+Use /stop to shut down daemon.
+```
+
+**Use Case 2: Auto-Start Daemon**
+```
+User: poetry run project-manager chat
+
+project-manager:
+Welcome to Coffee Maker Project Manager! 🤖
+Type 'help' for commands, or just chat naturally.
+
+🔴 Daemon: Stopped
+
+Would you like me to start the daemon? (y/n): y
+
+Starting daemon...
+✅ Daemon started successfully!
+
+🟢 Daemon: Idle - Waiting for tasks
+```
+
+**Use Case 3: Send Command via Chat**
+```
+User: Ask the daemon to start working on PRIORITY 2.7
+
+project-manager:
+✅ Command sent to daemon (notification #42)
+
+The daemon will process this when it next checks notifications.
+
+Use /notifications to monitor responses.
+
+[2 seconds later]
+🟢 Daemon: Active - Working on PRIORITY 2.7
+```
+
+**Use Case 4: Daemon Asks Question**
+```
+[Daemon working on task...]
+
+project-manager:
+📋 Daemon has a question:
+
+"Should I use pytest or unittest for the new tests?"
+
+Your response: pytest with pytest-cov for coverage
+
+✅ Response sent to daemon.
+
+[Daemon continues with pytest...]
+```
+
+**Success Criteria**:
+- ✅ 100% accurate daemon status detection
+- ✅ Daemon starts within 3 seconds of `/start` command
+- ✅ Graceful shutdown completes within 10 seconds
+- ✅ Real-time status updates (<1 second latency)
+- ✅ All daemon questions visible in chat
+- ✅ Commands reliably delivered to daemon
+- ✅ Zero orphaned daemon processes
+
+**Metrics to Track**:
+- Daemon uptime percentage
+- Average startup time
+- Shutdown success rate
+- Status check latency
+- Command delivery success rate
+- User satisfaction with visibility
+
+**Challenges & Risks**:
+- **Process Detection**: PID files can become stale
+  - Mitigation: Verify process name via psutil, clean stale PIDs
+- **Cross-Platform**: Process management differs on Windows/Mac/Linux
+  - Mitigation: Use psutil for cross-platform compatibility
+- **Zombie Processes**: Daemon might not clean up properly
+  - Mitigation: Implement graceful shutdown with SIGTERM
+- **Race Conditions**: Multiple project-managers starting daemon
+  - Mitigation: Use file locking for PID file writes
+
+**Future Enhancements** (Post-MVP):
+- Web dashboard for daemon monitoring
+- Historical status tracking (uptime, tasks completed)
+- Performance metrics (tasks/hour, success rate)
+- Email notifications for daemon crashes
+- Cluster management (multiple daemons)
+
+**Related Stories**:
+- Enables v0.2.0 release (Unified Launcher)
+- Required for US-007 (IDE needs daemon status)
+- Required for US-008 (Assistant needs daemon coordination)
+- Improves US-006 UX (integrated status display)
+
+---
+
 ## 🚀 Prioritized Roadmap
 
 ### 🔴 **PRIORITY 1: Analytics & Observability** ⚡ FOUNDATION FOR AUTONOMOUS DAEMON
