@@ -5,10 +5,25 @@
 
 ---
 
+## 📖 Documentation Home
+
+**👋 First time here?** Check **[docs/README.md](README.md)** - the documentation home page!
+
+The README provides:
+- 🚀 Quick start for new users (3 essential docs to read first)
+- 📋 Documentation organized by user type (End User, Developer, Contributor)
+- 🔍 "How to find what you need" quick reference table
+- 📁 Complete file structure overview
+
+**This index** (DOCUMENTATION_INDEX.md) provides detailed navigation for all docs.
+**The README** (README.md) provides a simpler, user-friendly overview.
+
+---
+
 ## 🎯 Quick Navigation
 
 **New User? Start Here:**
-→ [Quickstart Guide](#quickstart-guide) (5 minutes)
+→ [Quickstart Guide](QUICKSTART_PROJECT_MANAGER.md) (5 minutes)
 
 **Looking for tutorials?**
 → [Tutorials & Use Cases](#tutorials--use-cases)
