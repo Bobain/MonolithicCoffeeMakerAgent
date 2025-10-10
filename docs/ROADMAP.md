@@ -1,8 +1,8 @@
 # Coffee Maker Agent - Prioritized Roadmap
 
-**Last Updated**: 2025-10-09 🚨 **NEW TOP PRIORITY SET**
-**Current Branch**: `feature/priority-1.5`
-**Status**: PRIORITY 2-6 ✅ 100% COMPLETE | 🚀 **5 Major Components Implemented in Single Session**
+**Last Updated**: 2025-10-10 🚨 **PRIORITIES REORGANIZED + GCP DEPLOYMENT ADDED**
+**Current Branch**: `feature/priority-2.5`
+**Status**: PRIORITY 1-3 ✅ COMPLETE | PRIORITY 2 🔄 IN PROGRESS | **Next: PRIORITY 4 (GCP Deployment)**
 **Quick-Start**: ⚡ CLI: `project-manager view` | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py` | Code Review: see `coffee_maker/code_reviewer/README.md`
 **Achievement**: 🎉 **MASSIVE PROGRESS** - CLI, Daemon, Web UI, Documentation Infrastructure, and Multi-Model Code Review Agent all operational!
 
@@ -43,6 +43,25 @@ This roadmap is the **single source of truth** for the autonomous `code_develope
    - Use decimal notation for insertions (e.g., PRIORITY 2.5, 2.6)
    - Maintain sequential order
 
+6. **🚨 MANDATORY: Technical Specification Before Implementation** ⚡ **CRITICAL**
+   - **NEVER start implementing a complex priority without a detailed technical specification**
+   - For any priority with >1 day estimated duration, create a technical spec first
+   - Technical spec must include:
+     * **Prerequisites & Dependencies**: Verify ALL dependencies are available
+     * **Architecture Overview**: High-level design with diagrams
+     * **Component Specifications**: Detailed design for each module/class
+     * **Data Flow Diagrams**: How data moves through the system
+     * **Implementation Plan**: Step-by-step breakdown with time estimates
+     * **Testing Strategy**: Unit, integration, and E2E test plans
+     * **Security Considerations**: Authentication, authorization, data protection
+     * **Performance Requirements**: Response times, resource limits
+     * **Risk Analysis**: Identify risks and mitigation strategies
+     * **Success Criteria**: Clear, measurable acceptance criteria
+   - Document format: `docs/PRIORITY_X_TECHNICAL_SPEC.md`
+   - **Example**: See `docs/PRIORITY_2_TECHNICAL_SPEC.md` (complete template)
+   - **Why**: Prevents wasted effort, identifies blockers early, ensures quality
+   - **When to skip**: Only for trivial tasks (<4 hours, no architecture decisions)
+
 ### Why This Matters
 
 The daemon operates autonomously by:
@@ -62,14 +81,19 @@ The daemon operates autonomously by:
 
 ```markdown
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
-PRIORITY 3: Streamlit Dashboard ← Current focus
+PRIORITY 2: Project Manager with UI ← Current focus
 
 ### PRIORITY 1: Analytics ✅ Complete
-### PRIORITY 2: CLI ✅ Complete
-### PRIORITY 2.5: Documentation 🚧 Manual Review Required
-### PRIORITY 2.6: Testing 🔄 In Progress (50%)
-### PRIORITY 3: Dashboard 📝 Planned ← Daemon will start this next
-### PRIORITY 4: Agent UI 📝 Planned ← After PRIORITY 3
+### PRIORITY 1.5: Database Sync ✅ Complete
+### PRIORITY 2: Project Manager CLI 🔄 In Progress (Phase 2)
+### PRIORITY 2.5: UX Documentation 🚧 Manual Review Required
+### PRIORITY 2.6: Daemon Fix Verification 🔄 In Progress
+### PRIORITY 2.7: Daemon Crash Recovery 📝 Planned
+### PRIORITY 3: code_developer ✅ Complete
+### PRIORITY 4: GCP Deployment 📝 Planned ← Next after PRIORITY 2
+### PRIORITY 5: Streamlit Analytics Dashboard 📝 Planned
+### PRIORITY 5.5: Streamlit Error Dashboard 📝 Planned
+### PRIORITY 6: Streamlit Agent UI ✅ Complete
 ```
 
 **Remember**: The daemon trusts this roadmap completely. Keep it organized, prioritized, and up-to-date! 🎯
@@ -4525,31 +4549,60 @@ BACKGROUND PROCESS (always running):
 - Performance benchmarks and targets
 - Security considerations and threat models
 
-**Example Workflow**:
+**Example Workflow** (✅ **Real Example: PRIORITY 2 Technical Spec**):
 ```
-PRIORITY 7 Status: 📝 Planned (no technical details)
+PRIORITY 2 Phase 2 Status: 📝 Planned (complex AI integration)
   ↓
-project_manager researches:
-  - Reviews similar implementations
-  - Evaluates technology options
-  - Designs architecture
-  - Documents APIs
-  - Creates schemas
+project_manager analyzes requirements:
+  ├─ Checks ALL prerequisites and dependencies ✅
+  │  - anthropic SDK: ✅ installed (0.69.0)
+  │  - rich library: ✅ installed (14.1.0)
+  │  - ClaudeAPI interface: ✅ exists in autonomous/
+  │  - NotificationDB: ✅ exists in cli/
+  │
+  ├─ Designs complete architecture
+  │  - Component diagrams
+  │  - Data flow diagrams
+  │  - Module structure
+  │
+  ├─ Documents technical details
+  │  - API patterns
+  │  - Security considerations
+  │  - Performance requirements
+  │  - Risk analysis
+  │
+  └─ Creates implementation plan
+     - 3 phases with time estimates
+     - Step-by-step breakdown
+     - Testing strategy
   ↓
-Creates: docs/PRIORITY_7_TECHNICAL_SPEC.md (800+ lines)
-  - Architecture overview
-  - API endpoints with examples
-  - Database schema with indexes
-  - Component diagrams
-  - Integration patterns
-  - Test strategy
+Creates: docs/PRIORITY_2_TECHNICAL_SPEC.md (850+ lines)
+  - Complete architecture overview
+  - All component specifications with code examples
+  - Data flow diagrams
+  - Implementation plan (3 phases, 16-22 hours)
+  - Testing strategy (unit, integration, E2E)
+  - Security & performance requirements
+  - Risk analysis with mitigation
+  - Clear success criteria
   ↓
-PRIORITY 7 now has complete technical foundation
+PRIORITY 2 now has COMPLETE technical foundation ✅
   ↓
-code_developer can implement immediately without research
+code_developer can implement IMMEDIATELY:
+  - No research needed ✅
+  - All decisions made ✅
+  - Dependencies verified ✅
+  - Implementation steps clear ✅
+  - Tests planned ✅
 ```
 
 **Benefit**: When code_developer reaches a priority, **all technical decisions are already made** and documented. The developer can start implementing immediately without research or architectural decisions.
+
+**🚨 MANDATORY RULE**:
+- For ANY priority with >1 day effort: Create `docs/PRIORITY_X_TECHNICAL_SPEC.md` FIRST
+- Use `docs/PRIORITY_2_TECHNICAL_SPEC.md` as the template
+- Verify ALL dependencies are available BEFORE declaring "ready for implementation"
+- **NO exceptions** - this prevents wasted effort and ensures quality
 
 **Priority**: This is continuous background work, runs in parallel with user interactions.
 
@@ -9758,7 +9811,7 @@ daemon:
 
 ---
 
-### 🔴 **PRIORITY 3: Streamlit Analytics Dashboard** ⚡ NEW
+### 🔴 **PRIORITY 5: Streamlit Analytics Dashboard** ⚡ NEW
 
 **Estimated Duration**: 1-2 weeks
 **Impact**: ⭐⭐⭐⭐⭐
@@ -9824,7 +9877,7 @@ streamlit_apps/
 
 ---
 
-### 🔴 **PRIORITY 3.5: Streamlit Error Monitoring Dashboard** ⚡ NEW
+### 🔴 **PRIORITY 5.5: Streamlit Error Monitoring Dashboard** ⚡ NEW
 
 **Estimated Duration**: 3-5 days
 **Impact**: ⭐⭐⭐⭐⭐
@@ -10197,7 +10250,7 @@ st.dataframe(errors_df)
 
 ---
 
-### 🔴 **PRIORITY 4: Streamlit Agent Interaction UI** ⚡ NEW
+### 🔴 **PRIORITY 6: Streamlit Agent Interaction UI** ⚡ NEW
 
 **Estimated Duration**: 1-2 weeks (or autonomous implementation via daemon 🤖)
 **Impact**: ⭐⭐⭐⭐⭐
@@ -10277,7 +10330,7 @@ streamlit_apps/
 
 ---
 
-### 🔴 **PRIORITY 5: Professional Documentation**
+### 🔴 **PRIORITY 7: Professional Documentation**
 
 **Estimated Duration**: 1-2 weeks
 **Impact**: ⭐⭐⭐⭐
@@ -10329,7 +10382,7 @@ streamlit_apps/
 
 ---
 
-### 🟢 **PRIORITY 6: Innovative Projects** ✅ **COMPLETE** (Option A implemented)
+### 🟢 **PRIORITY 8.5: Innovative Projects** ✅ **COMPLETE** (Option A implemented)
 
 **Estimated Duration**: 3-4 weeks **per project**
 **Impact**: ⭐⭐⭐⭐⭐
@@ -11076,6 +11129,446 @@ $ project-manager provider costs
 
 **Marketing Angle**:
 > "Use **your preferred AI** - whether it's Claude, GPT-4, Gemini, or the next big model. Our autonomous developer works with all major AI providers, with smart fallback to ensure you never get blocked."
+
+---
+
+### 🔴 **PRIORITY 4: GCP Deployment of code_developer** ☁️ **CLOUD INFRASTRUCTURE**
+
+**Estimated Duration**: 2-3 weeks
+**Impact**: ⭐⭐⭐⭐⭐ (Critical for continuous autonomous operation)
+**Status**: 📝 Planned
+**Dependency**: Should be done after PRIORITY 3 (Autonomous Development Daemon) is stable
+**Strategic Goal**: Deploy code_developer on GCP for 24/7 autonomous operation with project_manager integration
+**Note**: Can be implemented by autonomous daemon (PRIORITY 3) once it's complete! 🤖
+
+#### Why This Is Critical
+
+Currently, the `code_developer` daemon runs locally on the developer's machine. **This creates significant limitations**:
+
+1. **Availability**: Daemon stops when laptop sleeps or shuts down
+2. **Accessibility**: Cannot work on tasks when away from development machine
+3. **Resource Constraints**: Limited by local machine resources (CPU, memory, disk)
+4. **Reliability**: Vulnerable to local network issues, power outages, system crashes
+5. **Scalability**: Cannot run multiple daemons for different projects simultaneously
+6. **Professional Workflow**: Real development teams work 24/7 - AI developers should too
+
+**Business Impact**: Deploying on GCP enables **truly autonomous, always-on development** that continues working even when the user is offline.
+
+#### Project: GCP-Based Autonomous Development Infrastructure
+
+**Goal**: Deploy `code_developer` daemon on Google Cloud Platform with full integration to `project_manager` CLI for seamless remote control and monitoring.
+
+#### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    User's Local Machine                      │
+│                                                               │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  project_manager CLI                                   │  │
+│  │  - View roadmap                                        │  │
+│  │  - Send commands to GCP daemon                        │  │
+│  │  - Monitor daemon status                              │  │
+│  │  - Receive notifications                              │  │
+│  │  - Edit files remotely                                │  │
+│  └───────────────┬───────────────────────────────────────┘  │
+│                  │                                           │
+│                  │ HTTPS/WebSocket                          │
+│                  │ (Authenticated)                          │
+└──────────────────┼───────────────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Google Cloud Platform (GCP)                     │
+│                                                               │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  Cloud Run / Compute Engine                           │  │
+│  │                                                        │  │
+│  │  ┌─────────────────────────────────────────────────┐ │  │
+│  │  │  code_developer Daemon                          │ │  │
+│  │  │  - Reads ROADMAP.md (from Cloud Storage)        │ │  │
+│  │  │  - Implements features autonomously             │ │  │
+│  │  │  - Commits to GitHub                            │ │  │
+│  │  │  - Sends notifications via API                  │ │  │
+│  │  │  - Responds to project_manager commands         │ │  │
+│  │  └─────────────────────────────────────────────────┘ │  │
+│  │                                                        │  │
+│  │  ┌─────────────────────────────────────────────────┐ │  │
+│  │  │  Control API (FastAPI)                          │ │  │
+│  │  │  - /status - Get daemon status                  │ │  │
+│  │  │  - /start - Start implementation                │ │  │
+│  │  │  - /stop - Pause daemon                         │ │  │
+│  │  │  - /logs - Stream logs                          │ │  │
+│  │  │  - /files - Edit project files                  │ │  │
+│  │  └─────────────────────────────────────────────────┘ │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                               │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  Cloud Storage                                         │  │
+│  │  - ROADMAP.md (sync from GitHub)                      │  │
+│  │  - Project files (working directory)                  │  │
+│  │  - Daemon state (checkpoints)                         │  │
+│  │  - Logs and analytics data                            │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                               │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  Cloud SQL / Firestore                                 │  │
+│  │  - Notifications database (replaces local SQLite)     │  │
+│  │  - Analytics database                                 │  │
+│  │  - Daemon execution history                           │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                               │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  Secret Manager                                        │  │
+│  │  - ANTHROPIC_API_KEY                                  │  │
+│  │  - GITHUB_TOKEN                                       │  │
+│  │  - Database credentials                               │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Core Components
+
+##### 1. Daemon Containerization
+
+**Deliverables**:
+```
+coffee_maker/deployment/
+├── Dockerfile                    # Multi-stage build for code_developer
+├── docker-compose.yml            # Local testing
+├── .dockerignore                 # Exclude unnecessary files
+├── requirements-deploy.txt       # Production dependencies
+└── healthcheck.sh                # Container health check script
+```
+
+**Dockerfile Requirements**:
+- Base image: Python 3.11-slim
+- Install Claude CLI or use Anthropic SDK
+- Install git, GitHub CLI (gh)
+- Copy coffee_maker package
+- Set up working directory for project files
+- Configure environment variables
+- Health check endpoint
+
+##### 2. GCP Infrastructure (Terraform)
+
+**Deliverables**:
+```
+infrastructure/terraform/
+├── main.tf                       # Main infrastructure definition
+├── variables.tf                  # Configuration variables
+├── outputs.tf                    # Infrastructure outputs
+├── cloud_run.tf                  # Cloud Run service definition
+├── storage.tf                    # Cloud Storage buckets
+├── database.tf                   # Cloud SQL or Firestore
+├── secrets.tf                    # Secret Manager configuration
+├── iam.tf                        # IAM roles and permissions
+└── networking.tf                 # VPC, firewall rules
+```
+
+**GCP Services**:
+1. **Cloud Run**: Serverless container deployment
+   - Auto-scaling based on load
+   - Cost-effective (pay per use)
+   - Integrated logging and monitoring
+
+2. **Cloud Storage**: File storage
+   - Project working directory
+   - ROADMAP.md synchronization
+   - Daemon state checkpoints
+
+3. **Cloud SQL (PostgreSQL)**: Persistent database
+   - Notifications (replaces local SQLite)
+   - Analytics data
+   - Execution history
+
+4. **Secret Manager**: Secure credential storage
+   - API keys (Anthropic, GitHub)
+   - Database credentials
+
+5. **Cloud Logging**: Centralized logging
+   - Daemon activity logs
+   - Error tracking
+   - Performance metrics
+
+##### 3. Control API (FastAPI)
+
+**Deliverables**:
+```
+coffee_maker/api/
+├── __init__.py
+├── main.py                       # FastAPI application
+├── routes/
+│   ├── daemon.py                 # Daemon control endpoints
+│   ├── files.py                  # File operations
+│   ├── notifications.py          # Notification management
+│   └── status.py                 # Status and health
+├── models/
+│   ├── requests.py               # API request models
+│   └── responses.py              # API response models
+├── auth.py                       # Authentication middleware
+└── websocket.py                  # WebSocket for real-time updates
+```
+
+**API Endpoints**:
+```python
+# Daemon Control
+POST   /api/daemon/start          # Start daemon implementation
+POST   /api/daemon/stop           # Stop/pause daemon
+POST   /api/daemon/restart        # Restart daemon
+GET    /api/daemon/status         # Get current status
+
+# File Operations
+GET    /api/files/roadmap         # Get ROADMAP.md content
+PUT    /api/files/roadmap         # Update ROADMAP.md
+GET    /api/files/{path}          # Read project file
+PUT    /api/files/{path}          # Write project file
+
+# Notifications
+GET    /api/notifications         # List notifications
+POST   /api/notifications/respond # Respond to daemon question
+DELETE /api/notifications/{id}    # Mark as read
+
+# Logs & Monitoring
+GET    /api/logs                  # Stream daemon logs
+GET    /api/metrics               # Get performance metrics
+GET    /api/health                # Health check
+
+# WebSocket
+WS     /ws/daemon                 # Real-time daemon updates
+WS     /ws/logs                   # Real-time log streaming
+```
+
+**Authentication**:
+- API key-based authentication for project_manager
+- GitHub OAuth for web access (future)
+- JWT tokens for session management
+
+##### 4. project_manager GCP Integration
+
+**Enhancements to `coffee_maker/cli/roadmap_cli.py`**:
+
+```python
+# New commands for GCP daemon control
+project-manager cloud deploy      # Deploy daemon to GCP
+project-manager cloud start       # Start GCP daemon
+project-manager cloud stop        # Stop GCP daemon
+project-manager cloud status      # Check GCP daemon status
+project-manager cloud logs        # Stream logs from GCP
+project-manager cloud ssh         # SSH into Cloud Run instance (debug)
+```
+
+**New module**: `coffee_maker/cli/gcp_client.py`
+```python
+class GCPDaemonClient:
+    """Client for interacting with GCP-deployed daemon."""
+
+    def __init__(self, api_url: str, api_key: str):
+        self.api_url = api_url
+        self.api_key = api_key
+        self.session = requests.Session()
+        self.session.headers['Authorization'] = f'Bearer {api_key}'
+
+    def get_status(self) -> DaemonStatus:
+        """Get current daemon status from GCP."""
+
+    def start_daemon(self, priority: Optional[str] = None):
+        """Start daemon implementation on GCP."""
+
+    def stop_daemon(self):
+        """Stop daemon on GCP."""
+
+    def stream_logs(self, follow: bool = True):
+        """Stream logs from GCP daemon."""
+
+    def edit_roadmap(self, content: str):
+        """Update ROADMAP.md on GCP."""
+
+    def edit_file(self, path: str, content: str):
+        """Edit project file on GCP."""
+```
+
+**Configuration**: `~/.config/coffee-maker/gcp.yaml`
+```yaml
+gcp:
+  enabled: true
+  api_url: https://code-developer-xxxxxx.run.app
+  api_key_env: COFFEE_MAKER_API_KEY
+  project_id: my-project-12345
+  region: us-central1
+
+  # Daemon preferences
+  daemon:
+    auto_start: true
+    check_interval: 30  # seconds
+    notify_on_completion: true
+```
+
+##### 5. GitHub Integration
+
+**Deliverables**:
+- GitHub App for secure repository access
+- Webhook integration for ROADMAP.md changes
+- Automatic PR creation from GCP daemon
+- Status checks integration
+
+**Workflow**:
+1. User updates ROADMAP.md locally
+2. GitHub webhook triggers GCP daemon
+3. Daemon pulls latest ROADMAP.md
+4. Daemon implements priority
+5. Daemon creates PR and notifies user
+
+##### 6. Monitoring & Observability
+
+**Deliverables**:
+```
+coffee_maker/monitoring/
+├── metrics.py                    # Custom metrics collection
+├── alerts.py                     # Alert rules and notifications
+├── dashboards/
+│   ├── daemon_health.json        # GCP Monitoring dashboard
+│   └── cost_tracking.json        # Cost monitoring dashboard
+└── README.md                     # Monitoring setup guide
+```
+
+**Metrics to Track**:
+- Daemon uptime and availability
+- Task completion rate
+- API response times
+- LLM API costs (Anthropic)
+- GCP infrastructure costs
+- Error rates and types
+- Resource utilization (CPU, memory, storage)
+
+**Alerting**:
+- Daemon crash or hang (>5 minutes idle)
+- High error rate (>10% failures)
+- Cost threshold exceeded ($50/day)
+- API rate limits reached
+- Disk space running low
+
+#### Implementation Phases
+
+**Phase 1: Containerization & Local Testing** (3-4 days)
+- ✅ Create Dockerfile for code_developer
+- ✅ Test container locally with docker-compose
+- ✅ Validate daemon runs correctly in container
+- ✅ Set up health checks
+
+**Phase 2: GCP Infrastructure Setup** (4-5 days)
+- ✅ Create Terraform configurations
+- ✅ Deploy Cloud Run service
+- ✅ Set up Cloud Storage buckets
+- ✅ Configure Cloud SQL database
+- ✅ Set up Secret Manager
+- ✅ Configure IAM roles
+
+**Phase 3: Control API Development** (4-5 days)
+- ✅ Implement FastAPI application
+- ✅ Create daemon control endpoints
+- ✅ Add file operations endpoints
+- ✅ Set up WebSocket for real-time updates
+- ✅ Implement authentication
+
+**Phase 4: project_manager Integration** (3-4 days)
+- ✅ Add GCP client to project_manager
+- ✅ Implement cloud commands
+- ✅ Add configuration management
+- ✅ Test end-to-end workflow
+
+**Phase 5: Monitoring & Documentation** (2-3 days)
+- ✅ Set up GCP Monitoring dashboards
+- ✅ Configure alerting rules
+- ✅ Write deployment documentation
+- ✅ Create troubleshooting guide
+
+**Total**: 16-21 days (2-3 weeks)
+
+#### Success Criteria
+
+- ✅ code_developer runs continuously on GCP (99.9% uptime)
+- ✅ project_manager can control GCP daemon remotely
+- ✅ User can view daemon status and logs in real-time
+- ✅ Daemon automatically pulls latest ROADMAP.md from GitHub
+- ✅ Daemon creates PRs and commits to GitHub from GCP
+- ✅ Notifications work between GCP daemon and local project_manager
+- ✅ User can edit ROADMAP.md and project files via project_manager
+- ✅ Costs stay within budget (<$100/month for moderate usage)
+- ✅ Full monitoring and alerting operational
+
+#### Cost Estimation (Monthly)
+
+**GCP Services**:
+- Cloud Run (24/7): ~$20-30/month (1 vCPU, 2GB RAM)
+- Cloud Storage: ~$5-10/month (50GB)
+- Cloud SQL (small instance): ~$25-35/month
+- Cloud Logging: ~$5-10/month
+- Networking: ~$5-10/month
+- **Total GCP**: ~$60-95/month
+
+**External Services**:
+- Anthropic API: Variable (depends on usage, $50-200/month estimated)
+- GitHub: Free (public repos) or included in existing plan
+
+**Total Estimated Cost**: $110-295/month for 24/7 autonomous development
+
+#### Security Considerations
+
+**Authentication & Authorization**:
+- API key rotation every 90 days
+- GitHub App with minimal required permissions
+- IAM roles following principle of least privilege
+- IP whitelisting for API access (optional)
+
+**Data Protection**:
+- Encryption at rest (Cloud Storage, Cloud SQL)
+- Encryption in transit (HTTPS/TLS)
+- Secret Manager for all credentials
+- No sensitive data in logs
+
+**Network Security**:
+- Cloud Run with VPC connector
+- Firewall rules limiting inbound traffic
+- DDoS protection via Cloud Armor (if needed)
+
+#### Migration Path
+
+**From Local to GCP**:
+1. User runs `project-manager cloud deploy`
+2. CLI builds and pushes Docker image
+3. Terraform provisions GCP infrastructure
+4. Database migrated from local SQLite to Cloud SQL
+5. ROADMAP.md synced to Cloud Storage
+6. API key generated and saved locally
+7. GCP daemon starts automatically
+8. Local daemon can be stopped
+
+**Rollback**:
+- Keep local daemon as fallback
+- Export data from Cloud SQL to local SQLite
+- Switch project_manager back to local mode
+
+#### Dependencies
+
+**Required**:
+- PRIORITY 3 complete (Autonomous Development Daemon)
+- PRIORITY 2 Phase 1 complete (project_manager basic CLI)
+
+**Recommended**:
+- PRIORITY 2 Phase 2 complete (AI-powered project_manager)
+- GitHub account with repository access
+- GCP account with billing enabled
+
+#### Future Enhancements (Post-PRIORITY 7)
+
+- **Multi-Project Support**: Run daemons for multiple projects
+- **Team Collaboration**: Shared GCP daemon for team projects
+- **Auto-Scaling**: Scale up resources for large tasks
+- **Cost Optimization**: Automatically pause daemon during inactivity
+- **Web Dashboard**: Browser-based UI for monitoring (alternative to CLI)
+- **Slack Integration**: Daemon notifications via Slack
+- **AWS/Azure Support**: Deploy on other cloud providers
 
 ---
 
