@@ -36,6 +36,7 @@ from rich.table import Table
 
 from coffee_maker.cli.ai_service import AIService
 from coffee_maker.cli.commands import get_command_handler, list_commands
+from coffee_maker.cli.notifications import NotificationDB, NOTIF_PRIORITY_HIGH
 from coffee_maker.cli.roadmap_editor import RoadmapEditor
 from coffee_maker.process_manager import ProcessManager
 
@@ -151,6 +152,9 @@ class ChatSession:
         self.process_manager = ProcessManager()
         self.daemon_status_text = ""
         self._update_status_display()
+
+        # Initialize notification database for bidirectional communication
+        self.notif_db = NotificationDB()
 
         # Setup prompt-toolkit for advanced input
         self._setup_prompt_session()
@@ -379,12 +383,20 @@ class ChatSession:
         self._run_repl_loop()
 
     def _run_repl_loop(self):
-        """Main REPL loop.
+        """Main REPL loop with periodic status updates and daemon question checking.
 
         Continuously reads user input and processes it until
         the session is terminated. Uses prompt-toolkit for advanced
         input features (multi-line, history, auto-completion).
+
+        Checks for daemon questions on startup and every 10 messages.
+        Updates daemon status every 10 messages.
         """
+        # Check for daemon questions on startup
+        self._check_daemon_questions()
+
+        message_count = 0
+
         while self.active:
             try:
                 # Show prompt with Rich styling hint
@@ -419,6 +431,20 @@ class ChatSession:
 
                 # Auto-save session after each interaction
                 self._save_session()
+
+                # Update status and check for daemon questions every 10 messages
+                message_count += 1
+                if message_count % 10 == 0:
+                    # Update daemon status
+                    old_status = self.daemon_status_text
+                    self._update_status_display()
+
+                    # Alert if status changed
+                    if old_status != self.daemon_status_text:
+                        self.console.print(f"\n[cyan]📊 Status Update: {self.daemon_status_text}[/]\n")
+
+                    # Check for new daemon questions
+                    self._check_daemon_questions()
 
             except KeyboardInterrupt:
                 self.console.print("\n\n[yellow]Interrupted. Type /exit to quit.[/]")
@@ -547,7 +573,7 @@ class ChatSession:
             return f"❌ Sorry, I encountered an error: {str(e)}"
 
     def _handle_natural_language_stream(self, text: str, context: Dict) -> str:
-        """Handle natural language with streaming response.
+        """Handle natural language with streaming response and daemon awareness.
 
         Args:
             text: Natural language input
@@ -557,6 +583,35 @@ class ChatSession:
             Complete response message
         """
         try:
+            # Detect daemon-related commands
+            daemon_keywords = [
+                "ask daemon",
+                "tell daemon",
+                "daemon implement",
+                "daemon work on",
+                "daemon start working",
+                "daemon please",
+                "ask code_developer",
+                "tell code_developer",
+            ]
+
+            if any(keyword in text.lower() for keyword in daemon_keywords):
+                return self._send_command_to_daemon(text)
+
+            # Detect status queries
+            status_keywords = [
+                "daemon status",
+                "what is daemon doing",
+                "is daemon working",
+                "daemon progress",
+                "what's daemon working on",
+                "code_developer status",
+            ]
+
+            if any(keyword in text.lower() for keyword in status_keywords):
+                return self._cmd_daemon_status()
+
+            # Normal AI-powered response with streaming
             # Show typing indicator briefly
             with Live(
                 Spinner("dots", text="[cyan]Claude is thinking...[/]"), console=self.console, refresh_per_second=10
@@ -812,6 +867,70 @@ class ChatSession:
         self.console.print(table)
         self.console.print("\n[italic]You can also use natural language![/]")
         self.console.print('[dim]Example: "Add a priority for user authentication"[/]\n')
+
+    def _send_command_to_daemon(self, command: str) -> str:
+        """Send command to daemon via notifications.
+
+        Args:
+            command: Natural language command for daemon
+
+        Returns:
+            Confirmation message
+        """
+        # Check if daemon is running
+        if not self.process_manager.is_daemon_running():
+            return (
+                "⚠️  **Daemon Not Running**\n\n"
+                "I can't send commands to the daemon because it's not running.\n\n"
+                "Would you like me to start it? Use `/start` to launch the daemon."
+            )
+
+        # Create notification for daemon
+        notif_id = self.notif_db.create_notification(
+            type="command",
+            title="Command from project-manager",
+            message=command,
+            priority=NOTIF_PRIORITY_HIGH,
+            context={"timestamp": datetime.now().isoformat(), "source": "project_manager_chat"},
+        )
+
+        return (
+            f"✅ **Command Sent to Daemon** (Notification #{notif_id})\n\n"
+            f"Your message has been delivered to code_developer.\n\n"
+            f"⏰ **Response Time**: He may take 12+ hours to respond.\n"
+            f"   Like a human developer, he needs focus time and rest periods.\n\n"
+            f"💡 **Tip**: Use `/notifications` to check for his response later."
+        )
+
+    def _check_daemon_questions(self):
+        """Check for pending questions from daemon and display them."""
+        try:
+            questions = self.notif_db.get_pending_notifications()
+
+            # Filter for questions from daemon (type="question")
+            daemon_questions = [q for q in questions if q.get("type") == "question"]
+
+            if daemon_questions:
+                self.console.print("\n[yellow]📋 Daemon Has Questions:[/]\n")
+
+                for q in daemon_questions[:5]:  # Show top 5
+                    created = q.get("created_at", "Unknown time")
+                    self.console.print(f"  [bold]#{q['id']}[/]: {q['title']}")
+                    self.console.print(f"  [dim]{created}[/]")
+                    # Truncate message if too long
+                    msg = q["message"]
+                    if len(msg) > 100:
+                        msg = msg[:100] + "..."
+                    self.console.print(f"  {msg}")
+                    self.console.print()
+
+                if len(daemon_questions) > 5:
+                    self.console.print(f"[dim]  ...and {len(daemon_questions) - 5} more[/]\n")
+
+                self.console.print("[dim]Use /notifications to view and respond[/]\n")
+
+        except Exception as e:
+            logger.error(f"Failed to check daemon questions: {e}")
 
     def _load_roadmap_context(self):
         """Load roadmap context at session start.
