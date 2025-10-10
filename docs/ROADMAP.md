@@ -3513,6 +3513,710 @@ Ready for user demo and testing
 
 ---
 
+## 📝 PLANNED: US-020 - Conversational Project Manager Interaction
+
+**User Story**:
+> "As a user, I want the project_manager to interact with me conversationally (like we did in this session), so that creating user stories feels natural and collaborative instead of rigid and command-driven."
+
+**Context**:
+This user story was inspired by an actual session where the user and PM collaborated naturally to create US-018 and US-019. The interaction felt collaborative, adaptive, and human - not robotic or interrogative.
+
+**Key Insight**:
+> "The kind of way we talked to each other during This Session is exactly what I would expect from project_manager."
+
+---
+
+### **Problem Statement**
+
+Currently, when users initiate a new user story, the interaction can feel:
+- ❌ Robotic ("Please answer questions 1-6")
+- ❌ Inflexible (all questions at once, no adaptation)
+- ❌ One-directional (PM asks, user answers, no dialogue)
+- ❌ Disconnected (no confirmation of understanding)
+
+**What we want instead**:
+- ✅ Natural, collaborative flow
+- ✅ Adaptive questioning (reconsider questions when user corrects)
+- ✅ One-by-one questions (not overwhelming batches)
+- ✅ Clear confirmation (show draft before proceeding)
+
+---
+
+### **Scope**
+
+**When This Applies**:
+- User initiates a new user story ("user story: As a [role] I want [goal]...")
+- PM needs to gather requirements through clarifying questions
+
+**Conversational Behaviors**:
+
+1. **One-by-One Questioning**
+   - Always ask questions individually
+   - Wait for user response before asking next question
+   - Never batch multiple questions ("Question 1-6: ...")
+
+2. **Adaptive Questioning**
+   - When user corrects/clarifies mid-conversation, reconsider remaining questions
+   - Example: User says "sorry the real story is..." → PM pivots to ask different questions
+   - Preserve answers that still apply to corrected story
+   - Discard questions that are no longer relevant
+
+3. **Always Integrate User Input**
+   - User's words have authority (even if they affect priorities or code_developer work)
+   - Never hesitate or ask permission to integrate corrections
+   - Immediately accept clarifications and adjust approach
+
+4. **Clear Confirmation**
+   - After gathering all answers, show user story draft for approval
+   - Don't proceed to ROADMAP.md until user approves draft
+
+5. **Natural Flow**
+   - Conversation feels collaborative, not interrogative
+   - Avoid robotic language ("Please answer questions 1-6")
+   - Use conversational transitions ("Perfect! Let me ask...", "Got it! Next question...")
+
+---
+
+### **Implementation**
+
+#### **Phase 1: Conversation State Manager** (1-1.5 days)
+
+**New Component**: `ConversationStateManager`
+
+```python
+class ConversationStateManager:
+    """Manages conversational state during user story creation.
+
+    Tracks:
+    - Current question being asked
+    - User answers collected so far
+    - Remaining questions to ask
+    - User corrections/clarifications
+    """
+
+    def __init__(self, initial_user_story: str):
+        self.user_story_text = initial_user_story
+        self.questions = self._generate_initial_questions()
+        self.answers = {}
+        self.current_question_idx = 0
+        self.corrections = []
+
+    def get_next_question(self) -> Optional[str]:
+        """Get the next question to ask user (one at a time)."""
+        if self.current_question_idx >= len(self.questions):
+            return None
+        return self.questions[self.current_question_idx]
+
+    def record_answer(self, answer: str):
+        """Record user's answer to current question."""
+        question = self.questions[self.current_question_idx]
+        self.answers[question] = answer
+        self.current_question_idx += 1
+
+    def handle_correction(self, correction: str):
+        """User corrected/clarified something - reconsider questions.
+
+        Examples:
+        - "sorry the real story is..."
+        - "I meant X not Y"
+        - "actually, let me clarify..."
+        """
+        self.corrections.append(correction)
+
+        # Update user story text with correction
+        self.user_story_text = correction
+
+        # Regenerate questions based on corrected understanding
+        new_questions = self._generate_questions_for_corrected_story(correction)
+
+        # Preserve answers that still apply
+        preserved_answers = self._preserve_relevant_answers(new_questions)
+
+        # Reset state with new questions
+        self.questions = new_questions
+        self.answers = preserved_answers
+        self.current_question_idx = len(preserved_answers)
+
+    def _generate_initial_questions(self) -> List[str]:
+        """Generate clarifying questions based on user story."""
+        # Use LLM to analyze user story and generate relevant questions
+        # Return list of questions to ask
+        pass
+
+    def _generate_questions_for_corrected_story(self, correction: str) -> List[str]:
+        """Regenerate questions after user correction."""
+        # Analyze correction and generate new set of questions
+        pass
+
+    def _preserve_relevant_answers(self, new_questions: List[str]) -> Dict[str, str]:
+        """Keep answers that still apply to corrected story."""
+        # Match previous answers to new questions where applicable
+        pass
+
+    def generate_draft_user_story(self) -> str:
+        """Generate user story specification draft for user approval."""
+        # Combine user_story_text + all answers into structured spec
+        pass
+```
+
+**Tasks**:
+- Implement ConversationStateManager class (4h)
+- Add correction detection ("sorry", "actually", "I meant") (2h)
+- Implement question regeneration logic (3h)
+- Add answer preservation when correcting (2h)
+- Write unit tests (2h)
+
+**Total**: 13 hours (~1.5 days)
+
+---
+
+#### **Phase 2: One-by-One Question Flow** (0.5-1 day)
+
+**Modify**: `project_manager chat` command to use conversational flow
+
+**Current Behavior** (Batch Questions):
+```
+PM: I have 5 questions to clarify your user story:
+
+Question 1: What should happen when...?
+Question 2: Who will use this feature?
+Question 3: What's the success criteria?
+Question 4: Are there any edge cases?
+Question 5: What's the priority?
+
+Please answer all 5 questions.
+```
+
+**New Behavior** (One-by-One):
+```
+PM: Let me ask some clarifying questions to understand your user story better.
+
+PM: Question 1: What should happen when...?
+User: [answer]
+
+PM: Got it! Next question: Who will use this feature?
+User: [answer]
+
+PM: Perfect! Question 3: What's the success criteria?
+User: [answer]
+
+[... continues one-by-one ...]
+
+PM: Great! I have all the information I need. Let me show you the draft user story:
+
+[Shows draft]
+
+PM: Does this match what you had in mind?
+User: Yes / No / Changes...
+```
+
+**Implementation**:
+```python
+class ProjectManagerChat:
+    def handle_user_story_creation(self, user_input: str):
+        """Handle new user story in conversational style."""
+        # Detect user story intent
+        if self._is_new_user_story(user_input):
+            # Start conversation
+            self.conversation = ConversationStateManager(user_input)
+            self._ask_next_question()
+
+        # Handle correction mid-conversation
+        elif self._is_correction(user_input):
+            self.conversation.handle_correction(user_input)
+            self._acknowledge_correction()
+            self._ask_next_question()
+
+        # Handle answer to current question
+        elif self.conversation and self.conversation.get_next_question():
+            self.conversation.record_answer(user_input)
+            self._ask_next_question()
+
+        # All questions answered - show draft
+        else:
+            draft = self.conversation.generate_draft_user_story()
+            self._show_draft_for_approval(draft)
+
+    def _ask_next_question(self):
+        """Ask next question with conversational tone."""
+        next_q = self.conversation.get_next_question()
+
+        if next_q:
+            # Add conversational transition
+            if self.conversation.current_question_idx == 0:
+                prefix = "Let me ask some clarifying questions to understand better.\n\n"
+            elif self.conversation.current_question_idx == 1:
+                prefix = "Got it! Next question:\n\n"
+            else:
+                prefix = "Perfect! "
+
+            self.send_message(f"{prefix}{next_q}")
+        else:
+            # All questions answered
+            self._finalize_conversation()
+
+    def _acknowledge_correction(self):
+        """Acknowledge user's correction naturally."""
+        messages = [
+            "Ah, I understand now! Let me adjust my questions based on that.",
+            "Got it, thanks for clarifying! Let me reconsider what I need to ask.",
+            "Perfect, that changes things. Let me ask different questions based on this.",
+        ]
+        self.send_message(random.choice(messages))
+
+    def _is_correction(self, text: str) -> bool:
+        """Detect if user is correcting/clarifying."""
+        correction_patterns = [
+            r"sorry.*real story",
+            r"actually",
+            r"I meant",
+            r"let me clarify",
+            r"correction",
+            r"no.*I want",
+        ]
+        return any(re.search(pattern, text.lower()) for pattern in correction_patterns)
+```
+
+**Tasks**:
+- Implement one-by-one question flow (3h)
+- Add conversational transitions (1h)
+- Implement correction detection (2h)
+- Add natural acknowledgments (1h)
+- Write integration tests (2h)
+
+**Total**: 9 hours (~1 day)
+
+---
+
+#### **Phase 3: Draft Approval Workflow** (0.5 day)
+
+**After all questions answered**, show user story draft and wait for approval:
+
+```
+PM: Great! I have all the information I need. Here's the user story draft:
+
+════════════════════════════════════════════════════════════════
+## 📝 US-XXX - [Title]
+
+**User Story**:
+> "[Original user story text]"
+
+**Scope**:
+[Generated from answers]
+
+**Acceptance Criteria**:
+1. [Criterion 1 - from answer to question X]
+2. [Criterion 2 - from answer to question Y]
+...
+
+**Implementation Plan**:
+- Phase 1: [...]
+- Phase 2: [...]
+
+**Estimated Effort**: X-Y days
+**Business Value**: ⭐⭐⭐⭐⭐
+════════════════════════════════════════════════════════════════
+
+Does this match what you had in mind?
+
+Options:
+- "yes" / "approve" → I'll add this to ROADMAP.md
+- "no" / "changes needed" → Tell me what to adjust
+- "cancel" → Discard this user story
+```
+
+**Implementation**:
+```python
+def _show_draft_for_approval(self, draft: str):
+    """Show draft user story and wait for approval."""
+    self.send_message("Great! I have all the information I need. Here's the user story draft:\n")
+    self.send_message("═" * 64)
+    self.send_message(draft)
+    self.send_message("═" * 64)
+    self.send_message("\nDoes this match what you had in mind?\n")
+    self.send_message("Options:")
+    self.send_message("- 'yes' / 'approve' → I'll add this to ROADMAP.md")
+    self.send_message("- 'no' / 'changes needed' → Tell me what to adjust")
+    self.send_message("- 'cancel' → Discard this user story")
+
+    self.awaiting_approval = True
+
+def handle_approval_response(self, response: str):
+    """Handle user's response to draft."""
+    if response.lower() in ["yes", "approve", "y", "approved"]:
+        self._add_to_roadmap(self.conversation.generate_final_spec())
+        self.send_message("✅ Added to ROADMAP.md!")
+    elif response.lower() in ["no", "changes", "change"]:
+        self.send_message("What would you like me to adjust?")
+        self.awaiting_changes = True
+    elif response.lower() == "cancel":
+        self.conversation = None
+        self.send_message("User story discarded.")
+```
+
+**Tasks**:
+- Implement draft display formatting (2h)
+- Add approval detection (1h)
+- Handle "changes needed" workflow (2h)
+- Write tests (1h)
+
+**Total**: 6 hours (~0.5 day)
+
+---
+
+#### **Phase 4: Anti-Pattern Detection** (0.5 day)
+
+Ensure PM never exhibits robotic behavior:
+
+**Anti-Patterns to Avoid**:
+❌ "Please answer questions 1-6"
+❌ "Q1: [question] Q2: [question] Q3: [question]"
+❌ No transitions between questions
+❌ No acknowledgment of answers
+❌ Asking redundant questions after user clarified
+
+**Implementation**:
+```python
+class ConversationalToneEnforcer:
+    """Ensures PM uses conversational tone, not robotic."""
+
+    ROBOTIC_PATTERNS = [
+        r"please answer questions? \d+-\d+",
+        r"q\d+:",
+        r"question \d+.*question \d+",  # Multiple questions at once
+    ]
+
+    CONVERSATIONAL_TRANSITIONS = [
+        "Got it! ",
+        "Perfect! ",
+        "Excellent! ",
+        "Great! ",
+        "I understand. ",
+    ]
+
+    def validate_message(self, message: str) -> bool:
+        """Check if message violates conversational tone."""
+        for pattern in self.ROBOTIC_PATTERNS:
+            if re.search(pattern, message.lower()):
+                raise ValueError(f"Robotic tone detected: {pattern}")
+        return True
+
+    def add_transition(self, message: str, question_idx: int) -> str:
+        """Add conversational transition to question."""
+        if question_idx == 0:
+            return f"Let me ask some clarifying questions.\n\n{message}"
+        else:
+            transition = random.choice(self.CONVERSATIONAL_TRANSITIONS)
+            return f"{transition}{message}"
+```
+
+**Tasks**:
+- Implement anti-pattern detection (2h)
+- Add conversational transitions (1h)
+- Add tone validation in unit tests (2h)
+
+**Total**: 5 hours (~0.5 day)
+
+---
+
+#### **Phase 5: Integration & Testing** (1 day)
+
+**Integration**:
+- Integrate ConversationStateManager into project_manager chat
+- Update chat command to detect new user story intent
+- Add session persistence for in-progress conversations
+
+**Testing Scenarios**:
+
+**Test 1: Simple User Story (No Corrections)**
+```
+User: user story: As a developer I want syntax highlighting in code blocks
+PM: Let me ask some clarifying questions.
+PM: Question 1: What programming languages should be highlighted?
+User: Python, JavaScript, and Bash
+PM: Got it! Question 2: Where should this highlighting appear?
+User: In the chat interface
+PM: Perfect! [... continues ...]
+PM: [Shows draft]
+User: yes
+PM: ✅ Added to ROADMAP.md!
+```
+
+**Test 2: User Correction Mid-Conversation**
+```
+User: user story: As a pm I want to see branches related to what I document
+PM: Question 1: What information do you need from branches?
+PM: Question 2: How should branches be displayed?
+User: sorry the real story is: As a user I want to be notified when a delivery is ready to ship
+PM: Ah, I understand now! Let me adjust my questions based on that.
+PM: Question 1: What notifications do you want to receive?
+User: When PR is opened
+PM: Got it! [... continues with different questions ...]
+```
+
+**Test 3: User Requests Changes to Draft**
+```
+PM: [Shows draft]
+User: no, changes needed
+PM: What would you like me to adjust?
+User: The acceptance criteria should include edge cases
+PM: [Updates draft with edge cases]
+PM: [Shows updated draft]
+User: yes
+PM: ✅ Added to ROADMAP.md!
+```
+
+**Tasks**:
+- Write end-to-end test scenarios (4h)
+- Manual testing with real user stories (3h)
+- Fix bugs and refine tone (4h)
+- Documentation and examples (2h)
+
+**Total**: 13 hours (~1.5 day)
+
+---
+
+#### **Phase 6: Documentation & Methodology Update** (0.5 day)
+
+**Update COLLABORATION_METHODOLOGY.md**:
+
+Add **Section 4.5: Conversational Interaction Patterns** (200-300 lines):
+
+```markdown
+### Section 4.5: Conversational Interaction Patterns
+
+When users initiate a new user story, the PM uses a conversational interaction style
+designed to feel collaborative and natural, not robotic or interrogative.
+
+**Conversational Principles**:
+
+1. **One-by-One Questions** - Never batch questions
+2. **Adaptive to Corrections** - Reconsider questions when user clarifies
+3. **Always Integrate User Input** - User has authority over requirements
+4. **Clear Confirmation** - Show draft before proceeding
+5. **Natural Flow** - Conversational tone, not robotic
+
+**Example Interaction**:
+[Show complete example from Test 2 above]
+
+**Anti-Patterns to Avoid**:
+- ❌ "Please answer questions 1-6"
+- ❌ Asking redundant questions after clarification
+- ❌ No acknowledgment between questions
+- ❌ Proceeding without showing draft
+
+**Success Criteria**:
+✅ Conversation feels collaborative, not interrogative
+✅ User feels heard and understood
+✅ Questions are relevant and adaptive
+✅ Draft matches user's intent on first try (>85% approval rate)
+```
+
+**Tasks**:
+- Write Section 4.5 in COLLABORATION_METHODOLOGY.md (3h)
+- Add examples from testing (1h)
+- Cross-reference with Section 3.1 (User role) (1h)
+- Version bump to 1.9 (15 min)
+
+**Total**: 5 hours (~0.5 day)
+
+---
+
+### **Acceptance Criteria**
+
+**Conversational Flow** (6 criteria):
+
+1. ✅ **One-by-One Questions**
+   - PM asks questions individually, never in batches
+   - Waits for user response before asking next question
+   - Test: User creates new story → PM asks Q1 → waits → asks Q2 → waits
+
+2. ✅ **Adaptive to Corrections**
+   - When user corrects/clarifies, PM reconsiders remaining questions
+   - PM preserves relevant answers from before correction
+   - Test: User says "sorry the real story is..." → PM asks different questions
+
+3. ✅ **Always Integrates User Input**
+   - PM accepts user corrections immediately without hesitation
+   - Changes take effect even if they affect priorities/code_developer
+   - Test: User changes scope mid-conversation → PM adapts without asking permission
+
+4. ✅ **Clear Confirmation via Draft**
+   - After gathering answers, PM shows complete draft user story
+   - PM waits for user approval ("yes"/"no"/"changes") before adding to ROADMAP
+   - Test: PM shows draft → User says "no" → PM asks what to adjust
+
+5. ✅ **Natural Flow**
+   - Conversation feels collaborative, not interrogative
+   - Conversational transitions between questions ("Got it!", "Perfect!")
+   - Test: Read conversation transcript → feels natural to human reviewer
+
+6. ✅ **Anti-Pattern Prevention**
+   - PM never uses robotic language ("Please answer questions 1-6")
+   - PM never asks redundant questions after user clarifies
+   - Test: Automated check detects robotic patterns → test fails
+
+**Technical Implementation** (3 criteria):
+
+7. ✅ **ConversationStateManager**
+   - Tracks current question, answers, corrections
+   - Regenerates questions when user corrects
+   - Test: Unit tests verify state management
+
+8. ✅ **Correction Detection**
+   - Detects when user is correcting ("sorry", "actually", "I meant")
+   - Triggers question regeneration automatically
+   - Test: User says "actually..." → PM detects correction
+
+9. ✅ **Session Persistence**
+   - In-progress conversation survives if user disconnects/reconnects
+   - PM resumes from current question
+   - Test: Start conversation → disconnect → reconnect → PM resumes
+
+**Documentation** (2 criteria):
+
+10. ✅ **COLLABORATION_METHODOLOGY.md Updated**
+    - Section 4.5 added with conversational patterns
+    - Examples from testing included
+    - Version bumped to 1.9
+
+11. ✅ **User Validation**
+    - User tests new conversational flow with real user story
+    - User confirms it feels "natural and collaborative"
+    - 85%+ approval rate on first-try draft
+
+---
+
+### **Success Criteria**
+
+**Primary Goal**: Natural, collaborative flow
+
+**Metrics**:
+- Conversation feels collaborative, not interrogative (subjective - user feedback)
+- Questions are relevant and not redundant
+- Draft matches user intent on first try (>85% approval rate)
+
+**User Feedback**:
+> "The kind of way we talked to each other during This Session is exactly what I would expect from project_manager."
+
+---
+
+### **Estimated Effort**
+
+**Implementation**: 4-5 days
+- Phase 1: Conversation State Manager (1-1.5 days)
+- Phase 2: One-by-One Question Flow (0.5-1 day)
+- Phase 3: Draft Approval Workflow (0.5 day)
+- Phase 4: Anti-Pattern Detection (0.5 day)
+- Phase 5: Integration & Testing (1 day)
+- Phase 6: Documentation (0.5 day)
+
+**Business Value**: ⭐⭐⭐⭐⭐ Critical
+- Improves user experience dramatically
+- Makes PM feel human, not robotic
+- Reduces friction in user story creation
+- Higher quality specs (better questions → better answers)
+
+**Priority**: HIGH (This is how PM should ALWAYS interact with users)
+
+---
+
+### **Relationships to Other User Stories**
+
+**Depends On**:
+- US-006 (Chat UX) - Conversational flow requires interactive chat
+- Section 3.1 (User role) - User responsibilities during user story creation
+
+**Enables**:
+- US-021 (PM Introspection) - Conversational data feeds into metrics
+- Better user story quality (clear questions → clear requirements)
+
+**Related Methodology Sections**:
+- Section 3.1.6 (Example Interactions) - Shows conversational patterns
+- Section 4.4 (Progress Reporting) - Conversational tone applies there too
+- Section 2.7 (Code References Methodology) - PM behavior matches documented patterns
+
+---
+
+### **Example: Full Conversational Flow**
+
+**Scenario**: User wants email notifications
+
+```
+User: user story: As a developer I want email notifications when the daemon completes tasks
+
+PM: Let me ask some clarifying questions to understand better.
+
+PM: Question 1: What events should trigger email notifications?
+
+User: When daemon completes a user story, or when it needs my input
+
+PM: Got it! Question 2: Where should emails be sent?
+
+User: To my work email
+
+PM: Perfect! Question 3: Should emails include links to PRs or just summaries?
+
+User: Full details with PR links
+
+PM: Excellent! Question 4: Any preferences for email frequency (immediate, batched, daily digest)?
+
+User: Immediate for questions, batched for completions
+
+PM: Great! I have all the information I need. Here's the user story draft:
+
+════════════════════════════════════════════════════════════════
+## 📝 US-XXX - Email Notifications for Daemon Events
+
+**User Story**:
+> "As a developer I want email notifications when the daemon completes tasks"
+
+**Scope**:
+Send email notifications for two event types:
+1. Daemon completes user story → Batched notifications
+2. Daemon needs user input → Immediate notifications
+
+**Email Content**:
+- Event type (completion / question)
+- User story details
+- PR links (for completions)
+- Full context (not just summaries)
+
+**Delivery**:
+- Destination: Work email
+- Timing: Immediate (questions), Batched (completions)
+
+**Acceptance Criteria**:
+1. ✅ Email sent when daemon completes user story (batched)
+2. ✅ Email sent when daemon needs input (immediate)
+3. ✅ Email includes PR link for completions
+4. ✅ Email includes full context, not summary
+5. ✅ Email sent to work email address
+
+**Implementation Plan**:
+- Phase 1: Email service integration (1 day)
+- Phase 2: Event detection (0.5 day)
+- Phase 3: Batching logic (0.5 day)
+- Phase 4: Templates (0.5 day)
+
+**Estimated Effort**: 2-3 days
+**Business Value**: ⭐⭐⭐⭐
+════════════════════════════════════════════════════════════════
+
+Does this match what you had in mind?
+
+Options:
+- "yes" / "approve" → I'll add this to ROADMAP.md
+- "no" / "changes needed" → Tell me what to adjust
+- "cancel" → Discard this user story
+
+User: yes
+
+PM: ✅ Added to ROADMAP.md as US-XXX!
+```
+
+---
+
 ## 🚀 RELEASE STRATEGY & VERSIONING
 
 ### ✅ What's Deliverable TODAY (Version 0.1.0 - MVP)
