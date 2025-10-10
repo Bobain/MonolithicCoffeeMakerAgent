@@ -290,22 +290,23 @@ Developer SHOULD have also created:
 
 ---
 
-## 📝 DISCUSSION: US-012 - Natural Language User Story Management
+## 📝 READY TO IMPLEMENT: US-012 - Natural Language User Story Management
 
-**Project**: **💬 US-012 - Natural Language Conversation for User Story Lifecycle**
+**Project**: **💬 US-012 - `/US` Command with Conversational Validation Workflow**
 
-**Status**: 🔄 **IN DISCUSSION** (2025-10-10)
+**Status**: 📝 **PLANNED** (2025-10-10 - DoD defined, ready to implement)
 
-**User Story (Corrected)**:
+**User Story**:
 > "As a user I want to interact with the project manager with natural language, I want him to translate what I say into user stories. We will validate together the user stories we will prioritize, de-prioritize, which ones to put into the backlog as new user story or how to rephrase an old one which covers part of user's need, etc."
 
-**Key Insight**: This is NOT about a `/US` command - it's about **natural conversational workflow** where:
-- User describes needs in plain language (no commands)
-- PM translates into structured user stories
-- PM and User validate together collaboratively
-- PM helps with prioritization decisions
-- PM detects if existing US can be rephrased vs creating new one
-- PM manages backlog vs active priorities
+**Definition of Done**:
+> "In the project_manager UI it is possible to say `/US I want to be able to [...]` and the project manager will share ideas with the user about what he will rephrase as a user story, wait for the user to validate, then propagate the information in the roadmap."
+
+**Key Requirements**:
+1. **New Command**: `/US [description]` in project_manager chat
+2. **Conversational Validation**: PM shares structured US draft, waits for user approval
+3. **Propagation**: Only after validation, PM adds to ROADMAP.md
+4. **Workflow**: Share ideas → Validate → Propagate (NOT immediate addition)
 
 **Current Capabilities**:
 ✅ Natural language chat interface exists
@@ -324,14 +325,18 @@ Developer SHOULD have also created:
 
 **Example Desired Workflow**:
 ```
-User: "I need the system to send me email when code_developer finishes a task"
+User: "/US I want to be able to receive email notifications when code_developer finishes a task"
 
-PM: "I've extracted this user story:
+PM: "I've extracted this user story from your description:
 
-US-XXX: Email Notifications on Task Completion
-As a: User
-I want: Email notifications when code_developer completes tasks
-So that: I stay informed without checking manually
+**US-XXX: Email Notifications on Task Completion**
+
+**As a**: User
+**I want**: Email notifications when code_developer completes tasks
+**So that**: I stay informed without checking manually
+
+**Business Value**: ⭐⭐⭐⭐ (High - improves awareness)
+**Estimated Effort**: 3-5 days (notification system, email templates, config)
 
 Does this capture your need? Any changes?"
 
@@ -339,22 +344,38 @@ User: "Yes, also when daemon asks me questions"
 
 PM: "Updated:
 
-US-XXX: Email & Question Notifications
+**US-XXX: Email & Question Notifications**
+
+**As a**: User
+**I want**: Email notifications when code_developer completes tasks OR asks questions
+**So that**: I stay informed and can respond quickly
+
+**Features**:
 - Email when tasks complete
 - Email when daemon has questions
-- Configurable notification preferences
+- Configurable notification preferences (frequency, types)
 
-I found US-008 (Automated User Support) mentions notifications.
+**Analysis**: I found US-008 (Automated User Support) mentions notifications.
+
 Should I:
 A) Create new US-XXX for email notifications
-B) Expand US-008 to include email
+B) Expand US-008 to include email functionality
 C) Keep separate and link them
 
-Also, priority? (TOP PRIORITY, after US-011, or backlog)"
+Also, where should this go?
+- TOP PRIORITY (implement next)
+- After US-011 (planned work)
+- Backlog (future consideration)"
 
 User: "Create new, make it after US-011"
 
-PM: "✅ Created US-XXX, prioritized after US-011 in roadmap"
+PM: "✅ Perfect! I've:
+1. Created US-XXX: Email & Question Notifications
+2. Prioritized after US-011 in roadmap
+3. Marked status as 📝 Planned
+4. Linked to US-008 for cross-reference
+
+You can see it in the roadmap now. Want to create another user story?"
 ```
 
 **Technical Foundation** (Already Exists):
@@ -371,27 +392,51 @@ PM: "✅ Created US-XXX, prioritized after US-011 in roadmap"
 4. **Rephrasing workflow**: Show existing US and propose updated version
 5. **Documentation**: Update TUTORIALS.md with examples of natural US creation
 
-**Next Steps**:
-1. User will try describing a need naturally in chat
-2. Test current PM responses to see what works
-3. Identify gaps in conversational flow
-4. Build enhancements based on real usage
+**Implementation Plan**:
 
-**Estimated** (if full enhancement needed): 1-2 days
-- Implement validation loop
-- Add similarity detection
-- Build prioritization helper
-- Create rephrasing workflow
-- Update documentation with examples
+**Phase 1: Core `/US` Command** (2-3 hours)
+1. Add `/US` command handler in `chat_interface.py`
+2. Parse command arguments (description text)
+3. Call `AIService.extract_user_story()`
+4. Present draft to user (formatted markdown)
+5. Wait for user response (validation loop)
 
-**Success Criteria**:
-- [ ] User can describe needs in plain language (no commands)
-- [ ] PM extracts structured user story
-- [ ] PM presents for validation before adding to roadmap
-- [ ] PM detects similar existing user stories
-- [ ] PM helps with prioritization decisions
+**Phase 2: Similarity Detection** (2-3 hours)
+1. Search existing user stories in ROADMAP
+2. Use fuzzy matching or semantic similarity
+3. Present options: create new, expand existing, or rephrase
+4. Let user decide
+
+**Phase 3: Prioritization Helper** (1-2 hours)
+1. Ask user: TOP PRIORITY, after specific US, or backlog?
+2. Analyze dependencies and suggest placement
+3. Show impact on timeline
+
+**Phase 4: Propagation to Roadmap** (1 hour)
+1. After validation, call `RoadmapEditor.add_user_story()`
+2. Update ROADMAP.md with new US
+3. Confirm to user with link/reference
+
+**Phase 5: Documentation & Polish** (1 hour)
+1. Update TUTORIALS.md with `/US` examples
+2. Add to PROJECT_MANAGER_FEATURES.md
+3. Test end-to-end workflow
+
+**Total Estimated**: 1-2 days (7-10 hours)
+
+**Acceptance Criteria** (Definition of Done):
+- [ ] `/US` command exists in project_manager chat interface
+- [ ] User can type: `/US I want to be able to [description]`
+- [ ] PM extracts and structures the user story from description
+- [ ] PM shares ideas about how to rephrase as user story
+- [ ] PM presents draft user story to user
+- [ ] PM waits for user validation (does NOT auto-add to roadmap)
+- [ ] User can request changes/refinements
+- [ ] After validation, PM propagates to ROADMAP.md
+- [ ] PM detects similar existing user stories and offers options
+- [ ] PM helps with prioritization (TOP PRIORITY, backlog, etc.)
 - [ ] PM can suggest rephrasing existing US vs creating new
-- [ ] Entire process feels like natural conversation (not command-driven)
+- [ ] Entire workflow feels conversational (not form-filling)
 
 ---
 
