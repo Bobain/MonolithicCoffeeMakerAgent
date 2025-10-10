@@ -16,8 +16,13 @@ Example:
 
 import logging
 import os
+from pathlib import Path
 from typing import Dict, List
 
+from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.key_binding import KeyBindings
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
@@ -30,6 +35,72 @@ from coffee_maker.cli.commands import get_command_handler, list_commands
 from coffee_maker.cli.roadmap_editor import RoadmapEditor
 
 logger = logging.getLogger(__name__)
+
+
+class ProjectManagerCompleter(Completer):
+    """Auto-completer for project-manager chat.
+
+    Provides Tab completion for:
+    - Slash commands (/help, /view, /add, etc.)
+    - Priority names (PRIORITY 1, PRIORITY 2, etc.)
+    - File paths (when relevant)
+    """
+
+    def __init__(self, editor: RoadmapEditor):
+        """Initialize completer.
+
+        Args:
+            editor: RoadmapEditor instance for priority completion
+        """
+        self.editor = editor
+        self.commands = [
+            "help",
+            "view",
+            "add",
+            "update",
+            "status",
+            "exit",
+            "quit",
+            "notifications",
+        ]
+
+    def get_completions(self, document, complete_event):
+        """Generate completions based on current input.
+
+        Args:
+            document: Current document being edited
+            complete_event: Completion event
+
+        Yields:
+            Completion objects
+        """
+        word_before_cursor = document.get_word_before_cursor()
+        text_before_cursor = document.text_before_cursor
+
+        # Complete slash commands
+        if text_before_cursor.startswith("/") or (text_before_cursor == "" and word_before_cursor == ""):
+            for cmd in self.commands:
+                if cmd.startswith(word_before_cursor.lstrip("/")):
+                    yield Completion(
+                        cmd if text_before_cursor.startswith("/") else f"/{cmd}",
+                        start_position=-len(word_before_cursor),
+                        display_meta=f"command",
+                    )
+
+        # Complete priority names when relevant
+        elif any(keyword in text_before_cursor.lower() for keyword in ["priority", "PRIORITY", "view", "update"]):
+            try:
+                priorities = self.editor.list_priorities()
+                for priority in priorities[:15]:  # Limit to 15 for performance
+                    priority_name = priority["name"]
+                    if priority_name.lower().startswith(word_before_cursor.lower()):
+                        yield Completion(
+                            priority_name,
+                            start_position=-len(word_before_cursor),
+                            display_meta=f"{priority['title'][:40]}...",
+                        )
+            except Exception as e:
+                logger.debug(f"Priority completion failed: {e}")
 
 
 class ChatSession:
@@ -68,7 +139,45 @@ class ChatSession:
         env_no_streaming = os.environ.get("PROJECT_MANAGER_NO_STREAMING", "").lower() in ["1", "true", "yes"]
         self.enable_streaming = enable_streaming and not env_no_streaming
 
+        # Setup prompt-toolkit for advanced input
+        self._setup_prompt_session()
+
         logger.info(f"ChatSession initialized (streaming={'enabled' if self.enable_streaming else 'disabled'})")
+
+    def _setup_prompt_session(self):
+        """Setup prompt-toolkit session with history, completion, and key bindings."""
+        # History file location
+        history_dir = Path.home() / ".project_manager"
+        history_dir.mkdir(exist_ok=True)
+        history_file = history_dir / "chat_history.txt"
+
+        # Key bindings for multi-line input
+        bindings = KeyBindings()
+
+        @bindings.add("enter")
+        def _(event):
+            """Submit on Enter."""
+            event.current_buffer.validate_and_handle()
+
+        @bindings.add("s-enter")  # Shift+Enter
+        def _(event):
+            """Insert newline on Shift+Enter."""
+            event.current_buffer.insert_text("\n")
+
+        @bindings.add("escape", "enter")  # Alt+Enter (fallback)
+        def _(event):
+            """Insert newline on Alt+Enter (alternative to Shift+Enter)."""
+            event.current_buffer.insert_text("\n")
+
+        # Create prompt session
+        self.prompt_session = PromptSession(
+            history=FileHistory(str(history_file)),
+            completer=ProjectManagerCompleter(self.editor),
+            complete_while_typing=False,  # Complete only on Tab
+            multiline=False,  # Will be controlled by key bindings
+            key_bindings=bindings,
+            enable_history_search=True,  # Ctrl+R for reverse search
+        )
 
     def start(self):
         """Start interactive chat session.
@@ -89,12 +198,17 @@ class ChatSession:
         """Main REPL loop.
 
         Continuously reads user input and processes it until
-        the session is terminated.
+        the session is terminated. Uses prompt-toolkit for advanced
+        input features (multi-line, history, auto-completion).
         """
         while self.active:
             try:
-                # Get user input
-                user_input = self.console.input("\n[bold cyan]You:[/] ")
+                # Show prompt with Rich styling hint
+                self.console.print("\n[bold cyan]You:[/] ", end="")
+
+                # Get user input with prompt-toolkit
+                # (supports: ↑/↓ history, Tab completion, Shift+Enter multi-line)
+                user_input = self.prompt_session.prompt("")
 
                 if not user_input.strip():
                     continue
@@ -366,9 +480,19 @@ class ChatSession:
 
     def _display_welcome(self):
         """Display welcome message with rich formatting."""
+        features = (
+            "✨ [bold]New Features:[/] ✨\n"
+            "  • [cyan]Streaming responses[/] - Text appears progressively\n"
+            "  • [cyan]↑/↓[/] - Navigate input history\n"
+            "  • [cyan]Tab[/] - Auto-complete commands and priorities\n"
+            "  • [cyan]Shift+Enter[/] - Multi-line input\n"
+            "  • [cyan]Ctrl+R[/] - Reverse history search\n\n"
+        )
+
         panel = Panel.fit(
             "[bold cyan]Coffee Maker - AI Project Manager[/]\n\n"
-            "Powered by Claude AI - Your intelligent roadmap assistant\n"
+            "Powered by Claude AI - Your intelligent roadmap assistant\n\n"
+            f"{features}"
             "Type [bold]/help[/] for commands or just chat naturally\n\n"
             "[dim]Session started. Type /exit to quit.[/]",
             title="🤖 Welcome",
