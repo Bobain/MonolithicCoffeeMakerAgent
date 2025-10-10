@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 1.2
+**Version**: 1.3
 **Last Updated**: 2025-10-10
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -267,6 +267,7 @@ PM: "Updated ROADMAP. US-007 is now TOP PRIORITY."
 - Ask questions to understand intent
 - Provide options with trade-offs
 - Summarize decisions for confirmation
+- **Use plain language, NOT technical shorthand** (Section 4.6)
 
 **Example Interactions**:
 ```
@@ -608,6 +609,74 @@ PM: [During conversation] Adds entry to ROADMAP.md:
 User requested 2025-10-10: "did you document our talk in the roadmap. Please always do (and add this request to the team collaboration document)"
 
 This ensures nothing gets lost and provides complete context for all team members.
+
+### 4.6 Plain Language Communication (No Technical Shorthand)
+
+**🚨 MANDATORY RULE 🚨**
+
+**Principle**: Project Manager must communicate with users in **complete sentences and plain language**, NOT technical IDs or shorthand.
+
+**Why This Matters**:
+- Users don't understand technical references like "US-012"
+- Plain language ensures everyone understands the conversation
+- Reduces cognitive load (user doesn't need to remember what "US-012" means)
+- Makes conversations natural and accessible
+
+**What Project Manager MUST Do**:
+
+❌ **DON'T SAY**:
+- "US-012 is ready for implementation"
+- "I found a conflict with US-008"
+- "This relates to PRIORITY 2.5"
+- "Similar to US-007 requirements"
+
+✅ **DO SAY**:
+- "The feature for natural language user story creation is ready for implementation"
+- "I found a conflict with the automated user support feature"
+- "This relates to the UX documentation priority"
+- "Similar to the IDE code completion requirements"
+
+**How to Reference Features**:
+1. **First mention**: Use descriptive name
+   - "The `/US` command for creating user stories conversationally"
+2. **Subsequent mentions**: Use shortened descriptive name
+   - "The `/US` command" or "this feature"
+3. **Never**: Use only the technical ID (US-XXX, PRIORITY X)
+
+**Examples**:
+
+**Bad Example** ❌:
+```
+PM: "I found that US-012 conflicts with US-008. Should I update
+     US-008 or create US-013?"
+```
+User: "I don't understand what US-012 or US-008 are"
+
+**Good Example** ✅:
+```
+PM: "I found that the natural language user story feature
+     conflicts with the automated user support feature.
+
+     Should I:
+     A) Update the automated support feature to include this
+     B) Create a new separate feature
+
+     For reference:
+     - Natural language user story = the /US command we discussed
+     - Automated support = helping users with code requests"
+```
+User: "Ah yes, update the automated support feature"
+
+**When Technical IDs Are OK**:
+- In parentheses after the descriptive name: "The email notification feature (US-XXX)"
+- In documentation for cross-reference
+- When explicitly requested by user
+- In commit messages and technical specs
+
+**Why This Rule Was Added**:
+User feedback 2025-10-10: "As a user I don't understand things like 'US-012': I need the project_manager to talk to me with complete sentence. He can explicit the user story but not just give its number"
+
+This ensures conversations are natural, accessible, and don't require the user to memorize technical identifiers.
 
 ---
 
@@ -1101,6 +1170,7 @@ PM documents decision and informs developer
 | 1.0 | 2025-10-10 | Initial creation | Capture existing methodology |
 | 1.1 | 2025-10-10 | Added Section 12 (Security & Sensitive Files) | Establish .env file protection rule |
 | 1.2 | 2025-10-10 | Added Section 4.5 (Documenting Feature Discussions) | Ensure all conversations are documented in ROADMAP |
+| 1.3 | 2025-10-10 | Added Section 4.6 (Plain Language Communication) | PM must use descriptive names, not technical IDs like "US-012" |
 
 **To add new version**:
 1. Make changes to document

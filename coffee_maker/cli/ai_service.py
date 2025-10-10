@@ -3,6 +3,12 @@
 This module provides Claude AI integration for the project manager CLI,
 enabling natural language understanding and intelligent roadmap management.
 
+IMPORTANT: Communication Guidelines
+    See docs/COLLABORATION_METHODOLOGY.md Section 4.6:
+    - Use plain language, NOT technical shorthand (no "US-012")
+    - Say "the email notification feature" not "US-012"
+    - Always explain features descriptively to users
+
 Example:
     >>> from coffee_maker.cli.ai_service import AIService
     >>>
