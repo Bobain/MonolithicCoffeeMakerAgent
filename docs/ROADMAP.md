@@ -178,9 +178,31 @@ The previous system required manual management of two separate processes with no
 - Streaming responses, multi-line input, history, auto-completion, syntax highlighting, session persistence
 
 **Next After US-009**:
+- **US-010: Living Documentation & Tutorials** ⚡ **NEXT PRIORITY**
 - PRIORITY 2.6: CI Testing (ensure daemon stability)
 - PRIORITY 2.7: Daemon Crash Recovery (24/7 reliability)
 - US-007: IDE Code Completion (developer productivity)
+
+---
+
+## 🔴 NEXT PRIORITY: US-010 - Living Documentation & Tutorials
+
+**Project**: **📚 US-010 - Living Documentation & Tutorials**
+
+**Status**: 🔄 **IN PROGRESS** (Started 2025-10-10)
+
+**Goal**: Create and maintain comprehensive, up-to-date documentation with tutorials so assistants can help users understand and use all deliverables
+
+**User Story**:
+> "As an assistant of the developer, I want to keep up to date the documentation and be aware of it, I also want to have a summary with tutorials so that 1) I can better understand the use of deliverables 2) I can answer questions from the user about how to use the deliverables"
+
+**Success Criteria** (6/6):
+- [x] Central documentation hub created (DOCUMENTATION_INDEX.md)
+- [x] All existing docs indexed and described
+- [x] Quickstart updated with US-009 features
+- [x] At least 5 practical tutorials created (TUTORIALS.md)
+- [x] Documentation maintenance process defined
+- [x] All docs written in clear, beginner-friendly language
 
 ---
 

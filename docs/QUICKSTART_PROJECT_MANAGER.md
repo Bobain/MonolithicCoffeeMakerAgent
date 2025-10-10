@@ -142,10 +142,153 @@ python run_daemon.py --auto-approve
 5. Create pull requests
 6. Send you notifications for review
 
+## ✨ NEW: Interactive Chat with Daemon Control (US-009)
+
+**The project-manager now includes an interactive chat interface with full daemon control!**
+
+### Start Chat Mode
+
+```bash
+poetry run project-manager chat
+```
+
+**You'll see**:
+```
+🤖 Welcome to Coffee Maker - AI Project Manager
+
+✨ New Features:
+  • Streaming responses - Text appears progressively
+  • ↑/↓ - Navigate input history
+  • Tab - Auto-complete commands and priorities
+  • Shift+Enter - Multi-line input
+
+📊 Status: 🟢 Daemon: Active - Working on PRIORITY 5
+         Use /status for detailed info, /start to launch daemon
+
+You: _
+```
+
+### Daemon Control Commands (NEW!)
+
+**Check Daemon Status**:
+```
+/status
+```
+
+Shows:
+- PID, uptime, CPU, memory
+- Current task
+- Whether daemon is running/idle/stopped
+
+**Start Daemon**:
+```
+/start
+```
+
+Launches the daemon in the background. No need for separate terminal!
+
+**Stop Daemon**:
+```
+/stop
+```
+
+Gracefully shuts down the daemon.
+
+**Restart Daemon**:
+```
+/restart
+```
+
+### Talk to the Daemon (NEW!)
+
+**Natural Language Communication**:
+```
+You: Ask daemon to implement PRIORITY 5
+
+✅ Command Sent to Daemon (Notification #42)
+
+Your message has been delivered to code_developer.
+
+⏰ Response Time: He may take 12+ hours to respond.
+   Like a human developer, he needs focus time and rest periods.
+```
+
+**Check for Daemon Questions**:
+
+The chat automatically shows daemon questions every 10 messages:
+```
+📋 Daemon Has Questions:
+
+  #41: Dependency Approval
+  Should I install pytest for testing?
+
+Use /notifications to view and respond
+```
+
+**Respond to Daemon**:
+```
+You: /respond 41 "Yes, use pytest"
+```
+
+### Chat Features
+
+**Multi-line Input** (Shift+Enter):
+```
+You: Add a new priority:
+     - Create authentication
+     - Add tests
+     - Update docs
+     [Press Enter to send]
+```
+
+**History Navigation** (↑/↓):
+Press ↑ to recall previous commands
+
+**Auto-completion** (Tab):
+Type `/sta` then press Tab → `/status`
+
+**Syntax Highlighting**:
+Code blocks in responses are automatically highlighted
+
+### Example Chat Session
+
+```
+You: /status
+Claude: 🟢 Daemon Status: RUNNING
+        - PID: 12345
+        - Status: WORKING
+        - Current Task: PRIORITY 5: Authentication
+        - Uptime: 2 hours
+        - CPU: 15.2%
+        - Memory: 45.3 MB
+
+You: What is the daemon working on?
+Claude: The daemon is currently implementing PRIORITY 5:
+        User Authentication with email/password and OAuth...
+
+You: Ask daemon to add tests for authentication
+Claude: ✅ Command sent to daemon (Notification #43)
+
+You: /exit
+Claude: Thank you for using Coffee Maker!
+```
+
 ## Common Workflows
 
-### Daily Check-In
+### Daily Check-In (Updated!)
 
+**Option A: Using Chat (Recommended)**
+```bash
+poetry run project-manager chat
+
+# Then in chat:
+/status                  # Check daemon status
+/notifications           # See daemon questions
+Ask daemon to...         # Send commands
+/exit                    # When done
+```
+
+**Option B: Using CLI Commands**
 ```bash
 # 1. Check notifications
 project-manager notifications
