@@ -1186,6 +1186,306 @@ Insights:
 
 ---
 
+## 📝 PLANNED: US-016 - Detailed Technical Spec Generation with Task-Level Estimates
+
+**Project**: **📐 US-016 - PM Must Create Full Technical Specs Before Estimating Delivery**
+
+**Status**: 📝 **PLANNED** (2025-10-10 - Requirements defined)
+
+**User Story**:
+> "As a project_manager I need the technical full specification to be already written with estimated time for each task, to give an estimated time delivery."
+
+**Business Context**:
+Currently, PM can provide delivery estimates without creating detailed technical specifications. This leads to:
+- ❌ Inaccurate estimates (missing hidden complexity)
+- ❌ Scope creep (discovered tasks not estimated)
+- ❌ No task-level breakdown for tracking
+- ❌ Difficult to identify which parts take longer
+
+**The Problem This Solves**:
+This is both a **capability** (tools to generate detailed specs) and a **process rule** (PM must refuse to estimate without spec).
+
+**What Needs to Happen**:
+
+**1. Mandatory Process Rule** (COLLABORATION_METHODOLOGY.md):
+PM **MUST** create a full technical specification with task-level time estimates before providing any delivery date estimate to the user.
+
+If user asks "How long will this take?", PM **MUST** respond:
+- "I need to create a technical specification first to give you an accurate estimate."
+- Then PM creates the spec
+- Then PM provides the delivery estimate based on spec totals
+
+**2. Technical Spec Requirements** (what PM must include):
+```markdown
+## Technical Specification Structure
+
+### Phase Breakdown:
+Each phase must include:
+- Phase name and goal
+- Task list with time estimates
+- Dependencies
+- Risks
+- Success criteria
+
+Example:
+**Phase 1: Database Schema** (Total: 6 hours)
+- [ ] Design tables (1.5h)
+- [ ] Write migration scripts (2h)
+- [ ] Add indexes (1h)
+- [ ] Write tests for schema (1.5h)
+
+**Phase 2: API Implementation** (Total: 8 hours)
+- [ ] Create endpoint routes (2h)
+- [ ] Implement business logic (3h)
+- [ ] Add error handling (1h)
+- [ ] Write integration tests (2h)
+
+Total Estimated Time: 14 hours (1.75 days)
+```
+
+**3. Spec Generation Capability** (what to build):
+Build tools to help PM generate these detailed specs more efficiently:
+- Template system for common feature types
+- AI-assisted task breakdown
+- Historical data integration (similar features)
+- Auto-calculation of totals
+
+**Acceptance Criteria** (Definition of Done):
+
+**Process Rule (Methodology)**:
+- [ ] COLLABORATION_METHODOLOGY.md updated with mandatory spec rule
+- [ ] PM cannot provide delivery estimate without spec
+- [ ] PM must refuse: "I need to create a technical specification first"
+- [ ] Rule documented with examples
+
+**Spec Structure Requirements**:
+- [ ] Technical spec template includes task-level breakdown
+- [ ] Each task has time estimate (in hours)
+- [ ] Phases are clearly defined with totals
+- [ ] Dependencies between tasks are documented
+- [ ] Risks are identified per phase
+
+**Generation Capability**:
+- [ ] Template system for technical specs
+- [ ] AI-assisted task breakdown from user story
+- [ ] Auto-calculation of phase totals and overall delivery time
+- [ ] Integration with US-015 metrics (suggest estimates based on historical data)
+
+**Delivery Estimate Process**:
+- [ ] User approves user story first
+- [ ] PM creates detailed technical spec (task-level estimates)
+- [ ] PM calculates total delivery time from spec
+- [ ] PM provides delivery estimate to user
+- [ ] User approves spec before implementation starts
+
+**Quality Requirements**:
+- [ ] Task estimates at reasonable granularity (0.5h - 4h per task)
+- [ ] No "misc" or "other" tasks without detail
+- [ ] Testing time explicitly included
+- [ ] Documentation time explicitly included
+
+**Implementation Approach**:
+
+**Phase 1: Methodology Update** (Day 1 - 2 hours)
+1. Update COLLABORATION_METHODOLOGY.md Section 2.4
+2. Add mandatory spec-before-estimate rule
+3. Document the process flow
+4. Add examples of PM refusing to estimate without spec
+5. Cross-reference US-016
+
+**Phase 2: Spec Template System** (Day 1-2 - 6 hours)
+1. Create technical spec template with task-level structure
+2. Define template variables (feature type, complexity, etc.)
+3. Include time estimation guidelines per task type
+4. Add examples for common feature types:
+   - CRUD features
+   - Integration features
+   - UI features
+   - Infrastructure features
+
+**Phase 3: AI-Assisted Task Breakdown** (Day 2-3 - 8 hours)
+1. Implement task breakdown logic in AIService
+2. Given user story, generate list of tasks
+3. Suggest time estimates based on:
+   - Task complexity
+   - Historical data (US-015 metrics)
+   - Similar features
+4. Group tasks into logical phases
+5. Calculate totals automatically
+
+**Phase 4: Integration with Estimation Metrics** (Day 3 - 4 hours)
+1. Connect to US-015 metrics database
+2. Query historical task estimates vs actuals
+3. Adjust suggested estimates based on accuracy trends
+4. Show confidence level in estimates
+
+**Phase 5: Spec Generation Workflow** (Day 4 - 6 hours)
+1. When user approves user story, PM triggers spec generation
+2. PM uses AI to break down into tasks
+3. PM generates spec document with estimates
+4. PM calculates total delivery time
+5. PM shows delivery estimate to user with spec reference
+
+**Phase 6: Testing & Documentation** (Day 4-5 - 4 hours)
+1. Test spec generation for various feature types
+2. Validate task estimates are reasonable
+3. Update documentation (TUTORIALS.md with examples)
+4. Mark US-016 complete
+
+**Technical Foundation**:
+- Template system - Jinja2 or similar for spec templates
+- AIService - Can analyze user stories and generate task lists
+- US-015 integration - Access to historical metrics
+- File system - Create and manage spec documents
+- COLLABORATION_METHODOLOGY.md - Document the mandatory process
+
+**Estimated Effort**: 4-5 days (methodology update, templates, AI task breakdown, integration)
+
+**Priority**: HIGH (critical for accurate estimation and avoiding scope creep)
+
+**Example Scenarios**:
+
+**Scenario 1: User Asks for Estimate Without Spec**
+```
+User: "How long will the Slack integration feature take?"
+
+PM (OLD behavior - not allowed):
+"Probably 3-4 days"
+
+PM (NEW behavior - US-016):
+"I need to create a technical specification first to give you an accurate estimate.
+
+This will take me about 15 minutes to analyze the requirements and break down
+the tasks with time estimates.
+
+Should I proceed with creating the spec?"
+
+User: "Yes"
+
+PM: [Generates detailed spec with task breakdown]
+
+PM: "I've created a technical specification at docs/US-017_TECHNICAL_SPEC.md
+
+Based on the detailed task breakdown:
+
+**Phase 1: Slack API Setup** (4 hours)
+- Configure Slack app (1h)
+- Set up OAuth flow (1.5h)
+- Test connection (0.5h)
+- Write integration tests (1h)
+
+**Phase 2: Notification Implementation** (6 hours)
+- Create notification formatter (2h)
+- Implement send logic (2h)
+- Add error handling & retries (1h)
+- Write unit tests (1h)
+
+**Phase 3: Integration & Testing** (4 hours)
+- Integrate with existing notification system (2h)
+- End-to-end testing (1h)
+- Documentation (1h)
+
+**Total Estimated Delivery Time**: 14 hours (1.75 days)
+
+With current velocity (2 stories/week), I estimate delivery in 2-3 days including
+testing and documentation.
+
+Would you like to review the technical spec before I proceed?"
+```
+
+**Scenario 2: PM Generates Spec from User Story**
+```
+User: "Add a /metrics command to show estimation accuracy"
+
+PM: "I'll create a technical specification for the metrics command feature.
+
+[AI analyzes user story]
+[Breaks down into tasks]
+[Suggests estimates based on historical data]
+
+Generated technical spec at docs/US-018_TECHNICAL_SPEC.md:
+
+**Phase 1: Database Query Logic** (3 hours)
+- Query story_metrics table (1h)
+- Calculate accuracy statistics (1h)
+- Format data for display (1h)
+
+**Phase 2: CLI Command Implementation** (4 hours)
+- Create /metrics command handler (1.5h)
+- Format output table (ASCII) (1.5h)
+- Add filtering options (1h)
+
+**Phase 3: Testing & Documentation** (3 hours)
+- Unit tests (1.5h)
+- Integration tests (1h)
+- Update TUTORIALS.md (0.5h)
+
+**Total**: 10 hours (1.25 days)
+
+**Confidence**: High (based on 5 similar CLI command implementations)
+**Historical Accuracy**: 88% for CLI features
+
+Estimated delivery: 1-2 days"
+```
+
+**Scenario 3: PM Refuses to Estimate Without Spec**
+```
+User: "Can you give me a rough estimate for the IDE integration feature?"
+
+PM: "I need to create a technical specification first to give you an accurate estimate.
+
+Without a detailed spec, any estimate would be a guess and could be off by 2-3x.
+
+The IDE integration feature is complex with many unknowns:
+- Which IDEs to support?
+- LSP server implementation needed?
+- Integration with existing code_developer knowledge?
+- Real-time vs on-demand completion?
+
+I can create a technical spec in about 30 minutes that will give us a much more
+accurate delivery estimate.
+
+Should I proceed with the spec creation?"
+
+User: "Yes, go ahead"
+
+PM: [Creates detailed spec with all tasks and estimates]
+```
+
+**Database Schema** (extends US-015):
+```sql
+-- Add to story_metrics table
+ALTER TABLE story_metrics ADD COLUMN has_detailed_spec BOOLEAN DEFAULT 0;
+ALTER TABLE story_metrics ADD COLUMN spec_task_count INTEGER;
+ALTER TABLE story_metrics ADD COLUMN spec_generated_by TEXT; -- "manual" or "ai-assisted"
+
+-- New table: spec_tasks (tracks individual task estimates)
+CREATE TABLE spec_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    story_id TEXT NOT NULL,
+    phase_name TEXT NOT NULL,
+    task_name TEXT NOT NULL,
+    estimated_hours REAL,
+    actual_hours REAL,
+    completed BOOLEAN DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Relationship to Other User Stories**:
+- **US-015**: Provides historical data for better task estimates
+- **US-014**: Helps categorize spec requirements (feature vs methodology)
+- **US-010**: Specs become part of living documentation
+- **Section 2.4 COLLABORATION_METHODOLOGY.md**: Enforces spec-before-implementation rule
+
+**Future Enhancements** (not in scope):
+- Visual spec generation UI
+- Gantt chart generation from spec
+- Spec comparison (estimated vs actual for learning)
+- Automatic spec updates as implementation progresses
+
+---
+
 ## 🚀 RELEASE STRATEGY & VERSIONING
 
 ### ✅ What's Deliverable TODAY (Version 0.1.0 - MVP)

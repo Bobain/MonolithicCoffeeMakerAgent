@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 1.5
+**Version**: 1.6
 **Last Updated**: 2025-10-10
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -117,29 +117,120 @@ Action: Continue Phase 4 before marking complete
 - Provides clear audit trail of decisions
 - Enables autonomous operation (daemon doesn't need to ask)
 
-### 2.4 Specification Before Implementation
+### 2.4 Specification Before Implementation (Enhanced - US-016)
 
-**Principle**: Complex work requires a **technical specification** before coding.
+**🚨 MANDATORY RULE 🚨**
+
+**Principle**: Complex work requires a **detailed technical specification with task-level time estimates** before coding. PM **CANNOT** provide delivery estimates without creating a spec first.
 
 **What This Means**:
 - Features >1 day get a technical spec document
-- Spec includes: architecture, dependencies, risks, success criteria
+- Spec MUST include **task-level breakdown** with time estimates (not just phases)
+- Each task estimated in hours (0.5h - 4h granularity)
 - User approves spec before implementation starts
 - Spec is referenced during implementation and testing
+- **PM must refuse to estimate without spec**
 
-**Why**:
-- Identifies blockers early (before wasting time coding)
-- Aligns team on approach
-- Provides clear roadmap for implementation
-- Enables better estimation
+**When Spec is Created**:
+1. User describes need → PM creates user story
+2. User approves user story
+3. **PM creates detailed technical spec** (task-level estimates)
+4. User approves spec
+5. Implementation begins
 
-**Example**:
+**Task-Level Requirements** (US-016):
+Each phase in the spec must break down into specific tasks:
+```markdown
+**Phase 1: Database Schema** (Total: 6 hours)
+- [ ] Design tables (1.5h)
+- [ ] Write migration scripts (2h)
+- [ ] Add indexes (1h)
+- [ ] Write tests for schema (1.5h)
+
+**Phase 2: API Implementation** (Total: 8 hours)
+- [ ] Create endpoint routes (2h)
+- [ ] Implement business logic (3h)
+- [ ] Add error handling (1h)
+- [ ] Write integration tests (2h)
+
+**Total Estimated Delivery**: 14 hours (1.75 days)
+```
+
+**PM Must Refuse to Estimate Without Spec**:
+
+❌ **BAD** (What PM must NOT do):
+```
+User: "How long will feature X take?"
+PM: "Probably 3-4 days"  ← WRONG! No spec created!
+```
+
+✅ **GOOD** (What PM MUST do):
+```
+User: "How long will feature X take?"
+
+PM: "I need to create a technical specification first to give you an accurate estimate.
+
+Without a detailed spec with task-level breakdown, any estimate would be a guess
+and could be off by 2-3x.
+
+I can create a technical spec in about 15-30 minutes that will give us a much
+more accurate delivery estimate.
+
+Should I proceed with creating the spec?"
+
+User: "Yes"
+
+PM: [Creates detailed spec with task-level estimates]
+
+PM: "Based on the detailed task breakdown in docs/US-XXX_TECHNICAL_SPEC.md:
+
+**Phase 1**: 6 hours
+**Phase 2**: 8 hours
+**Phase 3**: 4 hours
+
+**Total Estimated Delivery**: 18 hours (2.25 days)
+
+Would you like to review the technical spec before I proceed?"
+```
+
+**Why This is Critical**:
+- **Accurate estimation**: Task-level breakdown reveals hidden complexity
+- **Prevents scope creep**: All work identified upfront
+- **Enables tracking**: Can track actual vs estimated per task (US-015 metrics)
+- **Improves over time**: Historical task data improves future estimates
+- **Identifies blockers early**: Before wasting time coding
+
+**Quality Requirements**:
+- No "misc" or "other" tasks without detail
+- Testing time explicitly included per phase
+- Documentation time explicitly included
+- Dependencies between tasks documented
+- Risks identified per phase
+
+**Example (US-009)**:
 ```
 User: "Implement US-009"
+
+PM: "I'll create a detailed technical specification first."
+
 → PM: Creates docs/US-009_TECHNICAL_SPEC.md (1057 lines)
-→ User: Reviews and approves
-→ Developer: Implements following the spec
+  - Phase 1: Process Detection (6h) - 4 tasks detailed
+  - Phase 2: Process Control (4h) - 3 tasks detailed
+  - Phase 3: Status Display (6h) - 5 tasks detailed
+  - Phase 4: Communication (8h) - 6 tasks detailed
+  - Total: 24 hours (3 days)
+
+→ User: Reviews and approves spec
+
+→ PM: "Based on the spec, delivery estimate is 3-5 days including testing."
+
+→ Developer: Implements following the task-by-task spec
 ```
+
+**See Also**:
+- **US-016** in ROADMAP.md for complete specification
+- **US-015** for tracking estimated vs actual task times
+- **Section 9.2** for Technical Spec Template
 
 ### 2.5 Incremental Delivery with Feedback Loops
 
@@ -1501,6 +1592,7 @@ PM documents decision and informs developer
 | 1.3 | 2025-10-10 | Added Section 4.6 (Plain Language Communication) | PM must use descriptive names, not technical IDs like "US-012" |
 | 1.4 | 2025-10-10 | Added Section 5.2 (`/US` Command Workflow) | Document US-012/US-013 features: similarity check, DoD inference, validation workflow |
 | 1.5 | 2025-10-10 | Added Section 3.2.1 (Request Categorization and Document Routing) | Implement US-014: PM categorizes user input as feature/methodology/both and routes to correct documents |
+| 1.6 | 2025-10-10 | Enhanced Section 2.4 - Specification Before Implementation (US-016) | PM MUST create detailed technical spec with task-level estimates before providing delivery estimates. PM must refuse to estimate without spec. |
 
 **To add new version**:
 1. Make changes to document
