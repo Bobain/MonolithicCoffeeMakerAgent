@@ -290,51 +290,108 @@ Developer SHOULD have also created:
 
 ---
 
-## 📝 DISCUSSION: US-012 - Enhanced /US Command for Natural User Story Creation
+## 📝 DISCUSSION: US-012 - Natural Language User Story Management
 
-**Project**: **💬 US-012 - Conversational /US Command Interface**
+**Project**: **💬 US-012 - Natural Language Conversation for User Story Lifecycle**
 
 **Status**: 🔄 **IN DISCUSSION** (2025-10-10)
 
-**User Story**:
-> "As a user I want the project_manager to have a /US command in his chat interface, so that I can express myself naturally and he will deduce the consequences of the changes to be done to the roadmap and all related documents. He can share his thoughts with me and ask me questions of course to better understand what is at stake and what is the functionality."
+**User Story (Corrected)**:
+> "As a user I want to interact with the project manager with natural language, I want him to translate what I say into user stories. We will validate together the user stories we will prioritize, de-prioritize, which ones to put into the backlog as new user story or how to rephrase an old one which covers part of user's need, etc."
 
-**Current State - Already Working**:
-✅ `/user-story` command exists with subcommands:
-- `/user-story list` - List all User Stories
-- `/user-story view <id>` - View specific User Story details
-- `/user-story update <id> <field> <value>` - Update User Story fields
-- `/user-story assign <id> <priority>` - Assign User Story to priority
-- `/user-story add` - Shows instructions for creation
+**Key Insight**: This is NOT about a `/US` command - it's about **natural conversational workflow** where:
+- User describes needs in plain language (no commands)
+- PM translates into structured user stories
+- PM and User validate together collaboratively
+- PM helps with prioritization decisions
+- PM detects if existing US can be rephrased vs creating new one
+- PM manages backlog vs active priorities
 
-✅ AI-powered natural language processing:
-- `AIService.extract_user_story()` - Parse natural language into structured format
-- `AIService.analyze_user_story_impact()` - Analyze roadmap impact
-- Intent recognition for User Story requests
+**Current Capabilities**:
+✅ Natural language chat interface exists
+✅ AI can extract user stories from natural language (`AIService.extract_user_story()`)
+✅ AI can analyze roadmap impact (`AIService.analyze_user_story_impact()`)
+✅ PM can add/update user stories in ROADMAP.md
+✅ PM asks clarifying questions
 
-✅ Natural language already supported in chat (no slash command needed)
+**What Needs Enhancement**:
+1. **Collaborative validation workflow**: After extracting US, present it to user for validation before adding to roadmap
+2. **Similarity detection**: Check existing user stories and suggest if one can be rephrased instead of creating new
+3. **Prioritization conversation**: Help user decide: TOP PRIORITY, backlog, or defer
+4. **Impact analysis**: Show how new US affects existing roadmap (timeline, dependencies)
+5. **Backlog management**: Clear process for moving between backlog ↔ active priorities
+6. **Rephrasing workflow**: When existing US partially covers need, suggest rephrase instead of duplicate
 
-**What Could Be Enhanced**:
-1. **Shorter alias**: `/US` instead of `/user-story`
-2. **Fully conversational workflow**: Instead of showing instructions, start interactive creation
-3. **Automatic impact analysis**: Analyze consequences to roadmap and related docs automatically
-4. **Clarifying questions**: AI asks follow-up questions during creation process
-5. **Similarity detection**: Tell user if similar functionality already exists
+**Example Desired Workflow**:
+```
+User: "I need the system to send me email when code_developer finishes a task"
 
-**Discovery**:
-User was not aware of existing `/user-story` command. Will test current functionality first before deciding if enhancement is needed.
+PM: "I've extracted this user story:
+
+US-XXX: Email Notifications on Task Completion
+As a: User
+I want: Email notifications when code_developer completes tasks
+So that: I stay informed without checking manually
+
+Does this capture your need? Any changes?"
+
+User: "Yes, also when daemon asks me questions"
+
+PM: "Updated:
+
+US-XXX: Email & Question Notifications
+- Email when tasks complete
+- Email when daemon has questions
+- Configurable notification preferences
+
+I found US-008 (Automated User Support) mentions notifications.
+Should I:
+A) Create new US-XXX for email notifications
+B) Expand US-008 to include email
+C) Keep separate and link them
+
+Also, priority? (TOP PRIORITY, after US-011, or backlog)"
+
+User: "Create new, make it after US-011"
+
+PM: "✅ Created US-XXX, prioritized after US-011 in roadmap"
+```
+
+**Technical Foundation** (Already Exists):
+- `RoadmapEditor.add_user_story()` - Add US to roadmap
+- `RoadmapEditor.get_user_story_summary()` - List all user stories
+- `AIService.extract_user_story()` - Parse natural language
+- `AIService.analyze_user_story_impact()` - Roadmap impact
+- Chat interface with conversation history
+
+**What to Build**:
+1. **Conversational validation loop**: Extract → Present → User validates → Refine → Confirm
+2. **Similarity matcher**: Compare new US against existing ones
+3. **Prioritization helper**: Suggest placement based on dependencies, business value
+4. **Rephrasing workflow**: Show existing US and propose updated version
+5. **Documentation**: Update TUTORIALS.md with examples of natural US creation
 
 **Next Steps**:
-1. User will test existing `/user-story` command
-2. Return with feedback on what works vs what needs enhancement
-3. Decide if US-012 should be implemented or if current functionality is sufficient
+1. User will try describing a need naturally in chat
+2. Test current PM responses to see what works
+3. Identify gaps in conversational flow
+4. Build enhancements based on real usage
 
-**Estimated** (if full enhancement needed): 4-6 hours
-- Create `/US` alias
-- Implement conversational workflow
-- Add automatic impact analysis
-- Add clarifying question logic
-- Update documentation
+**Estimated** (if full enhancement needed): 1-2 days
+- Implement validation loop
+- Add similarity detection
+- Build prioritization helper
+- Create rephrasing workflow
+- Update documentation with examples
+
+**Success Criteria**:
+- [ ] User can describe needs in plain language (no commands)
+- [ ] PM extracts structured user story
+- [ ] PM presents for validation before adding to roadmap
+- [ ] PM detects similar existing user stories
+- [ ] PM helps with prioritization decisions
+- [ ] PM can suggest rephrasing existing US vs creating new
+- [ ] Entire process feels like natural conversation (not command-driven)
 
 ---
 
