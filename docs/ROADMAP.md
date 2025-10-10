@@ -105,38 +105,82 @@ PRIORITY 2: Project Manager with UI ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
-**Project**: **✅ US-006 COMPLETE - Next: CI Tests or New Features**
+**Project**: **🚀 US-009 - Process Management & Status Monitoring** ⚡ **HIGHEST PRIORITY**
 
-**Recent Completion** (2025-10-10):
-✅ US-006: project-manager chat UX is now complete with claude-cli quality!
-- ✅ Streaming responses with typing indicators
-- ✅ Multi-line input (Shift+Enter, Alt+Enter)
-- ✅ Input history (↑/↓, Ctrl+R)
-- ✅ Auto-completion (Tab for commands/priorities)
-- ✅ Syntax highlighting (Pygments with monokai)
-- ✅ Session persistence
+**Status**: 🔄 **IN PROGRESS** (Started 2025-10-10)
 
-**Next Recommended Priority**:
-Choose one of the following based on user needs:
+**Goal**: Implement chat interface that knows code_developer status, can wake/start the daemon, and enables bidirectional communication
 
-**Option A: PRIORITY 2.6 - CI Testing** (Stability)
-- Goal: Ensure code_developer remains functional with automated tests
-- Impact: Prevents regressions, increases confidence
-- Estimated: 1 day
+**Why This is Critical**:
+The current system requires manual management of two separate processes with no visibility. This creates a poor user experience where:
+- Users don't know if code_developer is running
+- No way to start/stop daemon from chat
+- No integrated communication flow
+- Must switch between terminals constantly
 
-**Option B: PRIORITY 2.7 - Daemon Crash Recovery** (Reliability)
-- Goal: Daemon recovers gracefully from errors and continues
-- Impact: Increases 24/7 operational reliability
-- Estimated: 2-3 days
+**User Story**:
+> "As a project_manager user, I want to know if the code_developer process is up so that I can watch the current progress, ask him to do something, ask him to answer a question, answer a question he asked me, etc. The code_developer can delay his answers for more than 12 hours, as he needs to focus or rest, and have other activities."
 
-**Option C: US-007 - IDE Code Completion** (Developer Productivity)
-- Goal: Smart IDE completions from code_developer knowledge
-- Impact: Faster development with project-aware suggestions
-- Estimated: 1-2 weeks
+**What We're Building** (1 week implementation):
 
-**Current Status**: ⏸️ Waiting for user direction on next priority
+**Phase 1: Process Detection** (Days 1-2) 📝 NEXT
+- Create `ProcessManager` class with psutil
+- PID file management at `~/.coffee_maker/daemon.pid`
+- Detect if code_developer is running
+- Get daemon status (idle/working/stopped)
+- Extract current task from ROADMAP or status file
 
-**Recommendation**: Start with **PRIORITY 2.6 (CI Tests)** to ensure stability before adding more features
+**Phase 2: Process Control** (Days 2-3)
+- Start daemon command (`/start`)
+- Stop daemon gracefully (`/stop`)
+- Automatic daemon startup on chat launch
+- Handle daemon PID file writing on startup
+
+**Phase 3: Status Display** (Days 3-4)
+- Show daemon status in chat header (🟢/🟡/🔴)
+- `/status` command with detailed info (PID, uptime, CPU, memory, current task)
+- Real-time status updates
+- Current task display
+
+**Phase 4: Communication** (Days 4-5)
+- Send commands to daemon via chat
+- Natural language detection ("ask daemon to...")
+- Daemon questions appear in chat
+- Response collection and delivery
+- Async communication (daemon can reply after 12+ hours)
+
+**Key Features**:
+- ✅ Real-time daemon status awareness
+- ✅ One-command daemon startup/shutdown
+- ✅ Integrated bidirectional communication
+- ✅ Async messaging (daemon can delay responses)
+- ✅ Graceful handling of daemon "rest periods"
+
+**Success Criteria**:
+- [ ] Chat always shows accurate daemon status
+- [ ] Can start/stop daemon from chat interface
+- [ ] Commands reliably reach daemon
+- [ ] Daemon questions appear in chat
+- [ ] System handles 12+ hour response delays gracefully
+- [ ] Zero orphaned daemon processes
+
+**Technical Specification**: See `docs/US-009_TECHNICAL_SPEC.md` (to be created)
+
+**Implementation Files**:
+- `coffee_maker/process_manager.py` (new)
+- `coffee_maker/cli/chat_interface.py` (update)
+- `coffee_maker/autonomous/daemon_cli.py` (update)
+- `~/.coffee_maker/daemon.pid` (new)
+- `~/.coffee_maker/daemon_status.json` (new)
+
+**Recent Completions**:
+✅ US-006: project-manager chat UX (2025-10-10)
+- Streaming responses, multi-line input, history, auto-completion, syntax highlighting, session persistence
+
+**Next After US-009**:
+- PRIORITY 2.6: CI Testing (ensure daemon stability)
+- PRIORITY 2.7: Daemon Crash Recovery (24/7 reliability)
+- US-007: IDE Code Completion (developer productivity)
 
 ---
 

@@ -37,6 +37,7 @@ from rich.table import Table
 from coffee_maker.cli.ai_service import AIService
 from coffee_maker.cli.commands import get_command_handler, list_commands
 from coffee_maker.cli.roadmap_editor import RoadmapEditor
+from coffee_maker.process_manager import ProcessManager
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,9 @@ class ProjectManagerCompleter(Completer):
             "add",
             "update",
             "status",
+            "start",
+            "stop",
+            "restart",
             "exit",
             "quit",
             "notifications",
@@ -143,6 +147,11 @@ class ChatSession:
         env_no_streaming = os.environ.get("PROJECT_MANAGER_NO_STREAMING", "").lower() in ["1", "true", "yes"]
         self.enable_streaming = enable_streaming and not env_no_streaming
 
+        # Initialize process manager for daemon status
+        self.process_manager = ProcessManager()
+        self.daemon_status_text = ""
+        self._update_status_display()
+
         # Setup prompt-toolkit for advanced input
         self._setup_prompt_session()
 
@@ -218,6 +227,141 @@ class ChatSession:
             logger.debug(f"Saved {len(self.history)} messages to session")
         except Exception as e:
             logger.warning(f"Failed to save session: {e}")
+
+    def _update_status_display(self):
+        """Update daemon status text for display."""
+        status = self.process_manager.get_daemon_status()
+
+        if status["running"]:
+            if status["current_task"]:
+                emoji = "🟢"
+                text = f"Daemon: Active - Working on {status['current_task']}"
+            else:
+                emoji = "🟡"
+                text = "Daemon: Idle - Waiting for tasks"
+        else:
+            emoji = "🔴"
+            text = "Daemon: Stopped"
+
+        self.daemon_status_text = f"{emoji} {text}"
+        logger.debug(f"Status updated: {self.daemon_status_text}")
+
+    def _cmd_daemon_status(self) -> str:
+        """Show detailed daemon status."""
+        import time
+        from datetime import timedelta
+
+        self._update_status_display()
+        status = self.process_manager.get_daemon_status()
+
+        if not status["running"]:
+            return (
+                "❌ **Daemon Status: STOPPED**\n\n"
+                "The code_developer daemon is not currently running.\n\n"
+                "Use `/start` to launch it.\n\n"
+                "💡 **Note**: The daemon can take 12+ hours to respond to tasks.\n"
+                "   Like a human developer, he needs focus time and rest periods!"
+            )
+
+        # Calculate uptime
+        uptime_seconds = time.time() - status["uptime"]
+        uptime = str(timedelta(seconds=int(uptime_seconds)))
+
+        # Format current task
+        task = status["current_task"] or "None (Idle)"
+
+        return (
+            f"🟢 **Daemon Status: RUNNING**\n\n"
+            f"- **PID**: {status['pid']}\n"
+            f"- **Status**: {status['status'].upper()}\n"
+            f"- **Current Task**: {task}\n"
+            f"- **Uptime**: {uptime}\n"
+            f"- **CPU**: {status['cpu_percent']:.1f}%\n"
+            f"- **Memory**: {status['memory_mb']:.1f} MB\n\n"
+            "💡 **Tip**: code_developer may take time to respond (12+ hours is normal).\n"
+            "   He needs focus time and rest, just like a human developer!\n\n"
+            "Use `/stop` to shut down the daemon gracefully."
+        )
+
+    def _cmd_daemon_start(self) -> str:
+        """Start the daemon."""
+        if self.process_manager.is_daemon_running():
+            self._update_status_display()
+            return "✅ Daemon is already running!"
+
+        self.console.print("[cyan]Starting code_developer daemon...[/]")
+
+        success = self.process_manager.start_daemon(background=True)
+
+        if success:
+            self._update_status_display()
+            return (
+                "✅ **Daemon Started Successfully!**\n\n"
+                "The code_developer daemon is now running in the background.\n\n"
+                "He'll start working on priorities from the roadmap and will\n"
+                "respond to your messages when he has time.\n\n"
+                "⏰ **Response Time**: May take 12+ hours (needs focus time)\n\n"
+                "Use `/status` to check what he's working on."
+            )
+        else:
+            return (
+                "❌ **Failed to Start Daemon**\n\n"
+                "Could not start the code_developer daemon.\n\n"
+                "**Troubleshooting**:\n"
+                "- Check that you have a valid ANTHROPIC_API_KEY in .env\n"
+                "- Ensure no other daemon is running\n"
+                "- Check logs for errors\n\n"
+                "Try running manually: `poetry run code-developer`"
+            )
+
+    def _cmd_daemon_stop(self) -> str:
+        """Stop the daemon."""
+        if not self.process_manager.is_daemon_running():
+            self._update_status_display()
+            return "⚠️  Daemon is not running."
+
+        self.console.print("[cyan]Stopping daemon gracefully...[/]")
+
+        success = self.process_manager.stop_daemon(timeout=10)
+
+        if success:
+            self._update_status_display()
+            return (
+                "✅ **Daemon Stopped Successfully**\n\n"
+                "The code_developer daemon has been shut down gracefully.\n\n"
+                "Use `/start` to launch it again when needed."
+            )
+        else:
+            return (
+                "❌ **Failed to Stop Daemon**\n\n"
+                "Could not stop the daemon gracefully.\n\n"
+                "You may need to kill the process manually:\n"
+                "1. Run `/status` to get the PID\n"
+                "2. Run `kill <PID>` in terminal"
+            )
+
+    def _cmd_daemon_restart(self) -> str:
+        """Restart the daemon."""
+        import time
+
+        self.console.print("[cyan]Restarting daemon...[/]")
+
+        # Stop if running
+        if self.process_manager.is_daemon_running():
+            self.console.print("[cyan]Stopping current daemon...[/]")
+            self.process_manager.stop_daemon()
+            time.sleep(2)
+
+        # Start fresh
+        self.console.print("[cyan]Starting daemon...[/]")
+        success = self.process_manager.start_daemon()
+
+        self._update_status_display()
+
+        if success:
+            return "✅ Daemon restarted successfully!"
+        else:
+            return "❌ Failed to restart daemon. Check logs."
 
     def start(self):
         """Start interactive chat session.
@@ -331,7 +475,17 @@ class ChatSession:
 
         logger.debug(f"Handling command: {cmd_name} with args: {args}")
 
-        # Get command handler
+        # Handle daemon control commands
+        if cmd_name == "status":
+            return self._cmd_daemon_status()
+        elif cmd_name == "start":
+            return self._cmd_daemon_start()
+        elif cmd_name == "stop":
+            return self._cmd_daemon_stop()
+        elif cmd_name == "restart":
+            return self._cmd_daemon_restart()
+
+        # Get command handler for other commands
         handler = get_command_handler(cmd_name)
 
         if handler:
@@ -542,6 +696,10 @@ class ChatSession:
             border_style="cyan",
         )
         self.console.print(panel)
+
+        # Show daemon status
+        self.console.print(f"\n[cyan]{self.daemon_status_text}[/]")
+        self.console.print("[dim]Use /status for detailed info, /start to launch daemon, /stop to shut down[/]\n")
 
     def _display_goodbye(self):
         """Display goodbye message and save session."""

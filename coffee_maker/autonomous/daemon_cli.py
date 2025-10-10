@@ -14,6 +14,7 @@ By default, the daemon uses Claude CLI (subscription). Use --use-api for Anthrop
 import argparse
 import logging
 import os
+import signal
 import sys
 
 # Load environment variables from .env file
@@ -25,6 +26,7 @@ except ImportError:
     pass  # python-dotenv not installed, env vars must be set manually
 
 from coffee_maker.autonomous.daemon import DevDaemon
+from coffee_maker.process_manager import ProcessManager
 
 
 def check_claude_session():
@@ -167,6 +169,21 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
     print("=" * 70)
     print("\nStarting daemon... (Press Ctrl+C to stop)\n")
 
+    # Initialize process manager for PID file handling
+    process_manager = ProcessManager()
+
+    # Register signal handlers for graceful shutdown
+    def signal_handler(signum, frame):
+        """Handle shutdown signals gracefully."""
+        logger = logging.getLogger(__name__)
+        logger.info(f"Received signal {signum}, shutting down gracefully...")
+        process_manager._clean_stale_pid()
+        print("\n\n⏹️  Daemon stopped (signal received)")
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+
     try:
         daemon = DevDaemon(
             roadmap_path=args.roadmap,
@@ -178,17 +195,27 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
             claude_cli_path=args.claude_path,
         )
 
+        # Write PID file after daemon is initialized
+        process_manager._write_pid_file(os.getpid())
+        print(f"📝 Daemon PID: {os.getpid()} (written to {process_manager.pid_file})\n")
+
+        # Run daemon main loop
         daemon.run()
 
     except KeyboardInterrupt:
         print("\n\n⏹️  Daemon stopped by user")
+        process_manager._clean_stale_pid()
         sys.exit(0)
     except Exception as e:
         print(f"\n\n❌ Error: {e}")
         import traceback
 
         traceback.print_exc()
+        process_manager._clean_stale_pid()
         sys.exit(1)
+    finally:
+        # Always clean up PID file on exit
+        process_manager._clean_stale_pid()
 
 
 if __name__ == "__main__":
