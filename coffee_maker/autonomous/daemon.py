@@ -251,7 +251,7 @@ class DevDaemon:
         logger.info(f"Approve with: project-manager respond {notif_id} approve")
 
         # Poll for response (simplified - in production would use event system)
-        max_wait = 300  # 5 minutes
+        max_wait = 1800  # 30 minutes
         poll_interval = 5
         waited = 0
 
