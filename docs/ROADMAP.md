@@ -4224,8 +4224,8 @@ Use natural language in the chat interface:
 
 ### Backlog Statistics
 
-- **Total Stories**: 2
-- **Backlog**: 1
+- **Total Stories**: 3
+- **Backlog**: 2
 - **In Discussion**: 0
 - **Ready**: 0
 - **Assigned**: 1
@@ -4280,6 +4280,152 @@ Use natural language in the chat interface:
 - Already implemented in AnalyzeRoadmapCommand
 - Health calculation based on progress, momentum, structure
 - Generates actionable recommendations
+
+---
+
+### 🎯 [US-003] Track development progress via pull requests
+
+**As a**: project_manager
+**I want**: To understand from pull requests what is currently being developed and what needs approval
+**So that**: I can track progress, identify blockers, and know what needs technical approval or user testing with DOD
+
+**Business Value**: ⭐⭐⭐⭐⭐
+**Estimated Effort**: 5 story points (4-6 days)
+**Status**: 📝 Backlog
+
+**Acceptance Criteria**:
+- [ ] project_manager can list all open pull requests with their status
+- [ ] Each PR shows: title, branch, author, User Story ID (if linked), status
+- [ ] PR status clearly indicates: "🔄 In Development", "🔍 Needs Technical Review", "🧪 Needs User Testing + DOD"
+- [ ] Can filter PRs by status (in-dev, needs-review, needs-testing)
+- [ ] PRs linked to User Stories show which acceptance criteria are being implemented
+- [ ] For PRs needing user testing, DOD tests are listed and can be run via CLI
+- [ ] Command: `/pr list` shows all PRs with their approval status
+- [ ] Command: `/pr review <pr-number>` shows what needs approval/testing
+- [ ] When PR is ready for user testing, automatically runs DOD tests if User Story linked
+
+**Definition of Done**:
+- [ ] **Functional**: Can list and understand status of all PRs via CLI
+- [ ] **Tested**: DOD tests below pass
+- [ ] **Integrated**: Works with existing User Story system
+- [ ] **Documented**: PR tracking workflow documented
+- [ ] **User-Tested**: project_manager can identify what needs approval without checking GitHub web UI
+
+**DOD Tests**:
+```yaml
+tests:
+  - name: "PR list command exists"
+    type: "command"
+    command: "poetry run project-manager --help"
+    expected_exit_code: 0
+    expected_output_contains: "pr"
+
+  - name: "Can list open PRs"
+    type: "python"
+    code: |
+      from coffee_maker.cli.pr_tracker import PRTracker
+      from coffee_maker.config import ROADMAP_PATH
+      tracker = PRTracker()
+      prs = tracker.list_open_prs()
+      # Should return list (may be empty if no PRs)
+      assert isinstance(prs, list)
+
+  - name: "Can identify PR status"
+    type: "python"
+    code: |
+      from coffee_maker.cli.pr_tracker import PRTracker
+      tracker = PRTracker()
+      # Test with mock PR
+      status = tracker.get_pr_status("feature/test-branch")
+      assert status in ["in_development", "needs_review", "needs_testing", "unknown"]
+
+  - name: "Can link PR to User Story"
+    type: "python"
+    code: |
+      from coffee_maker.cli.pr_tracker import PRTracker
+      tracker = PRTracker()
+      # Should be able to extract US ID from PR title or branch
+      us_id = tracker.extract_user_story_id("feature/US-003-pr-tracking")
+      assert us_id == "US-003"
+
+  - name: "Documentation exists"
+    type: "file_exists"
+    files:
+      - "docs/PR_TRACKING.md"
+      - "coffee_maker/cli/pr_tracker.py"
+```
+
+**Technical Notes**:
+- Use GitHub API (PyGithub) to fetch PR data
+- Parse PR titles/descriptions for User Story IDs (US-XXX format)
+- Store PR approval status in notification DB or separate tracking
+- Integrate with existing /test-dod command for User Stories
+- PR labels could indicate status: "needs-review", "needs-user-testing"
+
+**Related Stories**: US-001 (GCP Deploy), US-002 (Health Score)
+
+**Implementation Approach**:
+1. Create `coffee_maker/cli/pr_tracker.py` module
+2. Add `/pr` command to CLI command registry
+3. Integrate with GitHub API to fetch PR data
+4. Parse PR metadata to identify User Story links
+5. Determine approval status based on labels, reviews, CI status
+6. Display clear status for each PR (in-dev, needs-review, needs-testing)
+7. For "needs-testing" PRs, show DOD checklist and allow running tests
+
+**Workflow Example**:
+```bash
+# List all PRs
+project-manager pr list
+
+Output:
+📋 Open Pull Requests (3)
+
+🔄 In Development:
+  #42: [US-001] Implement GCP deployment scripts
+      Branch: feature/us-001-gcp-deploy
+      Author: code-developer
+      Status: CI passing, 2 commits today
+
+🔍 Needs Technical Review:
+  #45: [US-002] Add health score calculation
+      Branch: feature/us-002-health
+      Author: code-developer
+      Status: CI passing, all tests pass
+      Action: Awaiting code review from human
+
+🧪 Needs User Testing + DOD:
+  #48: [US-003] PR tracking implementation
+      Branch: feature/us-003-pr-tracking
+      Author: code-developer
+      Status: CI passing, implementation complete
+      Action: Run DOD tests and user acceptance testing
+
+# Review specific PR
+project-manager pr review 48
+
+Output:
+## PR #48: [US-003] PR tracking implementation
+
+**Status**: 🧪 Ready for User Testing
+**Branch**: feature/us-003-pr-tracking
+**User Story**: US-003
+
+**Acceptance Criteria** (from US-003):
+- ✅ Can list all open PRs
+- ✅ Shows PR status clearly
+- ✅ Filter PRs by status
+- ⏳ PRs linked to User Stories (needs testing)
+- ⏳ DOD tests can be run (needs testing)
+
+**Action Required**:
+1. Checkout branch: git checkout feature/us-003-pr-tracking
+2. Run DOD tests: project-manager test-dod US-003
+3. Test acceptance criteria manually
+4. If all pass, approve and merge PR
+
+Run DOD tests now? [y/n]
+```
 
 ---
 
