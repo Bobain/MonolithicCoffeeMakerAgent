@@ -117,7 +117,13 @@ Note: This is a temporary script. After PRIORITY 3 is complete,
     parser.add_argument(
         "--use-cli",
         action="store_true",
-        help="Use Claude CLI instead of Anthropic API (default: auto-detect)",
+        help="Force use of Claude CLI (default: auto-detect, prefers CLI)",
+    )
+
+    parser.add_argument(
+        "--use-api",
+        action="store_true",
+        help="Force use of Anthropic API (default: auto-detect, prefers CLI)",
     )
 
     parser.add_argument(
@@ -147,32 +153,63 @@ Note: This is a temporary script. After PRIORITY 3 is complete,
     import os
     import shutil
 
-    use_claude_cli = args.use_cli  # Explicit flag takes precedence
+    # Check for conflicting flags
+    if args.use_cli and args.use_api:
+        print("=" * 70)
+        print("❌ ERROR: Cannot use both --use-cli and --use-api")
+        print("=" * 70)
+        print("\nPlease choose one:")
+        print("  --use-cli   → Force Claude CLI mode")
+        print("  --use-api   → Force Anthropic API mode")
+        print("  (no flags)  → Auto-detect (prefers CLI)")
+        print("=" * 70 + "\n")
+        sys.exit(1)
 
-    if not use_claude_cli:
-        # Auto-detect: prefer CLI if API key not available
-        has_api_key = bool(os.environ.get("ANTHROPIC_API_KEY"))
+    # Explicit flags take precedence
+    if args.use_cli:
+        use_claude_cli = True
+    elif args.use_api:
+        use_claude_cli = False
+    else:
+        # Auto-detect: PREFER CLI as default (it's free and subscription-based)
+        # Only use API if explicitly configured (--use-api flag or CLI not available)
         has_cli = shutil.which("claude") or os.path.exists(args.claude_path)
+        has_api_key = bool(os.environ.get("ANTHROPIC_API_KEY"))
 
-        if not has_api_key and has_cli:
+        if has_cli:
+            # CLI available - use it as default
             print("=" * 70)
-            print("ℹ️  Auto-detected: Using Claude CLI (no API key found)")
+            print("ℹ️  Auto-detected: Using Claude CLI (default)")
             print("=" * 70)
+            print("💡 TIP: Claude CLI is free with your subscription!")
+            print("    To use API mode instead: unset ANTHROPIC_API_KEY or use --use-api")
+            print("=" * 70 + "\n")
             use_claude_cli = True
-        elif not has_api_key and not has_cli:
+        elif has_api_key:
+            # No CLI but has API key - use API
+            print("=" * 70)
+            print("ℹ️  Auto-detected: Using Anthropic API (no CLI found)")
+            print("=" * 70)
+            print("💡 TIP: Install Claude CLI for free usage!")
+            print("    Get it from: https://claude.ai/")
+            print("=" * 70 + "\n")
+            use_claude_cli = False
+        else:
+            # Neither available - error
             print("=" * 70)
             print("❌ ERROR: No Claude access available!")
             print("=" * 70)
             print("\nThe daemon requires either:")
-            print("  1. Anthropic API key (for API mode), OR")
-            print("  2. Claude CLI installed (for CLI mode)")
-            print("\n🔧 SOLUTION 1 (API Mode):")
+            print("  1. Claude CLI installed (recommended - free with subscription), OR")
+            print("  2. Anthropic API key (requires credits)")
+            print("\n🔧 SOLUTION 1 (CLI Mode - Recommended):")
+            print("  1. Install Claude CLI from: https://claude.ai/")
+            print("  2. Run: python run_daemon.py")
+            print("\n🔧 SOLUTION 2 (API Mode):")
             print("  1. Get your API key from: https://console.anthropic.com/")
             print("  2. Set the environment variable:")
             print("     export ANTHROPIC_API_KEY='your-api-key-here'")
-            print("\n🔧 SOLUTION 2 (CLI Mode - Recommended):")
-            print("  1. Install Claude CLI from: https://claude.ai/")
-            print("  2. Run with: python run_daemon.py --use-cli")
+            print("  3. Run: python run_daemon.py")
             print("\n" + "=" * 70 + "\n")
             sys.exit(1)
 
