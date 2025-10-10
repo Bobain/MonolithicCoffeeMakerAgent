@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 1.0
+**Version**: 1.1
 **Last Updated**: 2025-10-10
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -19,6 +19,9 @@
 8. [Evolution & Continuous Improvement](#evolution--continuous-improvement)
 9. [Tools & Artifacts](#tools--artifacts)
 10. [Examples & Case Studies](#examples--case-studies)
+11. [Appendix: Quick Reference](#appendix-quick-reference)
+12. [Security & Sensitive Files](#security--sensitive-files)
+13. [Closing Thoughts](#closing-thoughts)
 
 ---
 
@@ -782,11 +785,19 @@ A user story is **done** when:
 - [ ] Manual testing completed
 - [ ] Test coverage >80% for new code
 
-### Documentation Criteria
+### Documentation Criteria (UPDATED - US-011)
+- [ ] **User Guide** created (how to use the feature)
+- [ ] **API Reference** created (if feature has commands/functions)
+- [ ] **Troubleshooting** section added (common errors + solutions)
+- [ ] **Changelog entry** added (what changed)
+- [ ] **Technical Spec updated** with implementation results
 - [ ] README updated (if user-facing feature)
 - [ ] Code comments added (why, not what)
-- [ ] Technical spec matches implementation
 - [ ] ROADMAP.md updated with completion
+
+**Why This Matters**: Assistants need these docs to help users. If assistants can't help users with your feature, the feature isn't done!
+
+**Template**: See `docs/templates/DEVELOPER_DOCUMENTATION_TEMPLATE.md`
 
 ### User Validation
 - [ ] User tested the feature
@@ -1007,6 +1018,7 @@ PM documents decision and informs developer
 | Version | Date | Changes | Reason |
 |---------|------|---------|--------|
 | 1.0 | 2025-10-10 | Initial creation | Capture existing methodology |
+| 1.1 | 2025-10-10 | Added Section 12 (Security & Sensitive Files) | Establish .env file protection rule |
 
 **To add new version**:
 1. Make changes to document
@@ -1313,24 +1325,28 @@ User: "add a User story: As a developer I don't have time to answer
 
 ---
 
-**US-010: Living Documentation & Tutorials** 🔄 IN PROGRESS (2025-10-10)
+**US-010: Living Documentation & Tutorials** ✅ COMPLETE (2025-10-10)
 - **User Request**: "As an assistant of the developer, I want to keep up to date the documentation and be aware of it, I also want to have a summary with tutorials so that 1) I can better understand the use of deliverables 2) I can answer questions from the user about how to use the deliverables"
 - **Methodology Applied**: Documentation as part of DoD, living artifact
-- **What We're Building**:
-  * DOCUMENTATION_INDEX.md (central navigation hub)
-  * Updated QUICKSTART with US-009 features
-  * TUTORIALS.md (practical examples)
-  * Documentation maintenance process
-- **Scope**:
-  * Index all existing documentation (26+ files)
-  * Create 5+ practical tutorials
-  * Define how to keep docs current
-  * Integrate docs into DoD checklist
+- **What Was Built**:
+  * DOCUMENTATION_INDEX.md (central navigation hub - 355 lines)
+  * Updated QUICKSTART_PROJECT_MANAGER.md with US-009 features
+  * TUTORIALS.md (7 practical tutorials - 1040 lines)
+  * Documentation maintenance process defined
+  * Developer documentation template created
+- **Scope Completed**:
+  * ✅ Indexed all existing documentation (26+ files)
+  * ✅ Created 7 practical tutorials (5+ requirement exceeded)
+  * ✅ Defined how to keep docs current (Section 6.2 DoD)
+  * ✅ Integrated docs into DoD checklist (mandatory requirement)
+- **DoD**: 6/6 acceptance criteria met
 - **Impact on Methodology**:
-  * Documentation is now mandatory for DoD
+  * Documentation is now mandatory for DoD (Section 6.2)
   * Established living documentation pattern
   * Created tutorials as knowledge transfer mechanism
-  * Defined documentation maintenance in methodology
+  * Defined documentation maintenance process
+  * Assistants can now effectively help users with all deliverables
+- **Lessons**: Documentation as first-class deliverable improves team effectiveness and knowledge transfer
 
 ---
 
@@ -1469,7 +1485,93 @@ Action Items:
 
 ---
 
-## 12. Closing Thoughts
+## 12. Security & Sensitive Files
+
+### 12.1 Protected Files - Never Modify
+
+**🚨 CRITICAL SECURITY RULE 🚨**
+
+The following files must **NEVER** be modified by automated systems, AI assistants, or daemons:
+
+#### `.env` File (Environment Variables)
+- **Contains**: API keys, secrets, tokens, credentials
+- **Why Protected**: Security risk - accidental exposure, incorrect modifications
+- **Who Can Modify**: Human users ONLY
+- **How to Modify**: Manually edit with text editor
+- **Version Control**: NEVER commit to git (included in .gitignore)
+
+**What AI Assistants/Daemons CAN Do**:
+- ✅ Read environment variables via `os.environ.get()`
+- ✅ Document which variables are needed
+- ✅ Provide instructions for users to set variables
+- ✅ Validate that required variables are set
+
+**What AI Assistants/Daemons CANNOT Do**:
+- ❌ Write to `.env` file
+- ❌ Modify `.env` file content
+- ❌ Create new `.env` files
+- ❌ Delete `.env` file
+- ❌ Expose secrets in logs or outputs
+
+#### Other Protected Files
+- **`.gitignore`**: Version control configuration (user manages)
+- **`pyproject.toml`**: Dependency management (user approves changes)
+- **SSH keys, certificates**: Never touch
+
+### 12.2 How to Handle Environment Variables
+
+**When a new variable is needed:**
+
+1. **Developer/PM**: Document the requirement
+   ```markdown
+   **New Environment Variable Required**: SLACK_BOT_TOKEN
+
+   Add to .env file:
+   ```bash
+   export SLACK_BOT_TOKEN="xoxb-your-token-here"
+   ```
+
+   Get token from: https://api.slack.com/apps
+   ```
+
+2. **User**: Manually adds variable to `.env` file
+
+3. **Code**: Reads via `os.environ.get("VARIABLE_NAME")`
+
+**Example - Correct Approach**:
+```python
+# ✅ CORRECT - Read environment variable
+api_key = os.environ.get("ANTHROPIC_API_KEY")
+if not api_key:
+    raise ValueError(
+        "ANTHROPIC_API_KEY not set. "
+        "Please add to .env file:\n"
+        "export ANTHROPIC_API_KEY='sk-ant-...'"
+    )
+```
+
+**Example - Incorrect Approach**:
+```python
+# ❌ WRONG - Never write to .env file
+with open(".env", "a") as f:
+    f.write(f'export API_KEY="{user_provided_key}"\n')
+```
+
+### 12.3 Rationale
+
+**Why This Rule Exists**:
+
+1. **Security**: Prevents accidental exposure of secrets in logs, commits, or outputs
+2. **Control**: User maintains control over sensitive credentials
+3. **Auditability**: User can track who/what has access to credentials
+4. **Simplicity**: Clear separation of concerns - code reads, user writes
+5. **Trust**: Users trust the system more when credentials are never modified automatically
+
+**Historical Context**: This rule was added 2025-10-10 after identifying that automated tools could potentially modify sensitive credential files.
+
+---
+
+## 13. Closing Thoughts
 
 This methodology emerged organically through real collaboration between a human product owner and AI team members. It's not prescriptive or theoretical—it describes **what actually works** for building complex software with human-AI teams.
 
@@ -1485,10 +1587,12 @@ Key insights:
 
 5. **Document decisions**: Future team members (including future you) will thank you for writing down the "why" behind decisions.
 
+6. **Protect sensitive files**: Never modify .env or credential files - read-only access for security.
+
 **This is a living document. Update it as we learn.**
 
 ---
 
 **Last Updated**: 2025-10-10
-**Next Review**: After completing US-009 (current priority)
+**Next Review**: After completing next major user story
 **Maintained By**: project_manager (Claude) with user approval
