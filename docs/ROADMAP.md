@@ -290,6 +290,54 @@ Developer SHOULD have also created:
 
 ---
 
+## 📝 DISCUSSION: US-012 - Enhanced /US Command for Natural User Story Creation
+
+**Project**: **💬 US-012 - Conversational /US Command Interface**
+
+**Status**: 🔄 **IN DISCUSSION** (2025-10-10)
+
+**User Story**:
+> "As a user I want the project_manager to have a /US command in his chat interface, so that I can express myself naturally and he will deduce the consequences of the changes to be done to the roadmap and all related documents. He can share his thoughts with me and ask me questions of course to better understand what is at stake and what is the functionality."
+
+**Current State - Already Working**:
+✅ `/user-story` command exists with subcommands:
+- `/user-story list` - List all User Stories
+- `/user-story view <id>` - View specific User Story details
+- `/user-story update <id> <field> <value>` - Update User Story fields
+- `/user-story assign <id> <priority>` - Assign User Story to priority
+- `/user-story add` - Shows instructions for creation
+
+✅ AI-powered natural language processing:
+- `AIService.extract_user_story()` - Parse natural language into structured format
+- `AIService.analyze_user_story_impact()` - Analyze roadmap impact
+- Intent recognition for User Story requests
+
+✅ Natural language already supported in chat (no slash command needed)
+
+**What Could Be Enhanced**:
+1. **Shorter alias**: `/US` instead of `/user-story`
+2. **Fully conversational workflow**: Instead of showing instructions, start interactive creation
+3. **Automatic impact analysis**: Analyze consequences to roadmap and related docs automatically
+4. **Clarifying questions**: AI asks follow-up questions during creation process
+5. **Similarity detection**: Tell user if similar functionality already exists
+
+**Discovery**:
+User was not aware of existing `/user-story` command. Will test current functionality first before deciding if enhancement is needed.
+
+**Next Steps**:
+1. User will test existing `/user-story` command
+2. Return with feedback on what works vs what needs enhancement
+3. Decide if US-012 should be implemented or if current functionality is sufficient
+
+**Estimated** (if full enhancement needed): 4-6 hours
+- Create `/US` alias
+- Implement conversational workflow
+- Add automatic impact analysis
+- Add clarifying question logic
+- Update documentation
+
+---
+
 ## 🚀 RELEASE STRATEGY & VERSIONING
 
 ### ✅ What's Deliverable TODAY (Version 0.1.0 - MVP)

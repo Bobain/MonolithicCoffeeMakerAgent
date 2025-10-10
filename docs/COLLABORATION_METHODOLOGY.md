@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 1.1
+**Version**: 1.2
 **Last Updated**: 2025-10-10
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -242,6 +242,7 @@ PM: "Updated ROADMAP. US-007 is now TOP PRIORITY."
 **Primary Responsibilities**:
 - Facilitate communication between user and developer
 - Manage ROADMAP.md (add/update/organize priorities)
+- **Document all feature discussions in ROADMAP.md immediately** (Section 4.5)
 - Create technical specifications for complex work
 - Ask clarifying questions to reduce ambiguity
 - Track progress and report status
@@ -527,6 +528,86 @@ notif_service.create_notification(
 
 ⏰ ETA: US-009 complete by end of day
 ```
+
+### 4.5 Documenting Feature Discussions and Conversations
+
+**🚨 MANDATORY RULE 🚨**
+
+**Principle**: All feature discussions, user requests, and significant conversations must be documented in ROADMAP.md.
+
+**Why This Matters**:
+- Prevents ideas and requests from being lost
+- Creates audit trail of all user requests
+- Ensures context is available for future reference
+- Allows tracking of feature evolution from idea to implementation
+- Enables async team members (like code_developer) to understand context
+
+**What Project Manager MUST Document**:
+
+1. **Feature Requests**: Any time user expresses a need or want
+   - Status: "🔄 IN DISCUSSION" if exploring feasibility
+   - Status: "📝 PLANNED" if approved and ready to implement
+   - Status: "✅ COMPLETE" when fully implemented
+
+2. **User Story Discussions**: Natural language requests that might become User Stories
+   - Capture original user quote
+   - Document current capabilities vs requested enhancements
+   - List what exists vs what's missing
+   - Note next steps (user will test, needs design, etc.)
+
+3. **Design Conversations**: Discussions about how to build something
+   - Document options considered
+   - Capture user preferences
+   - Note decisions made
+
+**Format in ROADMAP**:
+```markdown
+## 📝 DISCUSSION: US-XXX - [Feature Name]
+
+**Status**: 🔄 IN DISCUSSION (YYYY-MM-DD)
+
+**User Story**:
+> "[Original user quote]"
+
+**Current State - Already Working**:
+[What already exists that addresses this need]
+
+**What Could Be Enhanced**:
+[What's missing or could be improved]
+
+**Discovery**:
+[Any findings during discussion]
+
+**Next Steps**:
+1. [Action item 1]
+2. [Action item 2]
+```
+
+**When to Document**:
+- ⏱️ **Immediately** during or after conversation
+- ❌ **Not later** - don't wait for end of session
+- ✅ **Before** moving to next topic
+
+**Where to Document**:
+- **Primary**: `docs/ROADMAP.md` (single source of truth)
+- **Secondary**: Technical specs, ADRs (for detailed design decisions)
+
+**Example**:
+```
+User: "I want a /US command for natural user story creation"
+↓
+PM: [During conversation] Adds entry to ROADMAP.md:
+  - US-012: Enhanced /US Command
+  - Status: IN DISCUSSION
+  - Documents existing /user-story command
+  - Lists what could be enhanced
+  - Captures that user will test existing functionality first
+```
+
+**Why This Rule Was Added**:
+User requested 2025-10-10: "did you document our talk in the roadmap. Please always do (and add this request to the team collaboration document)"
+
+This ensures nothing gets lost and provides complete context for all team members.
 
 ---
 
@@ -1019,6 +1100,7 @@ PM documents decision and informs developer
 |---------|------|---------|--------|
 | 1.0 | 2025-10-10 | Initial creation | Capture existing methodology |
 | 1.1 | 2025-10-10 | Added Section 12 (Security & Sensitive Files) | Establish .env file protection rule |
+| 1.2 | 2025-10-10 | Added Section 4.5 (Documenting Feature Discussions) | Ensure all conversations are documented in ROADMAP |
 
 **To add new version**:
 1. Make changes to document
