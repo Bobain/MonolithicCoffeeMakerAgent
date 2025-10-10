@@ -2,7 +2,7 @@
 
 **Last Updated**: 2025-10-10 🚨 **PRIORITIES REORGANIZED + GCP DEPLOYMENT ADDED**
 **Current Branch**: `feature/priority-2.5`
-**Status**: PRIORITY 1-3 ✅ COMPLETE | PRIORITY 2 ✅ COMPLETE (Phase 2) | **Next: PRIORITY 2.6 → PRIORITY 4 (GCP Deployment)**
+**Status**: PRIORITY 1-3 ✅ COMPLETE | PRIORITY 2 ✅ COMPLETE (Phase 2) | **Next: PRIORITY 2.6 → Streamlit Dashboards → PRIORITY 6.5 (GCP)**
 **Quick-Start**: ⚡ CLI: `project-manager view` | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py` | Code Review: see `coffee_maker/code_reviewer/README.md`
 **Achievement**: 🎉 **MASSIVE PROGRESS** - CLI, Daemon, Web UI, Documentation Infrastructure, and Multi-Model Code Review Agent all operational!
 
@@ -85,15 +85,18 @@ PRIORITY 2: Project Manager with UI ← Current focus
 
 ### PRIORITY 1: Analytics ✅ Complete
 ### PRIORITY 1.5: Database Sync ✅ Complete
-### PRIORITY 2: Project Manager CLI 🔄 In Progress (Phase 2)
-### PRIORITY 2.5: UX Documentation 🚧 Manual Review Required
-### PRIORITY 2.6: Daemon Fix Verification 🔄 In Progress
+### PRIORITY 2: Project Manager CLI ✅ Complete (Phase 2)
+### PRIORITY 2.5: UX Documentation ✅ Complete
+### PRIORITY 2.6: Daemon Fix Verification 📝 Planned
 ### PRIORITY 2.7: Daemon Crash Recovery 📝 Planned
 ### PRIORITY 3: code_developer ✅ Complete
-### PRIORITY 4: GCP Deployment 📝 Planned ← Next after PRIORITY 2
 ### PRIORITY 5: Streamlit Analytics Dashboard 📝 Planned
 ### PRIORITY 5.5: Streamlit Error Dashboard 📝 Planned
 ### PRIORITY 6: Streamlit Agent UI ✅ Complete
+### PRIORITY 6.5: GCP Deployment 📝 Planned ← After Streamlit apps
+### PRIORITY 7: Professional Documentation ✅ Complete
+### PRIORITY 8: Multi-AI Provider Support 📝 Planned
+### PRIORITY 9: Enhanced Communication 📝 Planned
 ```
 
 **Remember**: The daemon trusts this roadmap completely. Keep it organized, prioritized, and up-to-date! 🎯
@@ -4238,8 +4241,8 @@ Use natural language in the chat interface:
 
 **Business Value**: ⭐⭐⭐⭐⭐
 **Estimated Effort**: 5 story points (5-7 days)
-**Status**: ✅ Assigned to PRIORITY 4
-**Assigned To**: PRIORITY 4
+**Status**: ✅ Assigned to PRIORITY 6.5
+**Assigned To**: PRIORITY 6.5
 
 **Acceptance Criteria**:
 - [ ] code_developer runs continuously on GCP Compute Engine
@@ -4253,6 +4256,7 @@ Use natural language in the chat interface:
 - Docker container for isolation
 - Cloud Storage for logs and state
 - VPC for secure communication
+- Implemented in PRIORITY 6.5 (after Streamlit dashboards)
 
 ---
 
@@ -11244,12 +11248,12 @@ $ project-manager provider costs
 
 ---
 
-### 🔴 **PRIORITY 4: GCP Deployment of code_developer** ☁️ **CLOUD INFRASTRUCTURE**
+### 🔴 **PRIORITY 6.5: GCP Deployment of code_developer** ☁️ **CLOUD INFRASTRUCTURE**
 
 **Estimated Duration**: 2-3 weeks
 **Impact**: ⭐⭐⭐⭐⭐ (Critical for continuous autonomous operation)
 **Status**: 📝 Planned
-**Dependency**: Should be done after PRIORITY 3 (Autonomous Development Daemon) is stable
+**Dependency**: Should be done after Streamlit dashboards (PRIORITY 5, 5.5, 6) and PRIORITY 3 (Autonomous Development Daemon) is stable
 **Strategic Goal**: Deploy code_developer on GCP for 24/7 autonomous operation with project_manager integration
 **Note**: Can be implemented by autonomous daemon (PRIORITY 3) once it's complete! 🤖
 
