@@ -105,42 +105,45 @@ PRIORITY 2: Project Manager with UI ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
-**Project**: **🚨 CRITICAL: code_developer Functional Testing & CI Integration**
+**Project**: **🚨 CRITICAL: project-manager Chat UX - Claude CLI Quality**
 
-**Goal**: Establish comprehensive CI testing to guarantee code_developer remains functional for end users
+**Goal**: Polish `project-manager chat` to have the same professional UX quality as claude-cli
 
 **Why This is #1**:
-- ⚠️ **BLOCKING**: Without CI tests, we can't guarantee daemon functionality after changes
-- 🔥 **USER IMPACT**: Broken daemon means users can't develop autonomously
-- 🛡️ **QUALITY GATE**: CI tests prevent regressions from reaching production
-- 🚀 **VELOCITY**: Automated tests allow faster, confident development
+- 🎯 **USER INTERFACE**: This is the PRIMARY interface users interact with daily
+- ✅ **ALREADY FUNCTIONAL**: Basic chat exists, daemon is working, notifications are flowing
+- 🚀 **HIGH ROI**: UX improvements have immediate user impact
+- 💎 **PROFESSIONAL POLISH**: Demonstrates project maturity and quality
+- 🔑 **FOUNDATION**: All future PM interactions go through this interface
 
 **What to Build**:
-- Complete CI test suite in `tests/ci_tests/`
-- GitHub Actions workflow for automated testing
-- Integration tests for daemon end-to-end workflows
-- CLI mode & API mode testing
-- Smoke tests for critical user scenarios
+- Streaming responses (text appears progressively)
+- Multi-line input support (Shift+Enter)
+- Input history (↑/↓ arrow keys)
+- Auto-completion (Tab for commands/priorities)
+- Syntax highlighting + colored diffs
+- Session persistence (save/restore history)
+- File previews and progress indicators
 
-**Location**: See PRIORITY 2.6 (line 10504+) for complete specification
+**Location**: See US-006 (line 5406+) for complete specification
 
 **Status**: 📝 Planned - **START IMMEDIATELY**
 
-**Estimated**: 1 day (8 hours)
+**Estimated**: 2-3 days (3 story points)
 
 ---
 
-## ⏸️ DEFERRED: Project Manager Chat (After CI Tests)
+## ⏸️ DEFERRED: CI Tests (After Chat UX)
 
-**Project**: **AI-Powered Project Manager CLI - Phase 2** (Interactive Chat Interface)
+**Project**: **code_developer Functional Testing & CI Integration**
 
-**Goal**: Build `project-manager chat` - an interactive console chat (like Claude CLI) that becomes the ONLY interface needed
+**Goal**: Establish comprehensive CI testing to guarantee code_developer remains functional
 
-**Why Deferred**: Must ensure daemon stability via CI tests before adding new features
+**Why Deferred**: Chat UX is user-facing and higher priority; daemon already working with manual tests
 
-**Location**: See line 5044-5330 in this file for complete specification
+**Location**: See PRIORITY 2.6 (line 10504+) for complete specification
 
-**Status**: ⏸️ Deferred until PRIORITY 2.6 complete
+**Status**: ⏸️ Deferred until US-006 complete
 
 ---
 
