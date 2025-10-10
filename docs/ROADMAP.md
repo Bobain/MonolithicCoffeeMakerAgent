@@ -105,29 +105,42 @@ PRIORITY 2: Project Manager with UI ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
+**Project**: **🚨 CRITICAL: code_developer Functional Testing & CI Integration**
+
+**Goal**: Establish comprehensive CI testing to guarantee code_developer remains functional for end users
+
+**Why This is #1**:
+- ⚠️ **BLOCKING**: Without CI tests, we can't guarantee daemon functionality after changes
+- 🔥 **USER IMPACT**: Broken daemon means users can't develop autonomously
+- 🛡️ **QUALITY GATE**: CI tests prevent regressions from reaching production
+- 🚀 **VELOCITY**: Automated tests allow faster, confident development
+
+**What to Build**:
+- Complete CI test suite in `tests/ci_tests/`
+- GitHub Actions workflow for automated testing
+- Integration tests for daemon end-to-end workflows
+- CLI mode & API mode testing
+- Smoke tests for critical user scenarios
+
+**Location**: See PRIORITY 2.6 (line 10504+) for complete specification
+
+**Status**: 📝 Planned - **START IMMEDIATELY**
+
+**Estimated**: 1 day (8 hours)
+
+---
+
+## ⏸️ DEFERRED: Project Manager Chat (After CI Tests)
+
 **Project**: **AI-Powered Project Manager CLI - Phase 2** (Interactive Chat Interface)
 
 **Goal**: Build `project-manager chat` - an interactive console chat (like Claude CLI) that becomes the ONLY interface needed
 
-**Why This is #1**:
-- Once complete, users will use ONLY `project-manager` for everything (no more Claude CLI)
-- It becomes the primary interface to manage roadmap AND control code-developer daemon
-- Interactive chat with Claude API integration for natural language understanding
-- Beautiful terminal UI with Rich library (colors, boxes, streaming)
-
-**What to Build**:
-- Interactive REPL loop (like Claude CLI)
-- Claude API integration (Anthropic SDK)
-- Natural language understanding
-- Daemon control commands (`/implement`, `/status`)
-- Roadmap management (`/add`, `/update`, `/view`)
-- Rich terminal UI with streaming responses
+**Why Deferred**: Must ensure daemon stability via CI tests before adding new features
 
 **Location**: See line 5044-5330 in this file for complete specification
 
-**Status**: 📝 Planned - **START NOW**
-
-**Estimated**: 2-3 days (16-24 hours)
+**Status**: ⏸️ Deferred until PRIORITY 2.6 complete
 
 ---
 
@@ -10501,25 +10514,494 @@ def interactive_setup():
 
 ---
 
-### 🔴 **PRIORITY 2.6: Daemon Fix Verification & CI Testing** 🚨 **HIGH PRIORITY**
+### 🔴 **PRIORITY 2.6: code_developer Functional Testing & CI Integration** 🚨 **CRITICAL - TOP PRIORITY**
 
-**Estimated Duration**: 2-4 hours
-**Impact**: ⭐⭐⭐⭐⭐ (Critical for continuous development)
-**Status**: 📝 Planned
-**Dependency**: Requires daemon fixes from commit a24d3be
-**Why Important**: Must verify daemon infinite loop fix works before resuming autonomous development
+**Estimated Duration**: 1 day (8 hours)
+**Impact**: ⭐⭐⭐⭐⭐ (Critical - blocks all future development)
+**Status**: 📝 Planned - **START IMMEDIATELY**
+**Dependency**: None (self-contained testing infrastructure)
+**Why Important**: **Must guarantee code_developer remains functional for end users**
 
-#### Project: Verify Daemon Fixes & Establish CI Testing
+#### Project: Comprehensive CI Test Suite for code_developer
+
+**Problem Statement**:
+The `code_developer` daemon is the core autonomous development engine. If it breaks, users lose the ability to develop autonomously. We need a comprehensive CI test suite that **guarantees** the daemon works for end users before any code reaches production.
 
 **Objectives**:
-1. Test daemon locally with PRIORITY 2.5 to verify no infinite loop
-2. Set up GitHub Actions CI for daemon testing
-3. Define environment variables in GitHub for Claude CLI testing
-4. Create automated daemon health checks
+1. **User Scenario Testing**: Test critical user workflows end-to-end
+2. **CI Integration**: Automated tests on every PR/merge
+3. **Both Modes**: Test Claude CLI mode AND Anthropic API mode
+4. **Regression Prevention**: Catch breaking changes before deployment
+5. **User Confidence**: Users can trust the daemon works
+
+**Success Criteria**:
+- ✅ All tests pass on CI before merge
+- ✅ Tests cover 90%+ of user scenarios
+- ✅ Tests run in <10 minutes
+- ✅ Clear test failure messages guide debugging
+- ✅ Both CLI and API modes tested
 
 **Deliverables**:
 
-**1. Resume Daemon** (Verify fix works in production)
+#### **1. CI Test Structure** (`tests/ci_tests/` - New Directory)
+
+Create a dedicated `tests/ci_tests/` directory with complete test coverage:
+
+```
+tests/ci_tests/
+├── __init__.py
+├── README.md                           # CI testing documentation
+├── test_daemon_smoke.py                # Quick smoke tests (<1min)
+├── test_daemon_cli_mode.py             # Claude CLI mode tests
+├── test_daemon_api_mode.py             # Anthropic API mode tests
+├── test_daemon_integration.py          # End-to-end workflows
+├── test_daemon_user_scenarios.py       # Critical user scenarios
+├── test_roadmap_parsing.py             # ROADMAP parsing tests
+├── test_git_operations.py              # Git workflow tests
+├── test_notification_system.py         # Notification tests
+├── test_error_handling.py              # Error scenarios
+├── conftest.py                         # Pytest fixtures
+└── fixtures/
+    ├── sample_roadmap.md               # Test ROADMAP
+    ├── sample_roadmap_empty.md         # Empty ROADMAP test
+    └── sample_roadmap_invalid.md       # Invalid ROADMAP test
+```
+
+#### **2. Smoke Tests** (`tests/ci_tests/test_daemon_smoke.py`)
+
+**Purpose**: Fast tests that verify basic functionality (run on every commit)
+
+```python
+"""Smoke tests for code_developer daemon.
+
+These tests run quickly (<1 minute) and catch obvious breakage.
+Run on every commit to ensure basic functionality works.
+"""
+
+import pytest
+from coffee_maker.autonomous.daemon import DevDaemon
+from coffee_maker.autonomous.roadmap_parser import RoadmapParser
+from coffee_maker.autonomous.git_manager import GitManager
+from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
+
+
+class TestDaemonSmoke:
+    """Smoke tests - fast checks for obvious breakage."""
+
+    def test_daemon_imports_successfully(self):
+        """Verify all modules can be imported."""
+        assert DevDaemon is not None
+        assert RoadmapParser is not None
+        assert GitManager is not None
+
+    def test_daemon_initializes_with_defaults(self):
+        """Verify daemon can be created with default parameters."""
+        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", auto_approve=False)
+        assert daemon is not None
+        assert daemon.roadmap_path.exists()
+        assert daemon.auto_approve is False
+
+    def test_daemon_initializes_with_cli_mode(self):
+        """Verify daemon can be initialized in CLI mode."""
+        daemon = DevDaemon(
+            roadmap_path="docs/ROADMAP.md",
+            use_claude_cli=True,
+            claude_cli_path="/opt/homebrew/bin/claude"
+        )
+        assert daemon.use_claude_cli is True
+        assert isinstance(daemon.claude, ClaudeCLIInterface)
+
+    def test_daemon_initializes_with_api_mode(self):
+        """Verify daemon can be initialized in API mode."""
+        daemon = DevDaemon(
+            roadmap_path="docs/ROADMAP.md",
+            use_claude_cli=False
+        )
+        assert daemon.use_claude_cli is False
+        assert isinstance(daemon.claude, ClaudeAPI)
+
+    def test_roadmap_parser_loads_roadmap(self):
+        """Verify roadmap parser can load ROADMAP.md."""
+        parser = RoadmapParser("docs/ROADMAP.md")
+        assert parser is not None
+
+    def test_roadmap_parser_finds_priorities(self):
+        """Verify parser can extract priorities from ROADMAP."""
+        parser = RoadmapParser("docs/ROADMAP.md")
+        priorities = parser.get_all_priorities()
+        assert len(priorities) > 0
+        assert all("name" in p for p in priorities)
+
+    def test_git_manager_initializes(self):
+        """Verify GitManager can be created."""
+        git = GitManager()
+        assert git is not None
+
+    def test_git_manager_detects_repo(self):
+        """Verify GitManager detects we're in a Git repo."""
+        git = GitManager()
+        # This should not raise an exception
+        status = git.is_clean()
+        assert isinstance(status, bool)
+
+
+@pytest.mark.parametrize("use_cli", [True, False])
+class TestDaemonModeInitialization:
+    """Test daemon initialization in both CLI and API modes."""
+
+    def test_daemon_mode_correct(self, use_cli):
+        """Verify daemon correctly initializes in specified mode."""
+        daemon = DevDaemon(
+            roadmap_path="docs/ROADMAP.md",
+            use_claude_cli=use_cli
+        )
+        assert daemon.use_claude_cli == use_cli
+
+        if use_cli:
+            assert isinstance(daemon.claude, ClaudeCLIInterface)
+        else:
+            assert isinstance(daemon.claude, ClaudeAPI)
+```
+
+#### **3. Claude CLI Mode Tests** (`tests/ci_tests/test_daemon_cli_mode.py`)
+
+**Purpose**: Verify Claude CLI integration works correctly
+
+```python
+"""Tests for code_developer daemon in Claude CLI mode.
+
+These tests verify the daemon works correctly when using Claude CLI
+instead of the Anthropic API.
+"""
+
+import pytest
+import subprocess
+from pathlib import Path
+from coffee_maker.autonomous.daemon import DevDaemon
+from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+
+
+class TestClaudeCLIInterface:
+    """Test Claude CLI interface implementation."""
+
+    def test_claude_cli_is_available(self):
+        """Verify Claude CLI is installed and accessible."""
+        cli = ClaudeCLIInterface(claude_path="/opt/homebrew/bin/claude")
+        assert cli.is_available()
+
+    def test_claude_cli_check_available(self):
+        """Verify check_available() works correctly."""
+        cli = ClaudeCLIInterface(claude_path="/opt/homebrew/bin/claude")
+        assert cli.check_available()
+
+    def test_claude_cli_execute_simple_prompt(self):
+        """Verify Claude CLI can execute a simple prompt."""
+        cli = ClaudeCLIInterface(claude_path="/opt/homebrew/bin/claude")
+        result = cli.execute_prompt("Say just 'OK'", timeout=30)
+
+        assert result.success
+        assert "OK" in result.content or "ok" in result.content.lower()
+        assert result.usage["input_tokens"] > 0
+        assert result.usage["output_tokens"] > 0
+
+    def test_claude_cli_handles_timeout(self):
+        """Verify Claude CLI handles timeout correctly."""
+        cli = ClaudeCLIInterface(claude_path="/opt/homebrew/bin/claude")
+        # Very short timeout should fail
+        result = cli.execute_prompt(
+            "Write a very long story...",
+            timeout=1  # 1 second - too short
+        )
+
+        assert result.stop_reason == "timeout"
+        assert result.error is not None
+
+    def test_claude_cli_handles_invalid_path(self):
+        """Verify error handling for invalid Claude CLI path."""
+        with pytest.raises(RuntimeError, match="not found"):
+            ClaudeCLIInterface(claude_path="/invalid/path/to/claude")
+
+
+class TestDaemonCLIMode:
+    """Test daemon functionality in CLI mode."""
+
+    def test_daemon_cli_mode_prerequisite_check(self):
+        """Verify daemon prerequisite check passes in CLI mode."""
+        daemon = DevDaemon(
+            roadmap_path="docs/ROADMAP.md",
+            use_claude_cli=True,
+            claude_cli_path="/opt/homebrew/bin/claude"
+        )
+
+        assert daemon._check_prerequisites()
+
+    @pytest.mark.integration
+    def test_daemon_cli_mode_execution(self, tmp_path):
+        """Integration test: Verify daemon can execute in CLI mode."""
+        # Create test roadmap with simple task
+        test_roadmap = tmp_path / "ROADMAP.md"
+        test_roadmap.write_text("""
+# Test Roadmap
+
+### PRIORITY 1: Test Task 📝 Planned
+
+Create a simple test file.
+
+**Deliverables**:
+- Create test.txt with content "Hello World"
+        """)
+
+        daemon = DevDaemon(
+            roadmap_path=str(test_roadmap),
+            auto_approve=True,
+            create_prs=False,
+            use_claude_cli=True
+        )
+
+        # This is a full integration test - may take time
+        # Test that daemon can at least start and parse roadmap
+        next_priority = daemon.parser.get_next_planned_priority()
+        assert next_priority is not None
+        assert next_priority["name"] == "PRIORITY 1"
+```
+
+#### **4. User Scenario Tests** (`tests/ci_tests/test_daemon_user_scenarios.py`)
+
+**Purpose**: Test critical user workflows end-to-end
+
+```python
+"""User scenario tests for code_developer daemon.
+
+These tests simulate real user workflows to ensure the daemon
+works correctly for end users in production scenarios.
+"""
+
+import pytest
+from pathlib import Path
+from coffee_maker.autonomous.daemon import DevDaemon
+from coffee_maker.autonomous.roadmap_parser import RoadmapParser
+
+
+class TestUserScenarios:
+    """Test critical user scenarios."""
+
+    def test_user_scenario_first_time_setup(self, tmp_path):
+        """
+        USER SCENARIO: First-time user sets up daemon
+
+        Steps:
+        1. User clones repo
+        2. User runs: poetry run code-developer --auto-approve
+        3. Daemon should start successfully
+        """
+        # Create minimal ROADMAP
+        roadmap = tmp_path / "ROADMAP.md"
+        roadmap.write_text("""
+# Roadmap
+
+### PRIORITY 1: Welcome Task 📝 Planned
+Create README.md
+        """)
+
+        # User runs daemon
+        daemon = DevDaemon(
+            roadmap_path=str(roadmap),
+            auto_approve=True,
+            use_claude_cli=True
+        )
+
+        # Daemon should initialize successfully
+        assert daemon is not None
+        assert daemon._check_prerequisites()
+
+    def test_user_scenario_daemon_finds_next_task(self, tmp_path):
+        """
+        USER SCENARIO: Daemon finds next planned task
+
+        Steps:
+        1. ROADMAP has completed and planned priorities
+        2. Daemon should find first "📝 Planned" priority
+        3. Daemon should NOT pick completed priorities
+        """
+        roadmap = tmp_path / "ROADMAP.md"
+        roadmap.write_text("""
+# Roadmap
+
+### PRIORITY 1: Done Task ✅ Complete
+Already done
+
+### PRIORITY 2: Next Task 📝 Planned
+This should be picked
+
+### PRIORITY 3: Future Task 📝 Planned
+This comes later
+        """)
+
+        parser = RoadmapParser(str(roadmap))
+        next_task = parser.get_next_planned_priority()
+
+        assert next_task is not None
+        assert next_task["name"] == "PRIORITY 2"
+        assert "Next Task" in next_task["title"]
+
+    def test_user_scenario_daemon_skips_after_max_retries(self):
+        """
+        USER SCENARIO: Daemon gives up after max retries
+
+        Steps:
+        1. Priority attempted 3 times with no changes
+        2. Daemon should create notification
+        3. Daemon should move to next priority (not loop)
+        """
+        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+        daemon.max_retries = 3
+
+        # Simulate 3 failed attempts
+        test_priority = {
+            "name": "PRIORITY TEST",
+            "title": "Test Task",
+            "content": "Test content"
+        }
+
+        daemon.attempted_priorities["PRIORITY TEST"] = 3
+
+        # Should skip this priority
+        priority_name = test_priority["name"]
+        attempt_count = daemon.attempted_priorities.get(priority_name, 0)
+
+        assert attempt_count >= daemon.max_retries
+
+    def test_user_scenario_daemon_creates_notification_on_no_changes(self):
+        """
+        USER SCENARIO: Daemon creates notification when no files changed
+
+        Steps:
+        1. Claude executes but makes no file changes
+        2. Daemon detects no changes (git is_clean)
+        3. Daemon creates notification for manual review
+        4. Daemon returns success (not failure - avoids loop)
+        """
+        # This would be tested in integration - requires full daemon run
+        pass
+
+    @pytest.mark.integration
+    def test_user_scenario_full_workflow_cli_mode(self, tmp_path):
+        """
+        USER SCENARIO: Full daemon workflow in CLI mode
+
+        Steps:
+        1. User has Claude CLI installed
+        2. User runs: code-developer --auto-approve
+        3. Daemon reads ROADMAP
+        4. Daemon creates branch
+        5. Daemon executes Claude CLI
+        6. Daemon commits changes
+        7. Daemon creates PR
+        8. Daemon moves to next priority
+        """
+        # Full integration test - requires Claude CLI
+        # This is the most important test for users
+        pass
+
+    @pytest.mark.integration
+    def test_user_scenario_interactive_mode(self):
+        """
+        USER SCENARIO: User runs daemon in interactive mode
+
+        Steps:
+        1. User runs: code-developer (no --auto-approve)
+        2. Daemon finds next priority
+        3. Daemon creates notification asking for approval
+        4. Daemon waits for user response
+        5. User approves via: project-manager respond <id> approve
+        6. Daemon proceeds with implementation
+        """
+        pass
+```
+
+#### **5. Error Handling Tests** (`tests/ci_tests/test_error_handling.py`)
+
+**Purpose**: Verify daemon handles errors gracefully
+
+```python
+"""Error handling tests for code_developer daemon.
+
+These tests verify the daemon handles error conditions gracefully
+and provides helpful error messages to users.
+"""
+
+import pytest
+from coffee_maker.autonomous.daemon import DevDaemon
+from coffee_maker.autonomous.roadmap_parser import RoadmapParser
+
+
+class TestErrorHandling:
+    """Test daemon error handling."""
+
+    def test_daemon_handles_missing_roadmap(self):
+        """Verify error when ROADMAP.md doesn't exist."""
+        with pytest.raises(FileNotFoundError):
+            daemon = DevDaemon(roadmap_path="/nonexistent/ROADMAP.md")
+            daemon._check_prerequisites()
+
+    def test_daemon_handles_invalid_roadmap(self, tmp_path):
+        """Verify error when ROADMAP is invalid."""
+        roadmap = tmp_path / "ROADMAP.md"
+        roadmap.write_text("This is not a valid roadmap")
+
+        parser = RoadmapParser(str(roadmap))
+        priorities = parser.get_all_priorities()
+
+        # Should return empty list, not crash
+        assert isinstance(priorities, list)
+
+    def test_daemon_handles_claude_cli_not_found(self):
+        """Verify error when Claude CLI not installed."""
+        daemon = DevDaemon(
+            roadmap_path="docs/ROADMAP.md",
+            use_claude_cli=True,
+            claude_cli_path="/invalid/path"
+        )
+
+        # Should fail prerequisite check
+        assert not daemon._check_prerequisites()
+
+    def test_daemon_handles_missing_api_key(self, monkeypatch):
+        """Verify error when ANTHROPIC_API_KEY not set in API mode."""
+        # Remove API key from environment
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+        daemon = DevDaemon(
+            roadmap_path="docs/ROADMAP.md",
+            use_claude_cli=False  # API mode
+        )
+
+        # Should fail prerequisite check
+        assert not daemon._check_prerequisites()
+
+    def test_daemon_handles_no_planned_priorities(self, tmp_path):
+        """Verify behavior when all priorities are complete."""
+        roadmap = tmp_path / "ROADMAP.md"
+        roadmap.write_text("""
+# Roadmap
+
+### PRIORITY 1: Done ✅ Complete
+All done!
+        """)
+
+        parser = RoadmapParser(str(roadmap))
+        next_priority = parser.get_next_planned_priority()
+
+        # Should return None, not crash
+        assert next_priority is None
+```
+
+#### **6. GitHub Actions Workflow** (`.github/workflows/daemon-ci.yml`)
+
+**Purpose**: Automated CI testing on every PR and merge
+
+**1. Resume Daemon** (User Manual Test - Before CI Implementation)
 ```bash
 # Resume suspended daemon (if running)
 fg
