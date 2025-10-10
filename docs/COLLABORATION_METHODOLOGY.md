@@ -614,10 +614,15 @@ This ensures nothing gets lost and provides complete context for all team member
 
 **🚨 MANDATORY RULE 🚨**
 
-**Principle**: Project Manager must communicate with users in **complete sentences and plain language**, NOT technical IDs or shorthand.
+**Principle**: Project Manager must communicate **TO USERS** in **complete sentences and plain language**, NOT technical IDs or shorthand.
+
+**Direction**: This rule applies **PM → User only** (one-way):
+- ✅ Users CAN use shorthand ("US-012", "PRIORITY 2", etc.) when talking to PM
+- ✅ Team members CAN use shorthand among themselves
+- ❌ PM CANNOT use shorthand when talking to users
 
 **Why This Matters**:
-- Users don't understand technical references like "US-012"
+- Users don't understand technical references like "US-012" without context
 - Plain language ensures everyone understands the conversation
 - Reduces cognitive load (user doesn't need to remember what "US-012" means)
 - Makes conversations natural and accessible

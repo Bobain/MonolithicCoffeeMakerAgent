@@ -440,6 +440,113 @@ You can see it in the roadmap now. Want to create another user story?"
 
 ---
 
+## 📝 READY TO IMPLEMENT: US-013 - PM Infers and Validates DoD for Every User Story
+
+**Project**: **✅ US-013 - Automatic DoD Inference During `/US` Workflow**
+
+**Status**: 📝 **PLANNED** (2025-10-10 - Part of `/US` command implementation)
+
+**User Story**:
+> "As a project manager I want the developer to be productive and reliable, therefore I will define a DoD if the user does not give one. But first I will ask the user if he has a DoD"
+
+**Business Context**:
+Every user story needs a Definition of Done (DoD) to ensure quality and completeness. The PM should help users define DoD by:
+1. Asking if user has a DoD in mind
+2. If not, inferring DoD from the user's description
+3. Rephrasing it clearly for validation
+4. User validates and confirms
+
+**Integration with US-012**:
+This feature enhances the `/US` command workflow (US-012). After user describes their need, PM should:
+- Extract user story structure (US-012)
+- **Infer Definition of Done from description (US-013)** ← New
+- Present both for validation
+- User validates and refines
+- Propagate to ROADMAP with complete DoD
+
+**Workflow**:
+```
+User: "/US I want email notifications when daemon finishes tasks"
+
+PM: "I've extracted this user story:
+
+**US-XXX: Email Notifications on Task Completion**
+[... user story details ...]
+
+**Definition of Done** (inferred from your description):
+- [ ] Email sent when code_developer completes a task
+- [ ] Email includes task summary and results
+- [ ] User can configure notification preferences
+- [ ] Email delivered within 1 minute of completion
+- [ ] Tests verify email sending works
+- [ ] Documentation shows how to configure
+
+Do you have a different Definition of Done in mind, or does this look good?"
+
+User: "Add: Email should include link to PR"
+
+PM: "Updated DoD:
+- [ ] Email sent when code_developer completes a task
+- [ ] Email includes task summary and PR link ← Added
+- [ ] Email includes results
+- [ ] User can configure notification preferences
+- [ ] Email delivered within 1 minute of completion
+- [ ] Tests verify email sending works
+- [ ] Documentation shows how to configure
+
+Is this correct now?"
+
+User: "Yes, perfect"
+
+PM: "✅ Added US-XXX to ROADMAP with complete Definition of Done"
+```
+
+**Implementation Approach**:
+
+**Phase 1: DoD Inference** (1-2 hours)
+1. When user provides US description via `/US` command
+2. PM analyzes description to extract implicit success criteria
+3. PM generates DoD checklist based on:
+   - Functional requirements mentioned
+   - Standard quality criteria (tests, docs, validation)
+   - Non-functional requirements (performance, security if applicable)
+
+**Phase 2: DoD Validation** (1 hour)
+1. PM presents inferred DoD to user
+2. PM asks: "Do you have a different Definition of Done in mind?"
+3. User can:
+   - Accept as-is
+   - Request modifications
+   - Provide their own DoD completely
+4. Iterative refinement until user confirms
+
+**Phase 3: DoD Storage** (30 min)
+1. Store validated DoD with user story in ROADMAP
+2. Ensure DoD is visible and checkable
+3. Use checklist format for tracking completion
+
+**Acceptance Criteria** (Definition of Done):
+- [ ] PM infers DoD from user's description during `/US` workflow
+- [ ] Inferred DoD includes functional criteria (what the feature does)
+- [ ] Inferred DoD includes quality criteria (tests, docs, validation)
+- [ ] PM asks user if they have a different DoD in mind
+- [ ] User can accept, modify, or replace inferred DoD
+- [ ] DoD stored in ROADMAP with user story
+- [ ] DoD uses checklist format for tracking
+- [ ] Workflow feels natural (not form-filling)
+
+**Technical Foundation**:
+- `AIService` can analyze user descriptions and extract success criteria
+- ROADMAP.md already has DoD sections in user stories
+- Chat interface supports conversational validation
+- Section 6 of COLLABORATION_METHODOLOGY.md defines DoD template
+
+**Estimated Effort**: 2-3 hours (integrated with US-012 implementation)
+
+**Dependencies**: US-012 (part of same `/US` command workflow)
+
+---
+
 ## 🚀 RELEASE STRATEGY & VERSIONING
 
 ### ✅ What's Deliverable TODAY (Version 0.1.0 - MVP)
