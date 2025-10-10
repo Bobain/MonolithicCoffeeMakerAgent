@@ -199,10 +199,13 @@ Currently PM doesn't consistently identify what type of information users are pr
 ✅ US-009: Process Management & Status Monitoring (2025-10-10)
 ✅ US-010: Living Documentation & Tutorials (2025-10-10)
 
-**Next After US-014**:
-- US-012/US-013: `/US` Command for natural user story creation
-- US-007: IDE Code Completion (developer productivity)
-- PRIORITY 2.6: CI Testing (ensure daemon stability)
+**Next After US-014** (Priority Order):
+1. **US-016**: Technical Spec Generation with Task-Level Estimates (4-5 days) - NEXT PRIORITY
+2. US-015: Estimation Metrics & Velocity Tracking (3-4 days)
+3. US-017: Summary & Calendar of Deliverables (5-7 days)
+4. US-012/US-013: `/US` Command for natural user story creation
+5. US-007: IDE Code Completion (developer productivity)
+6. PRIORITY 2.6: CI Testing (ensure daemon stability)
 
 ---
 
