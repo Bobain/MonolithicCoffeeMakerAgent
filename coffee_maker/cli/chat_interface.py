@@ -14,8 +14,11 @@ Example:
     >>> session.start()
 """
 
+import json
 import logging
 import os
+import re
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
@@ -28,6 +31,7 @@ from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.spinner import Spinner
+from rich.syntax import Syntax
 from rich.table import Table
 
 from coffee_maker.cli.ai_service import AIService
@@ -142,6 +146,14 @@ class ChatSession:
         # Setup prompt-toolkit for advanced input
         self._setup_prompt_session()
 
+        # Setup session persistence
+        self.session_dir = Path.home() / ".project_manager" / "sessions"
+        self.session_dir.mkdir(parents=True, exist_ok=True)
+        self.session_file = self.session_dir / "default.json"
+
+        # Load previous session if exists
+        self._load_session()
+
         logger.info(f"ChatSession initialized (streaming={'enabled' if self.enable_streaming else 'disabled'})")
 
     def _setup_prompt_session(self):
@@ -178,6 +190,34 @@ class ChatSession:
             key_bindings=bindings,
             enable_history_search=True,  # Ctrl+R for reverse search
         )
+
+    def _load_session(self):
+        """Load previous conversation history from file."""
+        if self.session_file.exists():
+            try:
+                with open(self.session_file, "r") as f:
+                    data = json.load(f)
+                    self.history = data.get("history", [])
+                    logger.info(f"Loaded {len(self.history)} messages from previous session")
+            except Exception as e:
+                logger.warning(f"Failed to load session: {e}")
+                self.history = []
+
+    def _save_session(self):
+        """Save conversation history to file."""
+        try:
+            with open(self.session_file, "w") as f:
+                json.dump(
+                    {
+                        "history": self.history,
+                        "last_updated": datetime.now().isoformat(),
+                    },
+                    f,
+                    indent=2,
+                )
+            logger.debug(f"Saved {len(self.history)} messages to session")
+        except Exception as e:
+            logger.warning(f"Failed to save session: {e}")
 
     def start(self):
         """Start interactive chat session.
@@ -232,6 +272,9 @@ class ChatSession:
                 # Add to history
                 self.history.append({"role": "user", "content": user_input})
                 self.history.append({"role": "assistant", "content": response})
+
+                # Auto-save session after each interaction
+                self._save_session()
 
             except KeyboardInterrupt:
                 self.console.print("\n\n[yellow]Interrupted. Type /exit to quit.[/]")
@@ -501,13 +544,14 @@ class ChatSession:
         self.console.print(panel)
 
     def _display_goodbye(self):
-        """Display goodbye message."""
+        """Display goodbye message and save session."""
         self.active = False
+        self._save_session()  # Final save on exit
         self.console.print("\n[bold cyan]Thank you for using Coffee Maker Project Manager![/]")
-        self.console.print("[dim]Session ended. All changes have been saved.[/]\n")
+        self.console.print(f"[dim]Session saved ({len(self.history)} messages). All changes have been saved.[/]\n")
 
     def _display_response(self, response: str):
-        """Display AI response with rich formatting.
+        """Display AI response with enhanced syntax highlighting.
 
         Args:
             response: Response text (supports markdown)
@@ -517,13 +561,74 @@ class ChatSession:
         """
         self.console.print("\n[bold green]Claude:[/]")
 
-        # Try to render as markdown
+        # Extract and render code blocks with syntax highlighting
         try:
+            self._display_response_with_syntax(response)
+        except Exception as e:
+            logger.warning(f"Syntax highlighting failed: {e}, falling back to markdown")
+            # Fallback to basic markdown
+            try:
+                md = Markdown(response)
+                self.console.print(md)
+            except Exception:
+                # Final fallback to plain text
+                self.console.print(response)
+
+    def _display_response_with_syntax(self, response: str):
+        """Display response with enhanced code syntax highlighting.
+
+        Args:
+            response: Response text with markdown code blocks
+        """
+        # Pattern to match code blocks: ```language\ncode\n```
+        code_block_pattern = r"```(\w+)?\n(.*?)```"
+
+        last_end = 0
+        parts = []
+
+        # Find all code blocks
+        for match in re.finditer(code_block_pattern, response, re.DOTALL):
+            # Add text before code block
+            if match.start() > last_end:
+                text_part = response[last_end : match.start()]
+                if text_part.strip():
+                    parts.append(("text", text_part))
+
+            # Add code block
+            language = match.group(1) or "python"  # Default to python
+            code = match.group(2).strip()
+            parts.append(("code", code, language))
+
+            last_end = match.end()
+
+        # Add remaining text after last code block
+        if last_end < len(response):
+            remaining = response[last_end:]
+            if remaining.strip():
+                parts.append(("text", remaining))
+
+        # Render parts
+        if not parts:
+            # No code blocks found, render as markdown
             md = Markdown(response)
             self.console.print(md)
-        except Exception:
-            # Fallback to plain text
-            self.console.print(response)
+        else:
+            for part in parts:
+                if part[0] == "text":
+                    # Render text as markdown
+                    md = Markdown(part[1])
+                    self.console.print(md)
+                elif part[0] == "code":
+                    # Render code with syntax highlighting
+                    code, language = part[1], part[2]
+                    syntax = Syntax(
+                        code,
+                        language,
+                        theme="monokai",
+                        line_numbers=True,
+                        word_wrap=False,
+                    )
+                    self.console.print(syntax)
 
     def _display_help(self):
         """Display help with all available commands."""
