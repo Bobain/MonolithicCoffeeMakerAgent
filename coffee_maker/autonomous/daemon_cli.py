@@ -13,6 +13,14 @@ import logging
 import os
 import sys
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed, env vars must be set manually
+
 from coffee_maker.autonomous.daemon import DevDaemon
 
 
