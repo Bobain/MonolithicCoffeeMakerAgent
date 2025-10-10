@@ -824,6 +824,368 @@ Proceeding..."
 
 ---
 
+## 📝 PLANNED: US-015 - Estimation Metrics & Velocity Tracking
+
+**Project**: **📊 US-015 - Track Estimation Accuracy and Team Velocity for Better Planning**
+
+**Status**: 📝 **PLANNED** (2025-10-10 - Requirements defined)
+
+**User Story**:
+> "As a project manager I want to have metrics stored about my estimations of time to deliver and the velocity of the team, so that I can adjust my estimations based on past errors or good estimations"
+
+**Business Context**:
+Currently, PM estimates time for user stories (e.g., "3-5 days") but has no way to:
+- Track actual time taken vs estimated time
+- Measure estimation accuracy over time
+- Calculate team velocity (how much work gets done per sprint/week)
+- Learn from past estimation errors to improve future estimates
+- Identify patterns in over/under-estimation
+
+This leads to:
+- ❌ Repeated estimation mistakes (same types of work always take longer than estimated)
+- ❌ No data-driven approach to planning
+- ❌ Can't answer "When will this be done?" with confidence
+- ❌ No visibility into team velocity trends
+
+**What PM Should Do**:
+
+**Metrics to Track**:
+
+**Per User Story Level** (primary granularity):
+1. **Time Metrics**:
+   - Estimated time from ROADMAP (e.g., "3-5 days" → stored as min: 3, max: 5)
+   - Actual time taken (calculated from start to completion)
+   - Estimation error (actual - estimated)
+   - Estimation accuracy percentage
+
+2. **Velocity Metrics**:
+   - Story points completed per week/sprint
+   - Number of user stories completed per time period
+   - Average story duration
+   - Velocity trend (improving/declining)
+
+**Per Technical Spec Level** (when spec exists):
+3. **Spec Estimation Metrics**:
+   - Estimated time from technical spec (e.g., "Phase 1: 6 hours")
+   - Actual time per spec phase (allows adjusting spec estimates)
+   - Which spec phases consistently over/under-estimated
+   - Spec-level accuracy (helps improve future spec estimates)
+
+**Overall Accuracy**:
+4. **Accuracy Metrics**:
+   - Overall estimation accuracy (% of estimates within ±20%)
+   - Trend: improving or declining accuracy
+   - Category-specific accuracy (e.g., better at estimating UI work vs backend)
+   - Spec vs no-spec accuracy (do specs improve estimates?)
+
+**Where to Display**:
+- `/status` command shows current velocity and recent accuracy
+- `/metrics` command shows detailed historical data
+- When estimating new work, PM suggests adjusted estimates based on historical data
+
+**Database Schema** (SQLite):
+
+```sql
+-- New table: story_metrics
+CREATE TABLE story_metrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    story_id TEXT NOT NULL,  -- e.g., "US-015"
+    story_title TEXT NOT NULL,
+
+    -- Time estimation
+    estimated_min_days REAL,  -- e.g., 3.0
+    estimated_max_days REAL,  -- e.g., 5.0
+    actual_days REAL,         -- e.g., 4.2
+
+    -- Timestamps
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+
+    -- Calculation fields
+    estimation_error_days REAL,  -- actual - avg(estimated)
+    estimation_accuracy_pct REAL,  -- 100 - abs(error/estimated * 100)
+
+    -- Context
+    complexity TEXT,  -- "low", "medium", "high"
+    category TEXT,    -- "feature", "bug", "refactor", "docs"
+    story_points INTEGER,
+
+    -- Technical spec phase metrics (JSON) - tracks spec-level estimates
+    spec_phase_metrics TEXT,  -- JSON: [{"phase": "Phase 1", "estimated_hours": 6, "actual_hours": 8, "accuracy_pct": 75}, ...]
+    has_technical_spec BOOLEAN DEFAULT 0,
+    technical_spec_path TEXT,  -- e.g., "docs/US-015_TECHNICAL_SPEC.md"
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for fast queries
+CREATE INDEX idx_story_completed ON story_metrics(completed_at);
+CREATE INDEX idx_story_id ON story_metrics(story_id);
+
+-- New table: velocity_snapshots (weekly/sprint velocity tracking)
+CREATE TABLE velocity_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    period_start DATE,
+    period_end DATE,
+
+    -- Velocity metrics
+    stories_completed INTEGER,
+    story_points_completed INTEGER,
+    total_days_actual REAL,
+
+    -- Estimation accuracy for this period
+    avg_estimation_accuracy_pct REAL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Acceptance Criteria** (Definition of Done):
+
+**Data Capture**:
+- [ ] When user story is created, store estimated time (min/max days) from ROADMAP
+- [ ] When technical spec exists, store spec phase estimates (e.g., "Phase 1: 6h")
+- [ ] When user story status changes to "In Progress", record `started_at` timestamp
+- [ ] When user story marked complete, record `completed_at` timestamp
+- [ ] When spec phase completes, record actual time for that phase
+- [ ] Calculate actual days taken (completed_at - started_at, excluding weekends/breaks)
+- [ ] Calculate estimation error and accuracy percentage (story-level AND spec-level)
+- [ ] Store all metrics in SQLite `story_metrics` table with spec phase details
+
+**Metrics Display in /status**:
+- [ ] `/status` command shows current sprint velocity
+- [ ] Shows recent estimation accuracy (last 5 user stories)
+- [ ] Shows velocity trend (improving/stable/declining)
+- [ ] Shows current active story with elapsed time
+
+**Detailed Metrics Command**:
+- [ ] `/metrics` command shows comprehensive historical data
+- [ ] List all completed user stories with estimated vs actual time
+- [ ] Show overall estimation accuracy (% within ±20% of estimate)
+- [ ] Show velocity over time (chart or table)
+- [ ] Show accuracy trend (improving/declining)
+
+**Estimation Improvement**:
+- [ ] When PM estimates new user story, suggest adjusted estimate based on:
+  - Historical accuracy for similar complexity/category
+  - Recent velocity trends
+  - Team capacity
+- [ ] Show confidence level in suggestion ("based on 10 similar stories")
+
+**Real-Time Tracking**:
+- [ ] Track when user story starts (status → "In Progress")
+- [ ] Track when each phase completes (optional, for detailed analysis)
+- [ ] Update metrics when user story marked complete
+
+**Velocity Calculation**:
+- [ ] Calculate weekly velocity (stories completed per week)
+- [ ] Calculate story points velocity (if using story points)
+- [ ] Store velocity snapshots for trend analysis
+
+**Reporting**:
+- [ ] Generate sprint/week retrospective report with:
+  - Stories completed
+  - Velocity
+  - Estimation accuracy
+  - Insights (e.g., "Backend work consistently takes 30% longer than estimated")
+
+**Implementation Approach**:
+
+**Phase 1: Database Schema & Data Capture** (Day 1 - 4 hours)
+1. Create `story_metrics` table in SQLite
+2. Create `velocity_snapshots` table
+3. Implement data capture on user story lifecycle events:
+   - When created: capture estimated time
+   - When started: capture `started_at`
+   - When completed: capture `completed_at`, calculate metrics
+4. Write tests for metric calculation
+
+**Phase 2: /status Integration** (Day 2 - 3 hours)
+1. Query current velocity from database
+2. Calculate recent estimation accuracy
+3. Add velocity/accuracy display to `/status` command
+4. Show current active story with elapsed time
+
+**Phase 3: /metrics Command** (Day 2-3 - 4 hours)
+1. Implement `/metrics` command
+2. Query historical data from database
+3. Display formatted table/chart of:
+   - All user stories with estimated vs actual
+   - Overall accuracy statistics
+   - Velocity over time
+4. Add filtering options (by date range, category, complexity)
+
+**Phase 4: Estimation Suggestions** (Day 3 - 3 hours)
+1. When PM creates new user story, analyze historical data
+2. Find similar user stories (by complexity, category)
+3. Calculate suggested estimate based on historical actuals
+4. Display suggestion with confidence level
+5. PM can override suggestion
+
+**Phase 5: Reporting & Visualization** (Day 4 - 4 hours)
+1. Generate retrospective reports
+2. Velocity trend chart (ASCII or export to CSV)
+3. Accuracy trend over time
+4. Insights generation (identify patterns)
+
+**Phase 6: Testing & Documentation** (Day 4-5 - 2 hours)
+1. End-to-end testing with real user stories
+2. Update documentation
+3. Add examples to TUTORIALS.md
+4. Mark US-015 complete
+
+**Technical Foundation**:
+- SQLite database (already in use at `data/notifications.db` or new `data/metrics.db`)
+- RoadmapEditor - Can parse user story estimated time
+- CLI commands infrastructure - Can add new `/metrics` command
+- Timestamp tracking - Python datetime
+
+**Estimated Effort**: 3-4 days (database, metrics calculation, display, estimation suggestions)
+
+**Priority**: MEDIUM-HIGH (valuable for planning, but US-014 is more critical)
+
+**Example Scenarios**:
+
+**Scenario 1: Capturing Metrics for Completed User Story (with Technical Spec)**
+```
+# ROADMAP.md before completion:
+**Status**: 🔄 In Progress
+**Estimated Effort**: 3-5 days
+
+# Technical spec (US-014_TECHNICAL_SPEC.md) has phase estimates:
+Phase 1: 6 hours
+Phase 2: 4 hours
+Phase 3: 6 hours
+Phase 4: 8 hours
+Total: 24 hours (3 days)
+
+# User marks US-014 complete
+PM detects completion:
+- Started: 2025-10-10 09:00
+- Completed: 2025-10-13 17:00
+- Actual: 4.3 days (34.4 hours)
+- Estimated (ROADMAP): 3-5 days (avg: 4.0 days)
+- Estimated (Spec): 3.0 days (24 hours)
+- Error (ROADMAP): +0.3 days (+7.5%)
+- Error (Spec): +1.3 days (+43%)
+- Accuracy (ROADMAP): 92.5% (within ±20%)
+- Accuracy (Spec): 57% (spec underestimated)
+
+# Stores in database:
+story_metrics: {
+  story_id: "US-014",
+  estimated_min_days: 3.0,
+  estimated_max_days: 5.0,
+  actual_days: 4.3,
+  estimation_error_days: 0.3,
+  estimation_accuracy_pct: 92.5,
+  has_technical_spec: true,
+  technical_spec_path: "docs/US-014_TECHNICAL_SPEC.md",
+  spec_phase_metrics: [
+    {"phase": "Phase 1", "estimated_hours": 6, "actual_hours": 8, "accuracy_pct": 75},
+    {"phase": "Phase 2", "estimated_hours": 4, "actual_hours": 5, "accuracy_pct": 80},
+    {"phase": "Phase 3", "estimated_hours": 6, "actual_hours": 9, "accuracy_pct": 67},
+    {"phase": "Phase 4", "estimated_hours": 8, "actual_hours": 12.4, "accuracy_pct": 65}
+  ],
+  ...
+}
+
+# Insights generated:
+- ROADMAP estimate was good (92.5% accuracy)
+- Technical spec was too optimistic (57% accuracy, underestimated by 43%)
+- Phase 4 took 50% longer than estimated
+- Recommendation: Increase spec phase estimates by 30% for similar complexity work
+```
+
+**Scenario 2: /status Shows Velocity**
+```
+User: /status
+
+PM: 📊 Status Report
+
+Current Sprint (Week of 2025-10-10):
+- Stories completed: 2 (US-013, US-014)
+- Velocity: 2 stories/week
+- Total days: 8.5 days
+
+Recent Estimation Accuracy (last 5 stories):
+- US-014: 92.5% (estimated 3-5d, actual 4.3d)
+- US-013: 85.0% (estimated 2-3d, actual 3.5d)
+- US-012: 95.0% (estimated 1-2d, actual 1.8d)
+- US-011: 78.0% (estimated 1d, actual 1.4d)
+- US-010: 88.0% (estimated 1d, actual 0.9d)
+
+Overall accuracy: 87.7% (good!)
+Velocity trend: Stable (2 stories/week avg)
+
+🟢 Daemon Status: Running (working on Phase 1 of US-014)
+```
+
+**Scenario 3: PM Suggests Adjusted Estimate**
+```
+User: "Add a new user story for Slack notifications"
+
+PM: "I'll create a user story for Slack notification integration.
+
+Based on historical data:
+- 3 similar integration features in the past
+- Average actual time: 4.2 days
+- Your typical estimate: 3-4 days
+- Historical accuracy for integrations: 82%
+
+Suggested estimate: 4-5 days
+(Confidence: Medium - based on 3 similar stories)
+
+Should I use this estimate, or would you like to adjust it?"
+```
+
+**Scenario 4: /metrics Command**
+```
+User: /metrics
+
+PM: 📈 Estimation Metrics & Velocity
+
+All-Time Statistics:
+- Total user stories completed: 15
+- Overall estimation accuracy: 85.3%
+- Average velocity: 2.1 stories/week
+
+Estimation Accuracy by Story:
+┌─────────┬──────────────────┬───────────┬─────────┬───────────┬──────────┐
+│ Story   │ Title            │ Estimated │ Actual  │ Error     │ Accuracy │
+├─────────┼──────────────────┼───────────┼─────────┼───────────┼──────────┤
+│ US-014  │ Request Cat...   │ 3-5d      │ 4.3d    │ +0.3d     │ 92.5%    │
+│ US-013  │ Similarity...    │ 2-3d      │ 3.5d    │ +0.8d     │ 85.0%    │
+│ US-012  │ /US Command      │ 1-2d      │ 1.8d    │ +0.3d     │ 95.0%    │
+│ ...     │ ...              │ ...       │ ...     │ ...       │ ...      │
+└─────────┴──────────────────┴───────────┴─────────┴───────────┴──────────┘
+
+Velocity Trend (last 4 weeks):
+Week 1: 1.5 stories/week
+Week 2: 2.0 stories/week
+Week 3: 2.5 stories/week
+Week 4: 2.0 stories/week (current)
+
+Insights:
+✓ Estimation accuracy improving (78% → 92% over last 5 stories)
+✓ Backend work takes 25% longer than estimated on average
+✓ Documentation work is very accurate (95% avg)
+⚠ Integration features consistently underestimated by 1 day
+```
+
+**Related User Stories**:
+- US-014: Request categorization (helps with metrics by category)
+- US-010: Living documentation (metrics shown in docs)
+- US-009: Process management (track daemon work time)
+
+**Future Enhancements** (not in scope for US-015):
+- Burndown charts
+- Predictive analytics (ML-based estimation)
+- Team member velocity (if multi-person team)
+- Export metrics to external tools (Jira, Linear, etc.)
+
+---
+
 ## 🚀 RELEASE STRATEGY & VERSIONING
 
 ### ✅ What's Deliverable TODAY (Version 0.1.0 - MVP)
