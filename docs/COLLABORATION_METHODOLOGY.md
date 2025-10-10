@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 1.3
+**Version**: 1.4
 **Last Updated**: 2025-10-10
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -727,7 +727,150 @@ This ensures conversations are natural, accessible, and don't require the user t
 [2] PM: "Added US-008 to roadmap, scheduled after US-009"
 ```
 
-### 5.2 Implementing a Priority
+### 5.2 Adding a New User Story via `/US` Command (US-012, US-013)
+
+**Pattern**: `/US` command → Similarity check → User story validation → DoD inference → DoD validation → Propagate
+
+**What This Is**:
+The `/US` command provides a streamlined, conversational way to create user stories with automatic:
+- Similarity detection (avoiding duplicates)
+- Status checking (is it already done?)
+- Definition of Done inference (PM suggests DoD based on description)
+- Collaborative validation (user approves before adding to roadmap)
+
+**Steps**:
+1. **User**: Types `/US [description]` in project-manager chat
+2. **PM**: Searches for similar existing user stories
+3. **PM**: Checks if already shipped or partially done
+4. **PM**: Presents findings with options (new, enhance existing, or already done)
+5. **User**: Validates the user story structure
+6. **PM**: ONLY THEN infers Definition of Done from validated description
+7. **PM**: Presents DoD for validation
+8. **User**: Validates and refines DoD
+9. **PM**: Propagates to ROADMAP.md with complete DoD
+
+**Example**:
+```
+User: "/US I want email notifications when daemon finishes tasks"
+
+[Step 1-4: Similarity Check & Options]
+PM: "I'm checking if this already exists or is similar to something we have...
+
+Found: The process management feature (US-009) includes a notification
+system, but no email support.
+
+I see three options:
+A) Enhance the process management feature to add email notifications
+   (it's already 60% done)
+B) Create new user story for email-specific notifications
+C) This is complete - email is already working (please test)
+
+Which approach would you prefer?"
+
+User: "Create new user story, separate from process management"
+
+[Step 5: User Story Validation]
+PM: "Got it! Here's the user story I've extracted:
+
+**Email Notifications on Task Completion**
+
+**As a**: User
+**I want**: Email notifications when code_developer completes tasks
+**So that**: I stay informed without checking manually
+
+**Business Value**: ⭐⭐⭐⭐ (High - reduces manual monitoring)
+**Estimated Effort**: 3-5 days (email service, templates, config)
+
+Is this user story correct? Any changes?"
+
+User: "Yes, and also when daemon asks questions"
+
+PM: "Updated user story:
+
+**Email & Question Notifications**
+
+**As a**: User
+**I want**: Email notifications when code_developer completes tasks OR
+asks questions
+**So that**: I stay informed and can respond quickly
+
+**Business Value**: ⭐⭐⭐⭐⭐ (Critical - enables async workflow)
+**Estimated Effort**: 4-6 days (notification triggers, email templates,
+config)
+
+Is this correct?"
+
+User: "Yes"
+
+[Step 6-8: DoD Inference & Validation]
+PM: "Now let me infer the Definition of Done...
+
+**Definition of Done** (inferred from your description):
+- [ ] Email sent when code_developer completes a task
+- [ ] Email sent when code_developer asks a question
+- [ ] Email includes task summary and results
+- [ ] Email includes question context and link
+- [ ] User can configure notification preferences (frequency, types)
+- [ ] Email delivered within 1 minute of event
+- [ ] Tests verify email sending works
+- [ ] Documentation shows how to configure
+
+Does this Definition of Done look good, or do you have different
+criteria?"
+
+User: "Add: Email should include link to PR when task completes"
+
+PM: "Updated DoD:
+- [ ] Email sent when code_developer completes a task
+- [ ] Email includes PR link when task completes ← Added
+- [ ] Email sent when code_developer asks a question
+- [ ] Email includes task summary and results
+- [ ] Email includes question context and link
+- [ ] User can configure notification preferences
+- [ ] Email delivered within 1 minute of event
+- [ ] Tests verify email sending works
+- [ ] Documentation shows how to configure
+
+Is this correct now?"
+
+User: "Yes, perfect"
+
+[Step 9: Propagation]
+PM: "✅ Added the email and question notifications feature to ROADMAP
+with complete Definition of Done.
+
+Where should I prioritize it?
+- TOP PRIORITY (implement immediately)
+- After current work (next in queue)
+- Backlog (future consideration)"
+
+User: "After current work"
+
+PM: "Done! Added after the process management feature in the roadmap."
+```
+
+**Key Differences from Manual Workflow (Section 5.1)**:
+- **Automatic similarity detection**: Prevents duplicates and identifies related work
+- **Status awareness**: Checks if feature already exists or is partially done
+- **DoD inference**: PM suggests Definition of Done based on description
+- **Two-phase validation**: User story THEN DoD (not simultaneously)
+- **Streamlined**: Single command instead of multi-step conversation
+
+**Why This Matters**:
+- **Reduces duplication**: Similar user stories are detected before creation
+- **Saves time**: PM infers DoD automatically from description
+- **Improves quality**: Every user story has complete DoD before implementation
+- **Better planning**: User validates US before investing time in DoD discussion
+- **Leverages existing work**: Suggests enhancing existing features instead of duplicating
+
+**Implementation Status**:
+- 📝 **Planned** (US-012, US-013)
+- See `docs/ROADMAP.md` for complete specification
+- Estimated: 12-17 hours total implementation time
+
+---
+
+### 5.3 Implementing a Priority
 
 **Pattern**: Spec → Approve → Implement → Validate → Complete
 
@@ -764,7 +907,7 @@ Day 5: [User] Test and approve
 Day 5: [PM] Mark US-009 ✅ Complete
 ```
 
-### 5.3 Handling Blockers
+### 5.4 Handling Blockers
 
 **Pattern**: Identify → Escalate → Resolve → Continue
 
@@ -819,7 +962,7 @@ PM receives question
 [Dev] Continues implementation...
 ```
 
-### 5.4 Iterating on Requirements
+### 5.5 Iterating on Requirements
 
 **Pattern**: Build → Feedback → Adjust → Rebuild
 
@@ -856,7 +999,7 @@ PM: "Updated US-009 Phase 3 acceptance criteria to include
      'Status updates periodically'. Developer will add this."
 ```
 
-### 5.5 Version Releases
+### 5.6 Version Releases
 
 **Pattern**: MVP → Iterate → Major Release
 
@@ -1176,6 +1319,7 @@ PM documents decision and informs developer
 | 1.1 | 2025-10-10 | Added Section 12 (Security & Sensitive Files) | Establish .env file protection rule |
 | 1.2 | 2025-10-10 | Added Section 4.5 (Documenting Feature Discussions) | Ensure all conversations are documented in ROADMAP |
 | 1.3 | 2025-10-10 | Added Section 4.6 (Plain Language Communication) | PM must use descriptive names, not technical IDs like "US-012" |
+| 1.4 | 2025-10-10 | Added Section 5.2 (`/US` Command Workflow) | Document US-012/US-013 features: similarity check, DoD inference, validation workflow |
 
 **To add new version**:
 1. Make changes to document
