@@ -45,7 +45,11 @@ code-developer = "coffee_maker.autonomous.daemon_cli:main"
 markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
     "slow: marks tests as slow running tests (deselect with '-m \"not slow\"')",
+    "manual: marks tests as manual-only (never run in CI, only on user demand)",
 ]
+# Exclude manual tests from automatic test discovery
+testpaths = ["tests"]
+norecursedirs = ["tests/manual_tests", "*.egg", ".git", ".tox", "dist", "build"]
 
 [build-system]
 requires = ["poetry-core"]
