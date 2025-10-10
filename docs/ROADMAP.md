@@ -2066,6 +2066,797 @@ CREATE TABLE status_update_config (
 
 ---
 
+## 📝 PLANNED: US-018 - Team Role Clarity and Guidance System
+
+**Project**: **🎯 US-018 - Role Clarity: Understanding Responsibilities, Authorities, and Expectations**
+
+**Status**: 📝 **PLANNED** (Created 2025-10-10)
+
+**User Story**:
+> "As a member of the team, I want to know what I should do and what I can do, so I know what to do is expected from me and I can meet the request I receive."
+
+**Business Context**:
+Team members (User, PM, Developer) need clarity about:
+1. **What they should do** (responsibilities and expectations)
+2. **What they can do** (authorities and decision-making power)
+3. **How to handle requests** (workflows and escalation)
+4. **Who to communicate with** (communication protocols)
+5. **How to know if they're doing well** (success criteria)
+
+This reduces confusion, prevents duplicated effort, improves decision velocity, and helps the team "work as great as possible" (user's goal).
+
+**User's Clarification**:
+- Affects: **Both** feature development (tools to build) AND methodology (documentation to enhance)
+- Scope: **All roles** (User, PM, Developer)
+- Information: **All types** (responsibilities, authorities, workflows, communication, expectations)
+- Delivery: **Multiple ways** (documentation + commands + notifications + interactive guidance)
+- Goal: **"I just want the team to work as great as possible!"**
+
+**Business Value**: ⭐⭐⭐⭐⭐ (Critical - Team effectiveness multiplier)
+**Estimated Effort**: 6-8 days (3-4 days for feature, 2-3 days for documentation, 1 day for testing)
+**Complexity**: Medium-High
+**Priority**: MEDIUM (after US-014, US-015, US-016, US-017)
+
+---
+
+### **Scope**
+
+**What's Included**:
+
+1. **Role Clarity Commands**
+   - `/my-role`: Display current role's responsibilities, authorities, and expectations
+   - `/help [topic]`: Context-aware help for current situation
+   - `/what-next`: Suggest next actions based on current context and role
+
+2. **Proactive Guidance Notifications**
+   - When user receives request → PM suggests how to handle it
+   - When PM receives request → Suggest categorization (feature/methodology/both)
+   - When developer encounters blocker → Suggest escalation path
+
+3. **Interactive Role Guidance**
+   - Ask "What should I do with this request?"
+   - PM suggests options based on role and context
+   - Links to relevant methodology sections
+
+4. **Enhanced Role Documentation** (COLLABORATION_METHODOLOGY.md)
+   - Expand Section 3.1 (User role) with detailed responsibilities/authorities
+   - Expand Section 3.2 (PM role) with decision-making guidance
+   - Expand Section 3.3 (Developer role) with communication protocols
+   - Add responsibility matrices showing who decides what
+   - Add workflow diagrams for common scenarios
+
+5. **Context-Aware Help System**
+   - Detects what user is trying to do
+   - Provides relevant guidance from methodology
+   - Shows examples of similar situations
+
+---
+
+### **Acceptance Criteria**
+
+**Feature Criteria**:
+
+1. **`/my-role` Command**
+   - [ ] User can type `/my-role` in project-manager chat
+   - [ ] Shows current role (User/PM/Developer) with full description
+   - [ ] Lists 5-7 key responsibilities for that role
+   - [ ] Lists 3-5 key authorities (what they can decide)
+   - [ ] Shows 3-5 expectations (how success is measured)
+   - [ ] Links to relevant methodology sections for details
+   - [ ] Response formatted clearly with sections and bullet points
+
+2. **`/help` Command** (Context-Aware)
+   - [ ] User can type `/help` to get context-aware assistance
+   - [ ] PM detects current context (what user is working on)
+   - [ ] Provides relevant help from methodology for that context
+   - [ ] User can type `/help [topic]` for specific help (e.g., `/help escalation`)
+   - [ ] Shows examples relevant to current situation
+   - [ ] Links to full methodology sections for more detail
+   - [ ] Response includes practical examples and workflows
+
+3. **`/what-next` Command**
+   - [ ] User can type `/what-next` to get suggested actions
+   - [ ] PM analyzes current state (in-progress stories, blockers, etc.)
+   - [ ] Suggests 3-5 next actions prioritized by importance
+   - [ ] Each suggestion includes: action, rationale, estimated time
+   - [ ] Suggestions are role-specific (different for User vs PM vs Developer)
+   - [ ] User can ask "Why?" to get rationale for any suggestion
+
+4. **Proactive Guidance Notifications**
+   - [ ] When user submits request → PM creates notification with handling guidance
+   - [ ] Notification suggests: "This looks like [feature/methodology/both]. Should I..."
+   - [ ] When PM categorizes as ambiguous → Proactively ask clarifying questions
+   - [ ] When developer reports blocker → PM suggests escalation path automatically
+   - [ ] Notifications include links to relevant methodology sections
+   - [ ] User can approve suggested action or modify
+
+5. **Interactive Request Handling**
+   - [ ] User asks "What should I do with this request?" → PM analyzes and guides
+   - [ ] PM detects uncertain situations → Offers options with pros/cons
+   - [ ] PM suggests workflow: "Based on Section 5.1, you should..."
+   - [ ] Shows decision tree for common scenarios
+   - [ ] User can see similar past situations and how they were handled
+
+**Documentation Criteria** (COLLABORATION_METHODOLOGY.md enhancements):
+
+6. **Enhanced User Role Section** (Section 3.1)
+   - [ ] Detailed responsibilities table (7-10 items) with examples
+   - [ ] Authority matrix showing what User can decide vs must delegate
+   - [ ] Workflow diagrams for common scenarios (adding feature, changing priority)
+   - [ ] Communication protocol (how to talk to PM, what info to provide)
+   - [ ] Success criteria (how to know you're being an effective Product Owner)
+   - [ ] Example interactions expanded with more scenarios
+   - [ ] Links to related methodology sections
+
+7. **Enhanced PM Role Section** (Section 3.2)
+   - [ ] Responsibility matrix (10-15 items) with concrete examples
+   - [ ] Decision boundaries: when PM decides vs escalates to User
+   - [ ] Workflow patterns for all scenarios in Section 5
+   - [ ] Communication protocol with both User and Developer
+   - [ ] Success criteria (how to measure PM effectiveness)
+   - [ ] Example interactions covering edge cases
+   - [ ] Template responses for common situations
+
+8. **Enhanced Developer Role Section** (Section 3.3)
+   - [ ] Responsibility breakdown (8-12 items) with code examples
+   - [ ] Decision authority: technical vs product decisions
+   - [ ] Communication protocol via notifications.db
+   - [ ] Escalation paths for different blocker types
+   - [ ] Success criteria (code quality, test coverage, documentation)
+   - [ ] Example interactions via notifications
+   - [ ] Async communication best practices
+
+9. **Responsibility Matrices**
+   - [ ] "Who Decides What" table expanded with 20+ decision types
+   - [ ] "Who Communicates What" matrix (who reports what to whom)
+   - [ ] "Who Can Override" table (escalation authority)
+   - [ ] Decision speed guide (immediate vs 24h vs 48h decisions)
+   - [ ] Examples for each decision type
+
+10. **Workflow Diagrams**
+    - [ ] "Adding Feature" complete workflow (User → PM → Dev → User)
+    - [ ] "Handling Blocker" escalation flow (Dev → PM → User)
+    - [ ] "Changing Requirements" mid-implementation flow
+    - [ ] "Emergency Fix" expedited flow
+    - [ ] ASCII diagrams in markdown (readable in CLI)
+
+**Integration Criteria**:
+
+11. **Methodology Cross-References**
+    - [ ] All commands link to relevant methodology sections
+    - [ ] Methodology references commands where applicable
+    - [ ] Circular links between feature and documentation
+    - [ ] Version bump COLLABORATION_METHODOLOGY.md: 1.7 → 1.8
+
+12. **User Validation**
+    - [ ] User tests `/my-role` for their role → confirms it's clear
+    - [ ] User tests `/help` in different contexts → confirms relevance
+    - [ ] User tests `/what-next` → confirms suggestions are useful
+    - [ ] User reviews enhanced methodology → confirms clarity improvement
+    - [ ] User confirms: "I now know what I should and can do"
+
+---
+
+### **Implementation Plan**
+
+**Phase 1: Enhanced Documentation** (Days 1-2, 2-3 days)
+
+*Goal*: Expand role sections in COLLABORATION_METHODOLOGY.md with comprehensive details
+
+**Tasks**:
+1. Expand Section 3.1 (User role):
+   - Detailed responsibility table (7-10 items)
+   - Authority matrix
+   - Workflow diagrams (3-4 common scenarios)
+   - Communication protocol
+   - Success criteria
+   - Expanded examples (5-7 scenarios)
+
+2. Expand Section 3.2 (PM role):
+   - Responsibility matrix (10-15 items)
+   - Decision boundaries table
+   - Workflow patterns for all Section 5 scenarios
+   - Communication protocol (User + Developer)
+   - Success criteria
+   - Template responses for 10+ situations
+
+3. Expand Section 3.3 (Developer role):
+   - Responsibility breakdown (8-12 items)
+   - Decision authority guidelines
+   - Communication via notifications.db
+   - Escalation paths (4-5 blocker types)
+   - Success criteria (quality standards)
+   - Async communication best practices
+
+4. Add new sections:
+   - "Who Decides What" table (20+ decision types)
+   - "Who Communicates What" matrix
+   - "Who Can Override" escalation table
+   - Workflow diagrams (5 ASCII diagrams)
+
+5. Version bump: 1.7 → 1.8
+
+**Estimated Time**: 2-3 days (24-32 hours)
+- Research existing practices: 4h
+- Write detailed role descriptions: 8-12h
+- Create matrices and diagrams: 6-8h
+- Write examples and templates: 6-8h
+- Review and polish: 4h
+
+**Success Criteria**:
+- Each role has 2-3x more detail than before
+- Clear decision boundaries for all scenarios
+- Workflow diagrams for 5 common scenarios
+- User validates: "This is exactly what I needed"
+
+---
+
+**Phase 2: `/my-role` Command** (Day 3, 1 day)
+
+*Goal*: Build command that displays role information dynamically
+
+**Tasks**:
+1. Create `RoleGuide` class:
+   - Load COLLABORATION_METHODOLOGY.md
+   - Parse role sections (3.1, 3.2, 3.3)
+   - Extract responsibilities, authorities, expectations
+   - Format for display
+
+2. Implement `/my-role` command in chat:
+   ```python
+   @chat_command
+   def my_role(self, args: str = ""):
+       """Show responsibilities and authorities for my role"""
+       role_guide = RoleGuide("docs/COLLABORATION_METHODOLOGY.md")
+       role_info = role_guide.get_role_info(self.current_role)
+       self.display(role_info.format_for_display())
+   ```
+
+3. Output format:
+   ```
+   🎯 Your Role: User (Product Owner)
+
+   📋 Key Responsibilities:
+   • Define what needs to be built (user stories, requirements)
+   • Make product decisions (features, priorities, trade-offs)
+   • Approve technical specifications before implementation
+   • Validate completed work (acceptance testing)
+   • Provide feedback and clarifications
+
+   ⚡ Your Authorities:
+   • Final say on all product decisions
+   • Can change priorities at any time
+   • Can approve/reject implementations
+   • Can request changes or improvements
+
+   ⭐ Success Criteria:
+   • Clear acceptance criteria for each user story
+   • Available for clarifying questions
+   • Prompt review and approval of technical specs
+   • Timely testing and feedback on completed features
+
+   📖 Learn More: See COLLABORATION_METHODOLOGY.md Section 3.1
+   ```
+
+4. Auto-detect current role (User/PM/Developer)
+
+5. Add tests for role loading and formatting
+
+**Estimated Time**: 1 day (8 hours)
+- RoleGuide class: 4h
+- Command implementation: 2h
+- Auto-detection logic: 1h
+- Testing: 1h
+
+**Success Criteria**:
+- Command works for all 3 roles
+- Information matches methodology document
+- Clear, readable output format
+- User validates: "This answers my questions"
+
+---
+
+**Phase 3: `/help` and `/what-next` Commands** (Days 4-5, 1.5-2 days)
+
+*Goal*: Context-aware guidance commands
+
+**Tasks for `/help`**:
+1. Create `ContextDetector` class:
+   - Analyzes current conversation state
+   - Detects what user is working on
+   - Identifies relevant methodology sections
+
+2. Implement context-aware help:
+   ```python
+   @chat_command
+   def help(self, topic: str = ""):
+       """Get context-aware help"""
+       if topic:
+           # Specific topic requested
+           help_content = self.get_topic_help(topic)
+       else:
+           # Auto-detect context
+           context = self.context_detector.detect_context()
+           help_content = self.get_contextual_help(context)
+
+       self.display(help_content)
+   ```
+
+3. Help topics:
+   - `escalation`: When and how to escalate
+   - `dod`: Definition of Done checklist
+   - `priorities`: How to set priorities
+   - `workflow`: Common workflow patterns
+   - `communication`: Communication protocols
+   - [Auto-detected based on current activity]
+
+**Tasks for `/what-next`**:
+1. Create `NextActionSuggester` class:
+   - Reads ROADMAP.md current state
+   - Checks for blockers
+   - Identifies in-progress work
+   - Suggests prioritized actions
+
+2. Implement suggestion logic:
+   ```python
+   @chat_command
+   def what_next(self, args: str = ""):
+       """Get suggested next actions"""
+       suggester = NextActionSuggester(
+           roadmap="docs/ROADMAP.md",
+           role=self.current_role
+       )
+       suggestions = suggester.get_suggestions(count=5)
+       self.display(suggester.format_suggestions(suggestions))
+   ```
+
+3. Suggestion types:
+   - Review in-progress work
+   - Validate acceptance criteria
+   - Respond to daemon questions
+   - Update priorities
+   - Test completed features
+
+4. Role-specific suggestions (different for User/PM/Developer)
+
+**Estimated Time**: 1.5-2 days (12-16 hours)
+- Context detection: 4-6h
+- `/help` implementation: 4-5h
+- `/what-next` implementation: 4-5h
+
+**Success Criteria**:
+- Context detection works in 5+ scenarios
+- Help is relevant to current activity
+- Suggestions are actionable and prioritized
+- User validates: "These suggestions are helpful"
+
+---
+
+**Phase 4: Proactive Guidance System** (Days 5-6, 1.5-2 days)
+
+*Goal*: Automatic notifications with handling guidance
+
+**Tasks**:
+1. Request detection:
+   - Monitor user input for requests
+   - Categorize request type (feature/methodology/both)
+   - Generate handling guidance
+
+2. Notification creation:
+   ```python
+   def handle_user_request(self, user_input: str):
+       """Proactively guide request handling"""
+       category = self.categorize_request(user_input)
+       guidance = self.generate_guidance(category)
+
+       self.notifications.create_notification(
+           type="info",
+           title="Request Handling Guidance",
+           message=f"I detected this as a {category} request.\n\n{guidance}",
+           priority="normal",
+           context={
+               "request": user_input,
+               "category": category,
+               "suggested_action": guidance["action"],
+               "methodology_ref": guidance["section"]
+           }
+       )
+   ```
+
+3. Guidance patterns:
+   - Feature request → "I'll create a user story in ROADMAP.md"
+   - Methodology change → "I'll update COLLABORATION_METHODOLOGY.md"
+   - Ambiguous → "Should I... [options]"
+   - Blocker → "I suggest escalating to [role] because..."
+
+4. Auto-suggestion for common scenarios
+
+5. User can approve/modify suggested action
+
+**Estimated Time**: 1.5-2 days (12-16 hours)
+- Request detection: 4-5h
+- Guidance generation: 4-6h
+- Notification integration: 2-3h
+- Testing: 2-3h
+
+**Success Criteria**:
+- Detects 80%+ of request types correctly
+- Guidance matches methodology recommendations
+- Reduces "What should I do?" questions by 50%+
+- User validates: "This helps me handle requests faster"
+
+---
+
+**Phase 5: Interactive Role Guidance** (Day 7, 1 day)
+
+*Goal*: User can ask "What should I do?" and get specific guidance
+
+**Tasks**:
+1. Natural language detection:
+   - Recognize questions like "What should I do with this?"
+   - "How do I handle this request?"
+   - "What are my options?"
+
+2. Situation analysis:
+   - Parse the request/situation
+   - Identify relevant methodology sections
+   - Generate role-specific guidance
+
+3. Response with options:
+   ```python
+   def handle_guidance_request(self, situation: str):
+       """Provide interactive guidance"""
+       analysis = self.analyze_situation(situation)
+       options = self.generate_options(analysis)
+
+       response = f"""Based on your role as {self.current_role}, here are your options:
+
+       Option A: {options[0].description}
+          Rationale: {options[0].rationale}
+          Time: {options[0].time}
+          Reference: {options[0].methodology_section}
+
+       Option B: {options[1].description}
+          Rationale: {options[1].rationale}
+          Time: {options[1].time}
+          Reference: {options[1].methodology_section}
+
+       My recommendation: Option {self.recommend(options)} because {self.rationale}
+
+       What would you like to do?"""
+
+       return response
+   ```
+
+4. Show similar past situations and outcomes
+
+5. Link to relevant workflow diagrams
+
+**Estimated Time**: 1 day (8 hours)
+- NLP detection: 3h
+- Situation analysis: 3h
+- Option generation: 2h
+
+**Success Criteria**:
+- Recognizes guidance requests 90%+ of time
+- Provides 2-3 relevant options
+- Options match methodology guidance
+- User validates: "This helps me make decisions"
+
+---
+
+**Phase 6: Testing & Documentation** (Day 8, 1 day)
+
+*Goal*: Comprehensive testing and documentation
+
+**Tasks**:
+1. Unit tests:
+   - RoleGuide class
+   - ContextDetector
+   - NextActionSuggester
+   - Request categorization
+   - Guidance generation
+
+2. Integration tests:
+   - `/my-role` command
+   - `/help` command
+   - `/what-next` command
+   - Proactive notifications
+   - Interactive guidance
+
+3. User acceptance testing:
+   - User tests all commands
+   - User validates methodology enhancements
+   - User confirms: "I know what I should and can do"
+
+4. Documentation:
+   - Update QUICKSTART with new commands
+   - Add examples to PROJECT_MANAGER_FEATURES.md
+   - Update DOCUMENTATION_INDEX.md
+   - Add tutorial for role clarity features
+
+5. Polish and refinement based on user feedback
+
+**Estimated Time**: 1 day (8 hours)
+- Testing: 4h
+- Documentation: 3h
+- Polish: 1h
+
+**Success Criteria**:
+- All tests passing
+- Documentation complete
+- User approves all features
+- COLLABORATION_METHODOLOGY.md v1.8 approved
+
+---
+
+### **Technical Architecture**
+
+**Components**:
+
+```python
+# RoleGuide - Load and parse role information
+class RoleGuide:
+    def __init__(self, methodology_path: str):
+        self.methodology = self.load_methodology(methodology_path)
+        self.roles = self.parse_roles()  # User, PM, Developer
+
+    def get_role_info(self, role: str) -> RoleInfo:
+        """Get responsibilities, authorities, expectations for role"""
+        return self.roles[role]
+
+# ContextDetector - Detect what user is working on
+class ContextDetector:
+    def detect_context(self, conversation_history: List[Message]) -> Context:
+        """Analyze conversation to detect current context"""
+        # Returns: "adding_feature", "handling_blocker", "reviewing_pr", etc.
+
+# NextActionSuggester - Suggest next actions
+class NextActionSuggester:
+    def get_suggestions(self, role: str, roadmap_state: dict) -> List[Action]:
+        """Generate 3-5 prioritized next actions"""
+
+# GuidanceGenerator - Generate handling guidance
+class GuidanceGenerator:
+    def generate_guidance(self, request: str, role: str) -> Guidance:
+        """Generate guidance for handling a request"""
+```
+
+**Database Schema** (extends notifications.db):
+
+```sql
+-- Track guidance effectiveness
+CREATE TABLE guidance_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_request TEXT NOT NULL,
+    detected_category TEXT,  -- "feature", "methodology", "both", "ambiguous"
+    guidance_provided TEXT,
+    user_action TEXT,  -- What user actually did
+    was_helpful BOOLEAN,  -- User feedback
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Track command usage
+CREATE TABLE command_usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    command TEXT NOT NULL,  -- "/my-role", "/help", "/what-next"
+    role TEXT NOT NULL,  -- "User", "PM", "Developer"
+    context TEXT,  -- What situation triggered command
+    was_helpful BOOLEAN,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+### **Example Scenarios**
+
+**Scenario 1: User Wants to Add Feature**
+
+```
+User: "I want email notifications when daemon completes tasks"
+
+[PM detects request type: feature]
+[Proactive guidance triggered]
+
+PM: "I detected this as a feature request. Based on Section 5.1 of our
+     methodology, here's what I'll do:
+
+     1. Create a user story in ROADMAP.md
+     2. Ask clarifying questions about scope
+     3. Estimate effort
+     4. Get your approval
+
+     Should I proceed with creating the user story?"
+
+User: "/my-role"
+
+PM: "🎯 Your Role: User (Product Owner)
+
+     📋 Key Responsibilities:
+     • Define what needs to be built (like this email notification feature)
+     • Make product decisions (approve/reject my proposals)
+     • Approve technical specifications
+     • Validate completed work
+
+     ⚡ Your Authorities:
+     • Final say on feature scope
+     • Can change priorities anytime
+     • Can request changes
+
+     For this request, you should:
+     1. Confirm you want me to create the user story
+     2. Answer my clarifying questions
+     3. Approve the final user story
+
+     Ready to proceed?"
+
+User: "yes"
+```
+
+**Scenario 2: PM Uncertain About Categorization**
+
+```
+User: "I need better documentation"
+
+[PM detects ambiguous request]
+[Proactive guidance triggered]
+
+PM: "I want to make sure I understand correctly.
+
+     This could be either:
+     A) A feature request - build auto-generated documentation
+        → I'll add to ROADMAP.md
+     B) A process change - change how I document things
+        → I'll update COLLABORATION_METHODOLOGY.md
+     C) Both - build feature AND change process
+        → I'll update both documents
+
+     Need help deciding? Type '/help categorization' for examples."
+
+User: "/help categorization"
+
+PM: "📖 Request Categorization Help
+
+     Based on COLLABORATION_METHODOLOGY.md Section 3.2.1:
+
+     Feature Indicators:
+     • 'I want', 'add', 'build', 'implement'
+     • Describes something to create
+
+     Methodology Indicators:
+     • 'PM should', 'always', 'process'
+     • Describes how we work
+
+     Your request 'I need better documentation' could be either!
+
+     Examples:
+     • 'Auto-generate API docs' → Feature (build tool)
+     • 'Document every feature in README' → Methodology (process)
+     • 'Build doc generator AND mandate doc updates' → Both
+
+     Which applies to your request?"
+
+User: "Auto-generate docs"
+
+PM: "Got it! Feature request. I'll create a user story in ROADMAP.md."
+```
+
+**Scenario 3: User Unsure What to Do Next**
+
+```
+User: "/what-next"
+
+PM: "📋 Suggested Next Actions (Your Role: Product Owner)
+
+     1. ⭐ HIGH PRIORITY: Review US-014 technical spec
+        Rationale: Developer is waiting for your approval to start
+        Time: 15-20 minutes
+        Action: Read docs/US-014_TECHNICAL_SPEC.md and approve
+
+     2. 🔔 RESPONSE NEEDED: Daemon asked a question (Notification #42)
+        Rationale: Blocking developer's progress on US-015
+        Question: 'Use SQLite or PostgreSQL for metrics?'
+        Time: 2 minutes
+        Action: Type '/notifications' to view and respond
+
+     3. ✅ VALIDATION: Test completed US-013 feature
+        Rationale: Feature marked complete, needs user validation
+        Time: 10-15 minutes
+        Action: Test '/US' command and provide feedback
+
+     4. 📝 PLANNING: Review ROADMAP priorities
+        Rationale: US-014 nearing completion, need next priority
+        Time: 5 minutes
+        Action: Decide if US-015 or US-016 should be next
+
+     5. 💬 FEEDBACK: Provide feedback on documentation (optional)
+        Rationale: US-010 created new docs, user input valuable
+        Time: 10 minutes
+        Action: Review TUTORIALS.md and suggest improvements
+
+     My recommendation: Start with #1 (unblocking developer) then #2
+     (respond to question). This keeps work flowing.
+
+     Want more details on any action? Ask 'Why #1?' or similar."
+
+User: "Why #1?"
+
+PM: "⭐ Why Review US-014 Spec (Priority #1):
+
+     Context:
+     • Developer created 300-line technical spec for US-014
+     • Spec defines how intelligent request categorization will work
+     • Developer cannot start coding until you approve
+     • Estimated 3-5 days of work once approved
+
+     Impact of Delay:
+     • Developer is idle waiting for your approval
+     • Estimated velocity loss: 1 day per day of delay
+     • Other work (US-015, US-016) also blocked on this
+
+     What to Look For:
+     • Does the scope match what you requested?
+     • Are acceptance criteria clear and testable?
+     • Do you understand the technical approach?
+     • Any concerns about complexity or timeline?
+
+     Approval Process (Section 5.3):
+     1. Read docs/US-014_TECHNICAL_SPEC.md (15-20 min)
+     2. Type 'approved' or ask questions
+     3. Developer starts Phase 1 implementation
+
+     Reference: COLLABORATION_METHODOLOGY.md Section 5.3 (Implementing a Priority)"
+```
+
+---
+
+### **Success Criteria**
+
+**Feature Success**:
+- [ ] All commands (`/my-role`, `/help`, `/what-next`) working
+- [ ] Proactive guidance reduces "What should I do?" questions by 50%+
+- [ ] Context detection accurate in 80%+ of cases
+- [ ] Role information matches methodology document exactly
+- [ ] Commands fast (<1 second response time)
+
+**Documentation Success**:
+- [ ] Each role section 2-3x more detailed than before
+- [ ] Decision matrices cover 20+ decision types
+- [ ] Workflow diagrams for 5 common scenarios
+- [ ] Clear examples for all scenarios
+- [ ] COLLABORATION_METHODOLOGY.md v1.7 → v1.8
+
+**User Validation**:
+- [ ] User tests all commands → approves functionality
+- [ ] User reviews enhanced methodology → confirms clarity
+- [ ] User confirms: "I now know what I should and can do"
+- [ ] User confirms: "The team is working more effectively"
+- [ ] User validates: "This is exactly what I needed"
+
+---
+
+### **Relationship to Other User Stories**
+
+- **US-014**: Uses same categorization logic for proactive guidance
+- **US-010**: Role clarity docs become part of living documentation
+- **COLLABORATION_METHODOLOGY.md**: Primary artifact being enhanced
+- **Section 3 (Team Structure & Roles)**: Core sections being expanded
+- **Section 5 (Workflow Patterns)**: Used by guidance generation
+
+---
+
+### **Future Enhancements** (not in scope for US-018)
+
+- Visual role diagrams (org chart style)
+- Role training modules (interactive tutorials)
+- Performance feedback ("You're 20% faster at approving specs than last month")
+- Peer comparison ("Most Product Owners respond within 4 hours")
+- Automated workflow suggestions based on ML
+- Integration with project management tools (Jira, Linear, etc.)
+
+---
+
 ## 🚀 RELEASE STRATEGY & VERSIONING
 
 ### ✅ What's Deliverable TODAY (Version 0.1.0 - MVP)

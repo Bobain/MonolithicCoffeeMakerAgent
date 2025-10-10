@@ -498,46 +498,559 @@ This ensures the methodology document is not just documentation, but an **active
 
 ### 3.1 Role: User (Product Owner)
 
-**Primary Responsibilities**:
-- Define what needs to be built (user stories, requirements)
-- Make product decisions (features, priorities, trade-offs)
-- Approve technical specifications before implementation
-- Validate completed work (acceptance testing)
-- Provide feedback and clarifications
+**Overview**: The User acts as the Product Owner - the ultimate decision-maker for what gets built, when, and how it should work. You define requirements, validate implementations, and ensure the product meets your needs.
 
-**Authorities**:
-- Final say on all product decisions
-- Can change priorities at any time
-- Can approve/reject implementations
-- Can request changes or improvements
+---
 
-**Best Practices**:
-- Provide clear acceptance criteria for each user story
-- Be available for clarifying questions
-- Review and approve technical specs promptly
-- Test completed features and provide feedback
+#### 3.1.1 **Responsibilities Matrix** (Enhanced - US-018)
 
-**Communication Style**:
-- Natural language (no technical jargon required)
-- Can be high-level ("I want authentication")
-- Project manager will ask clarifying questions
+| # | Responsibility | What This Means | Example | Frequency |
+|---|---------------|------------------|---------|-----------|
+| 1 | **Define Requirements** | Describe what you need in natural language | "I want email notifications when daemon completes tasks" | As needed |
+| 2 | **Approve User Stories** | Review and validate PM's structured user stories | Review US-018 specification, approve or request changes | Per feature |
+| 3 | **Approve Technical Specs** | Review technical approach before implementation | Approve US-018 technical spec with 6 phases | Per complex feature (>1 day) |
+| 4 | **Set Priorities** | Decide what to build first | "Make US-014 TOP PRIORITY, then US-016" | When changes needed |
+| 5 | **Validate Implementations** | Test completed features against acceptance criteria | Test `/my-role` command, verify it works as expected | When feature complete |
+| 6 | **Provide Feedback** | Give clear feedback on what works and what doesn't | "The feature works but I'd like to add..." | During testing |
+| 7 | **Make Product Decisions** | Choose between options when PM presents alternatives | "Option A - enhance existing feature" | When escalated |
+| 8 | **Answer Clarifying Questions** | Respond to PM's questions about requirements | Clarify scope, answer "both feature and methodology" | When asked |
+| 9 | **Review Documentation** | Validate that documentation is clear and useful | Review enhanced COLLABORATION_METHODOLOGY.md sections | Per deliverable |
+| 10 | **Accept/Reject Deliverables** | Final approval before marking features complete | "Yes, US-018 meets all acceptance criteria - approve" | Per deliverable |
 
-**Example Interactions**:
+---
+
+#### 3.1.2 **Authority Matrix** (What You Can Decide vs Must Delegate)
+
+**🟢 YOU DECIDE** (No approval needed):
+
+| Decision Type | Examples | When to Use |
+|--------------|----------|-------------|
+| **Product Features** | Add email notifications, remove unused feature | Anytime |
+| **Priorities** | Make US-016 next priority, pause US-017 | Anytime |
+| **Acceptance Criteria** | "Feature must respond in <1 second" | During user story creation |
+| **Business Requirements** | "Must support 1000 concurrent users" | During spec approval |
+| **Feature Scope Changes** | "Add OAuth to authentication feature" | During implementation (ideally early) |
+| **Deliverable Acceptance** | Approve feature, request changes, reject | After testing |
+| **Budget/Timeline Trade-offs** | "Cut feature X to ship faster" | When PM presents options |
+
+**🔴 YOU MUST DELEGATE** (Let PM/Developer decide):
+
+| Decision Type | Examples | Who Decides | Why |
+|--------------|----------|-------------|-----|
+| **Technical Implementation** | Use SQLite vs PostgreSQL | Developer → PM → You (if escalated) | Technical expertise required |
+| **Code Structure** | Class names, file organization | Developer | Implementation detail |
+| **Testing Approach** | pytest vs unittest | Developer/PM | Technical decision |
+| **Documentation Format** | Markdown vs reStructuredText | PM | Process decision |
+| **Commit Message Format** | Conventional commits vs free-form | PM | Team standard |
+
+**⚠️ CONSULT BEFORE DECIDING** (Get PM input first):
+
+| Decision Type | Why Consult | Example |
+|--------------|-------------|---------|
+| **Major Scope Changes** | Impact on timeline/resources | "Let's add 5 more features to current user story" |
+| **Technical Constraints** | May not be feasible | "Must work offline with no internet" |
+| **Priority Changes Mid-Implementation** | Wastes work already done | Changing priority when 50% complete |
+| **Relaxing Quality Standards** | May cause technical debt | "Skip tests for this feature" |
+
+---
+
+#### 3.1.3 **Workflow Diagrams** (Common Scenarios)
+
+**Scenario 1: Adding a New Feature**
+
 ```
-User: "Add a User story: As a user, I want to have, in my IDE,
-       code completion that comes from code_developer accumulated
-       knowledge on the whole codebase."
-
-PM: "Got it! I'll create US-007 with:
-     - LSP server implementation
-     - Git history analysis for patterns
-     - Integration with VS Code, PyCharm, Neovim
-     Should I also include semantic search? Estimated 1-2 weeks."
-
-User: "Yes, add semantic search. And make it the top priority."
-
-PM: "Updated ROADMAP. US-007 is now TOP PRIORITY."
+[1] User: "I want feature X"
+     ↓
+[2] PM: Asks clarifying questions
+     • What should it do?
+     • Who will use it?
+     • What's the success criteria?
+     ↓
+[1] User: Answers questions
+     ↓
+[2] PM: Creates user story in ROADMAP.md
+     • Structured format
+     • Estimated effort
+     • Acceptance criteria
+     ↓
+[1] User: Reviews user story
+     ├─ Approve → Continue
+     └─ Request changes → PM updates → Re-review
+          ↓
+[2] PM: Creates technical spec (if >1 day work)
+     • Phases
+     • Tasks with time estimates
+     • Architecture
+     ↓
+[1] User: Reviews technical spec
+     ├─ Approve → PM marks TOP PRIORITY
+     └─ Request changes → PM updates → Re-review
+          ↓
+[3] Developer: Implements feature
+     ↓
+[2] PM: Validates against DoD
+     ↓
+[1] User: Tests feature
+     ├─ Approve → PM marks ✅ Complete
+     └─ Request changes → Back to Developer
 ```
+
+**Scenario 2: Changing Priorities**
+
+```
+[1] User: "I want to change priorities"
+     ↓
+[2] PM: Shows current priorities and impact
+     • Current: US-014 (3 days remaining)
+     • Next: US-016, US-015, US-017
+     • Changing now will:
+       - Pause current work (waste 2 days)
+       - Delay delivery by 1 week
+     ↓
+[1] User: Makes decision
+     ├─ Option A: "Finish US-014 first" → No change
+     ├─ Option B: "Pause US-014, start US-015" → PM updates ROADMAP
+     └─ Option C: "Add new urgent feature" → PM creates new TOP PRIORITY
+          ↓
+[2] PM: Updates ROADMAP.md with new priorities
+     ↓
+[3] Developer: Reads updated ROADMAP, switches to new TOP PRIORITY
+```
+
+**Scenario 3: Responding to Daemon Question**
+
+```
+[3] Developer (via notification): "Question: Use SQLite or PostgreSQL?"
+     ↓
+[2] PM: Receives question, analyzes
+     ├─ Can PM answer? (technical decision with clear precedent)
+     │    └─ Yes → PM responds directly
+     ├─ Needs user input? (product/business decision)
+     │    ↓
+     │   [2] PM: Escalates to user with context
+     │        • What the question is
+     │        • Options (A, B, C)
+     │        • PM's recommendation
+     │        • Impact on timeline/quality
+     │    ↓
+     │   [1] User: Provides decision
+     │        ↓
+     │   [2] PM: Relays to Developer via notification
+     └─ [3] Developer: Continues work
+```
+
+**Scenario 4: Validating Completed Feature**
+
+```
+[3] Developer: Marks feature complete, creates notification
+     ↓
+[2] PM: Validates against DoD checklist
+     • All acceptance criteria met?
+     • Tests passing?
+     • Documentation updated?
+     ├─ No → PM reports missing items to Developer
+     └─ Yes ↓
+          [2] PM: Notifies User for validation
+               "US-018 is complete. Ready for testing."
+          ↓
+          [1] User: Tests feature
+               ├─ Test `/my-role` command
+               ├─ Test `/help` command
+               ├─ Test `/what-next` command
+               ├─ Review enhanced methodology sections
+               └─ Verify all acceptance criteria met
+          ↓
+          [1] User: Provides feedback
+               ├─ Option A: "Approve - all good" → PM marks ✅ Complete
+               ├─ Option B: "Minor changes needed" → List changes → Developer fixes
+               └─ Option C: "Major issues" → Detailed feedback → Developer reworks
+```
+
+---
+
+#### 3.1.4 **Communication Protocol** (How to Work with PM)
+
+**When You Need Something**:
+
+1. **Describe Your Need in Natural Language**
+   - ✅ GOOD: "I want email notifications when daemon completes tasks"
+   - ✅ GOOD: "I need to know what my responsibilities are"
+   - ✅ GOOD: "Make feature X the top priority"
+   - ❌ AVOID: Technical jargon (unless you're technical)
+
+2. **Answer PM's Clarifying Questions Promptly**
+   - PM will ask 3-6 questions to understand scope
+   - Answer all questions in one message if possible
+   - If unsure, say "I don't know yet" - PM will help you figure it out
+
+3. **Review Proposals Thoroughly**
+   - User stories (structure of what will be built)
+   - Technical specs (how it will be built)
+   - Take time to review - don't rush approval
+
+4. **Provide Clear Feedback**
+   - ✅ GOOD: "The feature works but email should include PR link"
+   - ✅ GOOD: "Approve - meets all my needs"
+   - ❌ AVOID: Vague feedback like "something feels off"
+
+5. **Use Commands When Helpful** (US-018)
+   - `/my-role` - See your responsibilities and authorities
+   - `/help [topic]` - Get guidance on specific topics
+   - `/what-next` - See suggested next actions
+
+**What Information to Provide**:
+
+| When PM Asks... | Provide... | Example |
+|-----------------|------------|---------|
+| "What should this feature do?" | Concrete examples | "Send email with task name, status, PR link, and completion time" |
+| "Who will use this?" | User personas/roles | "Me (product owner) and other developers on the team" |
+| "What's the success criteria?" | How you'll know it works | "I receive email within 1 minute of daemon completing task" |
+| "Any constraints?" | Technical/business limits | "Must work with our existing email system (Gmail)" |
+| "How important is this?" | Priority relative to other work | "Critical - blocks my workflow" OR "Nice to have - not urgent" |
+
+**Response Times** (Guidelines):
+
+| Type of Request | Expected Response Time | Why |
+|-----------------|------------------------|-----|
+| **Urgent Blocker** | <2 hours | Developer is blocked, waiting |
+| **Spec Approval** | <1 business day | Delays implementation |
+| **Feature Validation** | <2 business days | Delays completion |
+| **Clarifying Questions** | <1 business day | PM can't proceed without |
+| **Priority Changes** | Anytime (no deadline) | You decide when |
+
+---
+
+#### 3.1.5 **Success Criteria** (How to Know You're Effective)
+
+**✅ You're Doing Great If**:
+
+1. **Requirements Are Clear**
+   - PM rarely asks "What did you mean by..."
+   - User stories match your intent on first try
+   - Developers rarely come back with clarifying questions
+
+2. **Priorities Are Stable**
+   - Top priority stays consistent for 3-5 days
+   - Few mid-stream priority changes
+   - Work flows smoothly without interruptions
+
+3. **Acceptance Criteria Are Met**
+   - Features work as you expected
+   - Rare surprises when testing ("This isn't what I wanted")
+   - 90%+ of features approved on first validation
+
+4. **Response Times Are Good**
+   - You respond to PM questions within 1 business day
+   - Spec approvals happen within 24 hours
+   - Daemon doesn't wait >2 days for decisions
+
+5. **Feedback Is Actionable**
+   - Developers know exactly what to change
+   - Few back-and-forth iterations
+   - Features improve with each iteration
+
+6. **Team Velocity Is High**
+   - 1-2 user stories completed per week
+   - Minimal wasted work
+   - Steady progress toward goals
+
+**❌ Warning Signs** (Areas to Improve):
+
+1. **Unclear Requirements**
+   - PM asks 10+ clarifying questions per feature
+   - User stories require multiple revisions
+   - Developers frequently ask "What did you mean?"
+
+2. **Priority Churn**
+   - Priorities change every 1-2 days
+   - Developer context-switches frequently
+   - Work gets abandoned mid-stream
+
+3. **Acceptance Rejection**
+   - <70% of features approved on first try
+   - Frequent "This isn't what I wanted"
+   - Lots of rework required
+
+4. **Slow Response Times**
+   - PM waits 3+ days for answers
+   - Specs sit unapproved for a week
+   - Daemon is idle waiting for decisions
+
+5. **Vague Feedback**
+   - "Something's not right but I can't say what"
+   - Developer doesn't know what to change
+   - Multiple iterations with no progress
+
+**📊 Metrics to Track** (Optional):
+
+| Metric | Target | How to Measure |
+|--------|--------|----------------|
+| **Feature Approval Rate** | >85% first-try approval | Features approved / Features validated |
+| **Average Response Time** | <1 business day | Time from PM question to your answer |
+| **Priority Stability** | >3 days | Average time TOP PRIORITY stays unchanged |
+| **Clarifying Questions** | <5 per feature | Questions PM asks per user story |
+| **Rework Rate** | <15% | Features requiring changes / Total features |
+
+---
+
+#### 3.1.6 **Example Interactions** (Expanded Scenarios)
+
+**Example 1: Adding a New Feature (Simple)**
+```
+User: "I want email notifications when daemon completes tasks"
+
+PM: "Got it! Some questions to clarify scope:
+     1. What should the email include? (task name, status, results, PR link?)
+     2. Who should receive emails? (you only, or other team members?)
+     3. When should emails be sent? (only on success, or also on failure?)
+     4. Any preferences for email format? (plain text, HTML, both?)
+     5. Should users be able to configure this? (enable/disable, frequency?)"
+
+User: "1. task name, status, PR link, completion time
+       2. me only for now
+       3. both success and failure
+       4. HTML preferred
+       5. yes - let me enable/disable per task type"
+
+PM: "Perfect! I'll create US-019:
+
+     **Email Notifications for Task Completion**
+
+     Scope:
+     - Send HTML email on task completion (success/failure)
+     - Include: task name, status, PR link, completion time
+     - User can configure: enable/disable per task type
+     - Email sent to user's configured address
+
+     Estimated: 3-4 days
+
+     Acceptance Criteria:
+     - [ ] Email sent within 1 minute of task completion
+     - [ ] Email includes all 4 required fields
+     - [ ] User can enable/disable per task type
+     - [ ] Both success and failure emails work
+     - [ ] HTML format with readable styling
+
+     Does this match what you want?"
+
+User: "Yes, perfect"
+
+PM: "Added to ROADMAP. Where should I prioritize it?
+     - TOP PRIORITY (implement immediately)
+     - After US-016 (next in queue)
+     - Backlog (future)"
+
+User: "After US-016"
+
+PM: "Done! It's now scheduled after the technical spec generation feature."
+```
+
+**Example 2: Changing Priorities Mid-Stream**
+```
+User: "I want to pause US-014 and work on email notifications instead"
+
+PM: "I understand you want to prioritize email notifications.
+
+     Current situation:
+     - US-014 (Request Categorization) is 60% complete (Day 2 of 3-5)
+     - 3 of 5 phases implemented
+     - 2-3 days remaining to finish
+
+     Impact of changing now:
+     - 2 days of work on US-014 will pause (not wasted, but delayed)
+     - Email notifications will take 3-4 days
+     - US-014 completion delayed by 3-4 days total
+     - Overall delivery: Same timeline, different order
+
+     Options:
+     A) Finish US-014 first (2-3 days), then email notifications (3-4 days)
+        Total: 5-7 days for both features
+     B) Pause US-014 now, do email first (3-4 days), resume US-014 (2-3 days)
+        Total: 5-7 days for both features, but context-switch overhead
+
+     My recommendation: Option A (finish US-014 first)
+     Reason: Avoid context-switch overhead, cleaner workflow
+
+     What would you like to do?"
+
+User: "You're right, finish US-014 first"
+
+PM: "Great! US-014 remains TOP PRIORITY. I'll add email notifications as the
+     next priority after US-014 completes."
+```
+
+**Example 3: Validating a Completed Feature**
+```
+PM: "US-018 (Role Clarity System) is complete and ready for validation!
+
+     What was implemented:
+     - `/my-role` command (shows your responsibilities)
+     - `/help [topic]` command (context-aware help)
+     - `/what-next` command (suggests next actions)
+     - Enhanced methodology sections 3.1, 3.2, 3.3
+     - Responsibility matrices and workflow diagrams
+
+     All 12 acceptance criteria met ✅
+
+     Please test:
+     1. Try `/my-role` - does it clearly show your role?
+     2. Try `/help` - does it provide useful guidance?
+     3. Try `/what-next` - are suggestions actionable?
+     4. Review enhanced COLLABORATION_METHODOLOGY.md sections 3.1-3.3
+     5. Confirm: 'I now know what I should and can do'
+
+     Let me know when you've tested!"
+
+User: [Tests all commands and reviews documentation]
+
+User: "Tested all commands - they work great! The `/my-role` command is
+       especially helpful. The enhanced methodology sections are much clearer.
+
+       One small thing: Can the `/what-next` command show estimated time for
+       each suggestion?"
+
+PM: "Great feedback! Yes, I can add estimated time to suggestions.
+
+     This is a small change (~30 minutes). Options:
+     A) Add it now before marking US-018 complete
+     B) Create US-018.1 for this enhancement
+
+     Recommendation: Option A (add it now - keeps feature complete)
+
+     Approve?"
+
+User: "Do A"
+
+PM: "Added to US-018 Phase 3. Developer will implement today.
+     I'll notify you when ready for re-validation."
+
+[30 minutes later]
+
+PM: "Updated `/what-next` command now shows estimated time per suggestion.
+     Please re-test!"
+
+User: [Tests] "Perfect! Approve US-018"
+
+PM: "✅ Marked US-018 complete in ROADMAP. Next priority: US-016"
+```
+
+**Example 4: Responding to a Daemon Question**
+```
+PM: "The daemon has a question that needs your input:
+
+     **Question**: Should the `/my-role` command show different information
+                  for different roles (User, PM, Developer)?
+
+     **Context**: Currently implementing role detection. Developer wants to know
+                 if each role should see role-specific content or generic content.
+
+     **Options**:
+     A) Role-specific content (User sees User responsibilities, PM sees PM responsibilities)
+        - Pro: More relevant, less cognitive load
+        - Con: Slightly more complex, takes +1 hour
+     B) Generic content (everyone sees all 3 roles)
+        - Pro: Simpler, faster to implement
+        - Con: More information to parse, less focused
+
+     **Developer's Recommendation**: Option A (role-specific)
+     **Reason**: Better UX, worth the extra hour
+
+     **Impact**: +1 hour if Option A, no impact if Option B
+
+     What would you like?"
+
+User: "Option A - I agree role-specific is better"
+
+PM: "Got it! I've relayed your decision to the developer.
+     The `/my-role` command will show role-specific content.
+     Estimated completion: today"
+```
+
+**Example 5: Using Commands for Guidance (US-018)**
+```
+User: "/my-role"
+
+PM: "🎯 Your Role: User (Product Owner)
+
+     📋 Key Responsibilities (10):
+     1. Define requirements in natural language
+     2. Approve user stories and technical specs
+     3. Set and change priorities
+     4. Validate completed implementations
+     5. Provide clear, actionable feedback
+     6. Answer clarifying questions promptly
+     7. Make product decisions
+     8. Review and approve documentation
+     9. Test features against acceptance criteria
+     10. Accept or reject final deliverables
+
+     ⚡ Your Authorities (YOU DECIDE):
+     • All product features and priorities
+     • All acceptance criteria and business requirements
+     • Feature scope changes (ideally early)
+     • Deliverable acceptance (approve/reject)
+     • Budget and timeline trade-offs
+
+     ⚠️ You Must Delegate (LET TEAM DECIDE):
+     • Technical implementation details
+     • Code structure and organization
+     • Testing approaches
+     • Documentation format
+     • Commit message conventions
+
+     ⭐ Success Criteria:
+     • Requirements are clear (few clarifying questions)
+     • Priorities are stable (>3 days per priority)
+     • 85%+ features approved first-try
+     • Response time <1 business day
+     • Feedback is actionable
+
+     📖 Learn More: COLLABORATION_METHODOLOGY.md Section 3.1
+     💡 Need help? Type `/help` or `/what-next`"
+
+User: "/what-next"
+
+PM: "📋 Suggested Next Actions (Your Role: Product Owner)
+
+     1. ⭐ HIGH PRIORITY: Review US-018 technical spec
+        Rationale: Developer is waiting for your approval to start
+        Time: 20-25 minutes
+        Action: Read docs/US-018_TECHNICAL_SPEC.md and approve
+        Why now: Blocking developer's progress
+
+     2. ✅ VALIDATION: Test completed US-017 feature
+        Rationale: Feature marked complete, needs user validation
+        Time: 15 minutes
+        Action: Test `/summary` and `/calendar` commands
+        Why now: Finalize completion of US-017
+
+     3. 📝 PLANNING: Decide on US-019 priority
+        Rationale: Email notifications feature is defined, needs prioritization
+        Time: 5 minutes
+        Action: Choose: TOP PRIORITY, After US-016, or Backlog
+        Why now: Clarifies roadmap for next 2 weeks
+
+     My recommendation: Start with #1 (unblock developer), then #2 (validate US-017)
+
+     Want details? Ask 'Why #1?' or 'Tell me more about #2'"
+```
+
+---
+
+#### 3.1.7 **Related Methodology Sections**
+
+- **Section 2.3** - Roadmap as Single Source of Truth (your priorities are documented here)
+- **Section 2.4** - Specification Before Implementation (what you approve before coding)
+- **Section 3.4** - Team Dynamics (how decisions flow through the team)
+- **Section 4.1** - Synchronous Communication (how you talk to PM)
+- **Section 5.1** - Adding a New User Story (workflow for your feature requests)
+- **Section 5.3** - Implementing a Priority (what happens after you approve)
+- **Section 6.1** - Definition of Done (what you validate before accepting)
+- **Section 7.1** - Who Decides What (complete decision matrix)
+
+**See Also**:
+- **US-018** in ROADMAP.md for role clarity commands (`/my-role`, `/help`, `/what-next`)
+- **Section 11.1** - Roles Cheat Sheet (quick reference)
 
 ### 3.2 Role: Project Manager (Claude/AI Assistant)
 
