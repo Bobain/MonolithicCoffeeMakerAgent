@@ -5679,6 +5679,304 @@ tree-sitter-python = "^0.21.0"
 
 ---
 
+### 🎯 [US-008] Automated User Support Assistant for Code Help Requests
+
+**As a**: Developer
+**I want**: An assistant program that automatically helps users with code completion and feature implementation requests
+**So that**: I don't have to manually respond when users ask for help with their code or feature implementations
+
+**Business Value**: ⭐⭐⭐⭐⭐
+**Estimated Effort**: 5-8 story points (1-2 weeks)
+**Status**: 📝 Planned
+**Sprint**: 🎯 **Sprint 8 or 9** (Nov 2025) - **High Impact**
+
+**Problem Statement**:
+As a developer, I frequently receive requests from users like:
+- "Please help me complete my code"
+- "Can you implement feature X for me?"
+- "I need help with the codebase"
+
+Currently, I have to manually:
+- Read the user's code context
+- Understand what they need
+- Provide code suggestions or implementations
+- Explain the solution
+
+This is time-consuming and takes me away from my core development work.
+
+**Proposed Solution**:
+Create an automated assistant that:
+1. Monitors user requests (via chat, issues, or dedicated channel)
+2. Analyzes the user's code context and request
+3. Leverages code_developer's knowledge of the codebase
+4. Provides intelligent code suggestions or implementations
+5. Explains the solution in user-friendly terms
+
+**Acceptance Criteria**:
+- [ ] Assistant monitors input channels (chat, GitHub issues, Discord, etc.)
+- [ ] Understands user's code context (files, current implementation)
+- [ ] Provides relevant code suggestions based on codebase patterns
+- [ ] Explains solutions clearly (not just code dumps)
+- [ ] Can implement small features autonomously
+- [ ] Escalates complex requests to developer when needed
+- [ ] Tracks user satisfaction with responses
+
+**Technical Approach**:
+
+**Phase 1: Input Integration** (Week 1)
+- Monitor project-manager chat for help requests
+- GitHub Issues integration (watch for "help wanted" label)
+- Discord/Slack webhook support (optional)
+- Email integration (support@ address)
+
+**Phase 2: Context Analysis** (Week 1)
+- Parse user's code snippets
+- Identify relevant files from codebase
+- Extract project context from ROADMAP
+- Build request understanding
+
+**Phase 3: Response Generation** (Week 2)
+- Use Claude API for code completion
+- Leverage code_developer commit history for patterns
+- Generate explanations alongside code
+- Format responses for readability
+
+**Phase 4: Quality & Escalation** (Week 2)
+- Confidence scoring (escalate low confidence)
+- User feedback collection
+- Analytics on response quality
+- Developer notification for escalations
+
+**Example Use Cases**:
+
+**Use Case 1**: Code Completion Request
+```
+User: "Help me complete this function:
+def analyze_roadmap():
+    # TODO: Parse ROADMAP.md and extract priorities
+"
+
+Assistant Response:
+"I can help! Based on your codebase, here's a completion using the existing RoadmapEditor:
+
+```python
+def analyze_roadmap():
+    from coffee_maker.cli.roadmap_editor import RoadmapEditor
+
+    editor = RoadmapEditor("docs/ROADMAP.md")
+    priorities = editor.list_priorities()
+
+    return {
+        "total": len(priorities),
+        "completed": sum(1 for p in priorities if p["status"] == "✅ Complete"),
+        "in_progress": sum(1 for p in priorities if p["status"] == "🔄 In Progress"),
+    }
+```
+
+This follows the project pattern seen in coffee_maker/cli/roadmap_cli.py:254.
+The RoadmapEditor is the standard way to interact with ROADMAP.md in this codebase."
+```
+
+**Use Case 2**: Feature Implementation Request
+```
+User: "I need a command to list all incomplete priorities"
+
+Assistant Response:
+"I'll implement this for you. Based on the existing CLI structure, here's the implementation:
+
+1. Add to coffee_maker/cli/commands.py:
+```python
+class ListIncompleteCommand(Command):
+    def execute(self, args, editor):
+        priorities = editor.list_priorities()
+        incomplete = [p for p in priorities if p["status"] != "✅ Complete"]
+
+        # Display with Rich table
+        table = Table(title="Incomplete Priorities")
+        table.add_column("Priority", style="cyan")
+        table.add_column("Title", style="white")
+        table.add_column("Status", style="yellow")
+
+        for p in incomplete:
+            table.add_row(p["name"], p["title"], p["status"])
+
+        console = Console()
+        console.print(table)
+```
+
+2. Register in roadmap_cli.py:
+```python
+COMMANDS = {
+    # ... existing commands ...
+    "incomplete": ListIncompleteCommand(),
+}
+```
+
+This follows the Command pattern used throughout the CLI. Would you like me to create a PR for this?"
+```
+
+**Use Case 3**: Escalation to Developer
+```
+User: "I want to completely redesign the daemon architecture"
+
+Assistant Response:
+"This is a significant architectural change that requires human review. I've notified the developer.
+
+Initial thoughts:
+- Current daemon uses polling (checks ROADMAP every 30s)
+- Alternative: Event-driven with file watchers
+- Consider: Impact on ~15 files, testing complexity, deployment changes
+
+I've created Issue #123 with these details. The developer will respond within 24 hours.
+
+For now, is there a smaller improvement I can help with?"
+```
+
+**Technical Architecture**:
+```
+┌─────────────────────────────────────────────────┐
+│          Input Channels                          │
+│  ┌────────────┬─────────────┬────────────────┐  │
+│  │ Chat       │ GitHub      │ Discord/Slack  │  │
+│  │ Messages   │ Issues      │ Webhooks       │  │
+│  └─────┬──────┴─────┬───────┴────────┬───────┘  │
+└────────┼────────────┼────────────────┼──────────┘
+         │            │                │
+         └────────────┼────────────────┘
+                      │
+         ┌────────────▼─────────────────────────┐
+         │   Request Router & Parser            │
+         │  - Classify request type             │
+         │  - Extract code context              │
+         │  - Determine complexity              │
+         └────────────┬─────────────────────────┘
+                      │
+         ┌────────────▼─────────────────────────┐
+         │   Assistant Engine                   │
+         │  ┌──────────────────────────────┐   │
+         │  │ Knowledge Base:              │   │
+         │  │ - Codebase patterns          │   │
+         │  │ - code_developer history     │   │
+         │  │ - ROADMAP context            │   │
+         │  └──────────────────────────────┘   │
+         │  ┌──────────────────────────────┐   │
+         │  │ Response Generator:          │   │
+         │  │ - Claude API integration     │   │
+         │  │ - Code completion            │   │
+         │  │ - Explanation generation     │   │
+         │  └──────────────────────────────┘   │
+         │  ┌──────────────────────────────┐   │
+         │  │ Escalation Logic:            │   │
+         │  │ - Confidence scoring         │   │
+         │  │ - Complexity detection       │   │
+         │  │ - Developer notification     │   │
+         │  └──────────────────────────────┘   │
+         └────────────┬─────────────────────────┘
+                      │
+         ┌────────────▼─────────────────────────┐
+         │   Response Delivery                  │
+         │  - Format for channel                │
+         │  - Track user satisfaction           │
+         │  - Collect feedback                  │
+         └──────────────────────────────────────┘
+```
+
+**Dependencies**:
+```toml
+# New dependencies
+discord-py = "^2.3.0"           # Discord integration (optional)
+slack-sdk = "^3.27.0"           # Slack integration (optional)
+pygithub = "^2.8.1"             # Already present (GitHub API)
+```
+
+**Implementation Files**:
+- `coffee_maker/assistant/server.py` - Main assistant server
+- `coffee_maker/assistant/request_parser.py` - Request understanding
+- `coffee_maker/assistant/response_generator.py` - Code generation
+- `coffee_maker/assistant/escalation.py` - Complexity detection
+- `coffee_maker/assistant/integrations/` - Channel integrations
+  - `chat_integration.py` - project-manager chat
+  - `github_integration.py` - Issues/PRs
+  - `discord_integration.py` - Discord bot
+  - `slack_integration.py` - Slack bot
+
+**Escalation Criteria**:
+Assistant escalates to developer when:
+- Confidence score < 0.7 (uncertain)
+- Request involves >3 files
+- Architectural changes requested
+- Security-sensitive code
+- User explicitly asks for human review
+
+**Success Criteria**:
+- ✅ Handles 80%+ of simple code help requests autonomously
+- ✅ Response time < 30 seconds for code completion
+- ✅ User satisfaction score > 4/5
+- ✅ Escalation accuracy > 90% (correct escalation decisions)
+- ✅ Developer time saved: 5+ hours/week
+
+**Metrics to Track**:
+- Requests received vs. handled
+- Escalation rate
+- User satisfaction scores
+- Response time distribution
+- Code correctness (via user feedback)
+- Developer time saved
+
+**Example Configuration**:
+```yaml
+# assistant_config.yaml
+channels:
+  chat:
+    enabled: true
+    max_response_time: 30s
+  github:
+    enabled: true
+    watched_labels: ["help wanted", "question"]
+  discord:
+    enabled: false  # Optional
+    bot_token: ${DISCORD_BOT_TOKEN}
+  slack:
+    enabled: false  # Optional
+    webhook_url: ${SLACK_WEBHOOK_URL}
+
+escalation:
+  confidence_threshold: 0.7
+  max_files_touched: 3
+  notify_via: ["email", "github_issue"]
+
+response:
+  max_length: 2000  # Characters
+  include_explanations: true
+  code_format: markdown
+  link_to_docs: true
+```
+
+**Challenges & Risks**:
+- **Code Quality**: Assistant might suggest suboptimal code
+  - Mitigation: Confidence scoring, human review for low scores
+- **Context Understanding**: May misunderstand complex requests
+  - Mitigation: Ask clarifying questions, escalate when uncertain
+- **User Expectations**: Users may expect human-level reasoning
+  - Mitigation: Set clear expectations, show confidence scores
+- **Integration Complexity**: Multiple channels to support
+  - Mitigation: Start with chat only, add others incrementally
+
+**Future Enhancements** (Post-MVP):
+- Multi-turn conversations (follow-up questions)
+- Voice interface (speak code requests)
+- Video tutorial generation (screen recording of implementation)
+- Team knowledge sharing (learn from all developers)
+- A/B testing different response styles
+
+**Related Stories**:
+- Complements US-007 (IDE completion for active coding)
+- Uses US-006 (project-manager chat as primary channel)
+- Leverages US-004 (code_developer knowledge base)
+- Reduces developer support burden (main value)
+
+---
+
 ## 🚀 Prioritized Roadmap
 
 ### 🔴 **PRIORITY 1: Analytics & Observability** ⚡ FOUNDATION FOR AUTONOMOUS DAEMON
