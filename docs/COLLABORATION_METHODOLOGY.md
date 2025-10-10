@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 1.6
+**Version**: 1.7
 **Last Updated**: 2025-10-10
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -280,6 +280,217 @@ Phase 4: Communication (Days 4-5) → Validate
    - PostgreSQL: Production-grade, multi-user, requires setup
    Decision: SQLite for MVP, can migrate later if needed"
 ```
+
+### 2.7 Code References Methodology Document (US-017)
+
+**🚨 IMPLEMENTATION REQUIREMENT 🚨**
+
+**Principle**: Code implementing project_manager and code_developer must **read and reference** this COLLABORATION_METHODOLOGY.md document to understand processes, rules, and behavioral requirements.
+
+**What This Means**:
+- PM and developer code should load this document at startup
+- Code should validate actions against documented processes
+- Mandatory rules (like "spec before estimate") should be enforced in code
+- Process changes in this document should automatically affect code behavior
+
+**Why**:
+- **Single source of truth**: Methodology defined once, used everywhere
+- **Consistency**: Code behavior matches documented process
+- **Maintainability**: Update methodology document instead of modifying code
+- **Auditability**: Clear link between process and implementation
+- **Validation**: Code can enforce mandatory rules automatically
+
+**Examples of Code Referencing Methodology**:
+
+**Example 1: Enforcing "Spec Before Estimate" (Section 2.4)**
+```python
+class ProjectManager:
+    def __init__(self):
+        # Load methodology document
+        self.methodology = self.load_methodology_doc()
+        self.mandatory_rules = self.parse_mandatory_rules()
+
+    def estimate_delivery(self, user_story_id: str) -> str:
+        """Provide delivery estimate for a user story"""
+
+        # Check Section 2.4 rule: spec must exist before estimate
+        if not self.has_technical_spec(user_story_id):
+            # Mandatory rule enforcement (from Section 2.4)
+            return (
+                "I need to create a technical specification first to give "
+                "you an accurate estimate.\n\n"
+                "Without a detailed spec with task-level breakdown, any "
+                "estimate would be a guess and could be off by 2-3x.\n\n"
+                "Should I proceed with creating the spec?"
+            )
+
+        # Spec exists, can provide estimate
+        spec = self.load_technical_spec(user_story_id)
+        total_hours = self.calculate_total_hours(spec)
+        return f"Estimated delivery: {total_hours / 8:.1f} days"
+```
+
+**Example 2: Progress Reporting Format (Section 4.4)**
+```python
+class StatusReportGenerator:
+    def __init__(self):
+        # Load methodology Section 4.4 for report format
+        self.methodology = self.load_methodology_doc()
+        self.report_format = self.get_section("4.4")
+
+    def generate_progress_report(self) -> str:
+        """Generate progress report following Section 4.4 format"""
+
+        # Use format from Section 4.4
+        report = f"""📊 Daily Progress Report ({date.today()})
+
+✅ Completed:
+{self.format_completed_items()}
+
+🔄 In Progress:
+{self.format_in_progress_items()}
+
+⏸️ Blocked:
+{self.format_blocked_items()}
+
+📋 Next Steps:
+{self.format_next_steps()}
+
+⏰ ETA: {self.calculate_eta()}
+"""
+        return report
+```
+
+**Example 3: User Story Validation (US-017 requirement)**
+```python
+class SummaryCalendarGenerator:
+    def __init__(self):
+        # Load methodology document
+        self.methodology = self.load_methodology_doc()
+
+    def generate_summary(self, days: int = 14) -> str:
+        """Generate recent completions summary
+
+        References Section 4.4 (Progress Reporting) and US-017
+        for format requirements.
+        """
+
+        completions = self.get_recent_completions(days)
+
+        # Follow executive summary format (US-017)
+        summary = f"📊 Recent Completions (Last {days} Days)\n\n"
+
+        for story in completions:
+            # Format per US-017 spec: business value + key features
+            summary += f"""✅ {story.title} ({story.id})
+   Completed: {story.completion_date}
+
+   Business Value: {story.business_value}
+
+   Key Features:
+{self.format_key_features(story)}
+
+   Impact: {story.impact}
+
+---
+"""
+        return summary
+```
+
+**Example 4: Request Categorization (Section 3.2.1)**
+```python
+class RequestClassifier:
+    def __init__(self):
+        # Load Section 3.2.1 classification rules
+        self.methodology = self.load_methodology_doc()
+        self.classification_rules = self.get_section("3.2.1")
+
+    def categorize_user_input(self, user_input: str) -> str:
+        """Categorize user input per Section 3.2.1
+
+        Returns: "feature", "methodology", or "both"
+        """
+
+        # Use keywords from Section 3.2.1
+        feature_indicators = self.classification_rules["feature_indicators"]
+        methodology_indicators = self.classification_rules["methodology_indicators"]
+
+        feature_score = self.calculate_keyword_match(
+            user_input, feature_indicators
+        )
+        methodology_score = self.calculate_keyword_match(
+            user_input, methodology_indicators
+        )
+
+        # Apply confidence thresholds from Section 3.2.1
+        if feature_score > 0.8 and methodology_score < 0.3:
+            return "feature"  # Route to ROADMAP.md
+        elif methodology_score > 0.8 and feature_score < 0.3:
+            return "methodology"  # Route to COLLABORATION_METHODOLOGY.md
+        elif feature_score > 0.5 and methodology_score > 0.5:
+            return "both"  # Route to both documents
+        else:
+            return "ambiguous"  # Ask clarifying questions
+```
+
+**Implementation Guidelines**:
+
+1. **Load Methodology at Startup**:
+   ```python
+   # In project_manager initialization
+   self.methodology_path = "docs/COLLABORATION_METHODOLOGY.md"
+   self.methodology = self.load_and_parse_methodology()
+   ```
+
+2. **Parse Mandatory Rules**:
+   ```python
+   def parse_mandatory_rules(self) -> Dict[str, Any]:
+       """Extract all 🚨 MANDATORY RULE 🚨 sections"""
+       rules = {}
+       for section in self.methodology.sections:
+           if "MANDATORY RULE" in section.heading:
+               rules[section.id] = section.content
+       return rules
+   ```
+
+3. **Validate Actions**:
+   ```python
+   def validate_action(self, action: str, context: Dict) -> bool:
+       """Check if action complies with methodology"""
+       if action == "provide_estimate":
+           # Check Section 2.4 rule
+           if not context.get("has_technical_spec"):
+               self.refuse_with_reason("Section 2.4")
+               return False
+       return True
+   ```
+
+4. **Generate Reports from Templates**:
+   ```python
+   def generate_report(self, report_type: str) -> str:
+       """Generate report using methodology templates"""
+       template = self.methodology.get_template(report_type)
+       return template.format(**self.get_report_data())
+   ```
+
+**Benefits**:
+
+1. **Automatic Enforcement**: Mandatory rules enforced by code, not manual checks
+2. **Consistency**: PM behavior always matches documented methodology
+3. **Easy Updates**: Change methodology document → code behavior updates
+4. **Auditability**: Trace PM actions back to specific methodology sections
+5. **Documentation**: Code references specific sections (e.g., "per Section 2.4")
+
+**See Also**:
+- **US-017** in ROADMAP.md for summary/calendar feature that uses this pattern
+- **Section 3.2.1** for request categorization implementation
+- **Section 2.4** for mandatory spec-before-estimate rule
+- **Section 4.4** for progress reporting format
+
+**User Request Context** (2025-10-10):
+> "and this document should be referenced by the code, so that project_manager uses it."
+
+This ensures the methodology document is not just documentation, but an **active specification** that drives code behavior.
 
 ---
 
@@ -1593,6 +1804,7 @@ PM documents decision and informs developer
 | 1.4 | 2025-10-10 | Added Section 5.2 (`/US` Command Workflow) | Document US-012/US-013 features: similarity check, DoD inference, validation workflow |
 | 1.5 | 2025-10-10 | Added Section 3.2.1 (Request Categorization and Document Routing) | Implement US-014: PM categorizes user input as feature/methodology/both and routes to correct documents |
 | 1.6 | 2025-10-10 | Enhanced Section 2.4 - Specification Before Implementation (US-016) | PM MUST create detailed technical spec with task-level estimates before providing delivery estimates. PM must refuse to estimate without spec. |
+| 1.7 | 2025-10-10 | Added Section 2.7 - Code References Methodology Document (US-017) | Code implementing PM and code_developer must read and reference COLLABORATION_METHODOLOGY.md to understand processes, rules, and behavioral requirements. Ensures methodology is active specification driving code behavior. |
 
 **To add new version**:
 1. Make changes to document

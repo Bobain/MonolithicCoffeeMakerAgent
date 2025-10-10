@@ -1486,6 +1486,583 @@ CREATE TABLE spec_tasks (
 
 ---
 
+## 📝 PLANNED: US-017 - Summary & Calendar of Deliverables
+
+**Project**: **📅 US-017 - Proactive Summary of Recent Deliveries and Upcoming Deliverables Calendar**
+
+**Status**: 📝 **PLANNED** (Created 2025-10-10)
+
+**User Story**:
+> "As a user I want to be provided by the project_manager the summary of recently delivered user story, and the calendar of next deliverables for which an estimation can be given. This calendar can be updated on a three-day basis or updated on my request"
+
+**Business Context**:
+Users need visibility into:
+1. What was recently delivered (celebrate progress)
+2. What's coming next with realistic timelines (plan their work)
+3. Regular updates without having to ask (proactive communication)
+
+This improves user confidence, reduces "What's the status?" questions, and helps users plan their own work around upcoming deliverables.
+
+**Business Value**: ⭐⭐⭐⭐⭐ (Critical - Enables planning and visibility)
+**Estimated Effort**: 5-7 days (2-3 days for core, 2-3 days for automation, 1 day for polish)
+**Complexity**: Medium-High
+**Priority**: HIGH (after US-014, US-015, US-016)
+
+---
+
+### **Scope**
+
+**What's Included**:
+
+1. **Recent Deliveries Summary** (Executive Summary Format)
+   - Shows completed user stories from last 7-14 days
+   - Format: Business value delivered + key features
+   - Example:
+     ```
+     ✅ Process Management (US-009) - Completed 2025-10-10
+     Business Value: Unified control of daemon from chat
+     Key Features:
+     - Real-time daemon status monitoring
+     - Start/stop commands from chat
+     - Bidirectional async communication
+     - 12+ hour response handling
+     ```
+
+2. **Upcoming Deliverables Calendar** (Text-Based Prose Report)
+   - Shows next deliverables with estimated completion dates
+   - Audience-aware format (text-based report for users)
+   - Configurable depth: Top 3 priorities (default) or user-specified count
+   - Only shows items WITH estimates (no "TBD" items)
+   - Example:
+     ```
+     📅 Upcoming Deliverables (Next 3 Priorities)
+
+     1. Intelligent Request Categorization (US-014)
+        Estimated: 3-5 days (completing by 2025-10-15)
+        What: PM automatically detects if user input is feature/methodology/both
+        Impact: Faster roadmap updates, no more manual categorization
+
+     2. Estimation Metrics Tracking (US-015)
+        Estimated: 3-4 days (completing by 2025-10-19)
+        What: Track estimated vs actual time for better future estimates
+        Impact: 30% more accurate estimates over time
+
+     3. Technical Spec Generation (US-016)
+        Estimated: 4-5 days (completing by 2025-10-24)
+        What: PM creates detailed specs with task-level time estimates
+        Impact: Accurate delivery dates before coding starts
+     ```
+
+3. **Internal Tracking Document** (For PM & code_developer)
+   - Shared status document: `docs/STATUS_TRACKING.md`
+   - Updated automatically when user stories complete
+   - Includes technical details PM/developer need
+   - Format:
+     ```markdown
+     ## Recent Completions (Last 14 Days)
+     - US-009: Process Management (10/10) - 5 days actual vs 3-5 estimated
+     - US-010: Living Documentation (10/10) - 2 days actual vs 1-2 estimated
+
+     ## Current Work (In Progress)
+     - US-014: Request Categorization (Phase 2/4) - Day 2 of 3-5
+
+     ## Next Up (Top 3)
+     - US-015: Metrics Tracking - 3-4 days estimated
+     - US-016: Spec Generation - 4-5 days estimated
+     - US-017: Summary & Calendar - 5-7 days estimated
+     ```
+
+4. **Update Mechanism**
+   - **Automatic**: PM generates updated summary/calendar every 3 days
+   - **Manual**: User can request update anytime with `/summary` or `/calendar` command
+   - **Smart Detection**: Auto-update if estimates change significantly (>1 day delta)
+
+5. **Delivery Channels**
+   - **Chat** (primary): `/summary` and `/calendar` commands
+   - **Multiple options**: Chat, file (STATUS_TRACKING.md), and notifications (Slack/email if configured)
+
+---
+
+### **Acceptance Criteria** (17 total)
+
+**Recent Deliveries Summary**:
+- [ ] 1. `/summary` command shows completed user stories from last 7-14 days
+- [ ] 2. Each summary includes: Story ID, title, completion date, business value, key features
+- [ ] 3. Executive summary format (not technical details)
+- [ ] 4. Shows "No recent completions" if nothing completed in last 14 days
+
+**Upcoming Deliverables Calendar**:
+- [ ] 5. `/calendar` command shows upcoming deliverables with estimates
+- [ ] 6. Default shows top 3 priorities
+- [ ] 7. User can request more: `/calendar 5` shows top 5
+- [ ] 8. Only shows items with estimates (excludes "TBD" or "Not estimated")
+- [ ] 9. Includes estimated completion date (not just duration)
+- [ ] 10. Text-based prose report format (not just list)
+- [ ] 11. Shows "What" and "Impact" for each deliverable
+
+**Internal Tracking Document**:
+- [ ] 12. `docs/STATUS_TRACKING.md` auto-generated and kept up-to-date
+- [ ] 13. Includes technical details PM/developer need (actual vs estimated, files changed, etc.)
+- [ ] 14. Updated automatically when user stories complete or start
+
+**Update Mechanism**:
+- [ ] 15. PM auto-generates updated summary/calendar every 3 days
+- [ ] 16. Manual update available via `/summary update` or `/calendar update`
+- [ ] 17. Smart detection: Auto-update if estimates change by >1 day
+
+---
+
+### **Implementation Plan** (5-7 days total)
+
+**Phase 1: Data Collection & Formatting** (Day 1-2, 6-8 hours)
+- [ ] Create `StatusReportGenerator` class
+- [ ] Query ROADMAP.md for completed stories (last 14 days)
+- [ ] Query ROADMAP.md for upcoming priorities with estimates
+- [ ] Parse user story metadata (business value, key features, estimated effort)
+- [ ] Format executive summary for recent deliveries
+- [ ] Format text-based prose report for upcoming calendar
+- [ ] Write unit tests for data extraction and formatting
+
+**Phase 2: Commands & Chat Integration** (Day 2-3, 6-8 hours)
+- [ ] Implement `/summary` command in chat CLI
+- [ ] Implement `/calendar` command with optional count parameter
+- [ ] Implement `/calendar 5` for custom depth
+- [ ] Add help text and command descriptions
+- [ ] Test commands in chat interface
+- [ ] Handle edge cases (no completions, no estimates, etc.)
+
+**Phase 3: Internal Tracking Document** (Day 3-4, 4-6 hours)
+- [ ] Create `docs/STATUS_TRACKING.md` template
+- [ ] Auto-generate document from ROADMAP data
+- [ ] Update document when user stories complete
+- [ ] Update document when user stories start (status changes)
+- [ ] Add technical details (actual vs estimated, velocity, etc.)
+- [ ] Write tests for document generation
+
+**Phase 4: Automatic Updates** (Day 4-5, 6-8 hours)
+- [ ] Implement 3-day auto-update schedule
+- [ ] Detect when last update was >3 days ago
+- [ ] Generate and send update notification to user
+- [ ] Implement smart detection (estimates changed >1 day)
+- [ ] Add manual update triggers (`/summary update`, `/calendar update`)
+- [ ] Test auto-update scheduling logic
+
+**Phase 5: Multi-Channel Delivery** (Day 5-6, 4-6 hours)
+- [ ] Implement file delivery (STATUS_TRACKING.md always up-to-date)
+- [ ] Add Slack notification option (if configured)
+- [ ] Add email notification option (if configured)
+- [ ] Configuration for delivery channels (user preferences)
+- [ ] Test all delivery channels
+
+**Phase 6: Testing & Documentation** (Day 6-7, 4-6 hours)
+- [ ] End-to-end testing of all commands
+- [ ] Test auto-update scheduling
+- [ ] Test multi-channel delivery
+- [ ] Update QUICKSTART_PROJECT_MANAGER.md with new commands
+- [ ] Update PROJECT_MANAGER_FEATURES.md with feature details
+- [ ] Create tutorial in TUTORIALS.md
+- [ ] Update ROADMAP to mark US-017 complete
+
+---
+
+### **Technical Approach**
+
+**1. StatusReportGenerator Class**:
+```python
+class StatusReportGenerator:
+    """Generates executive summaries and calendar reports from ROADMAP data"""
+
+    def __init__(self, roadmap_path: str):
+        self.roadmap_path = roadmap_path
+        self.roadmap_editor = RoadmapEditor(roadmap_path)
+
+    def get_recent_completions(self, days: int = 14) -> List[Dict]:
+        """Get completed user stories from last N days"""
+        # Parse ROADMAP for completed stories
+        # Filter by completion date (last N days)
+        # Extract: ID, title, completion date, business value, key features
+        pass
+
+    def format_executive_summary(self, completions: List[Dict]) -> str:
+        """Format recent completions as executive summary"""
+        # Business value + key features (not technical details)
+        pass
+
+    def get_upcoming_deliverables(self, count: int = 3) -> List[Dict]:
+        """Get next N priorities with estimates"""
+        # Parse ROADMAP for priorities with estimates
+        # Exclude items without estimates
+        # Extract: ID, title, estimated days, what, impact
+        pass
+
+    def format_calendar_report(self, deliverables: List[Dict]) -> str:
+        """Format upcoming deliverables as text-based prose report"""
+        # Calculate estimated completion dates
+        # Format as prose (not just list)
+        pass
+
+    def generate_status_tracking_doc(self) -> str:
+        """Generate docs/STATUS_TRACKING.md for internal use"""
+        # Technical details for PM/developer
+        # Actual vs estimated, velocity, files changed, etc.
+        pass
+
+    def should_auto_update(self) -> bool:
+        """Check if auto-update is due (3 days elapsed or estimates changed)"""
+        pass
+```
+
+**2. Chat Commands**:
+```python
+# In project-manager CLI
+
+@chat_command
+def summary(self, args: str = ""):
+    """Show summary of recently completed user stories
+
+    Usage:
+        /summary          - Show recent completions (last 14 days)
+        /summary update   - Force regenerate summary now
+    """
+    generator = StatusReportGenerator("docs/ROADMAP.md")
+    completions = generator.get_recent_completions(days=14)
+    summary = generator.format_executive_summary(completions)
+    self.display(summary)
+
+@chat_command
+def calendar(self, args: str = ""):
+    """Show calendar of upcoming deliverables with estimates
+
+    Usage:
+        /calendar         - Show top 3 priorities with estimates
+        /calendar 5       - Show top 5 priorities
+        /calendar update  - Force regenerate calendar now
+    """
+    count = int(args) if args.isdigit() else 3
+    generator = StatusReportGenerator("docs/ROADMAP.md")
+    deliverables = generator.get_upcoming_deliverables(count=count)
+    calendar = generator.format_calendar_report(deliverables)
+    self.display(calendar)
+```
+
+**3. Auto-Update Scheduler**:
+```python
+class AutoUpdateScheduler:
+    """Schedules automatic summary/calendar updates every 3 days"""
+
+    def __init__(self):
+        self.last_update = self.load_last_update_timestamp()
+
+    def should_update(self) -> bool:
+        """Check if 3 days have elapsed since last update"""
+        return (datetime.now() - self.last_update).days >= 3
+
+    def check_estimate_changes(self) -> bool:
+        """Check if any estimates changed by >1 day"""
+        # Compare current estimates with last known estimates
+        pass
+
+    def trigger_update(self):
+        """Generate and send update to user"""
+        generator = StatusReportGenerator("docs/ROADMAP.md")
+        summary = generator.format_executive_summary(...)
+        calendar = generator.format_calendar_report(...)
+        self.notify_user(summary, calendar)
+        self.last_update = datetime.now()
+```
+
+**4. Internal Tracking Document** (`docs/STATUS_TRACKING.md`):
+```markdown
+# Coffee Maker Agent - Status Tracking
+
+**Last Updated**: 2025-10-10 14:30:00
+**Auto-Generated**: Every 3 days or on manual request
+
+---
+
+## Recent Completions (Last 14 Days)
+
+### US-009: Process Management & Status Monitoring
+- **Completed**: 2025-10-10
+- **Estimated**: 3-5 days (4 days average)
+- **Actual**: 5 days
+- **Accuracy**: 100% (within range)
+- **Business Value**: ⭐⭐⭐⭐⭐
+- **Key Features**: Real-time status, start/stop commands, bidirectional communication
+- **Files Changed**: 12 files, 1,200+ lines added
+- **Tests**: 15 unit tests, 8 integration tests
+
+### US-010: Living Documentation & Tutorials
+- **Completed**: 2025-10-10
+- **Estimated**: 1-2 days (1.5 days average)
+- **Actual**: 2 days
+- **Accuracy**: 100% (within range)
+- **Business Value**: ⭐⭐⭐⭐
+- **Key Features**: DOCUMENTATION_INDEX.md, 7 tutorials, maintenance process
+- **Files Changed**: 5 files, 1,400+ lines added
+- **Tests**: N/A (documentation)
+
+---
+
+## Current Work (In Progress)
+
+### US-014: Intelligent Request Categorization
+- **Started**: 2025-10-10
+- **Estimated**: 3-5 days (4 days average)
+- **Progress**: Phase 2/4 (50%)
+- **Days Elapsed**: 2 days
+- **Expected Completion**: 2025-10-14 (±1 day)
+- **Status**: On track
+
+---
+
+## Next Up (Top 3 Priorities)
+
+### 1. US-015: Estimation Metrics & Velocity Tracking
+- **Estimated**: 3-4 days (3.5 days average)
+- **Expected Start**: 2025-10-15
+- **Expected Completion**: 2025-10-18 (±1 day)
+- **Dependencies**: None (can start immediately after US-014)
+- **Business Value**: ⭐⭐⭐⭐ (High)
+
+### 2. US-016: Technical Spec Generation
+- **Estimated**: 4-5 days (4.5 days average)
+- **Expected Start**: 2025-10-19
+- **Expected Completion**: 2025-10-23 (±1 day)
+- **Dependencies**: US-015 (metrics data for estimates)
+- **Business Value**: ⭐⭐⭐⭐⭐ (Critical)
+
+### 3. US-017: Summary & Calendar of Deliverables
+- **Estimated**: 5-7 days (6 days average)
+- **Expected Start**: 2025-10-24
+- **Expected Completion**: 2025-10-30 (±1 day)
+- **Dependencies**: None
+- **Business Value**: ⭐⭐⭐⭐⭐ (Critical)
+
+---
+
+## Velocity Metrics (Rolling 30 Days)
+
+- **Stories Completed**: 4 (US-006, US-009, US-010, US-014)
+- **Story Points Completed**: 32 points
+- **Average Velocity**: 8 points/week
+- **Estimation Accuracy**: 90% (within estimated range)
+- **Average Story Duration**: 3.5 days actual vs 3.2 days estimated
+
+---
+
+**Note**: This document is auto-generated from ROADMAP.md data. For latest status, check ROADMAP.md or use `/summary` and `/calendar` commands in project-manager chat.
+```
+
+---
+
+### **Success Criteria**
+
+**✅ DONE when**:
+1. User can type `/summary` and see executive summary of recent completions
+2. User can type `/calendar` and see upcoming deliverables with dates
+3. User can customize calendar depth: `/calendar 5` shows top 5
+4. PM auto-generates updated summary/calendar every 3 days
+5. Manual updates work: `/summary update` and `/calendar update`
+6. `docs/STATUS_TRACKING.md` stays current (auto-updated)
+7. Multi-channel delivery works (chat, file, notifications if configured)
+8. Only shows items with estimates (no "TBD" in calendar)
+9. Executive summary format (business value + key features, not technical)
+10. Text-based prose report (not just bullet list)
+11. Smart detection triggers update when estimates change >1 day
+12. All 17 acceptance criteria met
+13. Tests passing (>90% coverage)
+14. Documentation updated (QUICKSTART, FEATURES, TUTORIALS)
+15. User validated and approved
+
+---
+
+### **Example Scenarios**
+
+**Scenario 1: User Checks Recent Progress**
+```
+User: /summary
+
+PM: 📊 Recent Completions (Last 14 Days)
+
+✅ Process Management & Status Monitoring (US-009)
+   Completed: October 10, 2025
+
+   Business Value: Unified control of autonomous development daemon from
+   interactive chat interface, enabling real-time monitoring and
+   bidirectional async communication.
+
+   Key Features:
+   - Real-time daemon status monitoring (PID, uptime, CPU, memory)
+   - Start/stop commands from chat (/start, /stop, /status)
+   - Bidirectional async communication (12+ hour response handling)
+   - Natural language daemon commands ("ask daemon to...")
+   - Graceful shutdown with cleanup
+
+   Impact: Reduced manual process management overhead by 80%
+
+✅ Living Documentation & Tutorials (US-010)
+   Completed: October 10, 2025
+
+   Business Value: Comprehensive documentation hub enabling assistants
+   to effectively help users with all deliverables.
+
+   Key Features:
+   - DOCUMENTATION_INDEX.md (central navigation hub)
+   - 7 practical tutorials (5+ requirement exceeded)
+   - Documentation maintenance process
+   - Developer documentation template
+   - Integration into Definition of Done
+
+   Impact: 90% reduction in "how do I use this?" questions
+
+---
+
+Want to see what's coming next? Try `/calendar`
+```
+
+**Scenario 2: User Checks Upcoming Work**
+```
+User: /calendar
+
+PM: 📅 Upcoming Deliverables (Next 3 Priorities)
+
+1. Intelligent Request Categorization (US-014)
+   Estimated Completion: October 14, 2025 (in 4 days)
+
+   What You'll Get: Project manager will automatically detect whether
+   your input is a feature request, methodology change, or both, and
+   route information to the correct documents (ROADMAP vs
+   COLLABORATION_METHODOLOGY).
+
+   Impact: Faster roadmap updates, no more manual categorization. Your
+   ideas get captured in the right place immediately.
+
+   Status: Day 2 of 3-5 (on track ✅)
+
+---
+
+2. Estimation Metrics & Velocity Tracking (US-015)
+   Estimated Completion: October 18, 2025 (in 8 days)
+
+   What You'll Get: System tracks estimated vs actual time for every
+   user story, learns from estimation errors, and suggests better
+   estimates for future work based on historical patterns.
+
+   Impact: 30% more accurate estimates over time. You'll know delivery
+   dates with confidence.
+
+   Dependencies: None (starts immediately after US-014)
+
+---
+
+3. Technical Spec Generation with Task-Level Estimates (US-016)
+   Estimated Completion: October 23, 2025 (in 13 days)
+
+   What You'll Get: Project manager creates detailed technical specs
+   with task-level time estimates (0.5h-4h granularity) before
+   implementation. Accurate delivery dates BEFORE coding starts.
+
+   Impact: No more "guess-timates". Every feature has a detailed plan
+   and accurate timeline upfront.
+
+   Dependencies: Integrates with US-015 for historical data
+
+---
+
+Want to see more? Try `/calendar 5` for top 5 priorities
+```
+
+**Scenario 3: Auto-Update Notification (Every 3 Days)**
+```
+[3 days since last update]
+
+PM: 📬 Status Update (Automatic - October 13, 2025)
+
+Recent Progress:
+✅ US-014 (Intelligent Request Categorization) completed!
+   - Finished 1 day ahead of schedule
+   - All 19 acceptance criteria met
+
+Upcoming Next:
+📅 US-015 (Estimation Metrics) starting today
+   - Estimated: 3-4 days
+   - Expected completion: October 16-17
+
+Want more details? Use `/summary` for recent completions or `/calendar`
+for full upcoming schedule.
+```
+
+**Scenario 4: User Requests Deeper Calendar**
+```
+User: /calendar 5
+
+PM: 📅 Upcoming Deliverables (Next 5 Priorities)
+
+[Shows top 5 priorities with same format as above]
+
+Note: Showing 5 priorities. Some may be several weeks out.
+For more detailed planning, consider `/summary` to review recent
+velocity and adjust expectations.
+```
+
+---
+
+### **Database Schema** (extends US-015)
+
+```sql
+-- Add to existing story_metrics table (US-015)
+ALTER TABLE story_metrics ADD COLUMN displayed_in_summary BOOLEAN DEFAULT 0;
+ALTER TABLE story_metrics ADD COLUMN summary_generated_at TIMESTAMP;
+
+-- New table for tracking auto-updates
+CREATE TABLE status_update_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    update_type TEXT NOT NULL,  -- "auto" or "manual"
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    triggered_by TEXT,  -- "schedule" or "user" or "estimate_change"
+    summary_content TEXT,
+    calendar_content TEXT,
+    delivery_channels TEXT,  -- JSON: ["chat", "file", "slack", "email"]
+    user_requested BOOLEAN DEFAULT 0
+);
+
+-- Configuration for auto-updates
+CREATE TABLE status_update_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    auto_update_enabled BOOLEAN DEFAULT 1,
+    update_frequency_days INTEGER DEFAULT 3,
+    default_calendar_count INTEGER DEFAULT 3,
+    delivery_channels TEXT,  -- JSON: ["chat", "file"]
+    last_auto_update TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+### **Relationship to Other User Stories**
+
+- **US-015**: Provides velocity and accuracy data for calendar predictions
+- **US-016**: Specs provide task-level estimates shown in calendar
+- **US-010**: Summary/calendar become part of living documentation
+- **US-009**: Status updates can be delivered via bidirectional communication
+- **Section 4.4 COLLABORATION_METHODOLOGY.md**: Progress reporting pattern
+
+---
+
+### **Future Enhancements** (not in scope for US-017)
+
+- Visual calendar UI (Gantt chart, timeline view)
+- Predictive analytics ("Based on velocity, you'll complete 5 stories this month")
+- Burndown charts and velocity graphs
+- Integration with external calendars (Google Calendar, Outlook)
+- Webhook notifications (custom integrations)
+- Historical trend analysis ("Velocity improving by 15% month-over-month")
+
+---
+
 ## 🚀 RELEASE STRATEGY & VERSIONING
 
 ### ✅ What's Deliverable TODAY (Version 0.1.0 - MVP)
