@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 2.3
+**Version**: 2.3.1
 **Last Updated**: 2025-10-11
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -1748,6 +1748,36 @@ Assistant responds:
 PM updates DoD checklist based on assistant's validation
 ```
 
+**Environment Check Example**:
+```
+User asks PM: "What's the home directory for the daemon?"
+
+PM delegates to Assistant:
+  "Assistant, run 'echo $HOME' to check the home directory"
+
+Assistant uses execute_bash tool:
+  - Runs: echo $HOME
+  - shell=True expands the $HOME variable
+  - Captures stdout
+
+Assistant responds:
+  "The home directory is: /Users/bobain
+
+   Command: echo $HOME
+   Exit code: 0 (success)
+   Output: /Users/bobain"
+
+PM relays to User: "The daemon's home directory is /Users/bobain"
+```
+
+**Other Environment Commands Assistant Can Run**:
+- `echo $PATH` - Check PATH variable
+- `echo $USER` - Check current user
+- `pwd` - Check current working directory
+- `env` - List all environment variables
+- `which python` - Find Python executable path
+- `python --version` - Check Python version
+
 **Bug Ticket Creation (When DoD Validation Fails)**:
 
 When the assistant discovers bugs, crashes, or DoD criteria that are NOT met, it should **automatically create a bug ticket** with full details.
@@ -3435,6 +3465,7 @@ PM documents decision and informs developer
 | 2.1 | 2025-10-11 | Added Section 3.4 - Role: Assistant (LangChain-Powered AI Helper) | Defined assistant role, responsibilities, authorities, and task delegation guidelines. Includes: delegation decision matrix (ALWAYS/COLLABORATIVE/NEVER), 6 tools available to assistant (read_file, search_code, list_files, git_log, git_diff, execute_bash), best practices for PM→Assistant delegation, auto-refresh documentation requirement (every 30 minutes), availability requirements (always up when project-manager running). Renumbered Team Dynamics to 3.5. Addresses user request: "project_manager should know which tasks to delegate to assistant thanks to team collaboration document". |
 | 2.2 | 2025-10-11 | Enhanced Section 3.4 - Added DoD Validation Capability for Assistant | Added "DoD Validation" to assistant delegation matrix (ALWAYS DELEGATE category). Documented assistant's ability to validate Definition of Done criteria using execute_bash tool. Includes comprehensive DoD validation example: running pytest, checking exit codes, parsing test results, validating build success. Assistant can now answer "Are all tests passing?" by running tests and reporting clear ✅/❌ status. Critical for PM to validate DoD without manual testing. Addresses assistant's need to run bash commands for DoD validation. |
 | 2.3 | 2025-10-11 | **MAJOR**: Added Bug Ticket Creation Capability for Assistant | Implemented create_bug_ticket tool (7th tool for assistant). Assistant can now automatically create bug tickets in tickets/ directory when DoD validation fails. Added comprehensive bug ticket format with sections: Description, What I Was Testing, Steps to Reproduce, Expected/Actual Behavior, Exit Code, Error Output, Error Analysis, Impact on DoD, Additional Context, Suggested Actions. Includes 2 complete examples (test failure, build failure). Documented workflow: Assistant validates DoD → Command fails → Assistant creates BUG-XXX ticket → Reports to PM → code_developer fixes. Updated assistant responsibilities and authorities. Bug tickets auto-numbered (BUG-001, BUG-002, etc.). Critical for autonomous DoD validation and issue tracking. Addresses: "assistant should create bug issue if DoD validation crashes/fails". |
+| 2.3.1 | 2025-10-11 | Added Environment Check Example for Assistant | Added practical "Environment Check Example" showing assistant running `echo $HOME`. Demonstrates shell=True enables environment variable expansion. Included list of other useful environment commands assistant can run: echo $PATH, echo $USER, pwd, env, which python, python --version. Shows complete delegation workflow from User → PM → Assistant → Response. Addresses user verification: "can you check that the assistant is able to run echo $HOME?". Confirms assistant's execute_bash tool supports all environment variable commands. |
 
 **To add new version**:
 1. Make changes to document
