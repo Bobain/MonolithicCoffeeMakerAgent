@@ -149,19 +149,18 @@ class DeveloperStatusMonitor:
                     except:
                         pass
 
-                task_display = f"{priority_name} - {priority_title}"
-
                 # New task started
                 if priority_name != self.last_task_name:
                     self._display_new_task(
-                        task_display, {"priority": priority_name, "progress": progress, "current_step": priority_title}
+                        priority_title,
+                        {"priority": priority_name, "progress": progress, "current_step": priority_title},
                     )
                     self.last_task_name = priority_name
                     self.last_progress = progress
 
                 # Progress updated (only show if significant change, e.g., 10% increments)
                 elif self.last_progress is not None and abs(progress - self.last_progress) >= 10:
-                    self._display_progress_update(task_display, progress, priority_title)
+                    self._display_progress_update(priority_title, progress, priority_title)
                     self.last_progress = progress
 
         except json.JSONDecodeError:
