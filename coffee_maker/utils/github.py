@@ -1,3 +1,41 @@
+"""GitHub API utilities for pull request operations.
+
+This module provides utilities for interacting with GitHub pull requests,
+including posting code suggestions, fetching PR files, and handling review conflicts.
+
+Features:
+- Post code suggestions as PR review comments with automatic retry on conflicts
+- Fetch list of modified files from PRs (with Python file filtering)
+- Fetch file content from PR head commits
+- Automatic handling of pending review conflicts
+- GitHubPRClient wrapper for convenient PR operations
+
+Example:
+    >>> from coffee_maker.utils.github import GitHubPRClient
+    >>>
+    >>> # Create client
+    >>> client = GitHubPRClient()
+    >>>
+    >>> # Get modified Python files
+    >>> files = client.get_pr_modified_files("owner/repo", 123)
+    >>> print(f"Found {len(files['python_files'])} Python files")
+    >>>
+    >>> # Post code suggestion
+    >>> client.post_suggestion_in_pr_review(
+    ...     "owner/repo", 123, "src/main.py",
+    ...     start_line=10, end_line=12,
+    ...     suggestion_body="improved code",
+    ...     comment_text="Better implementation"
+    ... )
+
+Technical Notes:
+- Requires GITHUB_TOKEN environment variable (loaded via ConfigManager)
+- Uses PyGithub library for GitHub API access
+- Includes Langfuse observability decorators for monitoring
+- Automatically handles pending review conflicts with retry logic
+- Line numbers are 1-indexed (first line is 1)
+"""
+
 import logging
 from typing import Callable, Optional, Tuple
 
