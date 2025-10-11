@@ -28,6 +28,7 @@ except ImportError:
     pass  # python-dotenv not installed, env vars must be set manually
 
 from coffee_maker.autonomous.daemon import DevDaemon
+from coffee_maker.config import ConfigManager
 from coffee_maker.process_manager import ProcessManager
 
 
@@ -134,7 +135,7 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
             sys.exit(1)
     else:
         # API mode (--use-api flag) - Check if API key is set
-        if not os.environ.get("ANTHROPIC_API_KEY"):
+        if not ConfigManager.has_anthropic_api_key():
             print("=" * 70)
             print("❌ ERROR: ANTHROPIC_API_KEY not set!")
             print("=" * 70)
