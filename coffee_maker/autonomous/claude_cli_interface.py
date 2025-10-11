@@ -257,3 +257,79 @@ class ClaudeCLIInterface:
                 stop_reason="error",
                 error=str(e),
             )
+
+    def reset_context(self) -> bool:
+        """Reset conversation context using /compact command.
+
+        The /compact command summarizes the current conversation and
+        starts a fresh context, preventing token bloat and stale context.
+
+        This is critical for long-running daemon operations where context
+        can accumulate thousands of tokens over multiple tasks.
+
+        Returns:
+            True if context reset successful, False otherwise
+
+        Implementation:
+            Executes the /compact slash command in the Claude CLI session.
+            This command:
+            1. Summarizes current conversation
+            2. Clears message history
+            3. Starts fresh with summary as context
+
+        Example:
+            >>> cli = ClaudeCLIInterface()
+            >>> cli.execute_prompt("Implement feature X")
+            >>> cli.execute_prompt("Implement feature Y")
+            >>> # Context now has 2 features worth of tokens
+            >>> cli.reset_context()  # Compact and reset
+            True
+            >>> # Context now fresh with summary only
+
+        Note:
+            This method only works with Claude CLI. API mode uses
+            separate conversations per request (no context accumulation).
+        """
+        try:
+            logger.info("Resetting Claude context via /compact...")
+
+            # Execute /compact command
+            cmd = [
+                self.claude_path,
+                "-p",  # Print mode
+                "--model",
+                self.model,
+                "--dangerously-skip-permissions",
+            ]
+
+            # Send /compact command
+            compact_prompt = "/compact"
+
+            # Remove API key from environment
+            env = os.environ.copy()
+            env.pop("ANTHROPIC_API_KEY", None)
+
+            result = subprocess.run(
+                cmd,
+                input=compact_prompt,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+                env=env,
+            )
+
+            if result.returncode != 0:
+                logger.error(f"Failed to reset context: {result.stderr}")
+                return False
+
+            logger.info("✅ Context reset successful")
+            logger.debug(f"Compact output: {result.stdout[:200]}")
+            return True
+
+        except subprocess.TimeoutExpired:
+            logger.error("Context reset timeout after 30s")
+            return False
+        except Exception as e:
+            logger.error(f"Error resetting context: {e}")
+            return False

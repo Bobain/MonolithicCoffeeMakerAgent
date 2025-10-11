@@ -21,12 +21,19 @@ Example:
 
 import logging
 import time
+from datetime import datetime
 from pathlib import Path
 
 from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
 from coffee_maker.autonomous.git_manager import GitManager
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
-from coffee_maker.cli.notifications import NOTIF_PRIORITY_HIGH, NOTIF_TYPE_INFO, NotificationDB
+from coffee_maker.cli.notifications import (
+    NOTIF_PRIORITY_CRITICAL,
+    NOTIF_PRIORITY_HIGH,
+    NOTIF_TYPE_ERROR,
+    NOTIF_TYPE_INFO,
+    NotificationDB,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +76,10 @@ class DevDaemon:
         model: str = "sonnet",
         use_claude_cli: bool = False,
         claude_cli_path: str = "/opt/homebrew/bin/claude",
+        # PRIORITY 2.7: Crash recovery parameters
+        max_crashes: int = 3,
+        crash_sleep_interval: int = 60,
+        compact_interval: int = 10,
     ):
         """Initialize development daemon.
 
@@ -80,6 +91,9 @@ class DevDaemon:
             model: Claude model to use (default: claude-sonnet-4)
             use_claude_cli: Use Claude CLI instead of Anthropic API (default: False)
             claude_cli_path: Path to claude CLI executable (default: /opt/homebrew/bin/claude)
+            max_crashes: Maximum consecutive crashes before stopping (default: 3)
+            crash_sleep_interval: Sleep duration after crash in seconds (default: 60)
+            compact_interval: Iterations between context resets (default: 10)
         """
         self.roadmap_path = Path(roadmap_path)
         self.auto_approve = auto_approve
@@ -109,10 +123,23 @@ class DevDaemon:
         self.attempted_priorities = {}  # Track retry attempts: {priority_name: count}
         self.max_retries = 3  # Maximum attempts before skipping a priority
 
+        # PRIORITY 2.7: Crash recovery state
+        self.max_crashes = max_crashes
+        self.crash_sleep_interval = crash_sleep_interval
+        self.crash_count = 0
+        self.crash_history = []  # List of crash info dicts
+
+        # PRIORITY 2.7: Context management state
+        self.compact_interval = compact_interval
+        self.iterations_since_compact = 0
+        self.last_compact_time = None
+
         logger.info("DevDaemon initialized")
         logger.info(f"Roadmap: {self.roadmap_path}")
         logger.info(f"Auto-approve: {self.auto_approve}")
         logger.info(f"Create PRs: {self.create_prs}")
+        logger.info(f"Max crashes: {self.max_crashes}")
+        logger.info(f"Compact interval: {self.compact_interval} iterations")
 
     def run(self):
         """Run daemon main loop.
@@ -139,10 +166,27 @@ class DevDaemon:
         while self.running:
             iteration += 1
             logger.info(f"\n{'='*60}")
-            logger.info(f"Iteration {iteration}")
+            logger.info(f"Iteration {iteration} | Crashes: {self.crash_count}/{self.max_crashes}")
             logger.info(f"{'='*60}")
 
             try:
+                # PRIORITY 2.7: Crash recovery - reset context after crash
+                if self.crash_count > 0:
+                    logger.warning(f"🔄 Recovering from crash #{self.crash_count}")
+                    if self._reset_claude_context():
+                        logger.info("✅ Context reset successful")
+                        # Reset crash count only after successful recovery
+                        self.crash_count = 0
+                    else:
+                        logger.error("Failed to reset context - continuing anyway")
+
+                # PRIORITY 2.7: Periodic context refresh
+                if self.iterations_since_compact >= self.compact_interval:
+                    logger.info(f"🔄 Periodic context refresh (every {self.compact_interval} iterations)")
+                    if self._reset_claude_context():
+                        self.iterations_since_compact = 0
+                        logger.info("✅ Periodic refresh complete")
+
                 # BUG FIX #2: Sync roadmap branch BEFORE reading priorities
                 logger.info("🔄 Syncing with 'roadmap' branch...")
                 if not self._sync_roadmap_branch():
@@ -179,6 +223,8 @@ class DevDaemon:
 
                 if success:
                     logger.info(f"✅ Successfully implemented {next_priority['name']}")
+                    # PRIORITY 2.7: Increment iteration counter only on success
+                    self.iterations_since_compact += 1
                 else:
                     logger.warning(f"⚠️  Implementation failed for {next_priority['name']}")
 
@@ -192,15 +238,36 @@ class DevDaemon:
                 break
 
             except Exception as e:
-                logger.error(f"❌ Error in daemon loop: {e}")
+                # PRIORITY 2.7: Enhanced crash recovery
+                self.crash_count += 1
+                crash_info = {
+                    "timestamp": datetime.now().isoformat(),
+                    "exception": str(e),
+                    "exception_type": type(e).__name__,
+                    "priority": next_priority.get("name") if "next_priority" in locals() else "Unknown",
+                    "iteration": iteration,
+                }
+                self.crash_history.append(crash_info)
+
+                logger.error(f"❌ CRASH #{self.crash_count}/{self.max_crashes}: {e}")
+                logger.error(f"Priority: {crash_info['priority']}")
                 import traceback
 
                 traceback.print_exc()
 
-                # Continue after error
-                time.sleep(self.sleep_interval)
+                # Check if max crashes reached
+                if self.crash_count >= self.max_crashes:
+                    logger.critical(f"🚨 MAX CRASHES REACHED ({self.max_crashes}) - STOPPING DAEMON")
+                    self._notify_persistent_failure(crash_info)
+                    self.running = False
+                    break
+
+                # Sleep longer after crash
+                logger.info(f"💤 Sleeping {self.crash_sleep_interval}s after crash before recovery...")
+                time.sleep(self.crash_sleep_interval)
 
         logger.info("🛑 DevDaemon stopped")
+        logger.info(f"Total crashes: {len(self.crash_history)}")
 
     def _check_prerequisites(self) -> bool:
         """Check if prerequisites are met.
@@ -236,6 +303,51 @@ class DevDaemon:
         logger.info("✅ ROADMAP.md found")
 
         return True
+
+    def _reset_claude_context(self) -> bool:
+        """Reset Claude conversation context using /compact.
+
+        This method resets the Claude CLI conversation context to prevent
+        token bloat and stale context. It uses the /compact command which
+        summarizes the current conversation and starts fresh.
+
+        Returns:
+            True if context reset successful, False otherwise
+
+        Implementation:
+            1. Check if using Claude CLI (API mode doesn't need reset)
+            2. Call claude.reset_context() which executes /compact
+            3. Log token savings and new context state
+            4. Update last_compact_time timestamp
+
+        Example:
+            >>> daemon = DevDaemon(use_claude_cli=True)
+            >>> daemon._reset_claude_context()
+            True
+        """
+        # Only applicable for Claude CLI mode
+        if not self.use_claude_cli:
+            logger.debug("Context reset not needed for API mode")
+            return True
+
+        try:
+            logger.info("🔄 Resetting Claude context via /compact...")
+
+            # Call reset_context() on claude interface
+            result = self.claude.reset_context()
+
+            if result:
+                self.last_compact_time = datetime.now()
+                logger.info("✅ Context reset successful")
+                logger.info(f"Context age: {self.iterations_since_compact} iterations")
+                return True
+            else:
+                logger.error("❌ Context reset failed")
+                return False
+
+        except Exception as e:
+            logger.error(f"Error resetting context: {e}")
+            return False
 
     def _sync_roadmap_branch(self) -> bool:
         """Sync with 'roadmap' branch before each iteration.
@@ -750,6 +862,79 @@ This PR was autonomously implemented by the DevDaemon following the ROADMAP.md s
             message="The DevDaemon has completed all planned priorities in the ROADMAP!\n\nCheck your PRs for review.",
             priority=NOTIF_PRIORITY_HIGH,
         )
+
+    def _notify_persistent_failure(self, crash_info: dict):
+        """Notify user of persistent daemon failure.
+
+        Creates a critical notification when the daemon hits max crashes
+        and needs to stop. Includes crash history and debugging information.
+
+        Args:
+            crash_info: Dictionary with last crash details
+                - timestamp: ISO timestamp
+                - exception: Exception message
+                - exception_type: Exception class name
+                - priority: Priority being worked on
+                - iteration: Iteration number
+
+        Example:
+            >>> daemon._notify_persistent_failure({
+            ...     "timestamp": "2025-10-11T10:30:00",
+            ...     "exception": "API timeout",
+            ...     "exception_type": "TimeoutError",
+            ...     "priority": "PRIORITY 2.7",
+            ...     "iteration": 5
+            ... })
+        """
+        # Build crash history summary
+        crash_summary = "\n".join(
+            [
+                f"{i+1}. {c['timestamp']} - {c['exception_type']}: {c['exception'][:100]}"
+                for i, c in enumerate(self.crash_history[-5:])  # Last 5 crashes
+            ]
+        )
+
+        message = f"""🚨 CRITICAL: code_developer daemon has crashed {self.crash_count} times and stopped.
+
+**Last Crash Details**:
+- Time: {crash_info['timestamp']}
+- Priority: {crash_info['priority']}
+- Exception: {crash_info['exception_type']}
+- Message: {crash_info['exception'][:200]}
+
+**Recent Crash History** ({len(self.crash_history)} total):
+{crash_summary}
+
+**Action Required**:
+1. Review crash logs for root cause
+2. Check ROADMAP.md for problematic priority
+3. Fix underlying issue (API, network, code bug)
+4. Restart daemon: `poetry run code-developer`
+
+**Debugging Steps**:
+1. Check daemon logs: `tail -f ~/.coffee_maker/daemon.log`
+2. Test Claude CLI: `claude -p "test"`
+3. Verify API credits: Check Anthropic dashboard
+4. Check network: `ping api.anthropic.com`
+5. Review priority: `poetry run project-manager view {crash_info['priority']}`
+
+The daemon will remain stopped until manually restarted.
+"""
+
+        self.notifications.create_notification(
+            type=NOTIF_TYPE_ERROR,
+            title="🚨 Daemon Persistent Failure",
+            message=message,
+            priority=NOTIF_PRIORITY_CRITICAL,
+            context={
+                "crash_count": self.crash_count,
+                "crash_info": crash_info,
+                "crash_history": self.crash_history,
+                "requires_manual_intervention": True,
+            },
+        )
+
+        logger.critical("Created critical notification for persistent failure")
 
     def stop(self):
         """Stop the daemon gracefully."""
