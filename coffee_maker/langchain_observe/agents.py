@@ -18,6 +18,24 @@ logger = logging.getLogger(__name__)
 
 
 def instrument_llm(llm_instance: Any, *, methods: Iterable[str] = ("invoke", "ainvoke")) -> Any:
+    """Instrument LLM instance methods with Langfuse observability.
+
+    Wraps specified LLM methods with Langfuse's observe decorator for tracing.
+    Avoids double-instrumentation by tracking which methods have been wrapped.
+
+    Args:
+        llm_instance: LLM instance to instrument (e.g., ChatAnthropic, ChatOpenAI)
+        methods: Method names to instrument (default: invoke and ainvoke)
+
+    Returns:
+        The same LLM instance with instrumented methods
+
+    Example:
+        >>> from langchain_anthropic import ChatAnthropic
+        >>> llm = ChatAnthropic(model="claude-3-sonnet")
+        >>> instrumented = instrument_llm(llm)
+        >>> # Now llm.invoke() calls will be traced in Langfuse
+    """
     if getattr(llm_instance, "_langfuse_instrumented", False):
         return llm_instance
 
@@ -42,6 +60,26 @@ def instrument_llm(llm_instance: Any, *, methods: Iterable[str] = ("invoke", "ai
 
 
 def resolve_gemini_api_key() -> str:
+    """Resolve Gemini API key from multiple possible environment variables.
+
+    Checks for API key in multiple environment variable names and ensures
+    GEMINI_API_KEY is set for consistent access. Supports three variable names:
+    - GEMINI_API_KEY (primary)
+    - GOOGLE_API_KEY (alternative)
+    - COFFEE_MAKER_GEMINI_API_KEY (project-specific)
+
+    Returns:
+        The resolved API key string
+
+    Raises:
+        RuntimeError: If no API key found in any of the checked environment variables
+
+    Example:
+        >>> import os
+        >>> os.environ["GOOGLE_API_KEY"] = "my-key"
+        >>> key = resolve_gemini_api_key()
+        >>> assert os.environ["GEMINI_API_KEY"] == "my-key"  # Normalized
+    """
     for env_name in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "COFFEE_MAKER_GEMINI_API_KEY"):
         key = os.getenv(env_name)
         if key:
@@ -105,6 +143,31 @@ def configure_llm(
     methods: Iterable[str] = ("invoke", "ainvoke"),
     **kwargs: Any,
 ) -> Tuple[Any, str, Optional[str]]:
+    """Configure and instrument an LLM instance with Langfuse observability.
+
+    Creates an LLM instance for the specified provider and model, then instruments
+    it with Langfuse tracing. Falls back to a stub LLM if initialization fails
+    and strict=False.
+
+    Args:
+        provider: LLM provider name (e.g., 'anthropic', 'openai', 'gemini')
+        model: Model name, or None to use provider default
+        strict: If True, raise exceptions on initialization errors. If False, return stub LLM.
+        default_models: Mapping of provider names to default model names (unused in current implementation)
+        methods: LLM methods to instrument with Langfuse (default: invoke and ainvoke)
+        **kwargs: Additional arguments passed to LLM constructor
+
+    Returns:
+        Tuple of (instrumented_llm, provider_name, model_name)
+
+    Raises:
+        Exception: If LLM initialization fails and strict=True
+
+    Example:
+        >>> llm, provider, model = configure_llm(provider="anthropic", model="claude-3-sonnet")
+        >>> # llm is now ready to use with Langfuse tracing enabled
+        >>> response = llm.invoke("Hello!")
+    """
 
     try:
         candidate_llm = _build_llm(provider, model, **kwargs)
