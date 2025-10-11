@@ -24,9 +24,11 @@ import json
 import logging
 import os
 import re
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
@@ -46,6 +48,179 @@ from coffee_maker.cli.roadmap_editor import RoadmapEditor
 from coffee_maker.process_manager import ProcessManager
 
 logger = logging.getLogger(__name__)
+
+
+class DeveloperStatusMonitor:
+    """Background monitor for developer status changes.
+
+    Polls developer_status.json file and detects changes in:
+    - Developer state (working, testing, idle, etc.)
+    - Current task and progress
+    - Activity updates
+
+    When changes are detected, displays them automatically in the chat.
+    """
+
+    def __init__(self, console: Console, poll_interval: float = 2.0):
+        """Initialize status monitor.
+
+        Args:
+            console: Rich console for output
+            poll_interval: Seconds between status checks (default: 2)
+        """
+        self.console = console
+        self.poll_interval = poll_interval
+        self.status_file = Path("data/developer_status.json")
+        self.is_running = False
+        self.monitor_thread: Optional[threading.Thread] = None
+
+        # Track last known state to detect changes
+        self.last_state: Optional[str] = None
+        self.last_task_name: Optional[str] = None
+        self.last_progress: Optional[int] = None
+        self.last_step: Optional[str] = None
+
+        # Flag to suppress output during user input
+        self.suppress_output = False
+
+    def start(self):
+        """Start background monitoring thread."""
+        if self.is_running:
+            logger.warning("Status monitor already running")
+            return
+
+        self.is_running = True
+        self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        self.monitor_thread.start()
+        logger.info("Developer status monitor started")
+
+    def stop(self):
+        """Stop background monitoring thread."""
+        self.is_running = False
+        if self.monitor_thread and self.monitor_thread.is_alive():
+            logger.info("Developer status monitor stopped")
+
+    def _monitor_loop(self):
+        """Main monitoring loop (runs in background thread)."""
+        while self.is_running:
+            try:
+                self._check_status()
+            except Exception as e:
+                logger.error(f"Status monitor error: {e}", exc_info=True)
+
+            time.sleep(self.poll_interval)
+
+    def _check_status(self):
+        """Check developer status file for changes."""
+        if not self.status_file.exists():
+            # File doesn't exist yet, daemon probably not running
+            return
+
+        try:
+            with open(self.status_file, "r") as f:
+                status_data = json.load(f)
+
+            # Extract key fields
+            current_state = status_data.get("status", "unknown")
+            current_task = status_data.get("current_task")
+
+            # Detect state change
+            if current_state != self.last_state:
+                self._display_state_change(current_state)
+                self.last_state = current_state
+
+            # Detect task changes
+            if current_task:
+                task_name = current_task.get("name")
+                progress = current_task.get("progress", 0)
+                current_step = current_task.get("current_step", "")
+
+                # New task started
+                if task_name != self.last_task_name:
+                    self._display_new_task(task_name, current_task)
+                    self.last_task_name = task_name
+                    self.last_progress = progress
+                    self.last_step = current_step
+
+                # Progress updated (only show if significant change, e.g., 10% increments)
+                elif self.last_progress is not None and abs(progress - self.last_progress) >= 10:
+                    self._display_progress_update(task_name, progress, current_step)
+                    self.last_progress = progress
+                    self.last_step = current_step
+
+                # Step changed (even if progress same)
+                elif current_step != self.last_step and current_step:
+                    self._display_step_update(task_name, progress, current_step)
+                    self.last_step = current_step
+
+        except json.JSONDecodeError:
+            # File might be mid-write, skip this check
+            pass
+        except Exception as e:
+            logger.debug(f"Error checking status: {e}")
+
+    def _display_state_change(self, new_state: str):
+        """Display developer state change."""
+        if self.suppress_output:
+            return
+
+        # State emoji mapping
+        state_emoji = {
+            "working": "🟢",
+            "testing": "🟡",
+            "blocked": "🔴",
+            "idle": "⚪",
+            "thinking": "🔵",
+            "reviewing": "🟣",
+            "stopped": "⚫",
+        }
+
+        emoji = state_emoji.get(new_state, "⭕")
+        state_display = new_state.replace("_", " ").title()
+
+        self.console.print(f"\n[cyan]📊 Developer Status: {emoji} {state_display}[/]")
+
+    def _display_new_task(self, task_name: str, task_data: Dict):
+        """Display new task started."""
+        if self.suppress_output:
+            return
+
+        priority = task_data.get("priority", "?")
+        progress = task_data.get("progress", 0)
+        current_step = task_data.get("current_step", "")
+
+        self.console.print(f"\n[cyan]🚀 Started: PRIORITY {priority} - {task_name}[/]")
+        if current_step:
+            self.console.print(f"[dim]   {current_step}[/]")
+
+        # Show progress bar
+        self._show_progress_bar(progress)
+
+    def _display_progress_update(self, task_name: str, progress: int, current_step: str):
+        """Display progress update."""
+        if self.suppress_output:
+            return
+
+        self.console.print(f"\n[cyan]📈 Progress: {progress}%[/]")
+        if current_step:
+            self.console.print(f"[dim]   {current_step}[/]")
+
+        self._show_progress_bar(progress)
+
+    def _display_step_update(self, task_name: str, progress: int, current_step: str):
+        """Display step change."""
+        if self.suppress_output:
+            return
+
+        self.console.print(f"\n[cyan]⚙️  Step: {current_step}[/]")
+        self._show_progress_bar(progress)
+
+    def _show_progress_bar(self, progress: int):
+        """Show progress bar with percentage."""
+        bar_length = 30
+        filled = int(bar_length * progress / 100)
+        bar = "█" * filled + "░" * (bar_length - filled)
+        self.console.print(f"[dim]   [{bar}] {progress}%[/]")
 
 
 class ProjectManagerCompleter(Completer):
@@ -167,6 +342,9 @@ class ChatSession:
         # Initialize LangChain-powered assistant for complex questions (PRIORITY 2.9.5)
         # Assistant uses tools to help with analysis, debugging, code search, etc.
         self.assistant = AssistantBridge(action_callback=self._display_assistant_action)
+
+        # Initialize developer status monitor for real-time updates
+        self.status_monitor = DeveloperStatusMonitor(console=self.console, poll_interval=2.0)
 
         # Setup prompt-toolkit for advanced input
         self._setup_prompt_session()
@@ -540,6 +718,9 @@ class ChatSession:
         # Auto-check and start daemon if needed
         self._auto_start_daemon_if_needed()
 
+        # Start real-time status monitoring
+        self.status_monitor.start()
+
         self._display_welcome()
         self._load_roadmap_context()
         self._run_repl_loop()
@@ -559,63 +740,67 @@ class ChatSession:
 
         message_count = 0
 
-        while self.active:
-            try:
-                # Show prompt in a clean, claude-cli style
-                self.console.print("\n[bold]You[/]")
+        try:
+            while self.active:
+                try:
+                    # Show prompt in a clean, claude-cli style
+                    self.console.print("\n[bold]You[/]")
 
-                # Get user input with prompt-toolkit
-                # (supports: ↑/↓ history, Tab completion, Alt+Enter multi-line)
-                user_input = self.prompt_session.prompt("› ")
+                    # Get user input with prompt-toolkit
+                    # (supports: ↑/↓ history, Tab completion, Alt+Enter multi-line)
+                    user_input = self.prompt_session.prompt("› ")
 
-                if not user_input.strip():
-                    continue
+                    if not user_input.strip():
+                        continue
 
-                # Check for exit commands
-                if user_input.lower() in ["/exit", "/quit", "exit", "quit"]:
+                    # Check for exit commands
+                    if user_input.lower() in ["/exit", "/quit", "exit", "quit"]:
+                        self._display_goodbye()
+                        break
+
+                    # Check for help command
+                    if user_input.lower() in ["/help", "help"]:
+                        self._display_help()
+                        continue
+
+                    # Process input
+                    response = self._process_input(user_input)
+
+                    # Display response
+                    self._display_response(response)
+
+                    # Add to history
+                    self.history.append({"role": "user", "content": user_input})
+                    self.history.append({"role": "assistant", "content": response})
+
+                    # Auto-save session after each interaction
+                    self._save_session()
+
+                    # Update status and check for daemon questions every 10 messages
+                    message_count += 1
+                    if message_count % 10 == 0:
+                        # Update daemon status
+                        old_status = self.daemon_status_text
+                        self._update_status_display()
+
+                        # Alert if status changed
+                        if old_status != self.daemon_status_text:
+                            self.console.print(f"\n[cyan]📊 Status Update: {self.daemon_status_text}[/]\n")
+
+                        # Check for new daemon questions
+                        self._check_daemon_questions()
+
+                except KeyboardInterrupt:
+                    self.console.print("\n\n[yellow]Interrupted. Type /exit to quit.[/]")
+                except EOFError:
                     self._display_goodbye()
                     break
-
-                # Check for help command
-                if user_input.lower() in ["/help", "help"]:
-                    self._display_help()
-                    continue
-
-                # Process input
-                response = self._process_input(user_input)
-
-                # Display response
-                self._display_response(response)
-
-                # Add to history
-                self.history.append({"role": "user", "content": user_input})
-                self.history.append({"role": "assistant", "content": response})
-
-                # Auto-save session after each interaction
-                self._save_session()
-
-                # Update status and check for daemon questions every 10 messages
-                message_count += 1
-                if message_count % 10 == 0:
-                    # Update daemon status
-                    old_status = self.daemon_status_text
-                    self._update_status_display()
-
-                    # Alert if status changed
-                    if old_status != self.daemon_status_text:
-                        self.console.print(f"\n[cyan]📊 Status Update: {self.daemon_status_text}[/]\n")
-
-                    # Check for new daemon questions
-                    self._check_daemon_questions()
-
-            except KeyboardInterrupt:
-                self.console.print("\n\n[yellow]Interrupted. Type /exit to quit.[/]")
-            except EOFError:
-                self._display_goodbye()
-                break
-            except Exception as e:
-                logger.error(f"Error in REPL loop: {e}", exc_info=True)
-                self.console.print(f"\n[red]Error: {e}[/]")
+                except Exception as e:
+                    logger.error(f"Error in REPL loop: {e}", exc_info=True)
+                    self.console.print(f"\n[red]Error: {e}[/]")
+        finally:
+            # Ensure status monitor is stopped on any exit
+            self.status_monitor.stop()
 
     def _process_input(self, user_input: str) -> str:
         """Process user input (command or natural language).
@@ -915,6 +1100,10 @@ class ChatSession:
     def _display_goodbye(self):
         """Display goodbye message and save session."""
         self.active = False
+
+        # Stop status monitoring
+        self.status_monitor.stop()
+
         self._save_session()  # Final save on exit
         self.console.print("\n[dim]Session saved. Goodbye![/]")
         self.console.print()
