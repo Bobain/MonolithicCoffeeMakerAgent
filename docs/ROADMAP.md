@@ -98,41 +98,52 @@ US-XXX: Example Feature ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
-**Project**: **🚨 BUG FIXES - Critical code_developer Bugs (BLOCKING ALL WORK)**
+**Next Priority**: PRIORITY 2.9 - Sound Notifications for project-manager
 
-**Status**: 🔄 **IN PROGRESS** (Started: 2025-10-11)
+---
 
-**Critical Bugs to Fix IMMEDIATELY**:
+## ✅ RECENTLY COMPLETED: Critical Daemon Bug Fixes (2025-10-11)
 
-### Bug 1: Daemon Stops and Waits for Approval ❌
-**Problem**: Daemon asks for user approval before implementing each priority
+**Project**: **🚨 BUG FIXES - Critical code_developer Bugs**
+
+**Status**: ✅ **COMPLETE** (Completed: 2025-10-11)
+
+**Critical Bugs Fixed**:
+
+### Bug 1: Daemon Stops and Waits for Approval ✅
+**Problem**: Daemon asked for user approval before implementing each priority
 **Expected**: Daemon should be fully autonomous (--auto-approve should be default)
-**Fix**: Change default `auto_approve=True` in daemon.py
+**Fix**: ✅ FIXED
+- Updated `ProcessManager.start_daemon()` to always include `--auto-approve` flag
+- Enhanced process detection to require `--auto-approve` flag
+- Updated daemon detection logic to distinguish autonomous daemon from interactive sessions
+- Commit: 491a438
+- Files: `coffee_maker/process_manager.py`
 
-### Bug 2: Daemon Doesn't Sync Roadmap Branch ❌
-**Problem**: Daemon never pulls/merges roadmap branch, works with stale priorities
-**Expected**: Before each iteration, daemon should:
-```python
-# At start of each iteration:
-git fetch origin roadmap
-git merge origin/roadmap
-# Reload RoadmapParser
-# Then proceed with next priority
-```
-**Fix**: Add sync_roadmap() call at start of each iteration
+### Bug 2: Daemon Doesn't Sync Roadmap Branch ✅
+**Problem**: Daemon never pulled/merged roadmap branch, worked with stale priorities
+**Expected**: Before each iteration, daemon should sync with roadmap branch
+**Fix**: ✅ ALREADY IMPLEMENTED
+- `_sync_roadmap_branch()` method implemented in daemon.py (lines 380-441)
+- Called at start of each iteration (line 206)
+- Fetches origin/roadmap and merges automatically
+- Handles conflicts gracefully with abort + notification
 
-### Bug 3: Daemon Doesn't Check for Technical Specs ❌
-**Problem**: Daemon starts implementing without checking if technical spec exists
-**Expected**: Before implementing, check if `docs/US-XXX_TECHNICAL_SPEC.md` exists
-**Fix**: Add spec validation before implementation
+### Bug 3: Daemon Doesn't Check for Technical Specs ✅
+**Problem**: Daemon started implementing without checking if technical spec exists
+**Expected**: Before implementing, check if spec exists
+**Fix**: ✅ ALREADY IMPLEMENTED
+- `_ensure_technical_spec()` method implemented in daemon.py (lines 443-505)
+- Called before implementation (line 228)
+- Validates spec existence before proceeding
 
-### Bug 4: Daemon Doesn't Create Specs When Missing ❌
-**Problem**: When spec is missing, daemon just proceeds without creating it
-**Expected**: If spec doesn't exist, daemon should:
-1. Read user story from ROADMAP
-2. Create technical spec in `docs/US-XXX_TECHNICAL_SPEC.md`
-3. Then implement the feature
-**Fix**: Add spec creation workflow
+### Bug 4: Daemon Doesn't Create Specs When Missing ✅
+**Problem**: When spec was missing, daemon just proceeded without creating it
+**Expected**: If spec doesn't exist, create it first
+**Fix**: ✅ ALREADY IMPLEMENTED
+- Spec creation workflow in `_ensure_technical_spec()` method
+- Uses `_build_spec_creation_prompt()` to generate comprehensive specs
+- Commits spec before implementation begins
 
 ---
 
