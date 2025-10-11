@@ -126,7 +126,7 @@ class ClaudeProvider(BaseAIProvider):
         if system_prompt is None:
             system_prompt = self._build_default_system_prompt(working_dir)
 
-        logger.info(f"Executing Claude API request: {prompt[:100]}...")
+        logger.debug(f"Executing Claude API request: {prompt[:100]}...")
 
         try:
             message = self.client.messages.create(
@@ -139,7 +139,7 @@ class ClaudeProvider(BaseAIProvider):
             )
 
             content = self._extract_content(message)
-            logger.info(f"API request completed: {message.usage.input_tokens} in, {message.usage.output_tokens} out")
+            logger.debug(f"API request completed: {message.usage.input_tokens} in, {message.usage.output_tokens} out")
 
             return ProviderResult(
                 content=content,
@@ -177,7 +177,7 @@ class ClaudeProvider(BaseAIProvider):
         Returns:
             ProviderResult
         """
-        logger.info(f"Executing Claude CLI request: {prompt[:100]}...")
+        logger.debug(f"Executing Claude CLI request: {prompt[:100]}...")
 
         try:
             # Use ClaudeCLIInterface for CLI execution

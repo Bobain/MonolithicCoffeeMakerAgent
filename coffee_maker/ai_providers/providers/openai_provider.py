@@ -106,7 +106,7 @@ class OpenAIProvider(BaseAIProvider):
         # Build messages
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}]
 
-        logger.info(f"Executing OpenAI request: {prompt[:100]}...")
+        logger.debug(f"Executing OpenAI request: {prompt[:100]}...")
 
         try:
             response = self.client.chat.completions.create(
@@ -120,7 +120,7 @@ class OpenAIProvider(BaseAIProvider):
             content = response.choices[0].message.content or ""
             usage = response.usage
 
-            logger.info(f"OpenAI request completed: {usage.prompt_tokens} in, {usage.completion_tokens} out")
+            logger.debug(f"OpenAI request completed: {usage.prompt_tokens} in, {usage.completion_tokens} out")
 
             return ProviderResult(
                 content=content,

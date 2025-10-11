@@ -107,7 +107,7 @@ class GeminiProvider(BaseAIProvider):
 
         full_prompt = f"{system_prompt}\n\nTask:\n{prompt}"
 
-        logger.info(f"Executing Gemini request: {prompt[:100]}...")
+        logger.debug(f"Executing Gemini request: {prompt[:100]}...")
 
         try:
             response = self.model.generate_content(
@@ -123,7 +123,7 @@ class GeminiProvider(BaseAIProvider):
             input_tokens = self.count_tokens(full_prompt)
             output_tokens = self.count_tokens(content)
 
-            logger.info(f"Gemini request completed: ~{input_tokens} in, ~{output_tokens} out")
+            logger.debug(f"Gemini request completed: ~{input_tokens} in, ~{output_tokens} out")
 
             return ProviderResult(
                 content=content,
