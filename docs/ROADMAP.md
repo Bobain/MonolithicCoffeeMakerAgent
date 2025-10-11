@@ -98,9 +98,21 @@ US-XXX: Example Feature ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
-**Next Priority**: PRIORITY 2.11 - Integrated Bug Fixing Workflow
+**Next Priority**: PRIORITY 2.9.5 - Transparent Assistant Integration (Simplified Approach)
 
-**Note**: PRIORITY 2.9.5 (Transparent Assistant Integration) is skipped - too complex. Implementing PRIORITY 2.11 (Bug Workflow) next.
+**Status Update**:
+- PRIORITY 2.11 (Bug Workflow): ✅ Part 1 Complete (project-manager side)
+  - Bug ticket creation system implemented
+  - Natural language bug detection added
+  - User notifications working
+  - Branch: feature/priority-2.11-bug-workflow
+  - Commit: 6ccd981
+
+- PRIORITY 2.9.5 (Assistant Integration): 🔄 In Progress
+  - Using simplified async assistant approach
+  - No claude-cli dependency
+  - Non-blocking UI with "waiting for assistant" indicator
+  - Allows user to continue chatting while assistant works
 
 ---
 
