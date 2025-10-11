@@ -20,6 +20,7 @@ Example:
     >>> session.start()
 """
 
+import json
 import logging
 import os
 import re
