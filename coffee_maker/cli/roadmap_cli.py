@@ -296,6 +296,39 @@ def cmd_status(args):
         return 1
 
 
+def cmd_developer_status(args):
+    """Show developer status dashboard.
+
+    PRIORITY 4: Developer Status Dashboard
+
+    Displays real-time developer status including current task, progress,
+    activities, and metrics.
+
+    Args:
+        args: Parsed command-line arguments with optional --watch flag
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager developer-status
+        $ project-manager developer-status --watch
+    """
+    from coffee_maker.cli.developer_status_display import DeveloperStatusDisplay
+
+    display = DeveloperStatusDisplay()
+
+    if hasattr(args, "watch") and args.watch:
+        # Continuous watch mode
+        display.watch(interval=args.interval if hasattr(args, "interval") else 5)
+    else:
+        # One-time display
+        if not display.show():
+            return 1
+
+    return 0
+
+
 def cmd_notifications(args):
     """List pending notifications from daemon.
 
@@ -581,6 +614,11 @@ Use 'project-manager chat' for the best experience!
     # Status command
     subparsers.add_parser("status", help="Show daemon status")
 
+    # Developer status command (PRIORITY 4)
+    dev_status_parser = subparsers.add_parser("developer-status", help="Show developer status dashboard")
+    dev_status_parser.add_argument("--watch", action="store_true", help="Continuous watch mode")
+    dev_status_parser.add_argument("--interval", type=int, default=5, help="Update interval in seconds (default: 5)")
+
     # Notifications command
     subparsers.add_parser("notifications", help="List pending notifications")
 
@@ -605,6 +643,7 @@ Use 'project-manager chat' for the best experience!
     commands = {
         "view": cmd_view,
         "status": cmd_status,
+        "developer-status": cmd_developer_status,  # PRIORITY 4
         "notifications": cmd_notifications,
         "respond": cmd_respond,
         "sync": cmd_sync,
