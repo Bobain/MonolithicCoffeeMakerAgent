@@ -25,9 +25,11 @@ class ReadFileInput(BaseModel):
 class ReadFileTool(BaseTool):
     """Tool to read file contents."""
 
-    name = "read_file"
-    description = "Read contents of a file. Use this to examine source code, documentation, or configuration files."
-    args_schema = ReadFileInput
+    name: str = "read_file"
+    description: str = (
+        "Read contents of a file. Use this to examine source code, documentation, or configuration files."
+    )
+    args_schema: type[BaseModel] = ReadFileInput
 
     def _run(self, file_path: str, start_line: Optional[int] = None, end_line: Optional[int] = None) -> str:
         """Read file contents."""
@@ -60,9 +62,11 @@ class SearchCodeInput(BaseModel):
 class SearchCodeTool(BaseTool):
     """Tool to search code using grep."""
 
-    name = "search_code"
-    description = "Search for patterns in code files. Use this to find function definitions, class names, or specific code patterns."
-    args_schema = SearchCodeInput
+    name: str = "search_code"
+    description: str = (
+        "Search for patterns in code files. Use this to find function definitions, class names, or specific code patterns."
+    )
+    args_schema: type[BaseModel] = SearchCodeInput
 
     def _run(self, pattern: str, file_pattern: str = "*.py", directory: str = ".") -> str:
         """Search code using grep."""
@@ -92,9 +96,9 @@ class ListFilesInput(BaseModel):
 class ListFilesTool(BaseTool):
     """Tool to list files matching a pattern."""
 
-    name = "list_files"
-    description = "List files matching a pattern. Use this to discover files in the codebase."
-    args_schema = ListFilesInput
+    name: str = "list_files"
+    description: str = "List files matching a pattern. Use this to discover files in the codebase."
+    args_schema: type[BaseModel] = ListFilesInput
 
     def _run(self, pattern: str, directory: str = ".") -> str:
         """List files using glob."""
@@ -120,11 +124,11 @@ class GitLogInput(BaseModel):
 class GitLogTool(BaseTool):
     """Tool to view git commit history."""
 
-    name = "git_log"
-    description = (
+    name: str = "git_log"
+    description: str = (
         "View recent git commit history. Use this to understand recent changes or find when something was modified."
     )
-    args_schema = GitLogInput
+    args_schema: type[BaseModel] = GitLogInput
 
     def _run(self, max_commits: int = 10, file_path: Optional[str] = None) -> str:
         """Get git log."""
@@ -153,9 +157,9 @@ class GitDiffInput(BaseModel):
 class GitDiffTool(BaseTool):
     """Tool to view git differences."""
 
-    name = "git_diff"
-    description = "View git differences. Use this to see what changed in files or between commits."
-    args_schema = GitDiffInput
+    name: str = "git_diff"
+    description: str = "View git differences. Use this to see what changed in files or between commits."
+    args_schema: type[BaseModel] = GitDiffInput
 
     def _run(self, file_path: Optional[str] = None, commit: Optional[str] = None) -> str:
         """Get git diff."""
@@ -185,12 +189,12 @@ class ExecuteBashInput(BaseModel):
 class ExecuteBashTool(BaseTool):
     """Tool to execute bash commands (read-only operations)."""
 
-    name = "execute_bash"
-    description = (
+    name: str = "execute_bash"
+    description: str = (
         "Execute bash commands for read-only operations like ls, cat, ps, etc. "
         "DO NOT use for write operations. Use this to check system state or process info."
     )
-    args_schema = ExecuteBashInput
+    args_schema: type[BaseModel] = ExecuteBashInput
 
     def _run(self, command: str) -> str:
         """Execute bash command."""
