@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 2.1
+**Version**: 2.2
 **Last Updated**: 2025-10-11
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -3181,6 +3181,7 @@ PM documents decision and informs developer
 | 1.9 | 2025-10-11 | Added Section 9.1.1 - project-manager chat Modes | Documented CLI vs API modes, nesting detection, mode selection logic, user decision matrix. Addresses CLI nesting prevention feature. |
 | 2.0 | 2025-10-11 | Added Section 9.3 - Updating Roadmap Branch on GitHub | **MAJOR VERSION**: Complete automated workflow for updating 'roadmap' branch on GitHub using Python script (scripts/merge_roadmap_pr.py). Addresses user stories: "main branch always up to date" and "roadmap branch in github always current so developer can see what to achieve". Includes setup instructions, integration examples for all team members (project_manager, code_developer, assistant), safety guarantees, and error handling. Branch strategy documented. |
 | 2.1 | 2025-10-11 | Added Section 3.4 - Role: Assistant (LangChain-Powered AI Helper) | Defined assistant role, responsibilities, authorities, and task delegation guidelines. Includes: delegation decision matrix (ALWAYS/COLLABORATIVE/NEVER), 6 tools available to assistant (read_file, search_code, list_files, git_log, git_diff, execute_bash), best practices for PM→Assistant delegation, auto-refresh documentation requirement (every 30 minutes), availability requirements (always up when project-manager running). Renumbered Team Dynamics to 3.5. Addresses user request: "project_manager should know which tasks to delegate to assistant thanks to team collaboration document". |
+| 2.2 | 2025-10-11 | Enhanced Section 3.4 - Added DoD Validation Capability for Assistant | Added "DoD Validation" to assistant delegation matrix (ALWAYS DELEGATE category). Documented assistant's ability to validate Definition of Done criteria using execute_bash tool. Includes comprehensive DoD validation example: running pytest, checking exit codes, parsing test results, validating build success. Assistant can now answer "Are all tests passing?" by running tests and reporting clear ✅/❌ status. Critical for PM to validate DoD without manual testing. Addresses assistant's need to run bash commands for DoD validation. |
 
 **To add new version**:
 1. Make changes to document
