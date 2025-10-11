@@ -1644,6 +1644,7 @@ PM → Daemon: "Approved: Use pytest for US-009 tests"
 | **Git History** | "When was X changed?" | Has git tools | Let assistant use git_log |
 | **File Structure** | "What files exist in X?" | Has list_files tool | Let assistant use glob patterns |
 | **Troubleshooting** | "Why is X not working?" | Can debug systematically | Let assistant investigate |
+| **DoD Validation** | "Are all tests passing?" "Does code build?" | Can run tests/builds with execute_bash | Let assistant run pytest, builds, check exit codes |
 
 **🟡 COLLABORATIVE TASKS** (PM + Assistant):
 
@@ -1710,6 +1711,37 @@ Assistant responds with:
    ```"
 
 PM relays to User (or lets user see assistant's response directly)
+```
+
+**DoD Validation Example**:
+```
+PM needs to validate DoD: "Are all tests passing for PRIORITY 4?"
+
+PM delegates to Assistant:
+  "Assistant, please run the test suite and report if all tests are passing.
+   Check for any failures or errors."
+
+Assistant uses execute_bash tool:
+  - Runs: pytest tests/ -v
+  - Captures exit code and output
+  - Analyzes results
+
+Assistant responds:
+  "Test suite results:
+
+   ✅ All tests passing: 45/45
+
+   Test execution:
+   - tests/test_developer_status.py: 8 passed
+   - tests/test_daemon.py: 12 passed
+   - tests/integration/test_status_integration.py: 5 passed
+   - All other test files: 20 passed
+
+   Exit code: 0 (success)
+
+   ✅ DoD criterion 'All tests passing' is MET"
+
+PM updates DoD checklist based on assistant's validation
 ```
 
 **Auto-Refresh Documentation (Every 30 Minutes)**:
