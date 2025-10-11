@@ -267,15 +267,64 @@ def cmd_chat(args):
         return 1
 
     try:
+        import os
+        import shutil
+
+        # Auto-detect mode: CLI vs API (same logic as daemon)
+        claude_path = "/opt/homebrew/bin/claude"
+        has_cli = shutil.which("claude") or os.path.exists(claude_path)
+        has_api_key = bool(os.environ.get("ANTHROPIC_API_KEY"))
+
+        use_claude_cli = False
+
+        if has_cli:
+            # CLI available - use it as default (free with subscription!)
+            print("=" * 70)
+            print("ℹ️  Auto-detected: Using Claude CLI (default)")
+            print("=" * 70)
+            print("💡 TIP: Claude CLI is free with your subscription!")
+            print("=" * 70 + "\n")
+            use_claude_cli = True
+        elif has_api_key:
+            # No CLI but has API key - use API
+            print("=" * 70)
+            print("ℹ️  Auto-detected: Using Anthropic API (no CLI found)")
+            print("=" * 70)
+            print("💡 TIP: Install Claude CLI for free usage!")
+            print("    Get it from: https://claude.ai/")
+            print("=" * 70 + "\n")
+            use_claude_cli = False
+        else:
+            # Neither available - error
+            print("=" * 70)
+            print("❌ ERROR: No Claude access available!")
+            print("=" * 70)
+            print("\nThe chat requires either:")
+            print("  1. Claude CLI installed (recommended - free with subscription), OR")
+            print("  2. Anthropic API key (requires credits)")
+            print("\n🔧 SOLUTION 1 (CLI Mode - Recommended):")
+            print("  1. Install Claude CLI from: https://claude.ai/")
+            print("  2. Run: poetry run project-manager chat")
+            print("\n🔧 SOLUTION 2 (API Mode):")
+            print("  1. Get your API key from: https://console.anthropic.com/")
+            print("  2. Set the environment variable:")
+            print("     export ANTHROPIC_API_KEY='your-api-key-here'")
+            print("  3. Run: poetry run project-manager chat")
+            print("\n" + "=" * 70 + "\n")
+            return 1
+
         # Initialize components
         editor = RoadmapEditor(ROADMAP_PATH)
-        ai_service = AIService()
+        ai_service = AIService(use_claude_cli=use_claude_cli, claude_cli_path=claude_path)
 
         # Check AI service availability
         if not ai_service.check_available():
             print("❌ AI service not available")
             print("\nPlease check:")
-            print("  - ANTHROPIC_API_KEY is valid")
+            if use_claude_cli:
+                print("  - Claude CLI is installed and working")
+            else:
+                print("  - ANTHROPIC_API_KEY is valid")
             print("  - Internet connection is active")
             return 1
 
@@ -287,7 +336,9 @@ def cmd_chat(args):
 
     except ValueError as e:
         print(f"❌ Configuration error: {e}")
-        print("\nPlease set ANTHROPIC_API_KEY in your .env file")
+        if "ANTHROPIC_API_KEY" in str(e):
+            print("\n💡 TIP: Install Claude CLI for free usage (no API key needed)!")
+            print("   Get it from: https://claude.ai/")
         return 1
     except Exception as e:
         logger.error(f"Chat session failed: {e}")
