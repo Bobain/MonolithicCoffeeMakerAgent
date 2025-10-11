@@ -27,6 +27,11 @@ from datetime import datetime
 from pathlib import Path
 
 from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
+from coffee_maker.autonomous.developer_status import (
+    ActivityType,
+    DeveloperState,
+    DeveloperStatus,
+)
 from coffee_maker.autonomous.git_manager import GitManager
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 from coffee_maker.cli.notifications import (
@@ -120,6 +125,9 @@ class DevDaemon:
 
         self.notifications = NotificationDB()
 
+        # PRIORITY 4: Developer status tracking
+        self.status = DeveloperStatus()
+
         # State
         self.running = False
         self.attempted_priorities = {}  # Track retry attempts: {priority_name: count}
@@ -163,6 +171,9 @@ class DevDaemon:
         self.running = True
         self.start_time = datetime.now()
         logger.info("🤖 DevDaemon starting...")
+
+        # PRIORITY 4: Set initial status
+        self.status.update_status(DeveloperState.IDLE, current_step="Starting daemon")
 
         # Check prerequisites
         if not self._check_prerequisites():
@@ -210,12 +221,17 @@ class DevDaemon:
                 # Reload roadmap
                 self.parser = RoadmapParser(str(self.roadmap_path))
 
+                # PRIORITY 4: Update status - analyzing roadmap
+                self.status.update_status(DeveloperState.THINKING, current_step="Analyzing ROADMAP.md")
+
                 # Get next task
                 next_priority = self.parser.get_next_planned_priority()
 
                 if not next_priority:
                     logger.info("✅ No more planned priorities - all done!")
                     self._notify_completion()
+                    # PRIORITY 4: Return to idle when done
+                    self.status.update_status(DeveloperState.IDLE, current_step="All priorities complete")
                     break
 
                 logger.info(f"📋 Next priority: {next_priority['name']} - {next_priority['title']}")
@@ -232,22 +248,54 @@ class DevDaemon:
 
                 # Ask for approval if needed
                 if not self.auto_approve:
+                    # PRIORITY 4: Set blocked while waiting for approval
+                    self.status.add_question(
+                        question_id=f"approve_{next_priority['name']}",
+                        question_type="implementation_approval",
+                        message=f"Approve implementation of {next_priority['name']}?",
+                        context=f"Priority: {next_priority['title']}",
+                    )
+
                     if not self._request_approval(next_priority):
                         logger.info("User declined - waiting for next iteration")
+                        # Remove question since it was answered (declined)
+                        self.status.remove_question(f"approve_{next_priority['name']}")
                         time.sleep(self.sleep_interval)
                         continue
+
+                    # Remove question since it was approved
+                    self.status.remove_question(f"approve_{next_priority['name']}")
+
+                # PRIORITY 4: Update status - working on implementation
+                task_info = {
+                    "priority": next_priority.get("number", 0),
+                    "name": f"{next_priority['name']}: {next_priority['title']}",
+                }
+                self.status.update_status(
+                    DeveloperState.WORKING, task=task_info, progress=0, current_step="Starting implementation"
+                )
 
                 # Execute implementation
                 success = self._implement_priority(next_priority)
 
                 if success:
                     logger.info(f"✅ Successfully implemented {next_priority['name']}")
+                    # PRIORITY 4: Mark task as completed
+                    self.status.task_completed()
                     # PRIORITY 2.7: Increment iteration counter only on success
                     self.iterations_since_compact += 1
                     # PRIORITY 2.8: Write status after completion
                     self._write_status(priority=next_priority)
+                    # PRIORITY 4: Return to idle after task complete
+                    self.status.update_status(DeveloperState.IDLE, current_step="Task completed, waiting for next")
                 else:
                     logger.warning(f"⚠️  Implementation failed for {next_priority['name']}")
+                    # PRIORITY 4: Log error activity
+                    self.status.report_activity(
+                        ActivityType.ERROR_ENCOUNTERED,
+                        f"Implementation failed for {next_priority['name']}",
+                        details={"priority": next_priority["name"]},
+                    )
 
                 # Sleep before next iteration
                 logger.info(f"💤 Sleeping {self.sleep_interval}s before next iteration...")
@@ -275,6 +323,13 @@ class DevDaemon:
                 import traceback
 
                 traceback.print_exc()
+
+                # PRIORITY 4: Log crash as error activity
+                self.status.report_activity(
+                    ActivityType.ERROR_ENCOUNTERED,
+                    f"Daemon crashed: {type(e).__name__}",
+                    details={"exception": str(e)[:200], "crash_count": self.crash_count},
+                )
 
                 # PRIORITY 2.8: Write status after crash
                 priority_context = next_priority if "next_priority" in locals() else None
@@ -671,6 +726,9 @@ The daemon will skip this priority in future iterations.
             f"🚀 Starting implementation of {priority_name} (attempt {self.attempted_priorities[priority_name]}/{self.max_retries})"
         )
 
+        # PRIORITY 4: Update progress - creating branch
+        self.status.report_progress(10, "Creating feature branch")
+
         # Create branch
         branch_name = f"feature/{priority_name.lower().replace(' ', '-').replace(':', '')}"
         logger.info(f"Creating branch: {branch_name}")
@@ -679,8 +737,16 @@ The daemon will skip this priority in future iterations.
             logger.error("Failed to create branch")
             return False
 
+        # PRIORITY 4: Log branch creation
+        self.status.report_activity(
+            ActivityType.GIT_BRANCH, f"Created branch: {branch_name}", details={"branch": branch_name}
+        )
+
         # Build prompt for Claude
         prompt = self._build_implementation_prompt(priority)
+
+        # PRIORITY 4: Update progress - calling Claude API
+        self.status.report_progress(20, "Executing implementation with Claude API")
 
         logger.info("Executing Claude API with implementation prompt...")
 
@@ -693,6 +759,9 @@ The daemon will skip this priority in future iterations.
 
         logger.info("✅ Claude API execution complete")
         logger.info(f"📊 Token usage: {result.usage['input_tokens']} in, {result.usage['output_tokens']} out")
+
+        # PRIORITY 4: Update progress - implementation complete
+        self.status.report_progress(60, "Implementation complete, checking changes")
 
         # Check if any files were changed (Fix for infinite loop issue)
         if self.git.is_clean():
@@ -730,6 +799,9 @@ Status: Requires human decision
             # Return "success" to avoid infinite retry - human will decide next steps
             return True
 
+        # PRIORITY 4: Update progress - committing changes
+        self.status.report_progress(70, "Committing changes")
+
         # Commit changes
         commit_message = self._build_commit_message(priority)
 
@@ -739,6 +811,14 @@ Status: Requires human decision
 
         logger.info("✅ Changes committed")
 
+        # PRIORITY 4: Log commit activity
+        self.status.report_activity(
+            ActivityType.GIT_COMMIT, f"Committed {priority_name}", details={"priority": priority_name}
+        )
+
+        # PRIORITY 4: Update progress - pushing
+        self.status.report_progress(80, "Pushing to remote")
+
         # Push
         if not self.git.push():
             logger.error("Failed to push branch")
@@ -746,13 +826,23 @@ Status: Requires human decision
 
         logger.info("✅ Branch pushed")
 
+        # PRIORITY 4: Log push activity
+        self.status.report_activity(
+            ActivityType.GIT_PUSH, f"Pushed branch: {branch_name}", details={"branch": branch_name}
+        )
+
         # Create PR if enabled
         if self.create_prs:
+            # PRIORITY 4: Update status to REVIEWING
+            self.status.update_status(DeveloperState.REVIEWING, progress=90, current_step="Creating pull request")
             pr_body = self._build_pr_body(priority)
             pr_url = self.git.create_pull_request(f"Implement {priority_name}: {priority_title}", pr_body)
 
             if pr_url:
                 logger.info(f"✅ PR created: {pr_url}")
+
+                # PRIORITY 4: Update progress - PR created
+                self.status.report_progress(100, f"PR created: {pr_url}")
 
                 # Notify user
                 self.notifications.create_notification(
@@ -764,6 +854,8 @@ Status: Requires human decision
                 )
             else:
                 logger.warning("Failed to create PR")
+                # PRIORITY 4: Still mark as complete even if PR failed
+                self.status.report_progress(100, "Implementation complete (PR creation failed)")
 
         return True
 
