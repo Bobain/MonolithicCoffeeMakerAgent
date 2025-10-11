@@ -130,23 +130,170 @@ def cmd_view(args):
 def cmd_status(args):
     """Show daemon status.
 
+    PRIORITY 2.8: Daemon Status Reporting
+
+    Reads ~/.coffee_maker/daemon_status.json and displays current daemon status.
+
     Args:
         args: Parsed command-line arguments
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager status
+
+        Daemon Status: Running
+        PID: 12345
+        Started: 2025-10-11 10:30:00
+        Current Priority: PRIORITY 2.8 - Daemon Status Reporting
+        Iteration: 5
+        Crashes: 0/3
     """
+    import json
+    from datetime import datetime
+    from pathlib import Path
+
     print("\n" + "=" * 80)
-    print("Daemon Status")
+    print("Code Developer Daemon Status")
     print("=" * 80 + "\n")
 
-    # For MVP, this is a placeholder
-    # In Phase 2, this will query daemon's actual status
-    print("Status: Not implemented yet (MVP Phase 1)")
-    print("\nDaemon status will be available in Phase 2:")
-    print("  - Running/Stopped status")
-    print("  - Current task")
-    print("  - Progress")
-    print("  - Last activity")
+    # Read status file
+    status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
 
-    return 0
+    if not status_file.exists():
+        print("❌ Daemon status file not found")
+        print("\nThe daemon is either:")
+        print("  - Not running")
+        print("  - Never been started")
+        print("\n💡 Start the daemon with: poetry run code-developer")
+        return 1
+
+    try:
+        with open(status_file, "r") as f:
+            status = json.load(f)
+
+        # Display daemon status
+        daemon_status = status.get("status", "unknown")
+        if daemon_status == "running":
+            print("Status: 🟢 Running")
+        elif daemon_status == "stopped":
+            print("Status: 🔴 Stopped")
+        else:
+            print(f"Status: ⚪ {daemon_status}")
+
+        # PID and process info
+        pid = status.get("pid")
+        if pid:
+            print(f"PID: {pid}")
+
+            # Check if process is actually running
+            import psutil
+
+            try:
+                process = psutil.Process(pid)
+                if process.is_running():
+                    print(
+                        f"Process: ✅ Running (CPU: {process.cpu_percent()}%, Memory: {process.memory_info().rss / 1024 / 1024:.1f} MB)"
+                    )
+                else:
+                    print("Process: ⚠️  Not running (stale status file)")
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                print("Process: ⚠️  Not found (stale status file)")
+
+        # Start time
+        started_at = status.get("started_at")
+        if started_at:
+            try:
+                start_dt = datetime.fromisoformat(started_at)
+                print(f"Started: {start_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+
+                # Calculate uptime
+                uptime = datetime.now() - start_dt
+                hours = int(uptime.total_seconds() // 3600)
+                minutes = int((uptime.total_seconds() % 3600) // 60)
+                print(f"Uptime: {hours}h {minutes}m")
+            except ValueError:
+                print(f"Started: {started_at}")
+
+        # Current priority
+        current_priority = status.get("current_priority")
+        if current_priority:
+            name = current_priority.get("name", "Unknown")
+            title = current_priority.get("title", "")
+            print(f"\nCurrent Priority: {name}")
+            if title:
+                print(f"  {title}")
+
+            priority_started = current_priority.get("started_at")
+            if priority_started:
+                try:
+                    priority_dt = datetime.fromisoformat(priority_started)
+                    elapsed = datetime.now() - priority_dt
+                    minutes = int(elapsed.total_seconds() // 60)
+                    print(f"  Working on this for: {minutes} minutes")
+                except ValueError:
+                    pass
+        else:
+            print("\nCurrent Priority: None (idle)")
+
+        # Iteration count
+        iteration = status.get("iteration", 0)
+        print(f"\nIteration: {iteration}")
+
+        # Crash info
+        crashes = status.get("crashes", {})
+        crash_count = crashes.get("count", 0)
+        max_crashes = crashes.get("max", 3)
+        print(f"Crashes: {crash_count}/{max_crashes}")
+
+        if crash_count > 0:
+            print("⚠️  Recent crashes detected!")
+            crash_history = crashes.get("history", [])
+            if crash_history:
+                print("\nRecent crash history:")
+                for i, crash in enumerate(crash_history[-3:], 1):
+                    timestamp = crash.get("timestamp", "Unknown")
+                    exception_type = crash.get("exception_type", "Unknown")
+                    print(f"  {i}. {timestamp} - {exception_type}")
+
+        # Context management info
+        context = status.get("context", {})
+        iterations_since_compact = context.get("iterations_since_compact", 0)
+        compact_interval = context.get("compact_interval", 10)
+        last_compact = context.get("last_compact")
+
+        print(f"\nContext Management:")
+        print(f"  Iterations since last compact: {iterations_since_compact}/{compact_interval}")
+        if last_compact:
+            try:
+                compact_dt = datetime.fromisoformat(last_compact)
+                print(f"  Last compact: {compact_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+            except ValueError:
+                print(f"  Last compact: {last_compact}")
+        else:
+            print("  Last compact: Never")
+
+        # Last update time
+        last_update = status.get("last_update")
+        if last_update:
+            try:
+                update_dt = datetime.fromisoformat(last_update)
+                time_since = datetime.now() - update_dt
+                seconds = int(time_since.total_seconds())
+                print(f"\nLast update: {seconds}s ago ({update_dt.strftime('%H:%M:%S')})")
+            except ValueError:
+                print(f"\nLast update: {last_update}")
+
+        return 0
+
+    except json.JSONDecodeError:
+        print("❌ Status file is corrupted")
+        print(f"\nFile: {status_file}")
+        return 1
+    except Exception as e:
+        print(f"❌ Error reading status: {e}")
+        return 1
 
 
 def cmd_notifications(args):
