@@ -5,7 +5,6 @@ These tests verify real GitHub credentials and API functionality.
 They are marked as integration tests and require valid GITHUB_TOKEN.
 """
 
-import os
 import pytest
 
 pytest.skip("GitHub integration tests require external network access", allow_module_level=True)
@@ -13,6 +12,7 @@ pytest.skip("GitHub integration tests require external network access", allow_mo
 from dotenv import load_dotenv
 from github import Github, Auth
 from coffee_maker.code_formatter.crewai.tools import PostSuggestionToolLangAI
+from coffee_maker.config import ConfigManager
 
 # Load environment variables from .env file
 load_dotenv()
@@ -25,9 +25,9 @@ class TestGitHubIntegration:
     @pytest.fixture(autouse=True)
     def setup(self):
         """Verify GITHUB_TOKEN is available."""
-        self.token = os.getenv("GITHUB_TOKEN")
-        if not self.token:
+        if not ConfigManager.has_github_token():
             pytest.skip("GITHUB_TOKEN environment variable not set")
+        self.token = ConfigManager.get_github_token(required=False)
 
     def test_github_authentication(self):
         """Test that we can authenticate with GitHub using current credentials."""
@@ -124,9 +124,9 @@ class TestGitHubPermissions:
     @pytest.fixture(autouse=True)
     def setup(self):
         """Setup GitHub client."""
-        token = os.getenv("GITHUB_TOKEN")
-        if not token:
+        if not ConfigManager.has_github_token():
             pytest.skip("GITHUB_TOKEN environment variable not set")
+        token = ConfigManager.get_github_token(required=False)
         auth = Auth.Token(token)
         self.github = Github(auth=auth)
 

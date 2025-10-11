@@ -38,6 +38,7 @@ except ImportError:
 sys.path.insert(0, str(Path(__file__).parent))
 
 from coffee_maker.autonomous.daemon import DevDaemon
+from coffee_maker.config import ConfigManager
 
 
 def check_claude_session():
@@ -174,7 +175,7 @@ Note: This is a temporary script. After PRIORITY 3 is complete,
         # Auto-detect: PREFER CLI as default (it's free and subscription-based)
         # Only use API if explicitly configured (--use-api flag or CLI not available)
         has_cli = shutil.which("claude") or os.path.exists(args.claude_path)
-        has_api_key = bool(os.environ.get("ANTHROPIC_API_KEY"))
+        has_api_key = ConfigManager.has_anthropic_api_key()
 
         if has_cli:
             # CLI available - use it as default

@@ -5,9 +5,9 @@ directly instead of the Claude CLI.
 """
 
 import pytest
-import os
 from coffee_maker.autonomous.daemon import DevDaemon
 from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
+from coffee_maker.config import ConfigManager
 
 
 class TestClaudeAPIInterface:
@@ -39,7 +39,7 @@ class TestClaudeAPIInterface:
     @pytest.mark.integration
     def test_claude_api_check_available(self):
         """Verify check_available() works correctly."""
-        if not os.environ.get("ANTHROPIC_API_KEY"):
+        if not ConfigManager.has_anthropic_api_key():
             pytest.skip("ANTHROPIC_API_KEY not set")
 
         api = ClaudeAPI()
@@ -49,7 +49,7 @@ class TestClaudeAPIInterface:
     @pytest.mark.integration
     def test_claude_api_execute_simple_prompt(self):
         """Verify Claude API can execute a simple prompt."""
-        if not os.environ.get("ANTHROPIC_API_KEY"):
+        if not ConfigManager.has_anthropic_api_key():
             pytest.skip("ANTHROPIC_API_KEY not set")
 
         api = ClaudeAPI()
@@ -85,7 +85,7 @@ class TestDaemonAPIMode:
 
     def test_daemon_api_mode_prerequisite_check(self):
         """Verify daemon prerequisite check in API mode."""
-        if not os.environ.get("ANTHROPIC_API_KEY"):
+        if not ConfigManager.has_anthropic_api_key():
             pytest.skip("ANTHROPIC_API_KEY not set")
 
         daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=False)
@@ -97,7 +97,7 @@ class TestDaemonAPIMode:
     @pytest.mark.integration
     def test_daemon_api_mode_execution(self, tmp_path):
         """Integration test: Verify daemon can execute in API mode."""
-        if not os.environ.get("ANTHROPIC_API_KEY"):
+        if not ConfigManager.has_anthropic_api_key():
             pytest.skip("ANTHROPIC_API_KEY not set")
 
         # Create test roadmap with simple task
