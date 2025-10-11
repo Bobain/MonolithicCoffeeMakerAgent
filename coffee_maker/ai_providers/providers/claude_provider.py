@@ -25,6 +25,7 @@ from coffee_maker.ai_providers.base import (
     ProviderCapability,
     ProviderResult,
 )
+from coffee_maker.config.manager import ConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +66,8 @@ class ClaudeProvider(BaseAIProvider):
         self.cost_per_1m_output = config.get("cost_per_1m_output_tokens", 75.0)
 
         if not self.use_cli:
-            # Initialize API client
-            api_key = os.getenv(config.get("api_key_env", "ANTHROPIC_API_KEY"))
+            # Initialize API client using ConfigManager
+            api_key = ConfigManager.get_anthropic_api_key(required=True)
             self.client = Anthropic(api_key=api_key)
         else:
             # CLI mode - import ClaudeCLIInterface
@@ -225,9 +226,9 @@ class ClaudeProvider(BaseAIProvider):
 
             return shutil.which("claude") is not None
         else:
-            # Check if API key is set
-            api_key = os.getenv(self.config.get("api_key_env", "ANTHROPIC_API_KEY"))
-            if not api_key:
+            # Check if API key is set using ConfigManager
+            if not ConfigManager.has_anthropic_api_key():
+                logger.warning("ANTHROPIC_API_KEY not set")
                 return False
 
             # Try a simple API call

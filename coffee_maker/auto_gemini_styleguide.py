@@ -29,6 +29,8 @@ import google.generativeai as genai
 import google.generativeai.types  # Added: For BlockedPromptException
 from dotenv import load_dotenv
 
+from coffee_maker.config.manager import APIKeyMissingError, ConfigManager
+
 # --- Configuration ---
 # Relative path to the style guide from the script's location or project root
 DEFAULT_STYLEGUIDE_PATH = ".gemini/styleguide.md"
@@ -45,42 +47,54 @@ EXPLANATIONS_DELIMITER_END = "---EXPLANATIONS_END---"
 
 
 def load_api_key(env_file_path: str, let_load_dotenv_search: bool = True) -> str | None:
-    """Loads the Google API key from .env file or environment variables.
+    """Loads the Google API key from .env file or environment variables using ConfigManager.
+
+    ConfigManager automatically checks multiple environment variable names:
+    - GEMINI_API_KEY (primary)
+    - GOOGLE_API_KEY (alternative)
+    - COFFEE_MAKER_GEMINI_API_KEY (project-specific)
 
     Args:
         env_file_path (str): The path to the .env file.
-        let_load_dotenv_search (bool): If True, and key not found via `env_file_path` or system vars,
+        let_load_dotenv_search (bool): If True, and key not found via `env_file_path`,
                                         `load_dotenv()` will search default locations.
 
     Returns:
         str | None: The API key if found, otherwise None.
     """
+    # Load .env file if it exists (for other environment variables)
     if pathlib.Path(env_file_path).is_file():
         logging.info(f"Sourcing environment variables from '{env_file_path}'...")
-        # load_dotenv expects a string or Pathlike object for dotenv_path
         load_dotenv(dotenv_path=env_file_path, override=True)
     else:
         logging.info(f"Info: Environment file '{env_file_path}' not found. Checking system environment variables.")
 
-    api_key = os.getenv(API_KEY_ENV_VAR)
-    if not api_key:
-        logging.warning(
-            f"Error: API key not found. Please set the {API_KEY_ENV_VAR} environment variable "
-            f"or provide it in '{env_file_path}'."
-        )
-        logging.info(f"You can get an API key from Google AI Studio (https://aistudio.google.com/app/apikey).")
-
-    if let_load_dotenv_search and load_dotenv():
-        api_key = os.getenv(API_KEY_ENV_VAR)
-        if not api_key:
-            logging.error(
-                "We tried load_dotenv() (which searches default locations like .env) without specifying env_file_path, but could not find the API key."
-            )
-            return None
+    # Try to get API key using ConfigManager (checks multiple variable names)
+    try:
+        api_key = ConfigManager.get_gemini_api_key(required=True)
+        logging.info("Gemini API key loaded successfully from environment")
+        return api_key
+    except APIKeyMissingError:
+        # If not found, try load_dotenv() search
+        if let_load_dotenv_search and load_dotenv():
+            try:
+                api_key = ConfigManager.get_gemini_api_key(required=True)
+                logging.info("Gemini API key loaded successfully from .env file")
+                return api_key
+            except APIKeyMissingError:
+                logging.error(
+                    "API key not found. Tried GEMINI_API_KEY, GOOGLE_API_KEY, and COFFEE_MAKER_GEMINI_API_KEY. "
+                    f"Please set one of these in '{env_file_path}' or your environment."
+                )
+                logging.info("You can get an API key from Google AI Studio (https://aistudio.google.com/app/apikey).")
+                return None
         else:
-            logging.info(f"{API_KEY_ENV_VAR} was found by load_dotenv.")
-
-    return api_key
+            logging.error(
+                "API key not found. Tried GEMINI_API_KEY, GOOGLE_API_KEY, and COFFEE_MAKER_GEMINI_API_KEY. "
+                f"Please set one of these in '{env_file_path}' or your environment."
+            )
+            logging.info("You can get an API key from Google AI Studio (https://aistudio.google.com/app/apikey).")
+            return None
 
 
 def read_file_content(file_path: str) -> str | None:
