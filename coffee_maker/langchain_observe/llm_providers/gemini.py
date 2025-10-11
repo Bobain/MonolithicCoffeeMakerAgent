@@ -1,3 +1,20 @@
+"""Google Gemini LLM provider configuration and utilities.
+
+This module provides configuration data for Google's Gemini models including:
+- Available models (chat, embeddings, code, reasoning)
+- Rate limits for free and paid tiers
+- Model pricing and context lengths
+- API limit handling with fallback support
+
+The module supports automatic rate limit handling with fallback to alternative
+models when quotas are exceeded.
+
+Example:
+    >>> from coffee_maker.langchain_observe.llm_providers.gemini import MODELS_LIST
+    >>> best_chat_model = MODELS_LIST["chat"]["best_models"][0]
+    >>> print(best_chat_model)  # gemini-2.5-pro
+"""
+
 import google
 import logging
 from typing import Any, Callable, Dict, Optional
