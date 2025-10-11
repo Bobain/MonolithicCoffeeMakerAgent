@@ -7507,6 +7507,251 @@ class DeveloperStatusDisplay:
 
 ---
 
+## 🤖 PRIORITY 5: Assistant Auto-Refresh & Always-On Availability
+
+**Goal**: Ensure the LangChain-powered assistant is always available when project-manager runs and automatically refreshes its documentation knowledge
+
+**Duration**: 1 day (4-6 hours)
+**Dependencies**: PRIORITY 2.9.5 (Transparent Assistant Integration)
+**Status**: 📝 Planned
+
+### Why This Is Critical
+
+The assistant was integrated in PRIORITY 2.9.5, but currently:
+- ❌ Assistant doesn't automatically refresh documentation
+- ❌ Assistant's knowledge can become stale
+- ❌ No guarantee assistant is available when project-manager runs
+
+**This priority makes the assistant reliably useful**: Always up-to-date, always available!
+
+---
+
+### Core Features
+
+#### 1. Auto-Refresh Documentation (Every 30 Minutes)
+
+**Requirement**: Assistant automatically re-reads key documentation to stay current
+
+**Documentation to Refresh**:
+- `docs/ROADMAP.md` - Current priorities and completion status
+- `docs/COLLABORATION_METHODOLOGY.md` - Team processes and rules
+- `docs/DOCUMENTATION_INDEX.md` - Available documentation
+- `docs/TUTORIALS.md` - Usage guides
+- Recent git commits (last 10) - Recent changes
+
+**Implementation**:
+```python
+# In chat_interface.py or new assistant_manager.py
+
+import threading
+import time
+from datetime import datetime, timedelta
+
+class AssistantManager:
+    def __init__(self, assistant_bridge):
+        self.assistant = assistant_bridge
+        self.last_refresh = None
+        self.refresh_interval = 1800  # 30 minutes in seconds
+        self.refresh_thread = None
+
+    def start_auto_refresh(self):
+        """Start background thread for auto-refresh."""
+        self.refresh_thread = threading.Thread(
+            target=self._auto_refresh_loop,
+            daemon=True
+        )
+        self.refresh_thread.start()
+
+    def _auto_refresh_loop(self):
+        """Background loop that refreshes documentation every 30 minutes."""
+        while True:
+            self._refresh_documentation()
+            time.sleep(self.refresh_interval)
+
+    def _refresh_documentation(self):
+        """Read and process key documentation files."""
+        docs_to_refresh = [
+            "docs/ROADMAP.md",
+            "docs/COLLABORATION_METHODOLOGY.md",
+            "docs/DOCUMENTATION_INDEX.md",
+            "docs/TUTORIALS.md"
+        ]
+
+        # Read each doc and update assistant's memory
+        for doc_path in docs_to_refresh:
+            self.assistant.refresh_document(doc_path)
+
+        # Update git history
+        self.assistant.refresh_git_history()
+
+        self.last_refresh = datetime.now()
+```
+
+#### 2. Always-On Availability
+
+**Requirement**: Assistant must always be available when project-manager is running
+
+**Current State**: Assistant is initialized in chat interface
+
+**Enhanced State**: Assistant starts automatically with project-manager
+
+**Implementation**:
+```python
+# In roadmap_cli.py main()
+
+def main():
+    """Main entry point for project-manager CLI."""
+
+    # Initialize assistant on startup
+    assistant_manager = AssistantManager(assistant_bridge)
+    assistant_manager.start_auto_refresh()
+
+    # Make assistant available globally
+    cli_context = {
+        'assistant': assistant_manager,
+        'roadmap_parser': parser,
+        'notif_service': notif_service
+    }
+
+    # All commands can now access assistant via cli_context
+    # ...
+```
+
+#### 3. Status Indicator
+
+**Command**: `project-manager assistant-status`
+
+**Output**:
+```
+🤖 ASSISTANT STATUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Status: 🟢 ONLINE
+Last Documentation Refresh: 2025-10-11 14:30:00 (5 minutes ago)
+Next Refresh: in 25 minutes
+
+Documentation Knowledge:
+  ✅ ROADMAP.md (Current as of: 2025-10-11 14:30:00)
+  ✅ COLLABORATION_METHODOLOGY.md (v2.1)
+  ✅ DOCUMENTATION_INDEX.md (26 documents indexed)
+  ✅ Git History (Last 10 commits loaded)
+
+Tools Available:
+  ✅ read_file
+  ✅ search_code
+  ✅ list_files
+  ✅ git_log
+  ✅ git_diff
+  ✅ execute_bash
+
+Ready to answer questions! 🚀
+```
+
+#### 4. Refresh on Demand
+
+**Command**: `project-manager assistant-refresh`
+
+**Purpose**: Manually trigger documentation refresh (useful after making major changes)
+
+**Output**:
+```
+🔄 Refreshing assistant documentation...
+
+Reading ROADMAP.md... ✅
+Reading COLLABORATION_METHODOLOGY.md... ✅
+Reading DOCUMENTATION_INDEX.md... ✅
+Reading git history... ✅
+
+✅ Assistant knowledge refreshed successfully!
+```
+
+---
+
+### Technical Design
+
+#### Architecture
+
+```
+project-manager (main process)
+  ├── AssistantManager (background thread)
+  │   ├── Auto-refresh timer (every 30 min)
+  │   └── Document loader
+  ├── ChatInterface
+  │   └── Uses AssistantManager.assistant
+  └── CLI Commands
+      └── Can query assistant via context
+```
+
+#### Key Files to Modify
+
+1. **coffee_maker/cli/assistant_manager.py** (NEW)
+   - AssistantManager class
+   - Auto-refresh logic
+   - Background thread management
+
+2. **coffee_maker/cli/roadmap_cli.py** (MODIFY)
+   - Initialize AssistantManager on startup
+   - Add `cmd_assistant_status()` command
+   - Add `cmd_assistant_refresh()` command
+
+3. **coffee_maker/cli/assistant_bridge.py** (MODIFY)
+   - Add `refresh_document(path)` method
+   - Add `refresh_git_history()` method
+   - Cache documentation in memory
+
+4. **coffee_maker/cli/chat_interface.py** (MODIFY)
+   - Use shared AssistantManager instance
+   - Remove local initialization
+
+---
+
+### Acceptance Criteria
+
+- [ ] Assistant starts automatically when project-manager starts
+- [ ] Background thread refreshes documentation every 30 minutes
+- [ ] `project-manager assistant-status` shows refresh status and next refresh time
+- [ ] `project-manager assistant-refresh` manually triggers refresh
+- [ ] Assistant can answer questions using latest documentation
+- [ ] Documentation refresh doesn't block user interaction
+- [ ] Thread shuts down cleanly when project-manager exits
+- [ ] Assistant memory doesn't grow unbounded (old data cleared on refresh)
+
+---
+
+### Testing Plan
+
+1. **Unit Tests**:
+   - Test AssistantManager initialization
+   - Test refresh timer logic
+   - Test document loading
+
+2. **Integration Tests**:
+   - Start project-manager, verify assistant available
+   - Wait 30+ minutes, verify refresh occurs
+   - Run manual refresh, verify documents updated
+   - Check assistant-status command output
+
+3. **Manual Tests**:
+   - Update ROADMAP.md, run `assistant-refresh`, ask assistant about changes
+   - Run project-manager for 1+ hour, verify multiple auto-refreshes
+   - Ask assistant questions before/after refresh to verify knowledge updates
+
+---
+
+### Future Enhancements
+
+- **Selective Refresh**: Only refresh documents that changed (use file mtimes)
+- **Refresh Notifications**: Notify user when major documentation changes detected
+- **Smart Refresh Intervals**: Increase refresh frequency when developer is active
+- **Memory Optimization**: Use embeddings and vector search for large docs
+- **Assistant Health Check**: Detect and recover from assistant failures
+
+---
+
+**This ensures the assistant is always ready to help with up-to-date knowledge!** 🤖📚
+
+---
+
 ## 🔄 Recurring Best Practices
 
 **Philosophy**: Every new feature implementation is an opportunity to improve the entire codebase. These practices should be applied **continuously** throughout development, not as separate tasks.
