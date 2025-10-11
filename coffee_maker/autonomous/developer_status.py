@@ -70,7 +70,7 @@ class DeveloperStatus:
         status.report_progress(50, "Core functionality complete")
     """
 
-    def __init__(self, status_file: Path = None):
+    def __init__(self, status_file: Optional[Path] = None):
         """Initialize status tracker.
 
         Args:
@@ -80,9 +80,9 @@ class DeveloperStatus:
             status_file = Path("data/developer_status.json")
         self.status_file = status_file
         self.current_state = DeveloperState.IDLE
-        self.current_task = None
-        self.activity_log = []
-        self.questions = []
+        self.current_task: Optional[Dict] = None
+        self.activity_log: list = []
+        self.questions: list = []
         self.daemon_started_at = datetime.utcnow().isoformat() + "Z"
 
         # Metrics

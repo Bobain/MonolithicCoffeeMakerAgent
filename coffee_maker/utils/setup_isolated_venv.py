@@ -3,6 +3,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+from typing import Optional
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -22,9 +23,9 @@ def get_venv_python_executable(venv_dir_path: pathlib.Path) -> str:
 
 
 def setup_uv_pip(
-    venv_dir_path: pathlib.Path = None,
-    packages_to_install: list[str] = None,
-    python_version: str = None,
+    venv_dir_path: Optional[pathlib.Path] = None,
+    packages_to_install: Optional[list[str]] = None,
+    python_version: Optional[str] = None,
     overwrite_existing: bool = True,
 ) -> str:  # Return type is str, not None
     """
