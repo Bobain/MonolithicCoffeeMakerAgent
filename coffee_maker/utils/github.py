@@ -249,7 +249,7 @@ def get_pr_modified_files(repo_full_name, pr_number, g: Github = github_client_i
             )
         LOGGER.info(f"Found {len(file_list)} modified files in PR #{pr_number}")
         # Return just the filenames as a simple list to minimize tokens
-        filenames = [f["filename"] for f in file_list if f["filename"].endswith(".py")]
+        filenames = [f["filename"] for f in file_list if f["filename"] and f["filename"].endswith(".py")]
         return {"python_files": filenames, "total_files": len(file_list)}
     except Exception:
         LOGGER.error(f"Could not fetch modified files from PR #{pr_number}.", exc_info=True)

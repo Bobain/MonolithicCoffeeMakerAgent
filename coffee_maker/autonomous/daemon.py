@@ -313,7 +313,9 @@ class DevDaemon:
                     "timestamp": datetime.now().isoformat(),
                     "exception": str(e),
                     "exception_type": type(e).__name__,
-                    "priority": next_priority.get("name") if "next_priority" in locals() else "Unknown",
+                    "priority": (
+                        next_priority.get("name") if "next_priority" in locals() and next_priority else "Unknown"
+                    ),
                     "iteration": iteration,
                 }
                 self.crash_history.append(crash_info)
