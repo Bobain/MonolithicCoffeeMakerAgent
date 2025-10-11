@@ -110,8 +110,8 @@ Note: This is a temporary script. After PRIORITY 3 is complete,
 
     parser.add_argument(
         "--model",
-        default="claude-sonnet-4",
-        help="Claude model to use (default: claude-sonnet-4)",
+        default="sonnet",
+        help="Claude model to use (default: sonnet; options: sonnet, opus, haiku)",
     )
 
     parser.add_argument(
