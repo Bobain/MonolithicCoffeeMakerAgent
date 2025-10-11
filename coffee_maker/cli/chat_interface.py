@@ -41,6 +41,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 from coffee_maker.cli.ai_service import AIService
+from coffee_maker.cli.assistant_bridge import AssistantBridge
 from coffee_maker.cli.bug_tracker import BugTracker
 from coffee_maker.cli.commands import get_command_handler, list_commands
 from coffee_maker.cli.notifications import NotificationDB, NOTIF_PRIORITY_HIGH
@@ -166,6 +167,10 @@ class ChatSession:
         # Initialize bug tracker for integrated bug fixing workflow (PRIORITY 2.11)
         self.bug_tracker = BugTracker()
 
+        # Initialize LangChain-powered assistant for complex questions (PRIORITY 2.9.5)
+        # Assistant uses tools to help with analysis, debugging, code search, etc.
+        self.assistant = AssistantBridge(action_callback=self._display_assistant_action)
+
         # Setup prompt-toolkit for advanced input
         self._setup_prompt_session()
 
@@ -208,6 +213,19 @@ class ChatSession:
             key_bindings=bindings,
             enable_history_search=True,  # Ctrl+R for reverse search
         )
+
+    def _display_assistant_action(self, action: str):
+        """Display assistant action in real-time.
+
+        PRIORITY 2.9.5: Transparent Assistant Integration
+
+        Called by AssistantBridge when assistant uses a tool.
+        Shows user what the assistant is doing.
+
+        Args:
+            action: Action description (e.g., "🔧 read_file: daemon.py")
+        """
+        self.console.print(f"[dim]{action}[/]")
 
     def _load_session(self):
         """Load previous conversation history from file."""
@@ -724,6 +742,9 @@ class ChatSession:
         PRIORITY 2.11: Integrated bug fixing workflow
         Detects bug reports and creates tickets automatically.
 
+        PRIORITY 2.9.5: Transparent Assistant Integration
+        Uses LangChain assistant for complex questions requiring analysis.
+
         Args:
             text: Natural language input
             context: Roadmap context
@@ -764,30 +785,12 @@ class ChatSession:
             if any(keyword in text.lower() for keyword in status_keywords):
                 return self._cmd_daemon_status()
 
+            # PRIORITY 2.9.5: Check if assistant should help with complex question
+            if self.assistant.is_available() and self.assistant.should_invoke_for_question(text):
+                return self._invoke_assistant(text)
+
             # Normal AI-powered response with streaming
-            # Show typing indicator briefly
-            with Live(
-                Spinner("dots", text="[cyan]Claude is thinking...[/]"), console=self.console, refresh_per_second=10
-            ):
-                # Brief pause for UX (let user see the indicator)
-                import time
-
-                time.sleep(0.3)
-
-            # Stream response
-            self.console.print("\n[bold green]Claude:[/] ", end="")
-
-            full_response = ""
-            for chunk in self.ai_service.process_request_stream(user_input=text, context=context, history=self.history):
-                self.console.print(chunk, end="")
-                full_response += chunk
-
-            self.console.print()  # Final newline
-
-            # TODO: Extract action from full_response if needed
-            # For now, streaming responses don't support actions
-
-            return full_response
+            return self._get_normal_ai_response(text)
 
         except Exception as e:
             logger.error(f"Streaming natural language processing failed: {e}", exc_info=True)
@@ -1020,6 +1023,70 @@ class ChatSession:
         self.console.print(table)
         self.console.print("\n[italic]You can also use natural language![/]")
         self.console.print('[dim]Example: "Add a priority for user authentication"[/]\n')
+
+    def _invoke_assistant(self, question: str) -> str:
+        """Invoke LangChain assistant for complex question.
+
+        PRIORITY 2.9.5: Transparent Assistant Integration
+
+        Args:
+            question: User's complex question
+
+        Returns:
+            Assistant's answer with transparent action steps
+        """
+        try:
+            # Show indicator that assistant is working
+            self.console.print("\n[cyan]🔍 Using intelligent assistant to analyze...[/]\n")
+
+            # Invoke assistant (actions will be displayed via callback)
+            result = self.assistant.invoke(question)
+
+            if result["success"]:
+                # Display final answer
+                return result["answer"]
+            else:
+                # Fall back to normal AI if assistant fails
+                error_msg = result.get("error", "Unknown error")
+                logger.warning(f"Assistant failed: {error_msg}, falling back to Claude AI")
+                self.console.print(f"[yellow]Assistant unavailable ({error_msg}), using Claude AI instead...[/]\n")
+
+                # Continue to normal AI response (will be handled by caller)
+                return self._get_normal_ai_response(question)
+
+        except Exception as e:
+            logger.error(f"Assistant invocation failed: {e}", exc_info=True)
+            # Fall back to normal AI
+            return self._get_normal_ai_response(question)
+
+    def _get_normal_ai_response(self, text: str) -> str:
+        """Get normal Claude AI streaming response.
+
+        Args:
+            text: User input
+
+        Returns:
+            Complete AI response
+        """
+        context = self._build_context()
+
+        # Show typing indicator briefly
+        with Live(Spinner("dots", text="[cyan]Claude is thinking...[/]"), console=self.console, refresh_per_second=10):
+            import time
+
+            time.sleep(0.3)
+
+        # Stream response
+        self.console.print("\n[bold green]Claude:[/] ", end="")
+
+        full_response = ""
+        for chunk in self.ai_service.process_request_stream(user_input=text, context=context, history=self.history):
+            self.console.print(chunk, end="")
+            full_response += chunk
+
+        self.console.print()  # Final newline
+
+        return full_response
 
     def _handle_bug_report(self, bug_description: str) -> str:
         """Handle user bug report.
