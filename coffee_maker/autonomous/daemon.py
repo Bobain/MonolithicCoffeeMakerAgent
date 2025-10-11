@@ -19,7 +19,6 @@ Example:
     >>> daemon.run()
 """
 
-import json
 import logging
 import os
 import time
@@ -27,6 +26,7 @@ from datetime import datetime
 from pathlib import Path
 
 from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
+from coffee_maker.utils.file_io import write_json_file
 from coffee_maker.autonomous.developer_status import (
     ActivityType,
     DeveloperState,
@@ -1167,10 +1167,8 @@ The daemon will remain stopped until manually restarted.
 
             # Write to status file
             status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
-            status_file.parent.mkdir(exist_ok=True, parents=True)
 
-            with open(status_file, "w") as f:
-                json.dump(status, f, indent=2)
+            write_json_file(status_file, status)
 
             logger.debug(f"Status written to {status_file}")
 
