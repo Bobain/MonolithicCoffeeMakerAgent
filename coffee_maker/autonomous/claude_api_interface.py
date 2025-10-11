@@ -20,6 +20,8 @@ from typing import Optional
 
 from anthropic import Anthropic
 
+from coffee_maker.config import ConfigManager
+
 logger = logging.getLogger(__name__)
 
 
@@ -94,7 +96,10 @@ class ClaudeAPI:
         self.timeout = timeout
 
         # Initialize Anthropic client
-        self.client = Anthropic(api_key=api_key or os.environ.get("ANTHROPIC_API_KEY"))
+        # Use provided key or get from ConfigManager
+        if api_key is None:
+            api_key = ConfigManager.get_anthropic_api_key()
+        self.client = Anthropic(api_key=api_key)
 
         logger.debug(f"ClaudeAPI initialized with model: {model}")
 
