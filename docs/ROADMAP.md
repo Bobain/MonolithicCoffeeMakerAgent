@@ -1,10 +1,10 @@
 # Coffee Maker Agent - Prioritized Roadmap
 
-**Last Updated**: 2025-10-11 🚨 **NEW USER STORIES ADDED + COMPLETE PRIORITIZATION**
+**Last Updated**: 2025-10-11 🎉 **US-029 (CRITICAL) & US-030 IMPLEMENTED - VISIBILITY LOOP COMPLETE!**
 **Current Branch**: `roadmap`
-**Status**: PRIORITY 1-4 ✅ COMPLETE | **Next: 🚨 US-021 (Refactoring) → US-022 → US-023 → US-024**
-**Quick-Start**: ⚡ CLI: `project-manager view` | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py` | Code Review: see `coffee_maker/code_reviewer/README.md`
-**Achievement**: 🎉 **MASSIVE PROGRESS** - CLI, Daemon, Web UI, Documentation Infrastructure, and Multi-Model Code Review Agent all operational!
+**Status**: PRIORITY 1-4 ✅ COMPLETE | US-028/029/030 ✅ ADDED | **Next: 🚨 US-021 (Refactoring)**
+**Quick-Start**: ⚡ CLI: `project-manager` (defaults to chat!) | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py`
+**Achievement**: 🎉 **VISIBILITY LOOP OPERATIONAL** - code_developer now merges to roadmap frequently, project_manager has real-time visibility!
 
 ---
 
