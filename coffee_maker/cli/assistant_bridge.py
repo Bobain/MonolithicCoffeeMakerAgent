@@ -14,7 +14,6 @@ The assistant:
 """
 
 import logging
-import os
 from typing import Callable, Dict, Optional
 
 from langchain.agents import AgentExecutor, create_react_agent
@@ -23,6 +22,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 
 from coffee_maker.cli.assistant_tools import get_assistant_tools
+from coffee_maker.config import ConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -118,14 +118,14 @@ Question: {input}
             LLM instance or None if no provider available
         """
         # Try Anthropic first
-        if os.environ.get("ANTHROPIC_API_KEY"):
+        if ConfigManager.has_anthropic_api_key():
             try:
                 return ChatAnthropic(model="claude-3-5-sonnet-20241022", temperature=0)
             except Exception as e:
                 logger.warning(f"Failed to initialize Anthropic LLM: {e}")
 
         # Try OpenAI
-        if os.environ.get("OPENAI_API_KEY"):
+        if ConfigManager.has_openai_api_key():
             try:
                 return ChatOpenAI(model="gpt-4", temperature=0)
             except Exception as e:
