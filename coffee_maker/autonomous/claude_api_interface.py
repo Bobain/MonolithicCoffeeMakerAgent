@@ -96,7 +96,7 @@ class ClaudeAPI:
         # Initialize Anthropic client
         self.client = Anthropic(api_key=api_key or os.environ.get("ANTHROPIC_API_KEY"))
 
-        logger.info(f"ClaudeAPI initialized with model: {model}")
+        logger.debug(f"ClaudeAPI initialized with model: {model}")
 
     def execute_prompt(
         self,

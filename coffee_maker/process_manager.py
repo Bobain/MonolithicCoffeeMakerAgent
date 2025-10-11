@@ -34,7 +34,7 @@ class ProcessManager:
         self.pid_file = self.config_dir / "daemon.pid"
         self.status_file = self.config_dir / "daemon_status.json"
 
-        logger.info(f"ProcessManager initialized (config dir: {self.config_dir})")
+        logger.debug(f"ProcessManager initialized (config dir: {self.config_dir})")
 
     def is_daemon_running(self) -> bool:
         """Check if code_developer daemon is running.

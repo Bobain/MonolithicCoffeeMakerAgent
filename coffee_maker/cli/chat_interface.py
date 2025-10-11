@@ -182,7 +182,7 @@ class ChatSession:
         # Load previous session if exists
         self._load_session()
 
-        logger.info(f"ChatSession initialized (streaming={'enabled' if self.enable_streaming else 'disabled'})")
+        logger.debug(f"ChatSession initialized (streaming={'enabled' if self.enable_streaming else 'disabled'})")
 
     def _setup_prompt_session(self):
         """Setup prompt-toolkit session with history, completion, and key bindings."""

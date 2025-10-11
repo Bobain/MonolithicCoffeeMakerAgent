@@ -105,7 +105,7 @@ Question: {input}
                 return_intermediate_steps=True,  # Important for action streaming
             )
 
-            logger.info("LangChain assistant initialized successfully")
+            logger.debug("LangChain assistant initialized successfully")
 
         except Exception as e:
             logger.error(f"Failed to initialize assistant: {e}", exc_info=True)

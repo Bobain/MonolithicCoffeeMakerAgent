@@ -105,7 +105,7 @@ class ClaudeCLIInterface:
                 f"Please install from: https://docs.claude.com/docs/claude-cli"
             )
 
-        logger.info(f"ClaudeCLIInterface initialized: {claude_path}")
+        logger.debug(f"ClaudeCLIInterface initialized: {claude_path}")
 
     def is_available(self) -> bool:
         """Check if claude CLI command is available.

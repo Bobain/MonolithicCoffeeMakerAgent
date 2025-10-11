@@ -64,7 +64,7 @@ class RoadmapEditor:
         self.backup_dir = self.roadmap_path.parent / "roadmap_backups"
         self.backup_dir.mkdir(exist_ok=True)
 
-        logger.info(f"RoadmapEditor initialized for {self.roadmap_path}")
+        logger.debug(f"RoadmapEditor initialized for {self.roadmap_path}")
 
     def add_priority(
         self,

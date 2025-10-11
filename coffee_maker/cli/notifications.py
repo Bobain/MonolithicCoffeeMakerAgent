@@ -136,7 +136,7 @@ class NotificationDB:
         # Initialize database
         self._init_database()
 
-        logger.info(f"NotificationDB initialized: {db_path}")
+        logger.debug(f"NotificationDB initialized: {db_path}")
 
     def _init_database(self):
         """Initialize database schema and enable WAL mode."""
@@ -151,7 +151,7 @@ class NotificationDB:
         conn.commit()
         conn.close()
 
-        logger.info("Notification database schema initialized with WAL mode")
+        logger.debug("Notification database schema initialized with WAL mode")
 
     def _get_connection(self) -> sqlite3.Connection:
         """Get database connection with proper configuration.
