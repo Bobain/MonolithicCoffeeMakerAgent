@@ -193,6 +193,11 @@ class ClaudeCLIInterface:
 
             logger.info(f"Executing CLI request: {prompt[:100]}...")
 
+            # CRITICAL: Remove ANTHROPIC_API_KEY from environment
+            # Claude CLI should use subscription, NOT API credits
+            env = os.environ.copy()
+            env.pop("ANTHROPIC_API_KEY", None)  # Remove API key if present
+
             # Execute with prompt via stdin
             result = subprocess.run(
                 cmd,
@@ -201,6 +206,7 @@ class ClaudeCLIInterface:
                 text=True,
                 timeout=timeout,
                 check=False,
+                env=env,  # Use modified environment without API key
             )
 
             if result.returncode != 0:
