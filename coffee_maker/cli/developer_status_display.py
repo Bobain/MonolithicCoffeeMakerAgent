@@ -6,7 +6,6 @@ Used by project-manager developer-status command.
 PRIORITY 4: Developer Status Dashboard
 """
 
-import json
 import time
 from datetime import datetime
 from pathlib import Path
@@ -17,6 +16,8 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+
+from coffee_maker.utils.file_io import read_json_file
 
 
 class DeveloperStatusDisplay:
@@ -90,8 +91,7 @@ class DeveloperStatusDisplay:
             return None
 
         try:
-            with open(self.status_file) as f:
-                return json.load(f)
+            return read_json_file(self.status_file, default=None)
         except Exception as e:
             self.console.print(f"[red]Error reading status file: {e}[/red]")
             return None
