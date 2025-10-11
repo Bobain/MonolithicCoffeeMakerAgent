@@ -1,18 +1,17 @@
-# Project Roadmap
+# Empty Test Roadmap
 
-## Overview
+This roadmap intentionally has no priorities for testing edge cases.
 
-This is a new project without any priorities defined yet.
+## About This Project
 
-## Getting Started
+This is a new project that hasn't defined its priorities yet.
 
-1. Define your priorities
-2. Use the format: `### 🔴 **PRIORITY X: Title** 📝 Planned`
-3. Add deliverables for each priority
-4. Run the autonomous daemon
+## TODO
+
+- Define project goals
+- Create initial priorities
+- Set up development environment
 
 ## Notes
 
-- Priorities should follow the standard format
-- Include status emoji (📝 Planned, 🔄 In Progress, ✅ Complete)
-- List specific deliverables
+This file tests how the daemon handles ROADMAPs with no priorities.

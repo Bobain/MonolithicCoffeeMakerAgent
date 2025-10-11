@@ -34,6 +34,7 @@ from coffee_maker.autonomous.developer_status import (
 )
 from coffee_maker.autonomous.git_manager import GitManager
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
+from coffee_maker.autonomous.task_metrics import TaskMetricsDB
 from coffee_maker.cli.notifications import (
     NOTIF_PRIORITY_CRITICAL,
     NOTIF_PRIORITY_HIGH,
@@ -128,6 +129,9 @@ class DevDaemon:
         # PRIORITY 4: Developer status tracking
         self.status = DeveloperStatus()
 
+        # Task metrics database for performance tracking
+        self.metrics_db = TaskMetricsDB()
+
         # State
         self.running = False
         self.attempted_priorities = {}  # Track retry attempts: {priority_name: count}
@@ -137,6 +141,10 @@ class DevDaemon:
         self.start_time = None
         self.iteration_count = 0
         self.current_priority_start_time = None
+        self.current_priority_info = None  # Store current priority for metrics recording
+
+        # Subtask tracking for status bar display
+        self.current_subtasks = []  # List of {name, status, duration_seconds, estimated_seconds}
 
         # PRIORITY 2.7: Crash recovery state
         self.max_crashes = max_crashes
@@ -726,8 +734,18 @@ The daemon will skip this priority in future iterations.
             f"🚀 Starting implementation of {priority_name} (attempt {self.attempted_priorities[priority_name]}/{self.max_retries})"
         )
 
+        # Store priority info for metrics recording
+        self.current_priority_info = priority
+
+        # Clear previous subtasks
+        self.current_subtasks = []
+
         # PRIORITY 4: Update progress - creating branch
         self.status.report_progress(10, "Creating feature branch")
+
+        # Track subtask: Creating branch (estimated: 10 seconds)
+        subtask_start = datetime.now()
+        self._update_subtask("Creating feature branch", "in_progress", subtask_start, estimated_seconds=10)
 
         # Create branch
         branch_name = f"feature/{priority_name.lower().replace(' ', '-').replace(':', '')}"
@@ -735,7 +753,10 @@ The daemon will skip this priority in future iterations.
 
         if not self.git.create_branch(branch_name):
             logger.error("Failed to create branch")
+            self._update_subtask("Creating feature branch", "failed", subtask_start, estimated_seconds=10)
             return False
+
+        self._update_subtask("Creating feature branch", "completed", subtask_start, estimated_seconds=10)
 
         # PRIORITY 4: Log branch creation
         self.status.report_activity(
@@ -748,6 +769,10 @@ The daemon will skip this priority in future iterations.
         # PRIORITY 4: Update progress - calling Claude API
         self.status.report_progress(20, "Executing implementation with Claude API")
 
+        # Track subtask: Claude API execution (estimated: 5 minutes = 300 seconds)
+        subtask_start = datetime.now()
+        self._update_subtask("Executing Claude API", "in_progress", subtask_start, estimated_seconds=300)
+
         logger.info("Executing Claude API with implementation prompt...")
 
         # Execute Claude API
@@ -755,7 +780,10 @@ The daemon will skip this priority in future iterations.
 
         if not result.success:
             logger.error(f"Claude API failed: {result.error}")
+            self._update_subtask("Executing Claude API", "failed", subtask_start, estimated_seconds=300)
             return False
+
+        self._update_subtask("Executing Claude API", "completed", subtask_start, estimated_seconds=300)
 
         logger.info("✅ Claude API execution complete")
         logger.info(f"📊 Token usage: {result.usage['input_tokens']} in, {result.usage['output_tokens']} out")
@@ -802,12 +830,19 @@ Status: Requires human decision
         # PRIORITY 4: Update progress - committing changes
         self.status.report_progress(70, "Committing changes")
 
+        # Track subtask: Committing changes (estimated: 20 seconds)
+        subtask_start = datetime.now()
+        self._update_subtask("Committing changes", "in_progress", subtask_start, estimated_seconds=20)
+
         # Commit changes
         commit_message = self._build_commit_message(priority)
 
         if not self.git.commit(commit_message):
             logger.error("Failed to commit changes")
+            self._update_subtask("Committing changes", "failed", subtask_start, estimated_seconds=20)
             return False
+
+        self._update_subtask("Committing changes", "completed", subtask_start, estimated_seconds=20)
 
         logger.info("✅ Changes committed")
 
@@ -819,10 +854,17 @@ Status: Requires human decision
         # PRIORITY 4: Update progress - pushing
         self.status.report_progress(80, "Pushing to remote")
 
+        # Track subtask: Pushing to remote (estimated: 30 seconds)
+        subtask_start = datetime.now()
+        self._update_subtask("Pushing to remote", "in_progress", subtask_start, estimated_seconds=30)
+
         # Push
         if not self.git.push():
             logger.error("Failed to push branch")
+            self._update_subtask("Pushing to remote", "failed", subtask_start, estimated_seconds=30)
             return False
+
+        self._update_subtask("Pushing to remote", "completed", subtask_start, estimated_seconds=30)
 
         logger.info("✅ Branch pushed")
 
@@ -835,10 +877,16 @@ Status: Requires human decision
         if self.create_prs:
             # PRIORITY 4: Update status to REVIEWING
             self.status.update_status(DeveloperState.REVIEWING, progress=90, current_step="Creating pull request")
+
+            # Track subtask: Creating PR (estimated: 45 seconds)
+            subtask_start = datetime.now()
+            self._update_subtask("Creating pull request", "in_progress", subtask_start, estimated_seconds=45)
+
             pr_body = self._build_pr_body(priority)
             pr_url = self.git.create_pull_request(f"Implement {priority_name}: {priority_title}", pr_body)
 
             if pr_url:
+                self._update_subtask("Creating pull request", "completed", subtask_start, estimated_seconds=45)
                 logger.info(f"✅ PR created: {pr_url}")
 
                 # PRIORITY 4: Update progress - PR created
@@ -853,6 +901,7 @@ Status: Requires human decision
                     context={"priority_name": priority_name, "pr_url": pr_url},
                 )
             else:
+                self._update_subtask("Creating pull request", "failed", subtask_start, estimated_seconds=45)
                 logger.warning("Failed to create PR")
                 # PRIORITY 4: Still mark as complete even if PR failed
                 self.status.report_progress(100, "Implementation complete (PR creation failed)")
@@ -1150,6 +1199,7 @@ The daemon will remain stopped until manually restarted.
                     else None
                 ),
                 "iteration": getattr(self, "iteration_count", 0),
+                "subtasks": self.current_subtasks,  # Include subtasks for status bar display
                 "crashes": {
                     "count": self.crash_count,
                     "max": self.max_crashes,
@@ -1174,6 +1224,78 @@ The daemon will remain stopped until manually restarted.
 
         except Exception as e:
             logger.error(f"Failed to write status file: {e}")
+
+    def _update_subtask(self, name: str, status: str, start_time: datetime = None, estimated_seconds: int = 0):
+        """Update or add a subtask to tracking list.
+
+        This method tracks individual subtasks within a priority implementation
+        for display in the project-manager status bar.
+
+        Args:
+            name: Subtask name (e.g., "Creating branch", "Calling Claude API")
+            status: One of "pending", "in_progress", "completed", "failed"
+            start_time: When subtask started (for duration calculation)
+            estimated_seconds: Estimated time for this task in seconds
+
+        Status meanings:
+            - pending: Task not yet started (⏳)
+            - in_progress: Currently working on this task (🔄)
+            - completed: Task finished successfully (✓)
+            - failed: Task encountered an error (❌)
+
+        Example:
+            >>> daemon._update_subtask("Creating branch", "in_progress", datetime.now(), estimated_seconds=10)
+            >>> daemon._update_subtask("Creating branch", "completed", start_time, estimated_seconds=10)
+        """
+        # Calculate duration if start_time provided
+        duration_seconds = 0
+        if start_time and status in ["completed", "failed"]:
+            duration_seconds = int((datetime.now() - start_time).total_seconds())
+        elif start_time and status == "in_progress":
+            # For in-progress tasks, show current elapsed time
+            duration_seconds = int((datetime.now() - start_time).total_seconds())
+
+        # Check if subtask already exists
+        existing_idx = None
+        for idx, subtask in enumerate(self.current_subtasks):
+            if subtask["name"] == name:
+                existing_idx = idx
+                break
+
+        subtask_entry = {
+            "name": name,
+            "status": status,
+            "duration_seconds": duration_seconds,
+            "estimated_seconds": estimated_seconds,
+        }
+
+        if existing_idx is not None:
+            # Update existing subtask, preserve estimated_seconds if not provided
+            if estimated_seconds == 0 and "estimated_seconds" in self.current_subtasks[existing_idx]:
+                subtask_entry["estimated_seconds"] = self.current_subtasks[existing_idx]["estimated_seconds"]
+            self.current_subtasks[existing_idx] = subtask_entry
+        else:
+            # Add new subtask
+            self.current_subtasks.append(subtask_entry)
+
+        logger.debug(f"Subtask updated: {name} -> {status} ({duration_seconds}s / est: {estimated_seconds}s)")
+
+        # Record metrics to database when subtask completes or fails
+        if status in ["completed", "failed"] and duration_seconds > 0 and self.current_priority_info:
+            try:
+                self.metrics_db.record_subtask(
+                    priority_name=self.current_priority_info.get("name", "Unknown"),
+                    subtask_name=name,
+                    estimated_seconds=estimated_seconds,
+                    actual_seconds=duration_seconds,
+                    status=status,
+                    priority_title=self.current_priority_info.get("title"),
+                )
+            except Exception as e:
+                logger.warning(f"Failed to record metrics for subtask '{name}': {e}")
+
+        # Write status to file immediately so status bar updates
+        self._write_status()
 
     def stop(self):
         """Stop the daemon gracefully."""

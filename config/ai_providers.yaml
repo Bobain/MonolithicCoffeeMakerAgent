@@ -1,0 +1,98 @@
+# AI Provider Configuration
+# This file configures AI providers for the autonomous code-developer daemon.
+#
+# Supported providers:
+#   - claude: Anthropic Claude (API or CLI mode)
+#   - openai: OpenAI GPT-4, GPT-4 Turbo, o1, o3
+#   - gemini: Google Gemini
+#
+# Usage:
+#   - Set DEFAULT_AI_PROVIDER environment variable to override default_provider
+#   - Set API keys via environment variables (see provider configs below)
+#   - Edit this file to customize model settings, fallback order, and cost limits
+
+default_provider: claude
+
+providers:
+  # Claude (Anthropic) - Recommended for complex code generation
+  claude:
+    enabled: true
+    api_key_env: ANTHROPIC_API_KEY
+    model: claude-sonnet-4-5-20250929
+    use_cli: true  # Use Claude CLI instead of API (better for autonomous work)
+    max_tokens: 8000
+    temperature: 0.7
+
+    # Cost rates (USD per 1M tokens)
+    cost_per_1m_input_tokens: 15.0
+    cost_per_1m_output_tokens: 75.0
+
+    # Capabilities
+    supports_function_calling: true
+    supports_vision: true
+    supports_streaming: true
+    supports_system_prompts: true
+    supports_context_caching: true
+
+  # OpenAI GPT-4 - Widely available, familiar to developers
+  openai:
+    enabled: true
+    api_key_env: OPENAI_API_KEY
+    model: gpt-4-turbo
+    fallback_models:
+      - gpt-4
+      - gpt-3.5-turbo
+    max_tokens: 8000
+    temperature: 0.7
+
+    # Cost rates (USD per 1M tokens) - GPT-4 Turbo pricing
+    cost_per_1m_input_tokens: 10.0
+    cost_per_1m_output_tokens: 30.0
+
+    # Capabilities
+    supports_function_calling: true
+    supports_vision: true
+    supports_streaming: true
+    supports_system_prompts: true
+    supports_context_caching: false
+
+  # Google Gemini - Cost-effective alternative
+  gemini:
+    enabled: true
+    api_key_env: GOOGLE_API_KEY
+    model: gemini-1.5-pro
+    max_tokens: 8000
+    temperature: 0.7
+
+    # Cost rates (USD per 1M tokens) - Gemini 1.5 Pro pricing
+    cost_per_1m_input_tokens: 7.0
+    cost_per_1m_output_tokens: 21.0
+
+    # Capabilities
+    supports_function_calling: true
+    supports_vision: true
+    supports_streaming: true
+    supports_system_prompts: false  # Gemini combines system + user prompt
+    supports_context_caching: false
+
+# Fallback strategy
+fallback:
+  enabled: true
+  retry_attempts: 3
+  retry_delay: 1.0  # Initial retry delay in seconds
+  max_retry_delay: 60.0  # Max exponential backoff delay
+
+  # Provider fallback order (try in sequence if primary fails)
+  fallback_order:
+    - claude
+    - openai
+    - gemini
+
+# Cost controls
+cost_controls:
+  daily_limit: 50.0  # Max USD per day across all providers
+  per_task_limit: 5.0  # Max USD per single task
+  warn_threshold: 0.8  # Warn when reaching 80% of limits
+
+  # Cost tracking file location
+  tracking_file: "data/cost_tracking.json"

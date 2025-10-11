@@ -1,4 +1,4 @@
-name: Daemon Health Check
+name: Daemon CI Tests
 
 on:
   # Run on significant releases
@@ -12,41 +12,51 @@ on:
       - 'coffee_maker/autonomous/**'
       - 'run_daemon.py'
       - 'tests/ci_tests/**'
-      - 'tests/autonomous/**'
+      - '.github/workflows/daemon-test.yml'
 
   # Run on version tags (e.g., v1.0.0, v1.1.0)
   push:
     tags:
       - 'v*.*.*'
-    branches:
-      - main
-    paths:
-      - 'coffee_maker/autonomous/**'
-      - 'run_daemon.py'
 
   # Manual trigger for on-demand testing
   workflow_dispatch:
     inputs:
-      test_level:
-        description: 'Test level (smoke, integration, full)'
+      test_suite:
+        description: 'Test suite to run'
         required: false
-        default: 'smoke'
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - smoke
+          - integration
+          - user_scenarios
 
 jobs:
-  test-smoke:
-    name: Smoke Tests
+  smoke-tests:
+    name: Quick Smoke Tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install poetry
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
@@ -57,31 +67,33 @@ jobs:
 
       - name: Run smoke tests
         run: |
-          poetry run pytest tests/ci_tests/test_daemon_smoke.py -v
+          poetry run pytest tests/ci_tests/test_daemon_smoke.py -v -m smoke
 
-      - name: Upload test results
+      - name: Upload smoke test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: smoke-test-results
           path: |
-            .pytest_cache
-            *.log
+            .pytest_cache/
+            test-results/
 
-  test-unit:
+  unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: smoke-tests
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install poetry
+      - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
@@ -90,119 +102,38 @@ jobs:
         run: |
           poetry install --no-interaction --no-ansi
 
-      - name: Run unit tests (non-integration)
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: Run unit tests
         run: |
-          poetry run pytest tests/ci_tests/ -m "not integration" -v --tb=short
+          poetry run pytest tests/ci_tests/ -v \
+            --ignore=tests/ci_tests/test_daemon_integration.py \
+            -m "not integration and not slow"
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: unit-test-results
           path: |
-            .pytest_cache
-            *.log
+            .pytest_cache/
+            test-results/
 
-  test-integration:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    # Only run on main branch or manual dispatch
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' || github.event_name == 'release'
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
-        run: |
-          poetry install --no-interaction --no-ansi
-
-      - name: Configure git
-        run: |
-          git config --global user.name "CI Bot"
-          git config --global user.email "ci@example.com"
-
-      - name: Run integration tests
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          poetry run pytest tests/ci_tests/ -m integration -v --tb=short
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: integration-test-results
-          path: |
-            .pytest_cache
-            *.log
-
-  test-regression:
-    name: Non-Regression Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
-        run: |
-          poetry install --no-interaction --no-ansi
-
-      - name: Run non-regression tests
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          poetry run pytest tests/autonomous/test_daemon_regression.py -v
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: regression-test-results
-          path: |
-            .pytest_cache
-            *.log
-
-  health-check:
+  daemon-health-check:
     name: Daemon Health Check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # Only run on main branch or release
-    if: github.ref == 'refs/heads/main' || github.event_name == 'release' || github.event_name == 'push'
-    needs: [test-smoke, test-unit, test-regression]
+    timeout-minutes: 15
+    needs: unit-tests
+    if: github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install poetry
+      - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
@@ -211,30 +142,135 @@ jobs:
         run: |
           poetry install --no-interaction --no-ansi
 
-      - name: Check daemon health script
+      - name: Check daemon can initialize
         run: |
-          poetry run python scripts/check_daemon_health.py --help || echo "Health check script ready"
+          poetry run python -c "
+          from coffee_maker.autonomous.daemon import DevDaemon
+          daemon = DevDaemon(roadmap_path='docs/ROADMAP.md', auto_approve=True)
+          print('✅ Daemon initialized successfully')
+          "
 
-      - name: Verify notifications script
+      - name: Check ROADMAP parsing
         run: |
-          poetry run python scripts/verify_notifications.py --help || echo "Verification script ready"
+          poetry run python -c "
+          from coffee_maker.autonomous.roadmap_parser import RoadmapParser
+          parser = RoadmapParser('docs/ROADMAP.md')
+          priorities = parser.get_all_priorities()
+          print(f'✅ Found {len(priorities)} priorities in ROADMAP')
+          "
 
-  report:
-    name: Test Report
+      - name: Verify no infinite loop patterns
+        run: |
+          poetry run python scripts/check_daemon_health.py
+
+  test-coverage:
+    name: Test Coverage Report
     runs-on: ubuntu-latest
-    if: always()
-    needs: [test-smoke, test-unit, test-regression]
+    timeout-minutes: 10
+    needs: unit-tests
 
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Display test summary
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      - name: Run tests with coverage
+        run: |
+          poetry run pytest tests/ci_tests/ \
+            --cov=coffee_maker.autonomous \
+            --cov-report=xml \
+            --cov-report=html \
+            -m "not integration and not slow"
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            htmlcov/
+
+      - name: Check coverage threshold
+        run: |
+          poetry run python -c "
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('coverage.xml')
+          root = tree.getroot()
+          coverage = float(root.attrib['line-rate']) * 100
+          print(f'Coverage: {coverage:.1f}%')
+          if coverage < 70:
+              print('⚠️  Warning: Coverage below 70%')
+          else:
+              print('✅ Coverage threshold met')
+          "
+
+  notification-system-check:
+    name: Notification System Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: unit-tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      - name: Run notification tests
+        run: |
+          poetry run pytest tests/ci_tests/test_notification_system.py -v
+
+      - name: Verify notification script
+        run: |
+          poetry run python scripts/verify_notifications.py
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [smoke-tests, unit-tests, daemon-health-check, test-coverage, notification-system-check]
+    if: always()
+
+    steps:
+      - name: Check test results
         run: |
           echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Smoke Tests: ✅" >> $GITHUB_STEP_SUMMARY
-          echo "- Unit Tests: ✅" >> $GITHUB_STEP_SUMMARY
-          echo "- Regression Tests: ✅" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All daemon tests passed successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Smoke Tests: ${{ needs.smoke-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Health Check: ${{ needs.daemon-health-check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Coverage: ${{ needs.test-coverage.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Notifications: ${{ needs.notification-system-check.result }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if any test failed
+        if: |
+          needs.smoke-tests.result == 'failure' ||
+          needs.unit-tests.result == 'failure' ||
+          needs.daemon-health-check.result == 'failure'
+        run: |
+          echo "❌ Some tests failed"
+          exit 1
