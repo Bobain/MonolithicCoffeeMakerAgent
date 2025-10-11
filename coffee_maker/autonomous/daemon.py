@@ -443,6 +443,8 @@ class DevDaemon:
     def _ensure_technical_spec(self, priority: dict) -> bool:
         """Ensure technical specification exists for this priority.
 
+        BUG-002 FIX: Validate priority fields before accessing them.
+
         If spec doesn't exist, create it before implementing.
 
         Args:
@@ -451,6 +453,14 @@ class DevDaemon:
         Returns:
             True if spec exists or was created successfully
         """
+        # BUG-002: Validate required fields
+        if not priority.get("name"):
+            logger.error("❌ Priority missing 'name' field - cannot create technical spec")
+            return False
+
+        if not priority.get("content"):
+            logger.warning(f"⚠️  Priority {priority.get('name')} has no content - will use title only in spec")
+
         priority_name = priority["name"]
 
         # Determine spec filename
@@ -507,6 +517,8 @@ class DevDaemon:
     def _build_spec_creation_prompt(self, priority: dict, spec_filename: str) -> str:
         """Build prompt for creating technical specification.
 
+        BUG-002 FIX: Use safe dictionary access to prevent KeyError crashes.
+
         Args:
             priority: Priority dictionary
             spec_filename: Name of spec file to create
@@ -514,12 +526,27 @@ class DevDaemon:
         Returns:
             Prompt string
         """
-        return f"""Create a detailed technical specification for implementing {priority['name']}.
+        # BUG-002: Safe dictionary access with defaults
+        priority_name = priority.get("name", "Unknown Priority")
+        priority_title = priority.get("title", "No title")
+        priority_content = priority.get("content", "")
+
+        # Handle missing/empty content gracefully
+        if not priority_content or len(priority_content.strip()) == 0:
+            priority_context = f"Title: {priority_title}\nNo additional details provided in ROADMAP."
+            logger.warning(f"Priority {priority_name} has no content - using title only for spec creation")
+        else:
+            # Safely truncate content
+            priority_context = priority_content[:2000]
+            if len(priority_content) > 2000:
+                priority_context += "..."
+
+        return f"""Create a detailed technical specification for implementing {priority_name}.
 
 Read the user story from docs/ROADMAP.md and create a comprehensive technical spec.
 
 **Your Task:**
-1. Read docs/ROADMAP.md to understand {priority['name']}
+1. Read docs/ROADMAP.md to understand {priority_name}
 2. Create docs/{spec_filename} with detailed technical specification
 3. Include:
    - Prerequisites & Dependencies
@@ -542,7 +569,7 @@ Read the user story from docs/ROADMAP.md and create a comprehensive technical sp
 - Make it actionable for implementation
 
 **User Story Context:**
-{priority['content'][:2000]}...
+{priority_context}
 
 Create the spec now in docs/{spec_filename}."""
 
