@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any, Iterable, Mapping, Optional, Tuple
 
 from langchain_core.language_models import BaseChatModel
@@ -12,6 +11,7 @@ from langchain_core.outputs import ChatGeneration, ChatResult
 from langfuse import observe
 from pydantic import ConfigDict
 
+from coffee_maker.config import ConfigManager
 from coffee_maker.langchain_observe.llm import get_llm
 
 logger = logging.getLogger(__name__)
@@ -62,8 +62,8 @@ def instrument_llm(llm_instance: Any, *, methods: Iterable[str] = ("invoke", "ai
 def resolve_gemini_api_key() -> str:
     """Resolve Gemini API key from multiple possible environment variables.
 
-    Checks for API key in multiple environment variable names and ensures
-    GEMINI_API_KEY is set for consistent access. Supports three variable names:
+    Uses ConfigManager to check for API key in multiple environment variable names
+    and ensures GEMINI_API_KEY is set for consistent access. Supports three variable names:
     - GEMINI_API_KEY (primary)
     - GOOGLE_API_KEY (alternative)
     - COFFEE_MAKER_GEMINI_API_KEY (project-specific)
@@ -72,21 +72,15 @@ def resolve_gemini_api_key() -> str:
         The resolved API key string
 
     Raises:
-        RuntimeError: If no API key found in any of the checked environment variables
+        APIKeyMissingError: If no API key found in any of the checked environment variables
 
     Example:
         >>> import os
         >>> os.environ["GOOGLE_API_KEY"] = "my-key"
         >>> key = resolve_gemini_api_key()
-        >>> assert os.environ["GEMINI_API_KEY"] == "my-key"  # Normalized
+        >>> # ConfigManager normalizes to GEMINI_API_KEY
     """
-    for env_name in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "COFFEE_MAKER_GEMINI_API_KEY"):
-        key = os.getenv(env_name)
-        if key:
-            os.environ.setdefault("GEMINI_API_KEY", key)
-            return key
-
-    raise RuntimeError("Gemini API key missing: set GEMINI_API_KEY, GOOGLE_API_KEY, or COFFEE_MAKER_GEMINI_API_KEY.")
+    return ConfigManager.get_gemini_api_key()
 
 
 def _build_stub_llm(provider: str, model: Optional[str], error: Exception) -> Any:

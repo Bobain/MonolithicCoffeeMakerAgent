@@ -1,10 +1,10 @@
 import logging
-import os
 from typing import Callable, Optional, Tuple
 
 from github import Auth, Github, GithubException
 from langfuse import observe
 
+from coffee_maker.config import ConfigManager
 from coffee_maker.langchain_observe.retry_utils import with_conditional_retry
 
 LOGGER = logging.getLogger(__name__)
@@ -13,24 +13,21 @@ LOGGER = logging.getLogger(__name__)
 def get_github_client_instance() -> Github:
     """Create and return an authenticated GitHub client instance.
 
-    Reads the GITHUB_TOKEN from environment variables and creates an authenticated
-    GitHub client using PyGithub.
+    Uses ConfigManager to load GITHUB_TOKEN from environment and creates
+    an authenticated GitHub client using PyGithub.
 
     Returns:
         Github: Authenticated GitHub client instance
 
     Raises:
-        ValueError: If GITHUB_TOKEN environment variable is not set or empty
+        APIKeyMissingError: If GITHUB_TOKEN environment variable is not set
 
     Example:
         >>> client = get_github_client_instance()
         >>> user = client.get_user()
         >>> print(user.login)
     """
-    token = os.getenv("GITHUB_TOKEN")
-    if not token or not len(token):
-        LOGGER.critical("Error: GITHUB_TOKEN environment variable is not set.")
-        raise ValueError("Credentials for Github needed: GITHUB_TOKEN not defined.")
+    token = ConfigManager.get_github_token()
     auth = Auth.Token(token)
     return Github(auth=auth)
 
