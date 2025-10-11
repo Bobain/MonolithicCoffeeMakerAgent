@@ -47,7 +47,7 @@ from coffee_maker.cli.notifications import (
     NOTIF_STATUS_PENDING,
     NotificationDB,
 )
-from coffee_maker.config import ROADMAP_PATH
+from coffee_maker.config import ROADMAP_PATH, ConfigManager
 
 # Configure logging BEFORE imports that might fail
 logging.basicConfig(
@@ -475,7 +475,7 @@ def cmd_chat(args: argparse.Namespace) -> int:
         # Auto-detect mode: CLI vs API (same logic as daemon)
         claude_path = "/opt/homebrew/bin/claude"
         has_cli = shutil.which("claude") or os.path.exists(claude_path)
-        has_api_key = bool(os.environ.get("ANTHROPIC_API_KEY"))
+        has_api_key = ConfigManager.has_anthropic_api_key()
 
         use_claude_cli = False
 
