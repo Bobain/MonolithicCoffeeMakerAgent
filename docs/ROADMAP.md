@@ -98,9 +98,47 @@ US-XXX: Example Feature ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
-**Project**: **🚨 US-022 - Automatic Roadmap Synchronization for code_developer**
+**Project**: **🚨 BUG FIXES - Critical code_developer Bugs (BLOCKING ALL WORK)**
 
-**Status**: 📝 **EXTREMELY URGENT - MUST IMPLEMENT IMMEDIATELY** (Elevated: 2025-10-11)
+**Status**: 🔄 **IN PROGRESS** (Started: 2025-10-11)
+
+**Critical Bugs to Fix IMMEDIATELY**:
+
+### Bug 1: Daemon Stops and Waits for Approval ❌
+**Problem**: Daemon asks for user approval before implementing each priority
+**Expected**: Daemon should be fully autonomous (--auto-approve should be default)
+**Fix**: Change default `auto_approve=True` in daemon.py
+
+### Bug 2: Daemon Doesn't Sync Roadmap Branch ❌
+**Problem**: Daemon never pulls/merges roadmap branch, works with stale priorities
+**Expected**: Before each iteration, daemon should:
+```python
+# At start of each iteration:
+git fetch origin roadmap
+git merge origin/roadmap
+# Reload RoadmapParser
+# Then proceed with next priority
+```
+**Fix**: Add sync_roadmap() call at start of each iteration
+
+### Bug 3: Daemon Doesn't Check for Technical Specs ❌
+**Problem**: Daemon starts implementing without checking if technical spec exists
+**Expected**: Before implementing, check if `docs/US-XXX_TECHNICAL_SPEC.md` exists
+**Fix**: Add spec validation before implementation
+
+### Bug 4: Daemon Doesn't Create Specs When Missing ❌
+**Problem**: When spec is missing, daemon just proceeds without creating it
+**Expected**: If spec doesn't exist, daemon should:
+1. Read user story from ROADMAP
+2. Create technical spec in `docs/US-XXX_TECHNICAL_SPEC.md`
+3. Then implement the feature
+**Fix**: Add spec creation workflow
+
+---
+
+## 🚨 US-022 - Automatic Roadmap Synchronization (SPEC FOR BUG 2)
+
+**Status**: 📝 **PLANNED** - Spec for Bug Fix #2 above
 
 **Goal**: Enable code_developer and project_manager to synchronize roadmap via the 'roadmap' branch on GitHub, ensuring all team members always work with the latest roadmap
 
