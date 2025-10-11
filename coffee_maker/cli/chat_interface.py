@@ -70,7 +70,8 @@ class DeveloperStatusMonitor:
         """
         self.console = console
         self.poll_interval = poll_interval
-        self.status_file = Path("data/developer_status.json")
+        # Use the same status file path as the /status command
+        self.status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
         self.is_running = False
         self.monitor_thread: Optional[threading.Thread] = None
 
@@ -120,38 +121,48 @@ class DeveloperStatusMonitor:
             with open(self.status_file, "r") as f:
                 status_data = json.load(f)
 
-            # Extract key fields
+            # Extract key fields from daemon_status.json format
             current_state = status_data.get("status", "unknown")
-            current_task = status_data.get("current_task")
+            current_priority = status_data.get("current_priority")
 
-            # Detect state change
-            if current_state != self.last_state:
+            # Detect state change (running vs stopped)
+            if current_state != self.last_state and current_state != "running":
                 self._display_state_change(current_state)
                 self.last_state = current_state
 
-            # Detect task changes
-            if current_task:
-                task_name = current_task.get("name")
-                progress = current_task.get("progress", 0)
-                current_step = current_task.get("current_step", "")
+            # Detect task changes (current_priority in daemon format)
+            if current_priority and current_state == "running":
+                priority_name = current_priority.get("name", "")
+                priority_title = current_priority.get("title", "")
+                started_at = current_priority.get("started_at")
+
+                # Calculate progress based on time elapsed (rough estimate)
+                progress = 0
+                if started_at:
+                    from datetime import datetime
+
+                    try:
+                        start_time = datetime.fromisoformat(started_at)
+                        elapsed = (datetime.now() - start_time).total_seconds()
+                        # Rough estimate: assume 8 hours for completion
+                        progress = min(100, int((elapsed / (8 * 3600)) * 100))
+                    except:
+                        pass
+
+                task_display = f"{priority_name} - {priority_title}"
 
                 # New task started
-                if task_name != self.last_task_name:
-                    self._display_new_task(task_name, current_task)
-                    self.last_task_name = task_name
+                if priority_name != self.last_task_name:
+                    self._display_new_task(
+                        task_display, {"priority": priority_name, "progress": progress, "current_step": priority_title}
+                    )
+                    self.last_task_name = priority_name
                     self.last_progress = progress
-                    self.last_step = current_step
 
                 # Progress updated (only show if significant change, e.g., 10% increments)
                 elif self.last_progress is not None and abs(progress - self.last_progress) >= 10:
-                    self._display_progress_update(task_name, progress, current_step)
+                    self._display_progress_update(task_display, progress, priority_title)
                     self.last_progress = progress
-                    self.last_step = current_step
-
-                # Step changed (even if progress same)
-                elif current_step != self.last_step and current_step:
-                    self._display_step_update(task_name, progress, current_step)
-                    self.last_step = current_step
 
         except json.JSONDecodeError:
             # File might be mid-write, skip this check
@@ -1271,7 +1282,7 @@ class ChatSession:
 
         full_response = ""
         for chunk in self.ai_service.process_request_stream(user_input=text, context=context, history=self.history):
-            self.console.print(chunk, end="", flush=True)  # flush=True for immediate display
+            self.console.print(chunk, end="")
             full_response += chunk
 
         self.console.print()  # Final newline
