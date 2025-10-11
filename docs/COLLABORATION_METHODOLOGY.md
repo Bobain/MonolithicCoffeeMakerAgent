@@ -1,7 +1,7 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 1.7
-**Last Updated**: 2025-10-10
+**Version**: 1.8
+**Last Updated**: 2025-10-11
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
 
@@ -491,6 +491,93 @@ class RequestClassifier:
 > "and this document should be referenced by the code, so that project_manager uses it."
 
 This ensures the methodology document is not just documentation, but an **active specification** that drives code behavior.
+
+### 2.8 Documentation and Roadmap Versioning Policy
+
+**User Story**: "As a user I want documentation and roadmap in the branch to always be the most up-to-date version of roadmap and documentation"
+
+**Principle**: Documentation and ROADMAP.md must always reflect the **current, accurate state** of the project. Outdated documentation is worse than no documentation.
+
+**What This Means**:
+
+1. **Every Bug Fix or Feature Update**:
+   - Update ROADMAP.md with "Recent Bug Fixes" or "Recent Completions" section
+   - Update relevant documentation (QUICKSTART, TUTORIALS, etc.)
+   - Update COLLABORATION_METHODOLOGY.md if processes changed
+   - All updates committed in the same PR/branch as the code fix
+
+2. **Documentation is Part of Definition of Done**:
+   - Code changes without documentation updates are INCOMPLETE
+   - Bug fixes must document the problem, solution, and user impact
+   - Features must update user guides, API references, troubleshooting
+   - Cannot mark task complete until documentation is updated
+
+3. **Living Documents Over Static Docs**:
+   - ROADMAP.md: Updated continuously as priorities change
+   - COLLABORATION_METHODOLOGY.md: Updated when processes evolve
+   - QUICKSTART guides: Updated when user workflows change
+   - TUTORIALS: Updated when features change behavior
+
+4. **Version Control Best Practices**:
+   - Feature branches include documentation updates
+   - Documentation committed alongside code changes
+   - PR reviews include documentation review
+   - Main branch always has current documentation
+
+**Example: CLI Nesting Fix (2025-10-11)**
+
+When fixing the CLI nesting detection bug in `project-manager chat`:
+
+✅ **Complete Implementation**:
+```
+Branch: fix/cli-nesting-detection
+
+Commits:
+1. fix: Add CLI nesting detection to project-manager chat
+   - Code changes in coffee_maker/cli/roadmap_cli.py
+
+2. docs: Document CLI nesting detection fix
+   - ROADMAP.md: Added "Recent Bug Fixes" section
+   - QUICKSTART_PROJECT_MANAGER.md: Added troubleshooting section
+   - COLLABORATION_METHODOLOGY.md: Version 1.8 update
+```
+
+❌ **Incomplete** (What NOT to do):
+```
+Branch: fix/cli-nesting-detection
+
+Commits:
+1. fix: Add CLI nesting detection to project-manager chat
+   - Only code changes, no documentation
+   - User doesn't know bug was fixed
+   - No explanation of behavior change
+```
+
+**Bug Fix Documentation Template**:
+
+When fixing a bug, document it in ROADMAP.md:
+```markdown
+**Recent Bug Fixes** (YYYY-MM-DD):
+🔧 **[Short Title]**: [2-3 sentence description of problem, solution, and impact]
+   - Branch: [branch-name]
+   - Files modified: [key files]
+   - Impact: [how this affects users]
+```
+
+And update relevant user guides with troubleshooting information.
+
+**Why This Matters**:
+
+1. **User Confidence**: Users can trust documentation is current
+2. **Knowledge Transfer**: New team members see accurate state
+3. **Debugging**: Users can find solutions to known issues
+4. **Audit Trail**: Clear history of what changed and why
+5. **Professional Standards**: Documentation quality reflects code quality
+
+**See Also**:
+- **Section 6.2** - Documentation Criteria in Definition of Done
+- **Section 8.3** - Version History of this document
+- **US-010** - Living Documentation & Tutorials (completed case study)
 
 ---
 
@@ -2318,6 +2405,7 @@ PM documents decision and informs developer
 | 1.5 | 2025-10-10 | Added Section 3.2.1 (Request Categorization and Document Routing) | Implement US-014: PM categorizes user input as feature/methodology/both and routes to correct documents |
 | 1.6 | 2025-10-10 | Enhanced Section 2.4 - Specification Before Implementation (US-016) | PM MUST create detailed technical spec with task-level estimates before providing delivery estimates. PM must refuse to estimate without spec. |
 | 1.7 | 2025-10-10 | Added Section 2.7 - Code References Methodology Document (US-017) | Code implementing PM and code_developer must read and reference COLLABORATION_METHODOLOGY.md to understand processes, rules, and behavioral requirements. Ensures methodology is active specification driving code behavior. |
+| 1.8 | 2025-10-11 | Added Section 2.8 - Documentation and Roadmap Versioning Policy | Documentation and ROADMAP.md must always be up-to-date. Every bug fix or feature must update relevant docs in the same PR. Includes CLI nesting detection fix documentation (fix/cli-nesting-detection branch). User story: "Documentation in branch must always be most up-to-date version." |
 
 **To add new version**:
 1. Make changes to document
