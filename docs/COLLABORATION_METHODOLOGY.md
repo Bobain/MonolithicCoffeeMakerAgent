@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 1.9
+**Version**: 2.0
 **Last Updated**: 2025-10-11
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -2406,6 +2406,8 @@ PM documents decision and informs developer
 | 1.6 | 2025-10-10 | Enhanced Section 2.4 - Specification Before Implementation (US-016) | PM MUST create detailed technical spec with task-level estimates before providing delivery estimates. PM must refuse to estimate without spec. |
 | 1.7 | 2025-10-10 | Added Section 2.7 - Code References Methodology Document (US-017) | Code implementing PM and code_developer must read and reference COLLABORATION_METHODOLOGY.md to understand processes, rules, and behavioral requirements. Ensures methodology is active specification driving code behavior. |
 | 1.8 | 2025-10-11 | Added Section 2.8 - Documentation and Roadmap Versioning Policy | Documentation and ROADMAP.md must always be up-to-date. Every bug fix or feature must update relevant docs in the same PR. Includes CLI nesting detection fix documentation (fix/cli-nesting-detection branch). User story: "Documentation in branch must always be most up-to-date version." |
+| 1.9 | 2025-10-11 | Added Section 9.1.1 - project-manager chat Modes | Documented CLI vs API modes, nesting detection, mode selection logic, user decision matrix. Addresses CLI nesting prevention feature. |
+| 2.0 | 2025-10-11 | Added Section 9.3 - Updating Roadmap Branch on GitHub | **MAJOR VERSION**: Complete automated workflow for updating 'roadmap' branch on GitHub using Python script (scripts/merge_roadmap_pr.py). Addresses user stories: "main branch always up to date" and "roadmap branch in github always current so developer can see what to achieve". Includes setup instructions, integration examples for all team members (project_manager, code_developer, assistant), safety guarantees, and error handling. Branch strategy documented. |
 
 **To add new version**:
 1. Make changes to document
@@ -2622,7 +2624,334 @@ To avoid CLI nesting, we need to use API mode.
 }
 ```
 
-### 9.3 File Organization
+### 9.3 Updating Roadmap Branch on GitHub
+
+**🚨 CRITICAL PROCESS: For project_manager, code_developer, and assistant 🚨**
+
+**User Stories**:
+- "As a user: I always want the main branch to always be up to date as regards to the roadmap"
+- "As a developer I need the roadmap to be always up to date in the branch roadmap in github so that I can see what I will achieve"
+
+#### Problem
+
+GitHub has a dedicated `roadmap` branch that must always reflect the current state of `docs/ROADMAP.md` and `docs/COLLABORATION_METHODOLOGY.md`. Team members (project_manager, code_developer, assistant) need to update this branch frequently, but manual PR process creates overhead.
+
+#### When To Use This Process
+
+✅ **ALWAYS use this automated merge process when updating**:
+- `docs/ROADMAP.md` - Single source of truth for priorities
+- `docs/COLLABORATION_METHODOLOGY.md` - Team processes and methodology
+- `docs/*.md` - Any documentation files
+- Changes made by project_manager agent
+- Changes made by code_developer daemon
+- Documentation updates by assistant
+
+❌ **NEVER use this automated merge for**:
+- Code changes (`coffee_maker/**/*.py`)
+- Dependency changes (`pyproject.toml`)
+- Configuration changes (`config.yaml`, `.env`)
+- CI/CD changes (`.github/**`)
+- Any non-documentation changes
+
+**Why**: Code changes require manual review for quality, security, and correctness. Documentation changes are lower risk and need to stay current for the team to function effectively.
+
+#### Setup (One-Time per Team Member)
+
+Each team member needs a GitHub token to use the automated process:
+
+**1. Create GitHub Personal Access Token**:
+```
+1. Go to: https://github.com/settings/tokens
+2. Click "Generate new token (classic)"
+3. Name: "roadmap-automation" (or similar)
+4. Select scope: ✅ repo (full control of private repositories)
+5. Click "Generate token"
+6. Copy token (starts with "ghp_")
+```
+
+**2. Set Token in Environment**:
+```bash
+# Add to .env file (recommended - persistent)
+echo "GITHUB_TOKEN=ghp_your_token_here" >> .env
+
+# Or export in shell (temporary - current session only)
+export GITHUB_TOKEN=ghp_your_token_here
+```
+
+**3. Install PyGithub** (if not already installed):
+```bash
+poetry add PyGithub
+```
+
+#### Automated Process Using Script
+
+**Location**: `scripts/merge_roadmap_pr.py`
+
+**Usage**:
+```bash
+# After making roadmap changes on a feature branch:
+git checkout -b feature/roadmap-update-$(date +%Y%m%d-%H%M%S)
+git add docs/ROADMAP.md docs/COLLABORATION_METHODOLOGY.md
+git commit -m "docs: Update roadmap with latest priorities"
+git push -u origin HEAD
+
+# Use automated script to create and merge PR to 'roadmap' branch
+python scripts/merge_roadmap_pr.py feature/roadmap-update-YYYYMMDD-HHMMSS --base roadmap
+
+# Output:
+# ✅ All changes are in docs/ (2 files)
+# ✅ PR created targeting 'roadmap' branch: https://github.com/.../pull/123
+# ⏳ Attempting auto-merge...
+# ✅ PR merged successfully to 'roadmap'!
+# 🎉 Success!
+```
+
+**Script Features**:
+- ✅ **Validation**: Only merges if ALL changes are in `docs/`
+- ✅ **Safety**: Detects merge conflicts, fails if non-doc files changed
+- ✅ **Auto-merge**: Automatically merges if safe
+- ⚠️ **Fallback**: Outputs PR URL for manual review if auto-merge fails
+
+**Script Options**:
+```bash
+# Target different branch (default: roadmap)
+python scripts/merge_roadmap_pr.py feature/branch-name --base roadmap
+
+# Target main branch instead
+python scripts/merge_roadmap_pr.py feature/branch-name --base main
+
+# Create PR but don't auto-merge (manual review)
+python scripts/merge_roadmap_pr.py feature/branch-name --no-merge
+```
+
+#### Manual Process (Alternative)
+
+If the script is unavailable or you prefer manual control:
+
+```python
+from github import Github
+import os
+
+# Initialize
+g = Github(os.environ['GITHUB_TOKEN'])
+repo = g.get_repo("Bobain/MonolithicCoffeeMakerAgent")
+
+# Create PR
+pr = repo.create_pull(
+    title="docs: Update roadmap and documentation",
+    body="""## Summary
+Automated roadmap update.
+
+## Changes
+- Updated ROADMAP.md
+- Updated COLLABORATION_METHODOLOGY.md
+
+🤖 Auto-generated via team member
+    """,
+    head="feature/your-branch",
+    base="roadmap"  # Target roadmap branch, not main
+)
+
+print(f"✅ PR: {pr.html_url}")
+
+# Auto-merge if safe
+if pr.mergeable:
+    pr.merge(merge_method="squash")
+    print("✅ Merged!")
+else:
+    print(f"⚠️ Manual review: {pr.html_url}")
+```
+
+#### Integration in project_manager
+
+The `project_manager` should use this process automatically when updating roadmap:
+
+```python
+# In coffee_maker/cli/roadmap_editor.py
+
+def save_and_update_main(self):
+    """Save roadmap changes and update main branch automatically."""
+    import subprocess
+    from datetime import datetime
+
+    # Create timestamped branch
+    timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+    branch = f"roadmap-update-{timestamp}"
+
+    # Commit and push
+    subprocess.run(["git", "checkout", "-b", branch])
+    subprocess.run(["git", "add", "docs/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"])
+    subprocess.run(["git", "commit", "-m", "docs: Update roadmap"])
+    subprocess.run(["git", "push", "-u", "origin", branch])
+
+    # Auto-merge via script to 'roadmap' branch
+    result = subprocess.run(
+        ["python", "scripts/merge_roadmap_pr.py", branch, "--base", "roadmap"],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode == 0:
+        print("✅ Roadmap updated on GitHub 'roadmap' branch!")
+        # Clean up
+        subprocess.run(["git", "checkout", "main"])
+        subprocess.run(["git", "pull", "origin", "roadmap"])  # Sync local roadmap branch
+        subprocess.run(["git", "branch", "-d", branch])
+    else:
+        print(f"⚠️ Manual review needed:\n{result.stdout}")
+```
+
+#### Integration in code_developer
+
+The `code_developer` daemon should use this when completing features that update roadmap:
+
+```python
+# In coffee_maker/autonomous/daemon.py
+
+def update_roadmap_status(self, priority_name: str, new_status: str):
+    """Update priority status in roadmap and push to main."""
+    # Update roadmap
+    self.parser.update_priority_status(priority_name, new_status)
+
+    # Use automated script
+    branch = f"roadmap-{priority_name.lower().replace(' ', '-')}-{new_status}"
+    subprocess.run(["git", "checkout", "-b", branch])
+    subprocess.run(["git", "add", "docs/ROADMAP.md"])
+    subprocess.run(["git", "commit", "-m", f"docs: Mark {priority_name} as {new_status}"])
+    subprocess.run(["git", "push", "-u", "origin", branch])
+
+    # Auto-merge to roadmap branch
+    subprocess.run(["python", "scripts/merge_roadmap_pr.py", branch, "--base", "roadmap"])
+```
+
+#### Integration for assistant
+
+When assistant helps user update roadmap:
+
+```python
+# In assistant workflow
+
+def help_update_roadmap(user_changes: str):
+    """Help user update roadmap and sync to main."""
+    print("I'll update the roadmap and sync it to main for you.")
+
+    # Make changes to ROADMAP.md
+    # ... (update logic here)
+
+    # Use automated process
+    print("📝 Creating automated PR...")
+    branch = f"roadmap-user-update-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+    subprocess.run(["git", "checkout", "-b", branch])
+    subprocess.run(["git", "add", "docs/ROADMAP.md"])
+    subprocess.run(["git", "commit", "-m", "docs: User-requested roadmap update"])
+    subprocess.run(["git", "push", "-u", "origin", branch])
+    subprocess.run(["python", "scripts/merge_roadmap_pr.py", branch, "--base", "roadmap"])
+
+    print("✅ Roadmap is now up-to-date on GitHub 'roadmap' branch!")
+```
+
+#### Safety Guarantees
+
+The automated script includes these safety checks:
+
+1. ✅ **Documentation-only validation**: Fails if ANY non-docs/ file is changed
+2. ✅ **Conflict detection**: Fails if branch has merge conflicts with main
+3. ✅ **Branch protection respect**: Works within GitHub's protection rules
+4. ⚠️ **Manual fallback**: If unsafe, provides PR URL for manual review
+5. ✅ **Audit trail**: All changes tracked in PR history
+
+#### Error Handling
+
+**If script fails**:
+```
+❌ Non-documentation files detected: coffee_maker/cli/roadmap_cli.py
+
+⚠️  This script is ONLY for docs/ updates!
+```
+
+**Solution**: Create separate PRs - one for docs, one for code.
+
+**If merge blocked**:
+```
+⚠️  PR has merge conflicts - manual review required
+   Please review and merge manually: https://github.com/.../pull/123
+```
+
+**Solution**: Manually resolve conflicts on GitHub or locally.
+
+#### Example Complete Workflow
+
+```bash
+# 1. project_manager updates roadmap during chat
+$ poetry run project-manager chat
+You: Mark US-020 as complete
+Claude: ✅ Updated ROADMAP.md to mark US-020 complete
+        📝 Creating automated PR to 'roadmap' branch...
+        ✅ PR created: https://github.com/.../pull/124
+        ✅ PR merged successfully to 'roadmap'!
+        🎉 Roadmap branch is now current!
+
+# 2. Verify roadmap branch is updated
+$ git fetch origin roadmap
+$ git checkout roadmap
+$ git pull origin roadmap
+From github.com:Bobain/MonolithicCoffeeMakerAgent
+ * branch            main       -> FETCH_HEAD
+Updating abc1234..def5678
+Fast-forward
+ docs/ROADMAP.md | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+# 3. View updated roadmap
+$ cat docs/ROADMAP.md
+# Shows US-020 marked as ✅ Complete
+
+# 4. Continue working on main
+$ git checkout main
+```
+
+#### Verification
+
+After automated merge, verify `roadmap` branch is current:
+
+```bash
+# Check latest commit on roadmap branch
+git log origin/roadmap -1 --oneline
+
+# Should show your roadmap update commit
+# Example: abc1234 docs: Update roadmap with US-020 completion
+
+# View roadmap on GitHub
+# https://github.com/Bobain/MonolithicCoffeeMakerAgent/tree/roadmap/docs
+```
+
+#### Branch Strategy
+
+- **`main` branch**: Stable production code + documentation
+- **`roadmap` branch**: Always current roadmap and methodology docs
+  - Updated frequently by team members
+  - Reflects latest planning and priorities
+  - Used by developer to see what to achieve next
+- **Feature branches**: Individual changes (merged to roadmap for docs, to main for code)
+
+**Why separate roadmap branch?**
+- ✅ Roadmap updates don't trigger CI/CD pipelines on main
+- ✅ Developers can easily view current roadmap without switching to feature branches
+- ✅ Clear separation: `roadmap` = planning, `main` = implementation
+- ✅ Roadmap can be updated without affecting stable main branch
+
+```
+
+#### Documentation References
+
+- **Script**: `scripts/merge_roadmap_pr.py` (implementation)
+- **Contributing Guide**: `CONTRIBUTING.md` (external contributor process)
+- **Section 2.8**: Documentation Versioning Policy (why this matters)
+
+---
+
+### 9.4 File Organization
 
 ```
 MonolithicCoffeeMakerAgent/
@@ -2632,6 +2961,8 @@ MonolithicCoffeeMakerAgent/
 │   ├── US-XXX_TECHNICAL_SPEC.md      # User story specs
 │   ├── ADR-XXX_[decision].md         # Architecture decisions
 │   └── CHANGELOG_YYYY_MM_DD_[topic].md # Change logs
+├── scripts/
+│   └── merge_roadmap_pr.py           # Automated PR merge for roadmap
 ├── coffee_maker/
 │   ├── cli/                          # Project manager code
 │   ├── autonomous/                   # Developer daemon code
