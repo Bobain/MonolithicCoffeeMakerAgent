@@ -25,6 +25,7 @@ from coffee_maker.ai_providers.base import (
     ProviderCapability,
     ProviderResult,
 )
+from coffee_maker.config.manager import ConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +56,8 @@ class OpenAIProvider(BaseAIProvider):
         """
         super().__init__(config)
 
-        # Initialize OpenAI client
-        api_key = os.getenv(config.get("api_key_env", "OPENAI_API_KEY"))
+        # Initialize OpenAI client using ConfigManager
+        api_key = ConfigManager.get_openai_api_key(required=True)
         self.client = OpenAI(api_key=api_key)
 
         # Fallback models
@@ -150,8 +151,7 @@ class OpenAIProvider(BaseAIProvider):
         Returns:
             True if API key is set and OpenAI is accessible
         """
-        api_key = os.getenv(self.config.get("api_key_env", "OPENAI_API_KEY"))
-        if not api_key:
+        if not ConfigManager.has_openai_api_key():
             logger.warning("OPENAI_API_KEY not set")
             return False
 

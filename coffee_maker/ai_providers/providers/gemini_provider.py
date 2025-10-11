@@ -26,6 +26,7 @@ from coffee_maker.ai_providers.base import (
     ProviderCapability,
     ProviderResult,
 )
+from coffee_maker.config.manager import ConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -55,12 +56,9 @@ class GeminiProvider(BaseAIProvider):
         """
         super().__init__(config)
 
-        # Configure API key
-        api_key = os.getenv(config.get("api_key_env", "GOOGLE_API_KEY"))
-        if not api_key:
-            logger.warning("GOOGLE_API_KEY not set")
-        else:
-            genai.configure(api_key=api_key)
+        # Configure API key using ConfigManager
+        api_key = ConfigManager.get_gemini_api_key(required=True)
+        genai.configure(api_key=api_key)
 
         # Initialize model
         self.model = genai.GenerativeModel(self.config["model"])
@@ -153,8 +151,7 @@ class GeminiProvider(BaseAIProvider):
         Returns:
             True if API key is set and Gemini is accessible
         """
-        api_key = os.getenv(self.config.get("api_key_env", "GOOGLE_API_KEY"))
-        if not api_key:
+        if not ConfigManager.has_gemini_api_key():
             logger.warning("GOOGLE_API_KEY not set")
             return False
 
