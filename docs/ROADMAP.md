@@ -18156,54 +18156,70 @@ However, the user should **not be aware** of this backend assistance. It should 
 
 **Desired Behavior**:
 - project-manager detects when it needs help
-- Silently invokes Claude Code assistant
+- Invokes Claude Code assistant transparently
+- **Flushes/displays assistant's action steps** so user knows what's happening
 - Gets the help it needs
 - Responds to user with complete answer
-- **User never knows assistant was involved**
+- **User never knows there's a separate assistant** (just sees actions being performed)
 
 **Use Cases**:
 
-1. **Complex Code Analysis**
+1. **Complex Code Analysis** (with visible steps)
    ```
    User: "Why is the daemon crashing on priority 2.7?"
 
-   [Behind the scenes]
-   project-manager → Invokes assistant → Analyzes logs, code, recent changes
-   Assistant → Returns analysis
-   project-manager → Responds to user
-
    [User sees]
-   project-manager: "The daemon is crashing because..."
+   project-manager: 🔍 Analyzing daemon logs...
+   project-manager: 📖 Reading daemon.py and related files...
+   project-manager: 🔎 Checking recent changes...
+   project-manager: "The daemon is crashing because the context reset
+   is failing when the CLI returns a non-zero exit code in daemon.py:345..."
    ```
 
-2. **Technical Implementation Questions**
+2. **Technical Implementation Questions** (with visible steps)
    ```
    User: "How should we implement the sound notification system?"
 
-   [Behind the scenes]
-   project-manager → Invokes assistant → Reviews architecture, best practices
-   Assistant → Provides detailed implementation plan
-   project-manager → Summarizes for user
-
    [User sees]
-   project-manager: "For sound notifications, I suggest..."
+   project-manager: 📚 Reviewing architecture and best practices...
+   project-manager: 🔍 Checking existing notification system...
+   project-manager: 💡 Analyzing cross-platform requirements...
+   project-manager: "For sound notifications, I suggest using a
+   platform-specific approach with afplay for macOS, paplay for Linux..."
    ```
 
-3. **File Operations**
+3. **File Operations** (with visible steps)
    ```
    User: "Find all places where we create notifications"
 
-   [Behind the scenes]
-   project-manager → Invokes assistant → Searches codebase
-   Assistant → Returns list of locations
-   project-manager → Formats response
-
    [User sees]
+   project-manager: 🔎 Searching codebase for notification creation...
+   project-manager: 📂 Found 8 locations across 3 files
    project-manager: "Notifications are created in:
-   - daemon.py:425
-   - chat_interface.py:892
+   - daemon.py:425 (approval requests)
+   - daemon.py:653 (manual review needed)
+   - chat_interface.py:892 (daemon commands)
    ..."
    ```
+
+**Key Point**: User sees **what's being done** (the steps), but doesn't know it's a separate "assistant" doing it - it appears as if project-manager itself is performing these actions.
+
+**Interactive Refinement**: User can add information/clarifications while seeing actions:
+```
+User: "Why is the daemon crashing?"
+
+project-manager: 🔍 Analyzing daemon logs...
+User: "check only the last 100 lines"
+
+project-manager: 📖 Reading last 100 lines of daemon.log...
+project-manager: 🔎 Found 3 errors in recent logs...
+User: "focus on the timeout errors"
+
+project-manager: 🎯 Analyzing timeout errors...
+project-manager: "The daemon is timing out because..."
+```
+
+This allows **real-time guidance** - user can steer the investigation as it happens.
 
 **Deliverables**:
 
