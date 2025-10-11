@@ -19,7 +19,9 @@ Example:
     >>> daemon.run()
 """
 
+import json
 import logging
+import os
 import time
 from datetime import datetime
 from pathlib import Path
@@ -123,6 +125,11 @@ class DevDaemon:
         self.attempted_priorities = {}  # Track retry attempts: {priority_name: count}
         self.max_retries = 3  # Maximum attempts before skipping a priority
 
+        # PRIORITY 2.8: Status reporting state
+        self.start_time = None
+        self.iteration_count = 0
+        self.current_priority_start_time = None
+
         # PRIORITY 2.7: Crash recovery state
         self.max_crashes = max_crashes
         self.crash_sleep_interval = crash_sleep_interval
@@ -154,6 +161,7 @@ class DevDaemon:
             >>> daemon.run()  # Runs until complete
         """
         self.running = True
+        self.start_time = datetime.now()
         logger.info("🤖 DevDaemon starting...")
 
         # Check prerequisites
@@ -161,13 +169,20 @@ class DevDaemon:
             logger.error("Prerequisites not met - cannot start")
             return
 
+        # PRIORITY 2.8: Write initial status
+        self._write_status()
+
         iteration = 0
 
         while self.running:
             iteration += 1
+            self.iteration_count = iteration
             logger.info(f"\n{'='*60}")
             logger.info(f"Iteration {iteration} | Crashes: {self.crash_count}/{self.max_crashes}")
             logger.info(f"{'='*60}")
+
+            # PRIORITY 2.8: Write status at start of iteration
+            self._write_status()
 
             try:
                 # PRIORITY 2.7: Crash recovery - reset context after crash
@@ -205,6 +220,10 @@ class DevDaemon:
 
                 logger.info(f"📋 Next priority: {next_priority['name']} - {next_priority['title']}")
 
+                # PRIORITY 2.8: Update status with current priority
+                self.current_priority_start_time = datetime.now()
+                self._write_status(priority=next_priority)
+
                 # BUG FIX #3 & #4: Check for technical spec, create if missing
                 if not self._ensure_technical_spec(next_priority):
                     logger.warning("⚠️  Could not ensure technical spec exists - skipping this priority")
@@ -225,6 +244,8 @@ class DevDaemon:
                     logger.info(f"✅ Successfully implemented {next_priority['name']}")
                     # PRIORITY 2.7: Increment iteration counter only on success
                     self.iterations_since_compact += 1
+                    # PRIORITY 2.8: Write status after completion
+                    self._write_status(priority=next_priority)
                 else:
                     logger.warning(f"⚠️  Implementation failed for {next_priority['name']}")
 
@@ -255,6 +276,10 @@ class DevDaemon:
 
                 traceback.print_exc()
 
+                # PRIORITY 2.8: Write status after crash
+                priority_context = next_priority if "next_priority" in locals() else None
+                self._write_status(priority=priority_context)
+
                 # Check if max crashes reached
                 if self.crash_count >= self.max_crashes:
                     logger.critical(f"🚨 MAX CRASHES REACHED ({self.max_crashes}) - STOPPING DAEMON")
@@ -268,6 +293,9 @@ class DevDaemon:
 
         logger.info("🛑 DevDaemon stopped")
         logger.info(f"Total crashes: {len(self.crash_history)}")
+
+        # PRIORITY 2.8: Write final status on stop
+        self._write_status()
 
     def _check_prerequisites(self) -> bool:
         """Check if prerequisites are met.
@@ -935,6 +963,98 @@ The daemon will remain stopped until manually restarted.
         )
 
         logger.critical("Created critical notification for persistent failure")
+
+    def _write_status(self, priority=None):
+        """Write current daemon status to file.
+
+        PRIORITY 2.8: Daemon Status Reporting
+
+        This method writes the daemon's current status to ~/.coffee_maker/daemon_status.json
+        so that `project-manager status` can read and display it to the user.
+
+        Called at:
+        - Start of each iteration
+        - After priority completion
+        - After crash/recovery
+        - On daemon stop
+
+        Args:
+            priority: Optional priority dictionary being worked on
+
+        Status file format:
+            {
+                "pid": 12345,
+                "status": "running" | "stopped",
+                "started_at": "2025-10-11T10:30:00",
+                "current_priority": {
+                    "name": "PRIORITY 2.8",
+                    "title": "Daemon Status Reporting",
+                    "started_at": "2025-10-11T10:35:00"
+                },
+                "iteration": 5,
+                "crashes": {
+                    "count": 0,
+                    "max": 3,
+                    "history": [...]
+                },
+                "context": {
+                    "iterations_since_compact": 2,
+                    "compact_interval": 10,
+                    "last_compact": "2025-10-11T10:00:00"
+                },
+                "last_update": "2025-10-11T10:45:00"
+            }
+
+        Example:
+            >>> daemon = DevDaemon()
+            >>> daemon._write_status(priority={"name": "PRIORITY 2.8", "title": "..."})
+        """
+        try:
+            # Build status dictionary
+            status = {
+                "pid": os.getpid(),
+                "status": "running" if self.running else "stopped",
+                "started_at": (
+                    getattr(self, "start_time", datetime.now()).isoformat() if hasattr(self, "start_time") else None
+                ),
+                "current_priority": (
+                    {
+                        "name": priority["name"] if priority else None,
+                        "title": priority["title"] if priority else None,
+                        "started_at": (
+                            getattr(self, "current_priority_start_time", None).isoformat()
+                            if hasattr(self, "current_priority_start_time") and self.current_priority_start_time
+                            else None
+                        ),
+                    }
+                    if priority
+                    else None
+                ),
+                "iteration": getattr(self, "iteration_count", 0),
+                "crashes": {
+                    "count": self.crash_count,
+                    "max": self.max_crashes,
+                    "history": self.crash_history[-5:],  # Last 5 crashes
+                },
+                "context": {
+                    "iterations_since_compact": self.iterations_since_compact,
+                    "compact_interval": self.compact_interval,
+                    "last_compact": (self.last_compact_time.isoformat() if self.last_compact_time else None),
+                },
+                "last_update": datetime.now().isoformat(),
+            }
+
+            # Write to status file
+            status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
+            status_file.parent.mkdir(exist_ok=True, parents=True)
+
+            with open(status_file, "w") as f:
+                json.dump(status, f, indent=2)
+
+            logger.debug(f"Status written to {status_file}")
+
+        except Exception as e:
+            logger.error(f"Failed to write status file: {e}")
 
     def stop(self):
         """Stop the daemon gracefully."""
