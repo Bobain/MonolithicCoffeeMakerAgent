@@ -23,9 +23,11 @@ Example:
 import logging
 import os
 import re
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from coffee_maker.utils.file_io import read_json_file, write_json_file
 
@@ -34,10 +36,7 @@ from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from rich.console import Console
-from rich.live import Live
 from rich.markdown import Markdown
-from rich.panel import Panel
-from rich.spinner import Spinner
 from rich.syntax import Syntax
 from rich.table import Table
 
@@ -50,6 +49,211 @@ from coffee_maker.cli.roadmap_editor import RoadmapEditor
 from coffee_maker.process_manager import ProcessManager
 
 logger = logging.getLogger(__name__)
+
+
+class DeveloperStatusMonitor:
+    """Background monitor for developer status.
+
+    Polls developer_status.json file and maintains current status data
+    for display in a persistent status bar above the prompt.
+
+    Status is displayed as a multi-line toolbar showing:
+    - Current task title and priority
+    - Iteration count
+    - Time elapsed and ETA
+    - Progress bar
+    """
+
+    def __init__(self, poll_interval: float = 2.0):
+        """Initialize status monitor.
+
+        Args:
+            poll_interval: Seconds between status checks (default: 2)
+        """
+        self.poll_interval = poll_interval
+        # Use the same status file path as the /status command
+        self.status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
+        self.is_running = False
+        self.monitor_thread: Optional[threading.Thread] = None
+
+        # Current status data (thread-safe access)
+        self._status_lock = threading.Lock()
+        self._current_status: Optional[Dict] = None
+
+    def start(self):
+        """Start background monitoring thread."""
+        if self.is_running:
+            logger.warning("Status monitor already running")
+            return
+
+        self.is_running = True
+        self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        self.monitor_thread.start()
+        logger.info("Developer status monitor started")
+
+    def stop(self):
+        """Stop background monitoring thread."""
+        self.is_running = False
+        if self.monitor_thread and self.monitor_thread.is_alive():
+            logger.info("Developer status monitor stopped")
+
+    def _monitor_loop(self):
+        """Main monitoring loop (runs in background thread)."""
+        while self.is_running:
+            try:
+                self._check_status()
+            except Exception as e:
+                logger.error(f"Status monitor error: {e}", exc_info=True)
+
+            time.sleep(self.poll_interval)
+
+    def _check_status(self):
+        """Check developer status file and update internal state."""
+        if not self.status_file.exists():
+            # File doesn't exist yet, daemon probably not running
+            with self._status_lock:
+                self._current_status = None
+            return
+
+        try:
+            with open(self.status_file, "r") as f:
+                status_data = json.load(f)
+
+            # Store the full status data
+            with self._status_lock:
+                self._current_status = status_data
+
+        except json.JSONDecodeError:
+            # File might be mid-write, skip this check
+            pass
+        except Exception as e:
+            logger.debug(f"Error checking status: {e}")
+
+    def get_formatted_status(self) -> str:
+        """Get formatted status text for toolbar display.
+
+        Returns:
+            Multi-line formatted status string for bottom toolbar
+        """
+        with self._status_lock:
+            status_data = self._current_status
+
+        if not status_data:
+            return "⚫ code_developer: Not running"
+
+        daemon_status = status_data.get("status", "unknown")
+        current_priority = status_data.get("current_priority")
+        iteration = status_data.get("iteration", 0)
+
+        # Daemon not working on anything
+        if daemon_status != "running" or not current_priority:
+            return f"⚪ code_developer: Idle (iteration {iteration})"
+
+        # Extract priority info
+        priority_name = current_priority.get("name", "Unknown")
+        priority_title = current_priority.get("title", "Unknown Task")
+        started_at = current_priority.get("started_at")
+
+        # Calculate time and progress
+        elapsed_str = "0m"
+        progress = 0
+        eta_str = "unknown"
+
+        if started_at:
+            try:
+                from datetime import datetime
+
+                start_time = datetime.fromisoformat(started_at)
+                elapsed = (datetime.now() - start_time).total_seconds()
+
+                # Format elapsed time
+                hours = int(elapsed / 3600)
+                minutes = int((elapsed % 3600) / 60)
+                if hours > 0:
+                    elapsed_str = f"{hours}h {minutes}m"
+                else:
+                    elapsed_str = f"{minutes}m"
+
+                # Calculate progress (assume 8 hours per task)
+                progress = min(100, int((elapsed / (8 * 3600)) * 100))
+
+                # Calculate ETA
+                if progress > 0:
+                    total_estimated = elapsed / (progress / 100)
+                    remaining = total_estimated - elapsed
+                    eta_hours = int(remaining / 3600)
+                    eta_minutes = int((remaining % 3600) / 60)
+                    if eta_hours > 0:
+                        eta_str = f"~{eta_hours}h {eta_minutes}m"
+                    else:
+                        eta_str = f"~{eta_minutes}m"
+            except:
+                pass
+
+        # Create progress bar
+        bar_length = 20
+        filled = int(bar_length * progress / 100)
+        progress_bar = "█" * filled + "░" * (bar_length - filled)
+
+        # Format multi-line status
+        lines = [
+            f"🟢 {priority_title}",
+            f"▸ {priority_name} | Iteration {iteration} | Time: {elapsed_str} | ETA: {eta_str}",
+        ]
+
+        # Add subtasks if available
+        subtasks = status_data.get("subtasks", [])
+        if subtasks:
+            lines.append("▸ Tasks:")
+            for subtask in subtasks:
+                name = subtask.get("name", "Unknown task")
+                status = subtask.get("status", "unknown")
+                duration = subtask.get("duration_seconds", 0)
+                estimated = subtask.get("estimated_seconds", 0)
+
+                # Choose emoji based on status
+                if status == "completed":
+                    emoji = "✓"
+                elif status == "in_progress":
+                    emoji = "🔄"
+                elif status == "failed":
+                    emoji = "❌"
+                else:  # pending
+                    emoji = "⏳"
+
+                # Format duration and estimated time
+                def format_time(seconds):
+                    if seconds >= 60:
+                        mins = seconds // 60
+                        secs = seconds % 60
+                        return f"{mins}m{secs}s" if secs > 0 else f"{mins}m"
+                    else:
+                        return f"{seconds}s"
+
+                # Build subtask line
+                if status in ["completed", "failed"]:
+                    # Show actual vs estimated for finished tasks
+                    actual_str = format_time(duration)
+                    est_str = format_time(estimated) if estimated > 0 else "?"
+                    lines.append(f"   {emoji} {name}: {actual_str} (est: {est_str})")
+                elif status == "in_progress":
+                    # Show current elapsed and estimated
+                    if duration > 0:
+                        actual_str = format_time(duration)
+                        est_str = format_time(estimated) if estimated > 0 else "?"
+                        lines.append(f"   {emoji} {name}: {actual_str} / {est_str}")
+                    else:
+                        est_str = format_time(estimated) if estimated > 0 else "?"
+                        lines.append(f"   {emoji} {name} (est: {est_str})")
+                else:  # pending
+                    # Show only estimated
+                    est_str = format_time(estimated) if estimated > 0 else "?"
+                    lines.append(f"   {emoji} {name} (est: {est_str})")
+
+        # Add progress bar at the end
+        lines.append(f"▸ Progress: [{progress_bar}] {progress}%")
+
+        return "\n".join(lines)
 
 
 class ProjectManagerCompleter(Completer):
@@ -172,6 +376,9 @@ class ChatSession:
         # Assistant uses tools to help with analysis, debugging, code search, etc.
         self.assistant = AssistantBridge(action_callback=self._display_assistant_action)
 
+        # Initialize developer status monitor for real-time updates
+        self.status_monitor = DeveloperStatusMonitor(poll_interval=2.0)
+
         # Setup prompt-toolkit for advanced input
         self._setup_prompt_session()
 
@@ -205,7 +412,7 @@ class ChatSession:
             """Insert newline on Alt+Enter."""
             event.current_buffer.insert_text("\n")
 
-        # Create prompt session
+        # Create prompt session with better multi-line support and status bar
         self.prompt_session = PromptSession(
             history=FileHistory(str(history_file)),
             completer=ProjectManagerCompleter(self.editor),
@@ -213,6 +420,9 @@ class ChatSession:
             multiline=False,  # Will be controlled by key bindings
             key_bindings=bindings,
             enable_history_search=True,  # Ctrl+R for reverse search
+            prompt_continuation="... ",  # Continuation indicator for multi-line (like claude-cli)
+            bottom_toolbar=lambda: self.status_monitor.get_formatted_status(),  # Persistent status bar
+            refresh_interval=2,  # Refresh toolbar every 2 seconds
         )
 
     def _display_assistant_action(self, action: str):
@@ -538,6 +748,9 @@ class ChatSession:
         # Auto-check and start daemon if needed
         self._auto_start_daemon_if_needed()
 
+        # Start real-time status monitoring
+        self.status_monitor.start()
+
         self._display_welcome()
         self._load_roadmap_context()
         self._run_repl_loop()
@@ -557,63 +770,67 @@ class ChatSession:
 
         message_count = 0
 
-        while self.active:
-            try:
-                # Show prompt with Rich styling hint
-                self.console.print("\n[bold cyan]You:[/] ", end="")
+        try:
+            while self.active:
+                try:
+                    # Show prompt in a clean, claude-cli style
+                    self.console.print("\n[bold]You[/]")
 
-                # Get user input with prompt-toolkit
-                # (supports: ↑/↓ history, Tab completion, Shift+Enter multi-line)
-                user_input = self.prompt_session.prompt("")
+                    # Get user input with prompt-toolkit
+                    # (supports: ↑/↓ history, Tab completion, Alt+Enter multi-line)
+                    user_input = self.prompt_session.prompt("› ")
 
-                if not user_input.strip():
-                    continue
+                    if not user_input.strip():
+                        continue
 
-                # Check for exit commands
-                if user_input.lower() in ["/exit", "/quit", "exit", "quit"]:
+                    # Check for exit commands
+                    if user_input.lower() in ["/exit", "/quit", "exit", "quit"]:
+                        self._display_goodbye()
+                        break
+
+                    # Check for help command
+                    if user_input.lower() in ["/help", "help"]:
+                        self._display_help()
+                        continue
+
+                    # Process input
+                    response = self._process_input(user_input)
+
+                    # Display response
+                    self._display_response(response)
+
+                    # Add to history
+                    self.history.append({"role": "user", "content": user_input})
+                    self.history.append({"role": "assistant", "content": response})
+
+                    # Auto-save session after each interaction
+                    self._save_session()
+
+                    # Update status and check for daemon questions every 10 messages
+                    message_count += 1
+                    if message_count % 10 == 0:
+                        # Update daemon status
+                        old_status = self.daemon_status_text
+                        self._update_status_display()
+
+                        # Alert if status changed
+                        if old_status != self.daemon_status_text:
+                            self.console.print(f"\n[cyan]📊 Status Update: {self.daemon_status_text}[/]\n")
+
+                        # Check for new daemon questions
+                        self._check_daemon_questions()
+
+                except KeyboardInterrupt:
+                    self.console.print("\n\n[yellow]Interrupted. Type /exit to quit.[/]")
+                except EOFError:
                     self._display_goodbye()
                     break
-
-                # Check for help command
-                if user_input.lower() in ["/help", "help"]:
-                    self._display_help()
-                    continue
-
-                # Process input
-                response = self._process_input(user_input)
-
-                # Display response
-                self._display_response(response)
-
-                # Add to history
-                self.history.append({"role": "user", "content": user_input})
-                self.history.append({"role": "assistant", "content": response})
-
-                # Auto-save session after each interaction
-                self._save_session()
-
-                # Update status and check for daemon questions every 10 messages
-                message_count += 1
-                if message_count % 10 == 0:
-                    # Update daemon status
-                    old_status = self.daemon_status_text
-                    self._update_status_display()
-
-                    # Alert if status changed
-                    if old_status != self.daemon_status_text:
-                        self.console.print(f"\n[cyan]📊 Status Update: {self.daemon_status_text}[/]\n")
-
-                    # Check for new daemon questions
-                    self._check_daemon_questions()
-
-            except KeyboardInterrupt:
-                self.console.print("\n\n[yellow]Interrupted. Type /exit to quit.[/]")
-            except EOFError:
-                self._display_goodbye()
-                break
-            except Exception as e:
-                logger.error(f"Error in REPL loop: {e}", exc_info=True)
-                self.console.print(f"\n[red]Error: {e}[/]")
+                except Exception as e:
+                    logger.error(f"Error in REPL loop: {e}", exc_info=True)
+                    self.console.print(f"\n[red]Error: {e}[/]")
+        finally:
+            # Ensure status monitor is stopped on any exit
+            self.status_monitor.stop()
 
     def _process_input(self, user_input: str) -> str:
         """Process user input (command or natural language).
@@ -883,37 +1100,43 @@ class ChatSession:
             return f"❌ Failed to execute action: {str(e)}"
 
     def _display_welcome(self):
-        """Display welcome message with rich formatting."""
-        features = (
-            "✨ [bold]New Features:[/] ✨\n"
-            "  • [cyan]Streaming responses[/] - Text appears progressively\n"
-            "  • [cyan]↑/↓[/] - Navigate input history\n"
-            "  • [cyan]Tab[/] - Auto-complete commands and priorities\n"
-            "  • [cyan]Alt+Enter[/] - Multi-line input\n"
-            "  • [cyan]Ctrl+R[/] - Reverse history search\n\n"
-        )
+        """Display welcome message with clean, claude-cli inspired formatting."""
+        # Clean, minimal welcome similar to claude-cli
+        self.console.print()
+        self.console.print("[bold]Coffee Maker[/] [dim]·[/] AI Project Manager")
+        self.console.print("[dim]Powered by Claude AI[/]")
+        self.console.print()
 
-        panel = Panel.fit(
-            "[bold cyan]Coffee Maker - AI Project Manager[/]\n\n"
-            "Powered by Claude AI - Your intelligent roadmap assistant\n\n"
-            f"{features}"
-            "Type [bold]/help[/] for commands or just chat naturally\n\n"
-            "[dim]Session started. Type /exit to quit.[/]",
-            title="🤖 Welcome",
-            border_style="cyan",
+        # Show keyboard shortcuts in a clean way
+        self.console.print("[dim]Keyboard shortcuts:[/]")
+        self.console.print("[dim]  /help[/] [dim]- Show commands[/]")
+        self.console.print("[dim]  Alt+Enter[/] [dim]- Multi-line input[/]")
+        self.console.print(
+            "[dim]  ↑↓[/] [dim]- History    [/][dim]Tab[/] [dim]- Complete    [/][dim]/exit[/] [dim]- Quit[/]"
         )
-        self.console.print(panel)
+        self.console.print()
 
-        # Show daemon status
-        self.console.print(f"\n[cyan]{self.daemon_status_text}[/]")
-        self.console.print("[dim]Use /status for detailed info, /start to launch daemon, /stop to shut down[/]\n")
+        # Show daemon status in a subtle way
+        status_icon = (
+            "🟢" if "Active" in self.daemon_status_text else "🔴" if "Stopped" in self.daemon_status_text else "🟡"
+        )
+        self.console.print(
+            f"[dim]{status_icon} code_developer: {self.daemon_status_text.split(': ')[1] if ': ' in self.daemon_status_text else self.daemon_status_text}[/]"
+        )
+        self.console.print()
+        self.console.print("[dim]" + "─" * 60 + "[/]")
+        self.console.print()
 
     def _display_goodbye(self):
         """Display goodbye message and save session."""
         self.active = False
+
+        # Stop status monitoring
+        self.status_monitor.stop()
+
         self._save_session()  # Final save on exit
-        self.console.print("\n[bold cyan]Thank you for using Coffee Maker Project Manager![/]")
-        self.console.print(f"[dim]Session saved ({len(self.history)} messages). All changes have been saved.[/]\n")
+        self.console.print("\n[dim]Session saved. Goodbye![/]")
+        self.console.print()
 
     def _display_response(self, response: str):
         """Display AI response with enhanced syntax highlighting.
@@ -924,7 +1147,8 @@ class ChatSession:
         Example:
             >>> session._display_response("**Success!** Priority added.")
         """
-        self.console.print("\n[bold green]Claude:[/]")
+        # Clean, claude-cli style header
+        self.console.print("\n[bold]Claude[/]")
 
         # Extract and render code blocks with syntax highlighting
         try:
@@ -1066,14 +1290,14 @@ class ChatSession:
         """
         context = self._build_context()
 
-        # Show typing indicator briefly
-        with Live(Spinner("dots", text="[cyan]Claude is thinking...[/]"), console=self.console, refresh_per_second=10):
-            import time
+        # Show thinking indicator briefly (very subtle, like claude-cli)
+        self.console.print("\n[dim]...[/]", end="\r")  # Will be overwritten
+        import time
 
-            time.sleep(0.3)
+        time.sleep(0.2)  # Brief pause
 
-        # Stream response
-        self.console.print("\n[bold green]Claude:[/] ", end="")
+        # Stream response with clean header
+        self.console.print("\n[bold]Claude[/]")
 
         full_response = ""
         for chunk in self.ai_service.process_request_stream(user_input=text, context=context, history=self.history):

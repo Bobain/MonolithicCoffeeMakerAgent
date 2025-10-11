@@ -191,7 +191,7 @@ class ClaudeCLIInterface:
                 "--dangerously-skip-permissions",
             ]
 
-            logger.info(f"Executing CLI request: {prompt[:100]}...")
+            logger.debug(f"Executing CLI request: {prompt[:100]}...")
 
             # CRITICAL: Remove ANTHROPIC_API_KEY from environment
             # Claude CLI should use subscription, NOT API credits
@@ -222,7 +222,7 @@ class ClaudeCLIInterface:
 
             content = result.stdout.strip()
 
-            logger.info(f"CLI request completed ({len(content)} chars)")
+            logger.debug(f"CLI request completed ({len(content)} chars)")
 
             # Note: CLI doesn't provide token counts, so we estimate
             # Rough estimate: 1 token ≈ 4 characters
