@@ -105,95 +105,85 @@ PRIORITY 2: Project Manager with UI ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
-**Project**: **🧠 US-014 - Intelligent Request Categorization and Document Routing**
+**Project**: **🚨 US-022 - Automatic Roadmap Synchronization for code_developer**
 
-**Status**: 📝 **READY TO IMPLEMENT** (Spec approved 2025-10-10)
+**Status**: 📝 **EXTREMELY URGENT - MUST IMPLEMENT IMMEDIATELY** (Elevated: 2025-10-11)
 
-**Goal**: Build intelligent classification system that automatically detects whether user input is a feature request, methodology change, or both, and routes information to the correct documents
+**Goal**: Enable code_developer and project_manager to synchronize roadmap via the 'roadmap' branch on GitHub, ensuring all team members always work with the latest roadmap
 
-**Why This Is Critical**:
-Currently PM doesn't consistently identify what type of information users are providing:
-- Feature requests may be documented as methodology changes (or vice versa)
-- Information gets lost or placed in wrong documents
-- No clear process for handling hybrid requests (both feature + methodology)
-- PM doesn't ask clarifying questions when ambiguous
+**Why This Is EXTREMELY URGENT**:
+From a technical point of view, it is **critical** that project_manager and code_developer exchange roadmap updates via the 'roadmap' branch:
+- ❌ code_developer currently works with stale roadmap data for hours/days
+- ❌ project_manager updates aren't visible to code_developer during long feature branches
+- ❌ **Each time they want to modify the roadmap, they MUST do a pull first**
+- ❌ Without this, we get massive conflicts and wasted work on obsolete priorities
+- ✅ This MUST be the absolute top technical priority
 
-**User Story**:
-> "As a project manager, I need to be able to interpret the user's context: what part of what he is saying are user stories, and what parts concerns the collaboration methodologies, or both. I can ask him to make sure I understood as I need to get sure which documents should be updated (roadmap, collaboration methodology, etc)"
+**User Stories** (Multiple stakeholders):
+> "As a code_developer I need to merge roadmap branch into mine frequently in order to always be aware of my next priorities"
 
-**Implementation Plan** (3-5 days):
+> "As a project_manager I need the code-developer to always be aware of the last up to date roadmap, therefore I need him to pull the branch roadmap frequently"
 
-**Phase 1: Core Classification Engine** (Day 1 - 6 hours)
-- [ ] Create `RequestClassifier` class with keyword matching
-- [ ] Implement pattern detection (imperative vs prescriptive mood)
-- [ ] Build confidence scoring algorithm
-- [ ] Write comprehensive unit tests (>90% coverage)
-- [ ] Test 20+ classification scenarios
+> "Each time they want to read or modify the roadmap they will have to do a pull first" (à chaque fois qu'ils voudront lire ou modifier la roadmap il leur faudra faire un pull avant)
 
-**Phase 2: AI Service Integration** (Day 2 - 4 hours)
-- [ ] Integrate classifier into `ai_service.py`
-- [ ] Add clarification prompt generation (A/B/C format)
-- [ ] Implement routing logic based on classification
-- [ ] Add explicit document update statements
-- [ ] Write integration tests
+**Implementation Plan** (0.5 days = 4 hours):
 
-**Phase 3: Document Routing** (Day 3 - 6 hours)
-- [ ] Create `DocumentRouter` class
-- [ ] Implement ROADMAP.md update logic
-- [ ] Implement COLLABORATION_METHODOLOGY.md update logic
-- [ ] Add format validation
-- [ ] Handle hybrid requests (update both docs)
+**Phase 1: Sync Detection** (1 hour)
+- [ ] Check if 'roadmap' branch has new commits since last sync
+- [ ] Compare ROADMAP.md timestamps between local and origin/roadmap
+- [ ] Detect when sync is needed (every N iterations or when ROADMAP changed)
 
-**Phase 4: Testing & Documentation** (Day 4-5 - 8 hours)
-- [ ] End-to-end testing with real documents
-- [ ] Test all edge cases
-- [ ] Update documentation (4 docs)
-- [ ] User validation with 10+ test inputs
-- [ ] Mark US-014 complete
+**Phase 2: Automatic Merge from 'roadmap' Branch** (1.5 hours)
+- [ ] Implement `git fetch origin roadmap`
+- [ ] Implement `git merge origin/roadmap` in daemon's current branch
+- [ ] Handle merge conflicts automatically for safe files (ROADMAP.md, docs/*)
+- [ ] Abort and notify user if complex conflicts occur
 
-**Success Criteria** (19 acceptance criteria from US-014):
+**Phase 3: Roadmap Reload** (0.5 hours)
+- [ ] After successful merge, reload RoadmapParser
+- [ ] Re-evaluate current priority (may have changed!)
+- [ ] Log sync activity for audit trail
+- [ ] Notify if priority changed during sync
 
-**Detection & Classification**:
-- [ ] PM analyzes user input to detect type: feature, methodology, or both
-- [ ] PM uses contextual clues (keywords, phrasing, intent) to classify
-- [ ] PM correctly identifies ambiguous requests requiring clarification
+**Phase 4: Configuration & Safety** (1 hour)
+- [ ] Add `sync_interval` config (default: every 10 iterations or 30 minutes)
+- [ ] Add `auto_sync_enabled` flag (default: true)
+- [ ] Add safety checks (don't sync during active git operations)
+- [ ] Add notification on successful sync
 
-**Clarifying Questions**:
-- [ ] When ambiguous, PM asks: "Is this a feature to build, or a process change?"
-- [ ] PM presents options clearly (A/B/C format)
-- [ ] PM explains why question matters (which docs get updated)
-- [ ] User can respond naturally, PM interprets the response
-
-**Document Routing**:
-- [ ] Feature requests → ROADMAP.md (user stories)
-- [ ] Methodology changes → COLLABORATION_METHODOLOGY.md (process updates)
-- [ ] Hybrid requests → Both documents (cross-referenced)
-- [ ] PM explicitly states which documents will be updated before doing so
-
-**Technical Specification**: See `docs/US-014_TECHNICAL_SPEC.md` (1,343 lines)
-
-**Files to Create**:
-- `coffee_maker/cli/request_classifier.py` (new - ~250 lines)
-- `coffee_maker/cli/document_router.py` (new - ~200 lines)
-- `tests/test_request_classifier.py` (new - ~300 lines)
-- `tests/test_document_router.py` (new - ~200 lines)
-- `tests/test_e2e_request_classification.py` (new - ~150 lines)
+**Success Criteria**:
+- [ ] code_developer syncs with 'roadmap' branch every 10 iterations (or 30 minutes)
+- [ ] project_manager syncs with 'roadmap' branch before reading/modifying roadmap
+- [ ] ROADMAP.md changes from 'roadmap' branch are pulled automatically
+- [ ] Daemon reloads roadmap after sync
+- [ ] Daemon re-evaluates priority after sync (may switch tasks!)
+- [ ] Clean merges happen automatically
+- [ ] Conflicts trigger user notification
+- [ ] Sync activity logged to daemon.log
+- [ ] Can be disabled via config if needed
 
 **Files to Modify**:
-- `coffee_maker/cli/ai_service.py` (~150 lines added)
-- `docs/COLLABORATION_METHODOLOGY.md` (already updated with Section 3.2.1)
+- `coffee_maker/autonomous/daemon.py` (~50 lines added to main loop)
+- `coffee_maker/cli/roadmap_cli.py` (~30 lines for sync before read/modify)
+- `config.yaml.example` (add sync_interval, auto_sync_enabled)
+- `coffee_maker/autonomous/git_manager.py` (~30 lines for sync methods)
 
 **Key Technical Decisions**:
-- ✅ Rule-based classification (not ML) - fast, explainable, maintainable
-- ✅ Confidence thresholds: >80% (auto), 50-80% (mention), <50% (ask)
-- ✅ Keyword dictionaries for each category + pattern detection
-- ✅ Classification completes in <100ms
+- ✅ Sync from 'roadmap' branch (dedicated branch for roadmap updates)
+- ✅ Sync every 10 iterations OR 30 minutes (whichever comes first)
+- ✅ Auto-merge safe files (docs/*), abort on complex conflicts
+- ✅ Reload roadmap after every successful sync
+- ✅ Re-evaluate priority after sync (may switch to new top priority)
 
-**Target Accuracy**:
-- Feature detection: >92%
-- Methodology detection: >92%
-- Hybrid detection: >85%
-- Overall accuracy: >90%
+**Configuration**:
+```yaml
+# config.yaml
+daemon:
+  # Roadmap sync settings
+  auto_sync_enabled: true         # Enable automatic sync from 'roadmap' branch
+  sync_interval: 30               # Minutes between syncs (minimum)
+  sync_every_n_iterations: 10     # Sync every N iterations
+```
 
 **Recent Completions**:
 ✅ US-009: Process Management & Status Monitoring (2025-10-10)
@@ -206,13 +196,15 @@ Currently PM doesn't consistently identify what type of information users are pr
    - Impact: Prevents CLI nesting issues for users running project-manager from Claude Code
 
 **Next After US-014** (Priority Order):
-1. **US-022**: Automatic Roadmap Sync for code_developer (0.5 days) - **CRITICAL FOR DAEMON**
-2. **US-016**: Technical Spec Generation with Task-Level Estimates (4-5 days)
-3. US-015: Estimation Metrics & Velocity Tracking (3-4 days)
-4. US-017: Summary & Calendar of Deliverables (5-7 days)
-5. US-012/US-013: `/US` Command for natural user story creation
-6. US-007: IDE Code Completion (developer productivity)
-7. PRIORITY 2.6: CI Testing (ensure daemon stability)
+1. **US-022**: Automatic Roadmap Sync for code_developer (0.5 days) - **🚨 EXTREMELY URGENT - TOP PRIORITY**
+2. **US-023**: Document Index Enhancement (0.25 days) - **HIGH IMPACT**
+3. **US-024**: Working Directory Conflict Prevention (0.5 days) - **HIGH IMPACT - CRITICAL**
+4. **US-016**: Technical Spec Generation with Task-Level Estimates (4-5 days)
+5. US-015: Estimation Metrics & Velocity Tracking (3-4 days)
+6. US-017: Summary & Calendar of Deliverables (5-7 days)
+7. US-012/US-013: `/US` Command for natural user story creation
+8. US-007: IDE Code Completion (developer productivity)
+9. PRIORITY 2.6: CI Testing (ensure daemon stability)
 
 ---
 
@@ -258,9 +250,9 @@ Currently PM doesn't consistently identify what type of information users are pr
 **The Problem**:
 
 Currently, code_developer works on feature branches for extended periods (hours/days) while implementing priorities. During this time:
-- The PM may update ROADMAP.md on main (new priorities, changed requirements)
+- The PM may update ROADMAP.md on 'roadmap' branch (new priorities, changed requirements)
 - The user may reprioritize work
-- Other team members may merge documentation changes
+- Other team members may merge documentation changes to 'roadmap' branch
 - code_developer continues working with **stale roadmap** data
 
 **Real-World Impact**:
@@ -272,18 +264,18 @@ Currently, code_developer works on feature branches for extended periods (hours/
 **User Story Context** (2025-10-11):
 > "As a code_developer I need to merge roadmap branch into mine frequently in order to always be aware of my next priorities"
 
-**Solution**: Automatic Periodic Sync from main
+**Solution**: Automatic Periodic Sync from 'roadmap' branch
 
 **Implementation**:
 
 **Phase 1: Sync Detection** (1 hour)
-- [ ] Check if main has new commits since last sync
-- [ ] Compare ROADMAP.md timestamps between branches
+- [ ] Check if 'roadmap' branch has new commits since last sync
+- [ ] Compare ROADMAP.md timestamps between local and origin/roadmap
 - [ ] Detect when sync is needed (every N iterations or when ROADMAP changed)
 
 **Phase 2: Automatic Merge** (1.5 hours)
-- [ ] Implement `git fetch origin main`
-- [ ] Implement `git merge origin/main` in daemon's current branch
+- [ ] Implement `git fetch origin roadmap`
+- [ ] Implement `git merge origin/roadmap` in daemon's current branch
 - [ ] Handle merge conflicts automatically for safe files (ROADMAP.md, docs/*)
 - [ ] Abort and notify user if complex conflicts occur
 
@@ -299,8 +291,8 @@ Currently, code_developer works on feature branches for extended periods (hours/
 - [ ] Add notification on successful sync
 
 **Acceptance Criteria**:
-- [ ] Daemon syncs with main every 10 iterations (or 30 minutes)
-- [ ] ROADMAP.md changes from main are pulled automatically
+- [ ] Daemon syncs with 'roadmap' branch every 10 iterations (or 30 minutes)
+- [ ] ROADMAP.md changes from 'roadmap' branch are pulled automatically
 - [ ] Daemon reloads roadmap after sync
 - [ ] Daemon re-evaluates priority after sync (may switch tasks!)
 - [ ] Clean merges happen automatically
@@ -325,12 +317,12 @@ while self.running:
 
     # Sync every 10 iterations or 30 minutes
     if (iteration % 10 == 0) or (time.time() - last_sync_time > 1800):
-        logger.info("Syncing with main branch...")
-        if self.git.sync_from_main():
+        logger.info("Syncing with 'roadmap' branch...")
+        if self.git.sync_from_roadmap():
             # Successful sync - reload roadmap
             self.parser = RoadmapParser(str(self.roadmap_path))
             last_sync_time = time.time()
-            logger.info("✅ Synced with main, roadmap reloaded")
+            logger.info("✅ Synced with 'roadmap' branch, roadmap reloaded")
         else:
             # Conflict or error
             logger.warning("⚠️ Sync failed - manual intervention needed")
@@ -340,6 +332,22 @@ while self.running:
     next_priority = self.parser.get_next_planned_priority()
     # ...
 ```
+
+**Workflow for Team Members**:
+
+**To READ roadmap** (code_developer, project_manager, assistant):
+1. `git fetch origin roadmap`
+2. `git merge origin/roadmap` (pull and merge)
+3. Reload RoadmapParser to get latest data
+
+**To WRITE to roadmap** (project_manager, assistant):
+1. `git fetch origin roadmap`
+2. `git merge origin/roadmap` (get latest first!)
+3. Modify ROADMAP.md locally
+4. `git add docs/ROADMAP.md`
+5. `git commit -m "docs: update roadmap"`
+6. `git push origin HEAD:roadmap` (push and merge to roadmap branch)
+7. Or use `scripts/merge_roadmap_pr.py` for automated PR workflow
 
 **Why This is Critical**:
 
@@ -355,7 +363,7 @@ while self.running:
 # config.yaml
 daemon:
   # Roadmap sync settings
-  auto_sync_enabled: true         # Enable automatic sync from main
+  auto_sync_enabled: true         # Enable automatic sync from 'roadmap' branch
   sync_interval: 30               # Minutes between syncs (minimum)
   sync_every_n_iterations: 10     # Sync every N iterations
 ```
@@ -377,6 +385,238 @@ daemon:
 - COLLABORATION_METHODOLOGY.md: Add Section 5.X "Daemon Roadmap Sync Workflow"
 - QUICKSTART_DAEMON.md: Explain auto-sync behavior
 - config.yaml.example: Document sync settings
+
+---
+
+## 🚨 HIGH IMPACT: US-023 - Document Index Enhancement for Team Members
+
+**Project**: **📚 US-023 - Enhanced Documentation Index with Role-Based Guidance**
+
+**As a**: Team member (project_manager, code_developer, assistant)
+**I want**: A document that clearly explains what documents are useful for me and what is their content
+**So that**: I can quickly find the right documentation for my role and current task
+
+**Business Value**: ⭐⭐⭐⭐ (High - improves team efficiency and onboarding)
+**Estimated Effort**: 0.25 days (2 hours)
+**Status**: 📝 **PLANNED** (Created: 2025-10-11)
+
+**The Problem**:
+
+Currently, DOCUMENTATION_INDEX.md exists (from US-010) but may not provide sufficient role-based guidance:
+- Team members don't know which documents are relevant for their role
+- No clear "when to use this document" guidance
+- No examples of common scenarios → document mapping
+- No search or quick reference guide
+
+**User Story Context** (2025-10-11):
+> "As a team member I need a document that explains what documents are useful for me and what is their content"
+
+**Solution**: Enhance DOCUMENTATION_INDEX.md with Role-Based Guide
+
+**Implementation Plan** (2 hours):
+
+**Phase 1: Role-Based Organization** (45 minutes)
+- [ ] Add "For project_manager" section with relevant docs
+- [ ] Add "For code_developer" section with relevant docs
+- [ ] Add "For assistant" section with relevant docs
+- [ ] Add "For external contributors" section
+
+**Phase 2: Scenario-Based Quick Reference** (45 minutes)
+- [ ] Add "Common Scenarios" section:
+  * "I want to add a new feature" → Which docs to read
+  * "I need to understand team processes" → Which docs to read
+  * "I want to fix a bug" → Which docs to read
+  * "I need to update the roadmap" → Which docs to read
+- [ ] Add search tips and keyword index
+
+**Phase 3: Enhanced Document Descriptions** (30 minutes)
+- [ ] For each document, add:
+  * **Purpose**: What is this document for?
+  * **Audience**: Who should read this?
+  * **When to use**: In what situations?
+  * **Key sections**: What are the most important parts?
+  * **Related docs**: Links to related documentation
+
+**Acceptance Criteria**:
+- [ ] Each team role has clear list of relevant documents
+- [ ] Common scenarios mapped to specific documents
+- [ ] Each document has purpose, audience, and when-to-use guidance
+- [ ] Quick reference table for fast lookup
+- [ ] Search keywords provided for finding information
+- [ ] New team members can navigate docs within 5 minutes
+
+**Files to Modify**:
+- `docs/DOCUMENTATION_INDEX.md` (~100-150 lines added)
+
+**Example Enhancement**:
+
+```markdown
+## For project_manager
+
+### Essential Documents
+1. **ROADMAP.md** - Your primary workspace
+   - **Purpose**: Single source of truth for priorities
+   - **When to use**: Daily - check priorities, update status
+   - **Key sections**: TOP PRIORITY, priority list, user stories
+
+2. **COLLABORATION_METHODOLOGY.md** - Team processes
+   - **Purpose**: How the team works together
+   - **When to use**: When unsure about process, creating new workflows
+   - **Key sections**: Section 2.4 (spec before estimate), Section 9.3 (roadmap updates)
+
+### Common Scenarios
+- **"User requested a new feature"** → Read ROADMAP.md, create user story, use /US command
+- **"Need to update methodology"** → Read COLLABORATION_METHODOLOGY.md, update relevant section
+```
+
+**Why This Has High Impact**:
+1. **Faster onboarding**: New team members productive in hours, not days
+2. **Reduced confusion**: Clear role-based guidance
+3. **Better decisions**: Know which document to check for what
+4. **Time savings**: No hunting through docs to find information
+
+---
+
+## 🚨 HIGH IMPACT: US-024 - Working Directory Conflict Prevention
+
+**Project**: **🔒 US-024 - Concurrent Work Detection and Conflict Prevention**
+
+**As a**: project_manager
+**I want**: To ensure the user is not working in my working directory and making changes
+**So that**: We don't both get confused by concurrent modifications
+
+**Business Value**: ⭐⭐⭐⭐⭐ (Critical - prevents data loss and confusion)
+**Estimated Effort**: 0.5 days (4 hours)
+**Status**: 📝 **PLANNED** (Created: 2025-10-11)
+
+**The Problem**:
+
+Multiple team members (or user + agent) may work in the same git repository simultaneously:
+- User edits ROADMAP.md while project_manager is updating it
+- code_developer modifies files while user is testing
+- Results in:
+  * Lost changes (overwrites)
+  * Confusing git status
+  * Merge conflicts
+  * Wasted work
+
+**User Story Context** (2025-10-11):
+> "As a project_manager I need to get sure the user is not working in my working directory and making any change to the directory I am working in: otherwise we will both get confused"
+
+**Solution**: Lock File + Change Detection System
+
+**Implementation Plan** (4 hours):
+
+**Phase 1: Lock File Mechanism** (1.5 hours)
+- [ ] Create `.coffee_maker/locks/` directory
+- [ ] Implement `WorkspaceLock` class:
+  * Create lock file when agent starts work
+  * Lock file contains: agent name, PID, start time, files being modified
+  * Release lock when agent finishes
+  * Auto-release stale locks (>1 hour old, PID not running)
+- [ ] Add lock checking to all write operations
+
+**Phase 2: Change Detection** (1.5 hours)
+- [ ] Implement `ChangeDetector` class:
+  * Monitor file timestamps before starting work
+  * Compare timestamps before writing
+  * Detect if file was modified externally
+- [ ] Add warning messages:
+  * "⚠️ User is currently editing ROADMAP.md - waiting..."
+  * "⚠️ File was modified externally - reloading..."
+
+**Phase 3: Conflict Resolution Guidance** (1 hour)
+- [ ] When conflict detected:
+  * Show clear message explaining what happened
+  * Suggest resolution steps
+  * Offer to reload and retry
+  * Offer to notify other party
+- [ ] Add to COLLABORATION_METHODOLOGY.md Section 2.9
+
+**Acceptance Criteria**:
+- [ ] Lock file created when agent starts modifying files
+- [ ] Lock file checked before any write operation
+- [ ] Clear warning if another party holds lock
+- [ ] Stale locks auto-released after 1 hour
+- [ ] File timestamps checked before writing
+- [ ] Warning if file was modified externally
+- [ ] Guidance provided for conflict resolution
+- [ ] Locks survive process crashes (PID-based cleanup)
+- [ ] Multiple agents can read simultaneously (read-write lock pattern)
+
+**Files to Create**:
+- `coffee_maker/cli/workspace_lock.py` (~150 lines)
+- `coffee_maker/cli/change_detector.py` (~100 lines)
+- `tests/test_workspace_lock.py` (~150 lines)
+
+**Files to Modify**:
+- `coffee_maker/cli/roadmap_cli.py` (~30 lines - add lock/unlock calls)
+- `coffee_maker/cli/roadmap_editor.py` (~40 lines - check locks before write)
+- `coffee_maker/autonomous/daemon.py` (~30 lines - acquire lock on start)
+- `docs/COLLABORATION_METHODOLOGY.md` (add Section 2.9)
+
+**Key Technical Decisions**:
+- ✅ File-based locks (simple, works across processes)
+- ✅ PID-based lock ownership (auto-cleanup on crash)
+- ✅ Per-file locks (granular, allows concurrent work on different files)
+- ✅ Read-write lock pattern (multiple readers, single writer)
+- ✅ 1-hour timeout for stale locks
+
+**Lock File Example**:
+
+```json
+// .coffee_maker/locks/ROADMAP.md.lock
+{
+  "agent": "project_manager",
+  "pid": 12345,
+  "start_time": "2025-10-11T10:30:00Z",
+  "files": ["docs/ROADMAP.md"],
+  "lock_type": "write"
+}
+```
+
+**Workflow Example**:
+
+```python
+# In roadmap_editor.py
+def save_roadmap(self):
+    # Check for lock
+    lock = WorkspaceLock("ROADMAP.md")
+
+    if not lock.acquire(timeout=5):
+        print("⚠️ ROADMAP.md is currently being edited by another team member")
+        print("   Lock held by: code_developer (PID 12345)")
+        print("   Waiting...")
+        return False
+
+    try:
+        # Check for external modifications
+        if self.change_detector.was_modified_externally("ROADMAP.md"):
+            print("⚠️ ROADMAP.md was modified externally")
+            print("   Reloading...")
+            self.reload()
+
+        # Safe to write
+        self.write_roadmap()
+        print("✅ ROADMAP.md updated successfully")
+
+    finally:
+        lock.release()
+```
+
+**Why This Has High Impact**:
+1. **Prevents data loss**: No more overwritten changes
+2. **Avoids confusion**: Clear who is working on what
+3. **Automatic conflict avoidance**: As user requested
+4. **Team coordination**: Agents and users can coexist safely
+5. **Crash-safe**: Locks automatically cleaned up
+
+**User's Constraint** (2025-10-11):
+> "We must absolutely avoid conflicts, or they must know how to resolve them" (on doit absolument éviter les conflits, ou bien qu'ils sachent les résoudre)
+
+This user story addresses BOTH:
+- ✅ AVOIDS conflicts through locking mechanism
+- ✅ RESOLVES conflicts when they occur with clear guidance
 
 ---
 

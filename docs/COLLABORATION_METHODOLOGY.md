@@ -581,6 +581,190 @@ And update relevant user guides with troubleshooting information.
 
 ---
 
+### 2.9 Working Directory Conflict Prevention (US-024) 🚨 HIGH IMPACT
+
+**User Story**: "As a project_manager I need to get sure the user is not working in my working directory and making any change to the directory I am working in: otherwise we will both get confused"
+
+**User Requirement** (2025-10-11):
+> "We must absolutely avoid conflicts, or they must know how to resolve them" (on doit absolument éviter les conflits, ou bien qu'ils sachent les résoudre)
+
+**Principle**: **AVOID conflicts through locking**, and provide clear guidance when conflicts occur.
+
+**The Problem**:
+
+Multiple team members (user, project_manager, code_developer, assistant) may work in the same git repository simultaneously:
+- User edits ROADMAP.md while project_manager is updating it → **Lost changes**
+- code_developer modifies files while user is testing → **Confusing git status**
+- Two agents try to write the same file → **Overwritten work**
+
+This causes:
+- ❌ Data loss (one person's changes overwrite another's)
+- ❌ Confusion ("I just changed this, why is it different?")
+- ❌ Merge conflicts that are hard to resolve
+- ❌ Wasted effort
+
+**Solution**: Lock File System + Change Detection + Clear Conflict Resolution Guidance
+
+**How It Works**:
+
+**1. Lock Files (.coffee_maker/locks/)**:
+```json
+// .coffee_maker/locks/ROADMAP.md.lock
+{
+  "agent": "project_manager",
+  "pid": 12345,
+  "start_time": "2025-10-11T10:30:00Z",
+  "files": ["docs/ROADMAP.md"],
+  "lock_type": "write"
+}
+```
+
+**2. Lock Acquisition**:
+- Before writing any file, agent must acquire lock
+- Lock contains: agent name, PID, timestamp, files being modified
+- If lock already held, agent waits or notifies user
+- Stale locks (>1 hour old, PID not running) are auto-released
+
+**3. Change Detection**:
+- Before writing, check if file was modified externally (timestamp changed)
+- If modified, reload file and notify
+- Prevents silent overwrites
+
+**4. Read-Write Lock Pattern**:
+- Multiple agents can READ simultaneously (no lock needed)
+- Only ONE agent can WRITE at a time (exclusive lock)
+- Writers must wait for other writers to finish
+
+**Example Workflow**:
+
+```python
+# In roadmap_editor.py
+def save_roadmap(self):
+    # Check for lock
+    lock = WorkspaceLock("ROADMAP.md")
+
+    if not lock.acquire(timeout=5):
+        print("⚠️ ROADMAP.md is currently being edited by another team member")
+        print("   Lock held by: code_developer (PID 12345)")
+        print("   Waiting...")
+        return False
+
+    try:
+        # Check for external modifications
+        if self.change_detector.was_modified_externally("ROADMAP.md"):
+            print("⚠️ ROADMAP.md was modified externally")
+            print("   Reloading...")
+            self.reload()
+
+        # Safe to write
+        self.write_roadmap()
+        print("✅ ROADMAP.md updated successfully")
+
+    finally:
+        lock.release()
+```
+
+**User Experience**:
+
+**Scenario 1: Lock Held by Another Agent**:
+```
+You: project-manager view
+
+🔒 ROADMAP.md is currently locked
+   Locked by: code_developer (PID 54321)
+   Since: 2 minutes ago
+
+Options:
+  1. Wait (locks auto-release after 1 hour)
+  2. View read-only version
+  3. Force unlock (if process crashed)
+
+Your choice: _
+```
+
+**Scenario 2: File Modified Externally**:
+```
+project-manager: Saving ROADMAP...
+
+⚠️ WARNING: ROADMAP.md was modified by another process
+   Last modified: 30 seconds ago
+
+Options:
+  1. Reload and retry (RECOMMENDED)
+  2. Overwrite (YOUR CHANGES WILL BE LOST)
+  3. Cancel
+
+Your choice: 1
+
+✅ Reloaded ROADMAP.md
+✅ Merged your changes
+✅ Saved successfully
+```
+
+**Conflict Resolution Guidance**:
+
+When conflicts are unavoidable, provide clear steps:
+
+**Type 1: Concurrent Edits to Same Section**:
+```
+⚠️ MERGE CONFLICT DETECTED
+
+File: docs/ROADMAP.md
+Conflict: Both you and code_developer edited US-022
+
+Your version:
+  **Status**: 🔄 IN PROGRESS
+
+Their version:
+  **Status**: ✅ COMPLETE
+
+Resolution Steps:
+1. Review both versions
+2. Decide which is correct (or merge manually)
+3. Use `git checkout --ours` or `git checkout --theirs`
+4. Or edit manually to combine both changes
+
+See: docs/CONFLICT_RESOLUTION_GUIDE.md
+```
+
+**Type 2: Lock Timeout**:
+```
+⚠️ LOCK TIMEOUT
+
+Waited 5 minutes for lock on ROADMAP.md
+Lock still held by: code_developer (PID 54321)
+
+Possible causes:
+  1. Long-running operation (normal)
+  2. Process crashed (stale lock)
+  3. Network issue
+
+Actions:
+  - Check if PID 54321 is still running: `ps 54321`
+  - If not running: Force unlock with `--force-unlock`
+  - If running: Contact user or wait longer
+```
+
+**Benefits**:
+
+1. **Prevents data loss**: No more overwritten changes
+2. **Avoids confusion**: Clear who is working on what
+3. **Automatic conflict avoidance**: As user requested
+4. **Team coordination**: Agents and users can coexist safely
+5. **Crash-safe**: Locks automatically cleaned up
+6. **Clear guidance**: Users know how to resolve conflicts
+
+**Implementation**:
+- **Files**: `coffee_maker/cli/workspace_lock.py`, `coffee_maker/cli/change_detector.py`
+- **Status**: 📝 **PLANNED** (US-024 created 2025-10-11)
+- **Estimated**: 4 hours total
+
+**See Also**:
+- **Section 5.7** - Daemon Roadmap Synchronization (US-022)
+- **US-024** - Complete specification in ROADMAP.md
+
+---
+
 ## 3. Team Structure & Roles
 
 ### 3.1 Role: User (Product Owner)
@@ -2120,18 +2304,27 @@ v1.0.0 (+7 weeks): Full platform (US-008)
   - Multi-channel monitoring
 ```
 
-### 5.7 Daemon Roadmap Synchronization (US-022)
+### 5.7 Daemon Roadmap Synchronization (US-022) 🚨 EXTREMELY URGENT
 
 **Pattern**: Work → Sync → Reload → Adapt
 
+**Priority**: 🚨 **EXTREMELY URGENT - TOP TECHNICAL PRIORITY** (Elevated 2025-10-11)
+
 **Philosophy**: code_developer must stay current with roadmap changes during long-running implementations
+
+**User Requirement** (2025-10-11):
+> "From a technical point of view, it is extremely urgent that project_manager and code_developer exchange on the roadmap via the roadmap branch"
+>
+> "Each time they want to read or modify the roadmap they will have to do a pull first" (à chaque fois qu'ils voudront lire ou modifier la roadmap il leur faudra faire un pull avant)
+>
+> "We must absolutely avoid conflicts, or they must know how to resolve them" (on doit absolument éviter les conflits, ou bien qu'ils sachent les résoudre)
 
 **The Problem**:
 
-When code_developer works on feature branches for extended periods (hours/days), the roadmap on main may change:
-- PM adds new priorities
+When code_developer works on feature branches for extended periods (hours/days), the roadmap on 'roadmap' branch may change:
+- PM adds new priorities to 'roadmap' branch
 - User reprioritizes work
-- Requirements are updated
+- Requirements are updated on 'roadmap' branch
 - Other features complete
 
 Without synchronization, the daemon works with **stale roadmap data** and may:
@@ -2140,9 +2333,28 @@ Without synchronization, the daemon works with **stale roadmap data** and may:
 - Create massive merge conflicts
 - Waste effort on obsolete work
 
-**Solution**: Automatic periodic sync from main branch
+**Solution**: Automatic periodic sync from 'roadmap' branch + Lock mechanism to avoid conflicts
 
-**Workflow**:
+**Team Member Workflows**:
+
+**🔍 To READ roadmap** (all team members):
+```
+1. git fetch origin roadmap
+2. git merge origin/roadmap       # Pull and merge
+3. Reload RoadmapParser           # Get latest data
+```
+
+**✏️ To WRITE to roadmap** (project_manager, assistant):
+```
+1. git fetch origin roadmap
+2. git merge origin/roadmap       # Get latest FIRST!
+3. Modify ROADMAP.md locally
+4. git add docs/ROADMAP.md
+5. git commit -m "docs: update roadmap"
+6. git push origin HEAD:roadmap   # Push and merge to roadmap branch
+```
+
+**🤖 code_developer Automatic Sync Workflow**:
 
 ```
 Daemon working on feature branch
@@ -2150,12 +2362,12 @@ Daemon working on feature branch
 Every 10 iterations OR 30 minutes (whichever comes first)
   ↓
 Sync checkpoint:
-  ├─ Fetch origin/main
+  ├─ Fetch origin/roadmap        # From 'roadmap' branch, not 'main'!
   ├─ Check if ROADMAP.md has changes
   ↓
   ├─ No changes? → Continue working
   ↓
-  └─ Changes detected → Merge main into current branch
+  └─ Changes detected → Merge origin/roadmap into current branch
         ↓
         ├─ Clean merge? → Reload roadmap, re-evaluate priority
         │                 ↓
@@ -2180,10 +2392,10 @@ while self.running:
     if (iteration % 10 == 0) or (time.time() - last_sync_time > 1800):
         logger.info("🔄 Sync checkpoint - checking for roadmap updates")
 
-        if self.git.has_upstream_changes('origin/main'):
-            logger.info("📥 Changes detected on main - syncing...")
+        if self.git.has_upstream_changes('origin/roadmap'):  # From 'roadmap' branch!
+            logger.info("📥 Changes detected on 'roadmap' branch - syncing...")
 
-            if self.git.sync_from_main():
+            if self.git.sync_from_roadmap():  # sync_from_roadmap(), not sync_from_main()
                 # Successful sync
                 old_roadmap = self.parser
                 self.parser = RoadmapParser(str(self.roadmap_path))
@@ -2197,7 +2409,7 @@ while self.running:
                     # Abort current work, start new priority
 
                 last_sync_time = time.time()
-                logger.info("✅ Sync complete, roadmap reloaded")
+                logger.info("✅ Sync complete with 'roadmap' branch, roadmap reloaded")
             else:
                 # Conflict or error
                 logger.warning("❌ Sync failed - manual intervention needed")
@@ -2231,10 +2443,10 @@ daemon:
 
 ```
 10:00 AM: Daemon starts US-016 on branch feature/us-016
-10:30 AM: [Sync 1] No changes on main, continue
-11:00 AM: [Sync 2] No changes on main, continue
-11:15 AM: User updates ROADMAP, makes US-022 TOP PRIORITY
-11:30 AM: [Sync 3] Detects changes, merges main
+10:30 AM: [Sync 1] No changes on 'roadmap' branch, continue
+11:00 AM: [Sync 2] No changes on 'roadmap' branch, continue
+11:15 AM: PM updates ROADMAP on 'roadmap' branch, makes US-022 TOP PRIORITY
+11:30 AM: [Sync 3] Detects changes on 'roadmap', merges origin/roadmap
           → Roadmap reloaded
           → Priority changed: US-016 → US-022
           → Daemon switches to US-022!
