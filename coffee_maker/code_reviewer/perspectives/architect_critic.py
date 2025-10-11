@@ -13,7 +13,7 @@ import re
 from typing import List
 
 from coffee_maker.code_reviewer.perspectives.base_perspective import BasePerspective
-from coffee_maker.code_reviewer.reviewer import ReviewIssue
+from coffee_maker.code_reviewer.models import ReviewIssue
 
 
 class ArchitectCritic(BasePerspective):
