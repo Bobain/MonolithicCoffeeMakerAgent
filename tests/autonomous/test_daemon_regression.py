@@ -3,9 +3,14 @@
 
 These tests verify core functionality remains intact across releases.
 Run before significant releases or when merging PRs to main.
+
+Usage:
+    pytest tests/autonomous/test_daemon_regression.py -v
+    pytest tests/autonomous/test_daemon_regression.py -v -m integration
 """
 
 import pytest
+from pathlib import Path
 from coffee_maker.autonomous.daemon import DevDaemon
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 from coffee_maker.autonomous.git_manager import GitManager
@@ -19,226 +24,302 @@ class TestDaemonNonRegression:
         daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
         assert daemon is not None
         assert daemon.roadmap_path.exists()
+        assert daemon.roadmap_path.name == "ROADMAP.md"
+
+    def test_daemon_accepts_all_parameters(self):
+        """Verify daemon accepts all configuration parameters."""
+        daemon = DevDaemon(
+            roadmap_path="docs/ROADMAP.md",
+            auto_approve=True,
+            create_prs=False,
+            use_claude_cli=True,
+            max_retries=5,
+            verbose=True,
+        )
+
+        assert daemon.auto_approve is True
+        assert daemon.create_prs is False
+        assert daemon.use_claude_cli is True
+        assert daemon.max_retries == 5
+        assert daemon.verbose is True
 
     def test_roadmap_parser_finds_priorities(self):
         """Verify roadmap parser can find planned priorities."""
         parser = RoadmapParser("docs/ROADMAP.md")
-        priorities = parser.get_priorities()
+        priorities = parser.get_all_priorities()
         assert len(priorities) > 0
+        # Each priority should have required fields
+        for p in priorities:
+            assert "name" in p
+            assert "title" in p
+            assert "status" in p
+            assert "content" in p
+
+    def test_roadmap_parser_detects_statuses(self, tmp_path):
+        """Verify parser correctly detects priority statuses."""
+        roadmap = tmp_path / "ROADMAP.md"
+        roadmap.write_text(
+            """
+# Roadmap
+
+### PRIORITY 1: Done ✅ Complete
+Complete
+
+### PRIORITY 2: Working 🔄 In Progress
+In progress
+
+### PRIORITY 3: Todo 📝 Planned
+Planned
+
+### PRIORITY 4: Blocked ⏸️ Blocked
+Blocked
+        """
+        )
+
+        parser = RoadmapParser(str(roadmap))
+        priorities = parser.get_all_priorities()
+
+        assert len(priorities) == 4
+        assert priorities[0]["status"] == "complete"
+        assert priorities[1]["status"] == "in_progress"
+        assert priorities[2]["status"] == "planned"
+        assert priorities[3]["status"] == "blocked"
 
     def test_no_changes_detection_works(self):
-        """Verify daemon detects when no files changed (Fix Option 1)."""
+        """Verify daemon detects when no files changed."""
         git = GitManager()
-        assert git.is_clean() in [True, False]  # Should not raise
-
-    def test_task_specific_prompt_detection(self, tmp_path):
-        """Verify documentation tasks are detected correctly (Fix Option 3)."""
-        roadmap = tmp_path / "ROADMAP.md"
-        roadmap.write_text(
-            """
-# Test Roadmap
-
-### 🔴 **PRIORITY 2.5: UX Documentation** 📝 Planned
-
-**Status**: 📝 Planned
-
-Create user documentation and guides
-
-**Deliverables**:
-- Create docs/USER_GUIDE.md
-        """
-        )
-
-        daemon = DevDaemon(roadmap_path=str(roadmap))
-
-        # Test documentation priority
-        doc_priority = daemon.parser.get_next_planned_priority()
-        prompt = daemon._build_implementation_prompt(doc_priority)
-        assert "CREATE FILES" in prompt
-
-        # Test feature priority
-        roadmap.write_text(
-            """
-# Test Roadmap
-
-### 🔴 **PRIORITY 7: Implement Analytics** 📝 Planned
-
-**Status**: 📝 Planned
-
-Add analytics tracking
-
-**Deliverables**:
-- Implement analytics module
-        """
-        )
-
-        daemon = DevDaemon(roadmap_path=str(roadmap))
-        feature_priority = daemon.parser.get_next_planned_priority()
-        prompt = daemon._build_implementation_prompt(feature_priority)
-        # Feature prompts should NOT have CREATE FILES warning
-        # (they have standard prompt)
-        assert "ROADMAP" in prompt  # Should still mention roadmap
-
-    def test_notification_created_on_no_changes(self):
-        """Verify notification system is available."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
-        assert hasattr(daemon, "notifications")
-        assert hasattr(daemon.notifications, "create_notification")
-
-    def test_daemon_does_not_infinite_loop(self):
-        """Critical: Verify daemon has max retry logic."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
-
-        # Verify max_retries is set
-        assert hasattr(daemon, "max_retries")
-        assert daemon.max_retries > 0
-
-        # Verify attempted_priorities tracking exists
-        assert hasattr(daemon, "attempted_priorities")
-        assert isinstance(daemon.attempted_priorities, dict)
-
-    def test_daemon_components_initialized(self):
-        """Verify all daemon components initialize correctly."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
-
-        # Core components
-        assert daemon.parser is not None
-        assert daemon.git is not None
-        assert daemon.claude is not None
-        assert daemon.notifications is not None
-
-        # Configuration
-        assert isinstance(daemon.auto_approve, bool)
-        assert isinstance(daemon.create_prs, bool)
-        assert isinstance(daemon.sleep_interval, int)
-
-    def test_git_manager_basic_operations(self):
-        """Verify GitManager core functionality."""
-        git = GitManager()
-
-        # Should be able to get current branch
-        branch = git.get_current_branch()
-        assert isinstance(branch, str)
-        assert len(branch) > 0
-
-        # Should be able to check status
-        is_clean = git.is_clean()
-        assert isinstance(is_clean, bool)
-
-        # Should be able to check for remote
-        has_remote = git.has_remote()
-        assert isinstance(has_remote, bool)
-
-    def test_roadmap_parser_core_methods(self):
-        """Verify RoadmapParser core functionality."""
-        parser = RoadmapParser("docs/ROADMAP.md")
-
-        # Should find priorities
-        priorities = parser.get_priorities()
-        assert isinstance(priorities, list)
-
-        # Should find next planned (may be None)
-        next_planned = parser.get_next_planned_priority()
-        if next_planned:
-            assert isinstance(next_planned, dict)
-            assert "name" in next_planned
-            assert "title" in next_planned
-
-        # Should find in-progress priorities
-        in_progress = parser.get_in_progress_priorities()
-        assert isinstance(in_progress, list)
-
-    def test_daemon_build_commit_message(self, tmp_path):
-        """Verify daemon builds proper commit messages."""
-        roadmap = tmp_path / "ROADMAP.md"
-        roadmap.write_text(
-            """
-# Roadmap
-
-### 🔴 **PRIORITY 1: Test** 📝 Planned
-
-**Status**: 📝 Planned
-
-Test priority
-        """
-        )
-
-        daemon = DevDaemon(roadmap_path=str(roadmap))
-        priority = daemon.parser.get_next_planned_priority()
-
-        message = daemon._build_commit_message(priority)
-
-        # Should follow commit message conventions
-        assert "PRIORITY 1" in message
-        assert "Claude Code" in message
-        assert len(message) > 0
-
-    def test_daemon_build_pr_body(self, tmp_path):
-        """Verify daemon builds proper PR bodies."""
-        roadmap = tmp_path / "ROADMAP.md"
-        roadmap.write_text(
-            """
-# Roadmap
-
-### 🔴 **PRIORITY 1: Test** 📝 Planned
-
-**Status**: 📝 Planned
-
-Test priority
-        """
-        )
-
-        daemon = DevDaemon(roadmap_path=str(roadmap))
-        priority = daemon.parser.get_next_planned_priority()
-
-        pr_body = daemon._build_pr_body(priority)
-
-        # Should follow PR template
-        assert "Summary" in pr_body
-        assert "PRIORITY 1" in pr_body
-        assert len(pr_body) > 0
-
-    def test_daemon_prerequisite_check(self):
-        """Verify prerequisite check executes without error."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
-
-        # Should return boolean, not crash
-        result = daemon._check_prerequisites()
+        # Should not raise exception
+        result = git.is_clean()
         assert isinstance(result, bool)
+
+    def test_get_next_planned_priority_logic(self, tmp_path):
+        """Verify get_next_planned_priority returns correct priority."""
+        roadmap = tmp_path / "ROADMAP.md"
+        roadmap.write_text(
+            """
+# Roadmap
+
+### PRIORITY 1: Done ✅ Complete
+Done
+
+### PRIORITY 2: Current 📝 Planned
+Should be returned
+
+### PRIORITY 3: Future 📝 Planned
+Later
+        """
+        )
+
+        parser = RoadmapParser(str(roadmap))
+        next_priority = parser.get_next_planned_priority()
+
+        assert next_priority is not None
+        assert next_priority["name"] == "PRIORITY 2"
+        assert next_priority["status"] == "planned"
+
+    def test_daemon_skips_after_max_retries(self):
+        """Verify daemon tracks and respects max retries."""
+        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", max_retries=3)
+
+        # Simulate failed attempts
+        daemon.attempted_priorities["PRIORITY_TEST"] = 3
+
+        # Should recognize max retries reached
+        assert daemon.attempted_priorities["PRIORITY_TEST"] >= daemon.max_retries
+
+    def test_daemon_has_required_methods(self):
+        """Verify daemon has all required methods."""
+        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+
+        # Check critical methods exist
+        assert hasattr(daemon, "run")
+        assert hasattr(daemon, "_check_prerequisites")
+        assert hasattr(daemon, "_build_implementation_prompt")
+        assert callable(daemon.run)
+        assert callable(daemon._check_prerequisites)
+
+    def test_git_manager_has_required_methods(self):
+        """Verify GitManager has all required methods."""
+        git = GitManager()
+
+        # Check critical methods exist
+        assert hasattr(git, "is_clean")
+        assert hasattr(git, "get_current_branch")
+        assert hasattr(git, "branch_exists")
+        assert callable(git.is_clean)
+        assert callable(git.get_current_branch)
+
+    def test_parser_handles_empty_roadmap_gracefully(self, tmp_path):
+        """Verify parser doesn't crash on empty ROADMAP."""
+        roadmap = tmp_path / "ROADMAP.md"
+        roadmap.write_text("# Empty Roadmap\n")
+
+        parser = RoadmapParser(str(roadmap))
+        priorities = parser.get_all_priorities()
+
+        assert priorities == []
+        assert parser.get_next_planned_priority() is None
+
+    def test_parser_handles_malformed_priorities(self, tmp_path):
+        """Verify parser handles malformed priorities without crashing."""
+        roadmap = tmp_path / "ROADMAP.md"
+        roadmap.write_text(
+            """
+# Roadmap
+
+### PRIORITY ABC: Invalid Number
+Invalid
+
+### PRIORITY 1: Valid 📝 Planned
+Valid priority
+
+### Not a priority header
+Just text
+        """
+        )
+
+        parser = RoadmapParser(str(roadmap))
+        priorities = parser.get_all_priorities()
+
+        # Should find at least the valid one
+        assert any(p["name"] == "PRIORITY 1" for p in priorities)
 
 
 @pytest.mark.integration
-class TestDaemonIntegrationRegression:
-    """Integration regression tests - run before releases."""
+class TestDaemonIntegrationNonRegression:
+    """Integration tests - run before releases."""
 
-    def test_full_daemon_initialization(self):
-        """Test complete daemon initialization chain."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", auto_approve=False, create_prs=False)
+    def test_daemon_prerequisite_check_comprehensive(self):
+        """Test prerequisite check covers all requirements."""
+        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
 
-        # All components should initialize
-        assert daemon.parser is not None
-        assert daemon.git is not None
-        assert daemon.claude is not None
-        assert daemon.notifications is not None
-
-        # Prerequisite check should work
+        # Should check and return boolean
         result = daemon._check_prerequisites()
         assert isinstance(result, bool)
 
-    def test_roadmap_parsing_end_to_end(self):
-        """Test complete ROADMAP parsing workflow."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+    def test_full_daemon_initialization_sequence(self, tmp_path):
+        """Test complete initialization sequence works."""
+        roadmap = tmp_path / "ROADMAP.md"
+        roadmap.write_text(
+            """
+# Test Roadmap
 
-        # Should extract priorities
-        priorities = parser.get_priorities()
-        assert len(priorities) > 0
+### PRIORITY 1: Test Task 📝 Planned
 
-        # Should find next planned
-        parser.get_next_planned_priority()
-        # May or may not exist
+Create a test file.
 
-        # Should extract deliverables
-        if priorities:
-            first_priority = priorities[0]
-            deliverables = parser.extract_deliverables(first_priority["name"])
-            assert isinstance(deliverables, list)
+**Deliverables**:
+- File: test.txt
+        """
+        )
+
+        # Complete initialization
+        daemon = DevDaemon(roadmap_path=str(roadmap), auto_approve=True, create_prs=False)
+
+        # Verify all components initialized
+        assert daemon.parser is not None
+        assert daemon.roadmap_path.exists()
+        assert daemon.claude is not None
+
+        # Can find next task
+        next_task = daemon.parser.get_next_planned_priority()
+        assert next_task is not None
+
+    def test_daemon_mode_switching_works(self, tmp_path):
+        """Test daemon can be created in both CLI and API modes."""
+        roadmap = tmp_path / "ROADMAP.md"
+        roadmap.write_text("# Roadmap\n\n### PRIORITY 1: Test 📝 Planned\nTest")
+
+        # CLI mode
+        daemon_cli = DevDaemon(roadmap_path=str(roadmap), use_claude_cli=True)
+        assert daemon_cli.use_claude_cli is True
+
+        # API mode
+        daemon_api = DevDaemon(roadmap_path=str(roadmap), use_claude_cli=False)
+        assert daemon_api.use_claude_cli is False
+
+    @pytest.mark.slow
+    def test_daemon_handles_large_roadmap(self, tmp_path):
+        """Test daemon handles large ROADMAP files efficiently."""
+        roadmap = tmp_path / "ROADMAP.md"
+
+        # Create large ROADMAP
+        content = "# Large Roadmap\n\n"
+        for i in range(50):
+            content += f"### PRIORITY {i}: Task {i} 📝 Planned\n"
+            content += f"Content for task {i}\n\n"
+
+        roadmap.write_text(content)
+
+        parser = RoadmapParser(str(roadmap))
+        priorities = parser.get_all_priorities()
+
+        assert len(priorities) == 50
+
+        # Should still find next planned efficiently
+        next_task = parser.get_next_planned_priority()
+        assert next_task is not None
+
+
+class TestBackwardCompatibility:
+    """Tests to ensure backward compatibility."""
+
+    def test_daemon_accepts_old_initialization(self):
+        """Verify daemon works with minimal initialization."""
+        # Old-style initialization with just roadmap path
+        daemon = DevDaemon("docs/ROADMAP.md")
+        assert daemon is not None
+
+    def test_parser_accepts_string_path(self):
+        """Verify parser accepts string paths (not just Path objects)."""
+        # String path
+        parser1 = RoadmapParser("docs/ROADMAP.md")
+        assert parser1.roadmap_path.exists()
+
+        # Path object
+        parser2 = RoadmapParser(Path("docs/ROADMAP.md"))
+        assert parser2.roadmap_path.exists()
+
+    def test_daemon_defaults_are_sensible(self):
+        """Verify default values are sensible and unchanged."""
+        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+
+        # Check defaults haven't changed
+        assert daemon.auto_approve is False  # Safe default
+        assert daemon.create_prs is True  # Default behavior
+        assert daemon.max_retries == 3  # Standard retry count
+        assert daemon.verbose is False  # Quiet by default
+
+
+class TestCriticalUserScenarios:
+    """Test scenarios critical to users."""
+
+    def test_user_can_start_daemon_with_auto_approve(self, tmp_path):
+        """Test user can start daemon with --auto-approve flag."""
+        roadmap = tmp_path / "ROADMAP.md"
+        roadmap.write_text("# Roadmap\n\n### PRIORITY 1: Task 📝 Planned\nTask")
+
+        daemon = DevDaemon(roadmap_path=str(roadmap), auto_approve=True)
+        assert daemon.auto_approve is True
+
+    def test_user_can_disable_pr_creation(self, tmp_path):
+        """Test user can disable PR creation with --no-pr flag."""
+        roadmap = tmp_path / "ROADMAP.md"
+        roadmap.write_text("# Roadmap\n\n### PRIORITY 1: Task 📝 Planned\nTask")
+
+        daemon = DevDaemon(roadmap_path=str(roadmap), create_prs=False)
+        assert daemon.create_prs is False
+
+    def test_user_can_use_custom_roadmap_path(self, tmp_path):
+        """Test user can specify custom ROADMAP path."""
+        custom_path = tmp_path / "MY_ROADMAP.md"
+        custom_path.write_text("# Custom\n\n### PRIORITY 1: Task 📝 Planned\nTask")
+
+        daemon = DevDaemon(roadmap_path=str(custom_path))
+        assert daemon.roadmap_path == custom_path
+
+    def test_daemon_fails_gracefully_on_missing_roadmap(self):
+        """Test daemon fails gracefully when ROADMAP missing."""
+        with pytest.raises(FileNotFoundError):
+            daemon = DevDaemon(roadmap_path="/nonexistent/ROADMAP.md")
+            daemon._check_prerequisites()

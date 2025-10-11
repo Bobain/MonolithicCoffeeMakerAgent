@@ -1,0 +1,24 @@
+# Error Monitoring Dashboard Dependencies
+
+# Core Streamlit
+streamlit>=1.28.0
+
+# Data manipulation and analysis
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualization
+plotly>=5.17.0
+
+# Database
+sqlalchemy>=2.0.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Date/time handling (included in Python standard library, but listed for clarity)
+# datetime
+# typing
+
+# Note: These dependencies are shared with the analytics dashboard
+# and should be installed at the project level
