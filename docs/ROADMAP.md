@@ -17405,13 +17405,14 @@ poetry run code-developer --auto-approve
 
 ---
 
-### 🔴 **PRIORITY 2.7: Daemon Crash Recovery & Context Management** 🔄 **RELIABILITY**
+### 🔴 **PRIORITY 2.7: Daemon Crash Recovery & Context Management** ✅ **COMPLETE**
 
 **Estimated Duration**: 4-6 hours
 **Impact**: ⭐⭐⭐⭐⭐ (Critical for autonomous reliability)
-**Status**: 📝 Planned
+**Status**: ✅ Complete (2025-10-11)
 **Dependency**: Requires PRIORITY 2.6 completion
 **Why Important**: Autonomous systems need crash recovery and context management to ensure continuous operation
+**Commit**: 3718b2f
 
 #### Project: Implement Crash Recovery with Context Reset
 
@@ -17672,6 +17673,266 @@ daemon:
 2. Track crash rates and causes
 3. Optimize compact interval based on token usage
 4. Consider implementing isolated sessions
+
+---
+
+### 🔴 **PRIORITY 2.8: Daemon Status Reporting in project-manager** 🎯 **HIGH PRIORITY**
+
+**Estimated Duration**: 2-3 hours
+**Impact**: ⭐⭐⭐⭐⭐ (Critical for daemon monitoring and debugging)
+**Status**: 📝 Planned
+**Dependency**: Requires PRIORITY 2.7 completion
+**Why Important**: Users need visibility into daemon status for monitoring and debugging
+
+#### User Story: Real-time Daemon Status Command
+
+**As a** developer using code_developer
+**I want** to query daemon status via `project-manager status`
+**So that** I can monitor the daemon's current activity and health
+
+**Background**:
+Currently, users have no easy way to check:
+- Is the daemon running?
+- What priority is it working on?
+- How many crashes have occurred?
+- When did it last compact context?
+- What's the current iteration count?
+
+This makes debugging and monitoring difficult.
+
+**Example Desired Output**:
+```bash
+$ project-manager status
+
+🤖 Daemon Status
+================
+Status: 🟢 Running
+PID: 73437
+Uptime: 2h 34m
+
+Current Activity:
+  Priority: PRIORITY 2.7 - Daemon Crash Recovery
+  Iteration: 12
+  Last success: 3 minutes ago
+
+Health:
+  Crashes: 0/3
+  Last compact: 2 iterations ago (8 minutes)
+  Next compact: in 8 iterations
+
+Recent Activity:
+  [12:45] ✅ Completed PRIORITY 2.6
+  [13:15] 🔄 Started PRIORITY 2.7
+  [13:20] 🔄 Context refresh (periodic)
+```
+
+**Deliverables**:
+
+**1. Daemon Status File** (`~/.coffee_maker/daemon_status.json`)
+```json
+{
+  "pid": 73437,
+  "status": "running",
+  "started_at": "2025-10-11T11:11:29",
+  "current_priority": {
+    "name": "PRIORITY 2.7",
+    "title": "Daemon Crash Recovery",
+    "started_at": "2025-10-11T13:15:00"
+  },
+  "iteration": 12,
+  "crashes": {
+    "count": 0,
+    "max": 3,
+    "history": []
+  },
+  "context": {
+    "iterations_since_compact": 2,
+    "compact_interval": 10,
+    "last_compact": "2025-10-11T13:20:00"
+  },
+  "last_update": "2025-10-11T13:30:00"
+}
+```
+
+**2. DevDaemon Status Writer** (`coffee_maker/autonomous/daemon.py`)
+```python
+def _write_status(self, priority=None):
+    """Write current daemon status to file.
+
+    Called at:
+    - Start of each iteration
+    - After priority completion
+    - After crash/recovery
+    - On daemon stop
+    """
+    status = {
+        "pid": os.getpid(),
+        "status": "running" if self.running else "stopped",
+        "started_at": self.start_time.isoformat(),
+        "current_priority": {
+            "name": priority["name"] if priority else None,
+            "title": priority["title"] if priority else None,
+            "started_at": self.current_priority_start_time.isoformat() if priority else None
+        } if priority else None,
+        "iteration": self.iteration_count,
+        "crashes": {
+            "count": self.crash_count,
+            "max": self.max_crashes,
+            "history": self.crash_history[-5:]  # Last 5 crashes
+        },
+        "context": {
+            "iterations_since_compact": self.iterations_since_compact,
+            "compact_interval": self.compact_interval,
+            "last_compact": self.last_compact_time.isoformat() if self.last_compact_time else None
+        },
+        "last_update": datetime.now().isoformat()
+    }
+
+    status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
+    status_file.parent.mkdir(exist_ok=True, parents=True)
+
+    with open(status_file, 'w') as f:
+        json.dump(status, f, indent=2)
+```
+
+**3. project-manager status command** (`coffee_maker/cli/roadmap_cli.py`)
+```python
+@cli.command()
+def status():
+    """Show daemon status and current activity."""
+    status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
+
+    if not status_file.exists():
+        click.echo("❌ Daemon status file not found")
+        click.echo("   Is the daemon running?")
+        return
+
+    with open(status_file) as f:
+        status = json.load(f)
+
+    # Check if process is actually running
+    try:
+        os.kill(status["pid"], 0)
+        is_running = True
+    except OSError:
+        is_running = False
+
+    # Display formatted status
+    click.echo("\n🤖 Daemon Status")
+    click.echo("=" * 50)
+
+    if is_running:
+        click.echo(f"Status: 🟢 Running")
+        click.echo(f"PID: {status['pid']}")
+        uptime = datetime.now() - datetime.fromisoformat(status['started_at'])
+        click.echo(f"Uptime: {format_duration(uptime)}")
+    else:
+        click.echo(f"Status: 🔴 Stopped")
+        click.echo(f"Last PID: {status['pid']}")
+
+    if status.get("current_priority"):
+        click.echo(f"\nCurrent Activity:")
+        click.echo(f"  Priority: {status['current_priority']['name']} - {status['current_priority']['title']}")
+        click.echo(f"  Iteration: {status['iteration']}")
+
+        if status['current_priority']['started_at']:
+            duration = datetime.now() - datetime.fromisoformat(status['current_priority']['started_at'])
+            click.echo(f"  Working for: {format_duration(duration)}")
+
+    # Health metrics
+    click.echo(f"\nHealth:")
+    click.echo(f"  Crashes: {status['crashes']['count']}/{status['crashes']['max']}")
+
+    if status['context']['last_compact']:
+        time_since = datetime.now() - datetime.fromisoformat(status['context']['last_compact'])
+        click.echo(f"  Last compact: {format_duration(time_since)} ago")
+
+    remaining = status['context']['compact_interval'] - status['context']['iterations_since_compact']
+    click.echo(f"  Next compact: in {remaining} iterations")
+```
+
+**4. Update daemon.py run() loop**
+```python
+def run(self):
+    """Run daemon main loop."""
+    self.running = True
+    self.start_time = datetime.now()
+    self.iteration_count = 0
+
+    logger.info("🤖 DevDaemon starting...")
+
+    # Write initial status
+    self._write_status()
+
+    # ... existing prerequisite checks ...
+
+    while self.running:
+        self.iteration_count += 1
+
+        # ... existing code ...
+
+        try:
+            # ... get next_priority ...
+
+            # Update status with current priority
+            self._write_status(priority=next_priority)
+
+            # ... implement priority ...
+
+            if success:
+                # Update status after completion
+                self._write_status()
+
+        except Exception as e:
+            # Update status after crash
+            self._write_status()
+            # ... existing crash handling ...
+
+    # Write final status on stop
+    self.running = False
+    self._write_status()
+```
+
+**Acceptance Criteria**:
+- ✅ `project-manager status` shows daemon PID and running state
+- ✅ Shows current priority being worked on
+- ✅ Shows crash count and history
+- ✅ Shows context management metrics
+- ✅ Shows uptime and iteration count
+- ✅ Detects if daemon process is actually running (not stale)
+- ✅ Status file updated at each iteration
+- ✅ Clean output formatting with colors
+
+**Technical Notes**:
+- Status file location: `~/.coffee_maker/daemon_status.json`
+- Updated at start of each iteration (line 169 in daemon.py)
+- PID check uses `os.kill(pid, 0)` to verify process exists
+- Format durations as human-readable (2h 34m, not 9240s)
+
+**Testing**:
+```bash
+# Start daemon
+poetry run code-developer --auto-approve
+
+# Check status in another terminal
+poetry run project-manager status
+
+# Should show running daemon with current priority
+
+# Stop daemon (Ctrl+C)
+# Check status again
+poetry run project-manager status
+
+# Should show stopped with last known state
+```
+
+**Benefits**:
+1. **Visibility**: Users can see what the daemon is doing
+2. **Debugging**: Quick access to crash history and health metrics
+3. **Monitoring**: Check if daemon is hung or making progress
+4. **Operations**: Essential for production deployment
+
+**Implementation Priority**: **HIGH** (Behind PRIORITY 3, as requested by user)
 
 ---
 
