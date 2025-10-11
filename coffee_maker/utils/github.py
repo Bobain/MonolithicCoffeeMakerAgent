@@ -101,13 +101,13 @@ def _create_pending_review_retry_condition(
 
 @observe
 def post_suggestion_in_pr_review(
-    repo_full_name: str = None,
-    pr_number: int = None,
-    file_path: str = None,
-    start_line: int = None,
-    end_line: int = None,
-    suggestion_body: str = None,
-    comment_text: str = None,
+    repo_full_name: Optional[str] = None,
+    pr_number: Optional[int] = None,
+    file_path: Optional[str] = None,
+    start_line: Optional[int] = None,
+    end_line: Optional[int] = None,
+    suggestion_body: Optional[str] = None,
+    comment_text: Optional[str] = None,
     g: Github = github_client_instance,
 ) -> str:
     """

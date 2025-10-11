@@ -82,7 +82,7 @@ def _build_stub_llm(provider: str, model: Optional[str], error: Exception) -> An
     return _StubChatModel(description=message)
 
 
-def _build_llm(provider: str = None, model=None, **kwargs: Any):
+def _build_llm(provider: Optional[str] = None, model=None, **kwargs: Any):
     """Build LLM instance from provider and model specification.
 
     Args:

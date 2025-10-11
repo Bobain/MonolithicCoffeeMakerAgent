@@ -31,7 +31,7 @@ class DeveloperStatusDisplay:
         >>> display.watch()  # Continuous updates
     """
 
-    def __init__(self, status_file: Path = None):
+    def __init__(self, status_file: Optional[Path] = None):
         """Initialize status display.
 
         Args:

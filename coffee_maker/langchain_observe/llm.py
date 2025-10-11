@@ -141,9 +141,9 @@ def get_llm(
 
 
 def get_scheduled_llm(
-    langfuse_client: langfuse.Langfuse = None,
-    provider: str = None,
-    model: str = None,
+    langfuse_client: Optional[langfuse.Langfuse] = None,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
     tier: str = "tier1",
     max_wait_seconds: float = 300.0,
     **llm_kwargs,
