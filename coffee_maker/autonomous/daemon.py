@@ -87,7 +87,7 @@ class DevDaemon:
         max_crashes: int = 3,
         crash_sleep_interval: int = 60,
         compact_interval: int = 10,
-    ):
+    ) -> None:
         """Initialize development daemon.
 
         Args:

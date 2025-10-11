@@ -9,6 +9,7 @@ This module contains global configuration constants used throughout the project.
 import os
 import re
 from pathlib import Path
+from typing import Dict, Final, Optional
 
 
 # ============================================================================
@@ -31,7 +32,7 @@ from pathlib import Path
 # ============================================================================
 
 
-def load_env_with_exports(env_file: Path = None) -> None:
+def load_env_with_exports(env_file: Optional[Path] = None) -> None:
     """Load environment variables from .env file, handling 'export' keyword.
 
     This custom loader supports both formats:
@@ -117,7 +118,7 @@ if not ROADMAP_PATH.exists():
 DATA_DIR = PROJECT_ROOT / "data"
 
 # Database paths (shared between user environment and daemon)
-DATABASE_PATHS = {
+DATABASE_PATHS: Final[Dict[str, Path]] = {
     "analytics": DATA_DIR / "analytics.db",
     "notifications": DATA_DIR / "notifications.db",
     "langfuse_export": DATA_DIR / "langfuse_export.db",

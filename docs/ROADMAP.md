@@ -1,8 +1,8 @@
 # Coffee Maker Agent - Prioritized Roadmap
 
-**Last Updated**: 2025-10-10 🚨 **PRIORITIES REORGANIZED + GCP DEPLOYMENT ADDED**
-**Current Branch**: `feature/priority-2.5`
-**Status**: PRIORITY 1-3 ✅ COMPLETE | PRIORITY 2 ✅ COMPLETE (Phase 2) | **Next: PRIORITY 2.6 → Streamlit Dashboards → PRIORITY 6.5 (GCP)**
+**Last Updated**: 2025-10-11 🚨 **NEW USER STORIES ADDED + COMPLETE PRIORITIZATION**
+**Current Branch**: `roadmap`
+**Status**: PRIORITY 1-4 ✅ COMPLETE | **Next: 🚨 US-021 (Refactoring) → US-022 → US-023 → US-024**
 **Quick-Start**: ⚡ CLI: `project-manager view` | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py` | Code Review: see `coffee_maker/code_reviewer/README.md`
 **Achievement**: 🎉 **MASSIVE PROGRESS** - CLI, Daemon, Web UI, Documentation Infrastructure, and Multi-Model Code Review Agent all operational!
 
@@ -98,7 +98,9 @@ US-XXX: Example Feature ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
-**Next Priority**: To be determined (check roadmap for next planned priority)
+**Next Priority**: 🚨 **US-021 - Code Refactoring & Technical Debt Reduction** (HIGHEST PRIORITY - User Requested)
+
+**Current Focus**: Systematic refactoring to improve code quality, maintainability, and reduce technical debt across the entire codebase. This is the foundation for all future development.
 
 **Status Update**:
 - PRIORITY 2.11 (Bug Workflow): ✅ Part 1 Complete (project-manager side)
@@ -159,6 +161,142 @@ US-XXX: Example Feature ← Current focus
 - Spec creation workflow in `_ensure_technical_spec()` method
 - Uses `_build_spec_creation_prompt()` to generate comprehensive specs
 - Commits spec before implementation begins
+
+---
+
+## 🚨 US-021 - Code Refactoring & Technical Debt Reduction (HIGHEST PRIORITY)
+
+**Status**: 📝 **PLANNED** - User's highest priority, start immediately
+
+**As a**: Development team
+**I want**: Systematic refactoring to improve code quality, maintainability, and reduce technical debt
+**So that**: The codebase is easier to maintain, extend, and debug, reducing long-term development costs
+
+**Business Value**: ⭐⭐⭐⭐⭐ (Critical - Impacts all future development)
+**Estimated Effort**: 8 story points (1-2 weeks)
+
+### Current Codebase Analysis
+
+- **96 Python files** with **25,151 lines of code**
+- **676 functions** and **169 classes**
+- **68% type hint coverage** (65/96 files have type hints)
+- **Large files requiring splitting**:
+  - `chat_interface.py`: 1,215 lines
+  - `daemon.py`: 1,181 lines
+  - `roadmap_editor.py`: 945 lines
+  - `ai_service.py`: 739 lines
+
+### Definition of Done
+
+**Phase 1: Code Quality Foundations** (2-3 days)
+- [ ] All Python files have type hints (target: 100% coverage, up from 68%)
+- [ ] All public functions have comprehensive docstrings
+- [ ] Remove all code duplication (DRY violations)
+- [ ] Break large files into logical modules:
+  - [ ] `chat_interface.py` → max 500 lines (split into components)
+  - [ ] `daemon.py` → max 600 lines (extract managers/strategies)
+  - [ ] `roadmap_editor.py` → max 500 lines (extract validators/parsers)
+  - [ ] `ai_service.py` → max 400 lines (extract provider interface)
+- [ ] All functions < 50 lines (extract helper functions)
+- [ ] Consistent naming conventions across all modules
+
+**Phase 2: Architecture Improvements** (2-3 days)
+- [ ] Standardize error handling:
+  - [ ] Custom exception hierarchy (`coffee_maker/exceptions.py`)
+  - [ ] Consistent error messages and logging
+  - [ ] Error recovery strategies documented
+- [ ] Unified configuration management:
+  - [ ] Single `ConfigManager` class
+  - [ ] All config in one place (`coffee_maker/config/`)
+  - [ ] Environment variable validation
+  - [ ] Config schema with defaults
+- [ ] Dependency injection for testability:
+  - [ ] Extract interfaces for major components
+  - [ ] Constructor injection instead of global state
+  - [ ] Mock-friendly architecture
+
+**Phase 3: Testing & Documentation** (2-3 days)
+- [ ] Unit test coverage > 80%
+- [ ] Integration tests for critical workflows
+- [ ] Refactoring guide in `docs/REFACTORING_GUIDE.md`
+- [ ] Architecture diagrams updated
+- [ ] Code review checklist updated
+
+**Phase 4: Performance & Optimization** (1-2 days)
+- [ ] Identify and optimize slow operations
+- [ ] Add caching where appropriate
+- [ ] Optimize import statements
+- [ ] Profile code and fix bottlenecks
+
+### Acceptance Criteria
+
+**Code Quality Metrics**:
+- ✅ Type hint coverage: 100% (up from 68%)
+- ✅ Docstring coverage: 100% for public APIs
+- ✅ Average file size: < 600 lines
+- ✅ Average function length: < 50 lines
+- ✅ Code duplication: < 5%
+
+**Architecture Quality**:
+- ✅ Single configuration system used everywhere
+- ✅ Consistent error handling in all modules
+- ✅ Clear separation of concerns (UI, business logic, data)
+- ✅ Dependency injection used for major components
+- ✅ No circular dependencies
+
+**Testing Quality**:
+- ✅ Unit test coverage > 80%
+- ✅ All critical workflows have integration tests
+- ✅ Tests run in < 2 minutes
+
+### Implementation Plan
+
+**Week 1: Foundation Work**
+- **Day 1-2**: Add type hints to all 31 files missing them
+- **Day 3**: Split large files (chat_interface.py, daemon.py)
+- **Day 4**: Create unified exception hierarchy
+- **Day 5**: Unified configuration management
+
+**Week 2: Architecture & Testing**
+- **Day 6-7**: Dependency injection refactoring
+- **Day 8**: Add/improve unit tests (target 80% coverage)
+- **Day 9**: Performance optimization
+- **Day 10**: Documentation and guides
+
+### Refactoring Targets (Priority Order)
+
+**Critical (Do First)**:
+1. **`coffee_maker/cli/chat_interface.py`** (1,215 lines)
+   - Extract: `ChatUI`, `MessageHandler`, `SessionManager`
+   - Target: 3 files × 400 lines each
+
+2. **`coffee_maker/autonomous/daemon.py`** (1,181 lines)
+   - Extract: `TaskExecutor`, `RoadmapSyncManager`, `NotificationManager`
+   - Target: 4 files × 300 lines each
+
+3. **`coffee_maker/cli/roadmap_editor.py`** (945 lines)
+   - Extract: `RoadmapValidator`, `RoadmapParser`, `RoadmapWriter`
+   - Target: 4 files × 250 lines each
+
+**Important (Do Second)**:
+4. **`coffee_maker/cli/ai_service.py`** (739 lines)
+5. **Configuration scattered across project**
+6. **Error handling inconsistency**
+
+### Success Metrics
+
+**Before**: 96 files, 25,151 lines, 68% type hints
+**After**: ~120 files, ~26,000 lines, 100% type hints, 80%+ test coverage
+
+### Risk Analysis
+
+**Risks**:
+- ⚠️ **Breaking changes**: May break existing functionality
+  - Mitigation: Comprehensive tests before refactoring, incremental changes
+- ⚠️ **Time investment**: 1-2 weeks focused work
+  - Mitigation: Clear milestones, daily progress tracking
+
+**Technical Specification**: See `docs/NEW_USER_STORIES.md` for complete details
 
 ---
 
