@@ -18354,12 +18354,53 @@ Started about 10 minutes ago..."
 [Full technical dump]
 ```
 
+**4. Clean UI - No Technical Pollution**
+
+**Problem**: Users also see distracting technical noise:
+```
+⠸ Claude is thinking...
+
+Claude: 2025-10-11 12:08:21,476 - INFO - Executing CLI request: You are an AI project manager assistant...
+```
+
+**Solution**:
+```python
+# Remove spinner for simple status checks
+# Only show spinner for actual AI processing
+
+# Suppress INFO logs from user view
+# Logs go to file only, not terminal
+
+# Clean output:
+User: "is the daemon running?"
+Claude: "Yes, he's running! 🟢"
+```
+
+**Implementation**:
+```python
+# In chat_interface.py
+def _handle_natural_language_stream(self, text: str, context: Dict) -> str:
+    # For status checks - NO SPINNER
+    if self._is_simple_status_check(text):
+        return self._format_simple_response(text)  # Direct, no AI call
+
+    # For AI processing - show spinner
+    with Live(Spinner(...)):
+        return self._get_ai_response(text)
+
+# Configure logging
+# User terminal: WARNING and above only
+# Log file: DEBUG and above
+```
+
 **Benefits**:
 1. **Better UX**: Users get what they ask for
 2. **Less Overwhelming**: No technical overload
 3. **More Natural**: Feels like talking to a person
 4. **Context-Aware**: Responses match the question
 5. **Progressive**: Can drill down for details if needed
+6. **Clean UI**: No spinners or logs for simple queries
+7. **Fast**: Direct responses without AI overhead
 
 **Implementation Priority**: **HIGH** (After PRIORITY 2.9)
 
