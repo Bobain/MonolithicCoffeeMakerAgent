@@ -443,6 +443,11 @@ class DevDaemon:
                     self.iterations_since_compact += 1
                     # PRIORITY 2.8: Write status after completion
                     self._write_status(priority=next_priority)
+
+                    # US-029: CRITICAL - Merge to roadmap after successful implementation
+                    logger.info(f"📤 Merging {next_priority['name']} to roadmap for project_manager visibility...")
+                    self._merge_to_roadmap(f"Completed {next_priority['name']}")
+
                     # PRIORITY 4: Return to idle after task complete
                     self.status.update_status(DeveloperState.IDLE, current_step="Task completed, waiting for next")
                 else:
@@ -453,6 +458,10 @@ class DevDaemon:
                         f"Implementation failed for {next_priority['name']}",
                         details={"priority": next_priority["name"]},
                     )
+
+                # US-029: CRITICAL - Merge to roadmap before sleep so project_manager has visibility
+                logger.info("📤 Merging progress to roadmap before sleep...")
+                self._merge_to_roadmap("End of iteration checkpoint")
 
                 # Sleep before next iteration
                 logger.info(f"💤 Sleeping {self.sleep_interval}s before next iteration...")
@@ -652,6 +661,124 @@ class DevDaemon:
 
         except Exception as e:
             logger.error(f"Error syncing roadmap branch: {e}")
+            return False
+
+    def _merge_to_roadmap(self, message: str = "Sync progress to roadmap") -> bool:
+        """Merge current feature branch to roadmap branch.
+
+        US-029: CRITICAL - project_manager depends on this for visibility!
+
+        This method ensures project_manager can see all progress in real-time
+        by frequently merging feature branch changes to the roadmap branch.
+
+        Called after:
+        - Completing any sub-task
+        - Updating ROADMAP.md (CRITICAL!)
+        - Creating new tickets
+        - Before sleep/idle
+
+        Args:
+            message: Description of what was accomplished
+
+        Returns:
+            True if merge successful, False if conflicts
+
+        Example:
+            >>> # After updating ROADMAP.md
+            >>> self._merge_to_roadmap("Updated US-021 progress")
+            True
+
+            >>> # Before sleep
+            >>> self._merge_to_roadmap("End of iteration checkpoint")
+            True
+        """
+        try:
+            import subprocess
+
+            # Get current branch
+            current_branch = subprocess.check_output(
+                ["git", "branch", "--show-current"], cwd=self.git.repo_path, text=True
+            ).strip()
+
+            if current_branch == "roadmap":
+                logger.warning("Already on roadmap branch, skipping merge")
+                return True
+
+            # Commit any uncommitted changes
+            status = subprocess.check_output(["git", "status", "--porcelain"], cwd=self.git.repo_path, text=True)
+
+            if status.strip():
+                logger.info(f"Committing changes before merge: {message}")
+                subprocess.run(["git", "add", "-A"], cwd=self.git.repo_path, check=True)
+                subprocess.run(["git", "commit", "-m", message], cwd=self.git.repo_path, check=True)
+                subprocess.run(["git", "push", "origin", current_branch], cwd=self.git.repo_path, check=True)
+
+            # Switch to roadmap
+            subprocess.run(["git", "checkout", "roadmap"], cwd=self.git.repo_path, check=True)
+            subprocess.run(["git", "pull", "origin", "roadmap"], cwd=self.git.repo_path, check=True)
+
+            # Merge with --no-ff (preserves history)
+            merge_result = subprocess.run(
+                ["git", "merge", "--no-ff", "-m", f"Merge {current_branch}: {message}", current_branch],
+                cwd=self.git.repo_path,
+                capture_output=True,
+                text=True,
+            )
+
+            if merge_result.returncode != 0:
+                # CONFLICT - abort and notify project_manager
+                subprocess.run(["git", "merge", "--abort"], cwd=self.git.repo_path, check=True)
+                subprocess.run(["git", "checkout", current_branch], cwd=self.git.repo_path, check=True)
+
+                # Create CRITICAL notification for project_manager
+                self.notifications.create_notification(
+                    type=NOTIF_TYPE_ERROR,
+                    priority=NOTIF_PRIORITY_CRITICAL,
+                    title=f"🚨 MERGE CONFLICT: {current_branch} → roadmap",
+                    message=f"""Automatic merge to roadmap failed with conflicts.
+
+⚠️  PROJECT_MANAGER VISIBILITY BLOCKED!
+
+The roadmap branch is now out of sync with {current_branch}.
+Manual intervention required to restore visibility.
+
+Steps to resolve:
+1. git checkout roadmap
+2. git pull origin roadmap
+3. git merge {current_branch}
+4. Resolve conflicts in affected files
+5. git add <resolved-files>
+6. git commit
+7. git push origin roadmap
+
+Until resolved, project_manager cannot see latest progress.
+""",
+                )
+
+                logger.error(f"Merge conflict: {current_branch} → roadmap")
+                logger.error("PROJECT_MANAGER VISIBILITY BLOCKED!")
+                return False
+
+            # Push to origin/roadmap
+            subprocess.run(["git", "push", "origin", "roadmap"], cwd=self.git.repo_path, check=True)
+
+            # Switch back to feature branch
+            subprocess.run(["git", "checkout", current_branch], cwd=self.git.repo_path, check=True)
+
+            logger.info(f"✅ Merged {current_branch} → roadmap")
+            logger.info(f"✅ project_manager can now see: {message}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to merge to roadmap: {e}")
+            logger.error("PROJECT_MANAGER CANNOT SEE PROGRESS!")
+
+            # Try to recover
+            try:
+                subprocess.run(["git", "checkout", current_branch], cwd=self.git.repo_path, check=True)
+            except:
+                pass
+
             return False
 
     def _ensure_technical_spec(self, priority: dict) -> bool:

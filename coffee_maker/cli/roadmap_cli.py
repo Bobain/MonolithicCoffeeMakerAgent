@@ -915,9 +915,10 @@ Use 'project-manager chat' for the best experience!
 
     args = parser.parse_args()
 
+    # US-030: Default to chat when no command provided
     if not args.command:
-        parser.print_help()
-        return 1
+        logger.info("No command provided - defaulting to chat interface (US-030)")
+        args.command = "chat"
 
     # PRIORITY 5: Initialize and start AssistantManager if chat features available
     if CHAT_AVAILABLE:
