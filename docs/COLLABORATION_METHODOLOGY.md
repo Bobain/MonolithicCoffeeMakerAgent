@@ -2476,6 +2476,271 @@ daemon:
 
 ---
 
+### 5.8 Integrated Bug Fixing Workflow (PRIORITY 2.11)
+
+**Pattern**: Report → Ticket → Analysis → Tech Spec → Implementation → PR
+
+**Philosophy**: Bugs are treated like features with formal tracking and structured resolution
+
+**User Requirement** (2025-10-11):
+> "As a user I want to be able to ask the project_manager to fix a bug he opens a ticket, with DoD and it will be analysed by the code_developer before writing technical specs and finally implementing the fix."
+
+**The Bug Workflow**:
+
+```
+User reports bug to project_manager
+  ↓
+project_manager creates ticket with Definition of Done
+  ↓
+Ticket saved to tickets/BUG-{number}.md
+  ↓
+project_manager notifies code_developer (notification system)
+  ↓
+code_developer picks up ticket
+  ↓
+PHASE 1: Analysis
+  ├─ Reproduce bug
+  ├─ Identify root cause
+  └─ Document findings in ticket
+  ↓
+PHASE 2: Technical Spec
+  ├─ Document fix approach
+  ├─ List affected files
+  └─ Note potential side effects
+  ↓
+PHASE 3: Implementation
+  ├─ Write fix
+  ├─ Add regression tests
+  └─ Update ticket with changes
+  ↓
+PHASE 4: Testing
+  ├─ Run test suite
+  ├─ Verify fix works
+  └─ Check for regressions
+  ↓
+PHASE 5: PR Creation
+  ├─ Create pull request
+  ├─ Link to ticket
+  └─ Mark ticket as resolved
+```
+
+**Bug Ticket Format** (tickets/BUG-{number}.md):
+
+```markdown
+# BUG-{number}: {Title}
+
+**Status**: 🔴 Open / 🟡 In Progress / 🟢 Resolved
+**Created**: {timestamp}
+**Reporter**: User
+**Assigned**: code_developer
+
+## Description
+{What's broken}
+
+## Reproduction Steps
+1. {Step 1}
+2. {Step 2}
+3. {Step 3}
+
+## Expected Behavior
+{What should happen}
+
+## Actual Behavior
+{What actually happens}
+
+## Definition of Done
+- [ ] Bug reproduced locally
+- [ ] Root cause identified
+- [ ] Fix implemented
+- [ ] Regression tests added
+- [ ] All tests passing
+- [ ] PR created and linked
+- [ ] User validated fix
+
+## Analysis (code_developer)
+{Root cause findings}
+
+## Technical Spec (code_developer)
+{Fix approach and affected files}
+
+## Implementation (code_developer)
+{Changes made and tests added}
+
+## PR Link
+{Pull request URL}
+```
+
+**project_manager Bug Detection**:
+
+```python
+def _handle_bug_report(self, message: str) -> bool:
+    """Detect and handle bug reports.
+
+    Triggers:
+    - "there's a bug"
+    - "not working"
+    - "getting an error"
+    - "fix the bug"
+    """
+    bug_patterns = [
+        r"(bug|error|broken|not working|failing)",
+        r"(fix|resolve|investigate)\s+(the\s+)?(bug|issue|error)"
+    ]
+
+    if any(re.search(pattern, message.lower()) for pattern in bug_patterns):
+        # Extract bug details
+        title = self._extract_bug_title(message)
+        description = self._extract_bug_description(message)
+
+        # Create ticket with DoD
+        ticket_number = self._get_next_bug_number()
+        ticket = self._create_bug_ticket(
+            number=ticket_number,
+            title=title,
+            description=description,
+            reporter="User"
+        )
+
+        # Save ticket
+        ticket_path = Path("tickets") / f"BUG-{ticket_number}.md"
+        ticket_path.parent.mkdir(exist_ok=True)
+        ticket_path.write_text(ticket)
+
+        # Notify code_developer
+        self.notifier.add_notification(
+            priority="high",
+            category="bug",
+            message=f"New bug ticket: BUG-{ticket_number}",
+            metadata={"ticket_path": str(ticket_path)}
+        )
+
+        # Respond to user
+        print(f"✓ Created ticket BUG-{ticket_number}")
+        print(f"✓ code_developer has been notified")
+
+        return True
+
+    return False
+```
+
+**code_developer Bug Handling**:
+
+```python
+def _handle_bug_ticket(self, notification: dict):
+    """Process bug ticket through 5-phase workflow.
+
+    PHASE 1: Analysis
+    - Reproduce bug
+    - Identify root cause
+    - Document findings
+
+    PHASE 2: Technical Spec
+    - Document fix approach
+    - List affected files
+    - Note side effects
+
+    PHASE 3: Implementation
+    - Write fix
+    - Add tests
+    - Update ticket
+
+    PHASE 4: Testing
+    - Run test suite
+    - Verify fix
+    - Check regressions
+
+    PHASE 5: PR Creation
+    - Create PR
+    - Link ticket
+    - Mark resolved
+    """
+    ticket_path = Path(notification["metadata"]["ticket_path"])
+    ticket_content = ticket_path.read_text()
+
+    # PHASE 1: Analysis
+    logger.info("🔍 PHASE 1: Analyzing bug...")
+    self._update_ticket_status(ticket_path, "🟡 In Progress")
+
+    analysis = self._reproduce_and_analyze_bug(ticket_content)
+    self._append_to_ticket(ticket_path, "## Analysis (code_developer)", analysis)
+
+    # PHASE 2: Technical Spec
+    logger.info("📝 PHASE 2: Writing technical spec...")
+
+    tech_spec = self._write_bug_fix_spec(ticket_content, analysis)
+    self._append_to_ticket(ticket_path, "## Technical Spec (code_developer)", tech_spec)
+
+    # PHASE 3: Implementation
+    logger.info("⚙️  PHASE 3: Implementing fix...")
+
+    implementation_result = self._implement_bug_fix(tech_spec)
+    self._append_to_ticket(ticket_path, "## Implementation (code_developer)", implementation_result)
+
+    # PHASE 4: Testing
+    logger.info("🧪 PHASE 4: Testing fix...")
+
+    test_result = self._run_test_suite()
+    if not test_result.success:
+        logger.error("Tests failed - keeping ticket open")
+        return
+
+    # PHASE 5: PR Creation
+    logger.info("🚀 PHASE 5: Creating PR...")
+
+    pr_url = self._create_pull_request(
+        title=f"Fix: {ticket_path.stem}",
+        body=f"Fixes {ticket_path.name}\n\n{tech_spec}\n\n{implementation_result}"
+    )
+
+    self._append_to_ticket(ticket_path, "## PR Link", pr_url)
+    self._update_ticket_status(ticket_path, "🟢 Resolved")
+
+    logger.info(f"✓ Bug fixed and PR created: {pr_url}")
+```
+
+**Key Benefits**:
+
+1. **Structured Process**: Every bug follows the same 5-phase workflow
+2. **Full Traceability**: Complete history from report to resolution
+3. **Quality Assurance**: DoD ensures bugs are truly fixed
+4. **Asynchronous Work**: User can continue working while bug is fixed
+5. **No Context Loss**: All information captured in ticket
+
+**Example Interaction**:
+
+```
+User: "There's a bug in the notification system - it's not showing
+       high priority alerts"
+
+PM: "✓ Created ticket BUG-003: High priority alerts not showing
+     ✓ code_developer has been notified
+
+     You can check status anytime with: poetry run project-manager status"
+
+[Hours later...]
+
+code_developer: [Working through 5 phases autonomously]
+                ↓ Analysis: Found filtering logic bug in notifications.py:142
+                ↓ Tech Spec: Fix filter condition + add test
+                ↓ Implementation: Fixed + added regression test
+                ↓ Testing: All tests passing
+                ↓ PR: Created PR #123
+
+PM: [Next time user checks in]
+    "Good news! BUG-003 is resolved. code_developer created PR #123 with
+     the fix. The issue was in the priority filtering logic."
+```
+
+**Implementation Status**:
+- 📝 **PLANNED** (PRIORITY 2.11 created 2025-10-11)
+- See `docs/ROADMAP.md` for complete specification
+- High priority for implementation
+
+**User Story Reference**: PRIORITY 2.11
+> "As a user I want to be able to ask the project_manager to fix a bug he opens a ticket, with DoD and it will be analysed by the code_developer before writing technical specs and finally implementing the fix."
+
+---
+
 ## 6. Definition of Done (DoD)
 
 ### 6.1 What is "Done"?
