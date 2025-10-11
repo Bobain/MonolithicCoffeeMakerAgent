@@ -18732,6 +18732,379 @@ def _handle_natural_language_stream(self, text: str, context: Dict) -> str:
 
 ---
 
+### 🔴 **PRIORITY 2.11: Integrated Bug Fixing Workflow** 🐛 **HIGH PRIORITY**
+
+**Estimated Duration**: 4-5 hours
+**Impact**: ⭐⭐⭐⭐⭐ (Critical - Developer productivity and quality)
+**Status**: 📝 Planned
+**Dependency**: None
+**Why Important**: Streamlined bug fixing from user report to implementation with proper analysis and documentation
+
+#### User Story: Seamless Bug Fixing Workflow
+
+**As a** user
+**I want** to ask project-manager to fix a bug and have it automatically analyzed, documented, and implemented
+**So that** bugs are handled professionally with proper analysis, technical specs, and Definition of Done
+
+**Background**:
+Currently, when bugs are discovered:
+- No structured process for reporting
+- No automatic ticket creation
+- No analysis before fixing
+- No technical specification
+- Direct implementation without proper planning
+- Risk of incomplete fixes or introducing new bugs
+
+**Desired Workflow**:
+
+```
+User → Reports Bug → project-manager → Creates Ticket (with DoD) →
+code_developer → Analyzes Bug → Writes Technical Spec → Implements Fix → Tests → Done
+```
+
+**Step-by-Step Process**:
+
+1. **User Reports Bug**
+   ```
+   User: "There's a bug - the daemon crashes when priority has no technical spec"
+   ```
+
+2. **project-manager Creates Ticket**
+   ```
+   project-manager: "🐛 Creating bug ticket...
+
+   BUG-001: Daemon crashes on priority without technical spec
+
+   **Description**:
+   When daemon encounters a priority without technical spec, it crashes
+   instead of handling gracefully.
+
+   **Reproduction Steps**:
+   1. Add priority to ROADMAP without technical spec
+   2. Start daemon
+   3. Daemon crashes when reaching that priority
+
+   **Expected Behavior**:
+   Daemon should create technical spec or skip gracefully
+
+   **Definition of Done**:
+   - [ ] Bug reproduced and root cause identified
+   - [ ] Technical specification written
+   - [ ] Fix implemented with error handling
+   - [ ] Unit tests added for edge case
+   - [ ] Integration test verifies fix
+   - [ ] No regressions in existing functionality
+   - [ ] Documentation updated if needed
+
+   Ticket saved to: tickets/BUG-001.md
+   Assigned to: code_developer
+
+   Would you like me to ask code_developer to start working on this?"
+   ```
+
+3. **User Approves**
+   ```
+   User: "yes, fix it"
+   ```
+
+4. **code_developer Analyzes Bug**
+   ```
+   code_developer: 🔍 Analyzing BUG-001...
+   code_developer: 📖 Reading daemon.py and related code...
+   code_developer: 🔎 Reproducing the bug...
+   code_developer: ✅ Bug confirmed in daemon.py:450
+
+   **Analysis Complete**:
+
+   Root Cause: _ensure_technical_spec() raises exception when spec file
+   doesn't exist, but exception not caught in run() loop.
+
+   Impact: High - daemon crashes and stops working
+   Affected: All priorities without technical specs
+   Risk: Medium - fix is straightforward, low regression risk
+   ```
+
+5. **code_developer Writes Technical Spec**
+   ```
+   code_developer: 📝 Writing technical specification...
+
+   Created: docs/BUG-001_TECHNICAL_SPEC.md
+
+   **Technical Specification - BUG-001**
+
+   **Solution Approach**:
+   1. Add try-catch around spec creation in run() loop
+   2. Log warning instead of crashing
+   3. Continue to next priority
+   4. Add unit tests for missing spec scenario
+
+   **Files to Modify**:
+   - daemon.py:450-460 (add exception handling)
+   - tests/test_daemon.py (add test case)
+
+   **Testing Strategy**:
+   - Unit test: priority without spec
+   - Integration test: daemon continues after missing spec
+   - Manual test: verify error message clarity
+
+   **Rollback Plan**:
+   If issues occur, revert commit and re-analyze
+   ```
+
+6. **code_developer Implements Fix**
+   ```
+   code_developer: 🔧 Implementing fix for BUG-001...
+   code_developer: ✏️ Modifying daemon.py...
+   code_developer: ✅ Added exception handling
+   code_developer: 📝 Writing unit tests...
+   code_developer: ✅ Tests passing
+   code_developer: 🧪 Running integration tests...
+   code_developer: ✅ All tests pass
+
+   **Fix Complete**:
+   - daemon.py: Added graceful handling for missing specs
+   - tests/test_daemon.py: Added test_missing_technical_spec()
+   - All DoD items: ✅ Complete
+
+   PR created: #234 "Fix: Handle missing technical specs gracefully"
+   Branch: bugfix/BUG-001
+
+   Ready for your review!
+   ```
+
+**Deliverables**:
+
+**1. Bug Ticket Format** (`tickets/BUG-{number}.md`)
+```markdown
+# BUG-{number}: {Title}
+
+**Status**: Open | In Analysis | In Progress | Testing | Fixed
+**Priority**: Critical | High | Medium | Low
+**Reported By**: User
+**Assigned To**: code_developer
+**Created**: 2025-10-11
+**Updated**: 2025-10-11
+
+## Description
+[Clear description of the bug]
+
+## Reproduction Steps
+1. Step 1
+2. Step 2
+3. Expected vs Actual
+
+## Expected Behavior
+[What should happen]
+
+## Actual Behavior
+[What actually happens]
+
+## Definition of Done
+- [ ] Root cause identified
+- [ ] Technical spec written
+- [ ] Fix implemented
+- [ ] Tests added
+- [ ] Tests passing
+- [ ] No regressions
+- [ ] Documentation updated
+- [ ] PR reviewed and merged
+
+## Analysis
+[code_developer fills this in]
+
+## Technical Spec
+See: docs/BUG-{number}_TECHNICAL_SPEC.md
+
+## Implementation
+PR: #{pr_number}
+Branch: bugfix/BUG-{number}
+Commits: [list]
+```
+
+**2. project-manager Bug Command** (`coffee_maker/cli/chat_interface.py`)
+```python
+def _handle_bug_report(self, bug_description: str) -> str:
+    """Handle user bug report.
+
+    Args:
+        bug_description: User's description of the bug
+
+    Returns:
+        Ticket creation confirmation and next steps
+
+    Workflow:
+        1. Generate ticket number (BUG-xxx)
+        2. Create ticket file with description and DoD
+        3. Notify code_developer via notification
+        4. Return ticket info to user
+    """
+    # Generate ticket number
+    ticket_num = self._get_next_bug_number()
+
+    # Create ticket with DoD
+    ticket = {
+        "number": ticket_num,
+        "title": self._extract_bug_title(bug_description),
+        "description": bug_description,
+        "reproduction_steps": self._extract_reproduction_steps(bug_description),
+        "definition_of_done": [
+            "Root cause identified",
+            "Technical spec written",
+            "Fix implemented",
+            "Tests added",
+            "Tests passing",
+            "No regressions",
+            "Documentation updated",
+            "PR reviewed and merged"
+        ],
+        "status": "Open",
+        "priority": self._assess_bug_priority(bug_description),
+        "assigned_to": "code_developer",
+        "created": datetime.now().isoformat()
+    }
+
+    # Write ticket file
+    ticket_path = self._write_bug_ticket(ticket)
+
+    # Create notification for code_developer
+    self.notif_db.create_notification(
+        type="bug_report",
+        title=f"BUG-{ticket_num}: {ticket['title']}",
+        message=f"New bug reported. See {ticket_path} for details.",
+        priority=NOTIF_PRIORITY_HIGH if ticket['priority'] in ['Critical', 'High'] else NOTIF_PRIORITY_NORMAL,
+        context={"ticket": ticket, "ticket_path": str(ticket_path)}
+    )
+
+    return self._format_bug_ticket_response(ticket, ticket_path)
+```
+
+**3. code_developer Bug Handling** (`coffee_maker/autonomous/daemon.py`)
+```python
+def _handle_bug_ticket(self, ticket: dict) -> bool:
+    """Handle bug ticket with full workflow.
+
+    Args:
+        ticket: Bug ticket dictionary
+
+    Returns:
+        True if bug fixed successfully
+
+    Workflow:
+        1. Read ticket and understand bug
+        2. Analyze: reproduce bug, find root cause
+        3. Write technical specification
+        4. Implement fix with tests
+        5. Verify all DoD items complete
+        6. Create PR and update ticket
+    """
+    ticket_num = ticket['number']
+    logger.info(f"🐛 Handling {ticket_num}: {ticket['title']}")
+
+    # Phase 1: Analysis
+    logger.info("🔍 Phase 1: Analyzing bug...")
+    analysis = self._analyze_bug(ticket)
+
+    if not analysis['reproduced']:
+        return self._mark_cannot_reproduce(ticket_num)
+
+    # Phase 2: Technical Spec
+    logger.info("📝 Phase 2: Writing technical specification...")
+    spec_path = self._write_bug_technical_spec(ticket_num, analysis)
+
+    # Phase 3: Implementation
+    logger.info("🔧 Phase 3: Implementing fix...")
+    impl_result = self._implement_bug_fix(ticket_num, spec_path)
+
+    if not impl_result['success']:
+        return False
+
+    # Phase 4: Testing
+    logger.info("🧪 Phase 4: Running tests...")
+    test_result = self._run_tests()
+
+    if not test_result['passed']:
+        return False
+
+    # Phase 5: PR Creation
+    logger.info("📤 Phase 5: Creating PR...")
+    pr_url = self._create_bug_fix_pr(ticket_num, impl_result)
+
+    # Update ticket
+    self._update_bug_ticket(ticket_num, {
+        'status': 'Fixed',
+        'pr_url': pr_url,
+        'fixed_at': datetime.now().isoformat()
+    })
+
+    logger.info(f"✅ {ticket_num} fixed! PR: {pr_url}")
+    return True
+```
+
+**Implementation Steps**:
+
+1. **Create Ticket System** (1.5 hours)
+   - tickets/ directory structure
+   - BUG-{number}.md template
+   - Auto-increment bug numbers
+   - Ticket file generation
+
+2. **project-manager Bug Commands** (1 hour)
+   - Detect bug reports in chat
+   - Create ticket with DoD
+   - Notify code_developer
+   - Display ticket to user
+
+3. **code_developer Bug Workflow** (2 hours)
+   - Read and parse bug tickets
+   - Analysis phase (reproduce + root cause)
+   - Tech spec phase
+   - Implementation phase with tests
+   - PR creation and ticket update
+
+4. **Testing & Integration** (30 min)
+   - Test full workflow end-to-end
+   - Verify DoD completion
+   - Test edge cases
+
+**Testing**:
+```bash
+# Test full workflow
+project-manager chat
+
+User: "There's a bug - daemon crashes when priority has no spec"
+
+project-manager: 🐛 Creating BUG-001...
+project-manager: [Shows ticket with DoD]
+project-manager: "Assign to code_developer? (yes/no)"
+
+User: "yes"
+
+project-manager: ✅ Notified code_developer
+
+# code_developer (daemon) picks it up
+# [Analyzes bug]
+# [Writes technical spec]
+# [Implements fix]
+# [Creates PR]
+
+project-manager: 🎉 BUG-001 fixed!
+project-manager: PR #234: https://github.com/.../pull/234
+project-manager: All DoD items complete ✅
+```
+
+**Benefits**:
+1. **Structured Process**: Every bug handled professionally
+2. **Proper Analysis**: Root cause identified before fixing
+3. **Documentation**: Technical specs for complex bugs
+4. **Quality**: DoD ensures complete fixes
+5. **Traceability**: Tickets track entire bug lifecycle
+6. **Automation**: code_developer handles heavy lifting
+7. **Transparency**: User sees progress at each phase
+
+**Implementation Priority**: **HIGH** (After PRIORITY 2.10)
+
+---
+
 ### 🔴 **PRIORITY 5: Streamlit Analytics Dashboard** ⚡ NEW
 
 **Estimated Duration**: 1-2 weeks
