@@ -16,6 +16,94 @@ Phase 2 (Future):
     - Roadmap editing
     - Slack integration
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 WORKFLOW INTEGRATION: US-027 (ROADMAP BRANCH AS SOURCE OF TRUTH)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+IMPORTANT: The 'roadmap' branch is the SINGLE SOURCE OF TRUTH for ROADMAP.md
+
+When viewing the roadmap with project-manager, you should ALWAYS be on the
+'roadmap' branch to see the latest priorities and status updates.
+
+US-027 Workflow (Manager Side):
+────────────────────────────────
+1. project_manager MUST view roadmap from 'roadmap' branch
+2. code_developer daemon syncs FROM 'roadmap' branch each iteration
+3. Updates to priorities happen ON 'roadmap' branch
+4. Feature branches merge TO 'roadmap' frequently (US-024)
+
+Why This Matters:
+─────────────────
+    ❌ WRONG: Viewing roadmap from feature branch
+       → Shows stale priorities
+       → User provides feedback on obsolete tasks
+       → Daemon wastes time on wrong work
+
+    ✅ CORRECT: Always viewing roadmap from 'roadmap' branch
+       → Shows current priorities
+       → User provides feedback on actual work
+       → Daemon implements correct priorities
+
+Branch Warning System:
+──────────────────────
+The `cmd_view` function checks your current branch and warns if you're not
+on 'roadmap':
+
+    $ git checkout feature/something
+    $ project-manager view
+
+    ⚠️  ══════════════════════════════════════════════════════════════
+    ⚠️  WARNING: You are NOT on the roadmap branch!
+    ⚠️  ══════════════════════════════════════════════════════════════
+
+       Current branch: feature/something
+       Roadmap branch is the SINGLE SOURCE OF TRUTH
+
+       To view latest priorities:
+       $ git checkout roadmap && git pull
+
+Best Practice:
+──────────────
+Always start your session with:
+
+    $ git checkout roadmap
+    $ git pull origin roadmap
+    $ project-manager view
+
+This ensures you're looking at the daemon's current priorities, not stale
+feature branch versions.
+
+The Complete Visibility Loop:
+─────────────────────────────
+
+    code_developer              project_manager
+    (daemon)                    (this CLI)
+         │                            │
+         ├─[1. Work]────►             │
+         │                            │
+         ├─[2. Merge to roadmap]──►  │
+         │      (US-024)              │
+         │                       ┌────┴────┐
+         │                       │ View on │
+         │                       │ roadmap │
+         │                       │ branch  │
+         │                       └────┬────┘
+         │                            │
+         │    ┌───────────────────────┘
+         │    │ [3. User updates ROADMAP.md
+         │    │     on roadmap branch]
+         │    │
+    ┌────┴────▼───┐
+    │ [4. Sync    │
+    │  from       │
+    │  roadmap]   │
+    │  (US-027)   │
+    └────┬────────┘
+         │
+         └─[5. Continue with updated priorities]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 Commands:
     project-manager view [priority]      View roadmap (or specific priority)
     project-manager status                Show daemon status
@@ -24,7 +112,10 @@ Commands:
     project-manager sync                  Sync with daemon environment
 
 Example:
-    # View full roadmap
+    # ALWAYS start by ensuring you're on roadmap branch
+    $ git checkout roadmap && git pull
+
+    # View full roadmap (from roadmap branch)
     $ project-manager view
 
     # View specific priority

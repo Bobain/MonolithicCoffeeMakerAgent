@@ -21,6 +21,102 @@ Workflow:
     7. Update status and notify user
     8. Sleep and repeat
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 WORKFLOW INTEGRATION: US-024 + US-027 (VISIBILITY LOOP)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This daemon implements a dual workflow for real-time visibility between
+code_developer (this daemon) and project_manager (user interface):
+
+US-027: Roadmap Branch as Single Source of Truth (Developer Side)
+──────────────────────────────────────────────────────────────────
+The daemon ALWAYS syncs with 'roadmap' branch at the start of each iteration:
+
+    def run():
+        while True:
+            # 1. SYNC FROM roadmap branch (US-027)
+            _sync_roadmap_branch()  # Pull latest ROADMAP.md from origin/roadmap
+
+            # 2. Read priorities
+            next_priority = parser.get_next_planned_priority()
+
+            # 3. Implement
+            _implement_priority(next_priority)
+
+            # 4. MERGE TO roadmap branch (US-024)
+            # (Not yet implemented - see US-024.md)
+
+            time.sleep(30)
+
+Key principle: The 'roadmap' branch is the SINGLE SOURCE OF TRUTH.
+All priority decisions, status updates, and planning changes MUST go
+through the roadmap branch first.
+
+US-024: Frequent Roadmap Sync (Developer → Manager Visibility)
+───────────────────────────────────────────────────────────────
+The daemon will merge to 'roadmap' branch frequently to show progress:
+
+    Merge Triggers:
+    - After completing sub-tasks
+    - After updating ROADMAP.md
+    - Before going idle/sleep
+    - After creating tickets
+
+    Implementation (planned):
+        def _merge_to_roadmap(message: str):
+            git checkout roadmap
+            git merge --no-ff feature-branch -m message
+            git push origin roadmap
+            git checkout feature-branch
+
+The Visibility Loop
+───────────────────
+Together, US-024 + US-027 create a continuous visibility loop:
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │                  VISIBILITY LOOP                            │
+    │                                                             │
+    │   code_developer                    project_manager        │
+    │   (this daemon)                     (user interface)        │
+    │        │                                   │                │
+    │        ├──[1. Work on feature]─────►      │                │
+    │        │                                   │                │
+    │        ├──[2. Merge to roadmap]────►  ┌───┴───┐            │
+    │        │        (US-024)              │ See   │            │
+    │        │                              │updates│            │
+    │        │                              └───┬───┘            │
+    │        │                                  │                │
+    │        │   ┌──────────────────────────────┘                │
+    │        │   │ [3. User provides feedback]                   │
+    │        │   │    (updates ROADMAP.md on                     │
+    │        │   │     roadmap branch)                           │
+    │        │   │                                               │
+    │   ┌────┴───▼────┐                                          │
+    │   │ [4. Sync    │                                          │
+    │   │  from       │                                          │
+    │   │  roadmap]   │                                          │
+    │   │  (US-027)   │                                          │
+    │   └────┬────────┘                                          │
+    │        │                                                   │
+    │        └──[5. Continue with updated priorities]           │
+    │                                                             │
+    │   Result: Real-time visibility and early course            │
+    │           correction without waiting for PR merge          │
+    └─────────────────────────────────────────────────────────────┘
+
+Benefits:
+    For code_developer (daemon):
+    - ✅ Always works on latest priorities
+    - ✅ Never wastes time on obsolete tasks
+    - ✅ Frequent checkpoints for recovery
+
+    For project_manager (user):
+    - ✅ Real-time visibility into progress
+    - ✅ Can provide feedback early
+    - ✅ No surprises at PR time
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 Key Features:
     - Crash Recovery: Automatic recovery from crashes (max 3 attempts)
     - Context Management: Periodic context refresh (every 10 iterations)
@@ -29,6 +125,7 @@ Key Features:
     - Notifications: Bidirectional communication with user
     - Auto-approval Mode: Fully autonomous operation
     - PR Creation: Automatic pull request generation
+    - Roadmap Sync: Always syncs with origin/roadmap (US-027)
 
 Prerequisites:
     - ANTHROPIC_API_KEY environment variable (for API mode)
@@ -36,6 +133,7 @@ Prerequisites:
     - Git repository with remote
     - docs/ROADMAP.md exists
     - Clean working directory
+    - 'roadmap' branch exists and is up to date
 
 Usage Examples:
     Basic usage (autonomous mode):
