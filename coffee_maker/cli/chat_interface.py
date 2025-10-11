@@ -41,6 +41,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 from coffee_maker.cli.ai_service import AIService
+from coffee_maker.cli.bug_tracker import BugTracker
 from coffee_maker.cli.commands import get_command_handler, list_commands
 from coffee_maker.cli.notifications import NotificationDB, NOTIF_PRIORITY_HIGH
 from coffee_maker.cli.roadmap_editor import RoadmapEditor
@@ -161,6 +162,9 @@ class ChatSession:
 
         # Initialize notification database for bidirectional communication
         self.notif_db = NotificationDB()
+
+        # Initialize bug tracker for integrated bug fixing workflow (PRIORITY 2.11)
+        self.bug_tracker = BugTracker()
 
         # Setup prompt-toolkit for advanced input
         self._setup_prompt_session()
@@ -717,6 +721,9 @@ class ChatSession:
     def _handle_natural_language_stream(self, text: str, context: Dict) -> str:
         """Handle natural language with streaming response and daemon awareness.
 
+        PRIORITY 2.11: Integrated bug fixing workflow
+        Detects bug reports and creates tickets automatically.
+
         Args:
             text: Natural language input
             context: Roadmap context
@@ -725,6 +732,10 @@ class ChatSession:
             Complete response message
         """
         try:
+            # PRIORITY 2.11: Detect bug reports
+            if self.bug_tracker.detect_bug_report(text):
+                return self._handle_bug_report(text)
+
             # Detect daemon-related commands
             daemon_keywords = [
                 "ask daemon",
@@ -1009,6 +1020,49 @@ class ChatSession:
         self.console.print(table)
         self.console.print("\n[italic]You can also use natural language![/]")
         self.console.print('[dim]Example: "Add a priority for user authentication"[/]\n')
+
+    def _handle_bug_report(self, bug_description: str) -> str:
+        """Handle user bug report.
+
+        PRIORITY 2.11: Integrated Bug Fixing Workflow
+
+        Args:
+            bug_description: User's description of the bug
+
+        Returns:
+            Ticket creation confirmation and next steps
+
+        Workflow:
+            1. Generate ticket number (BUG-xxx)
+            2. Create ticket file with description and DoD
+            3. Notify code_developer via notification
+            4. Return ticket info to user
+        """
+        try:
+            # Create bug ticket
+            bug_number, ticket_path = self.bug_tracker.create_bug_ticket(description=bug_description)
+
+            # Extract info for notification
+            title = self.bug_tracker.extract_bug_title(bug_description)
+            priority = self.bug_tracker.assess_bug_priority(bug_description)
+
+            # Create notification for code_developer
+            notif_id = self.notif_db.create_notification(
+                type="bug",
+                title=f"BUG-{bug_number:03d}: {title}",
+                message=f"New bug reported. See {ticket_path} for details.\n\n{bug_description}",
+                priority=NOTIF_PRIORITY_HIGH if priority in ["Critical", "High"] else "normal",
+                context={"bug_number": bug_number, "ticket_path": str(ticket_path), "priority": priority},
+            )
+
+            logger.info(f"Bug ticket {bug_number} created, notification #{notif_id} sent to daemon")
+
+            # Format response for user
+            return self.bug_tracker.format_ticket_response(bug_number, ticket_path, title, priority)
+
+        except Exception as e:
+            logger.error(f"Failed to create bug ticket: {e}", exc_info=True)
+            return f"❌ Failed to create bug ticket: {str(e)}"
 
     def _send_command_to_daemon(self, command: str) -> str:
         """Send command to daemon via notifications.
