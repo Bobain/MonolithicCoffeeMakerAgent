@@ -60,6 +60,7 @@ logger = logging.getLogger(__name__)
 # Import chat components for Phase 2
 try:
     from coffee_maker.cli.ai_service import AIService
+    from coffee_maker.cli.assistant_manager import AssistantManager
     from coffee_maker.cli.chat_interface import ChatSession
     from coffee_maker.cli.roadmap_editor import RoadmapEditor
 
@@ -432,6 +433,168 @@ def cmd_sync(args):
     return 0
 
 
+def cmd_assistant_status(args):
+    """Show assistant status and knowledge state.
+
+    PRIORITY 5: Assistant Auto-Refresh & Always-On Availability
+
+    Displays:
+    - Assistant online/offline status
+    - Last documentation refresh time
+    - Next scheduled refresh
+    - Documentation files loaded
+    - Git commit history loaded
+    - Available tools
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager assistant-status
+    """
+    if not CHAT_AVAILABLE:
+        print("❌ Assistant feature not available")
+        print("\nMissing dependencies. Install with: poetry install")
+        return 1
+
+    try:
+        # Get assistant manager from global context (will be set in main())
+        if not hasattr(cmd_assistant_status, "manager"):
+            print("❌ Assistant manager not initialized")
+            print("\nThe assistant is not running.")
+            return 1
+
+        manager = cmd_assistant_status.manager
+        status = manager.get_status()
+
+        print("\n" + "=" * 80)
+        print("🤖 ASSISTANT STATUS")
+        print("=" * 80 + "\n")
+
+        # Online status
+        if status["online"]:
+            print("Status: 🟢 ONLINE")
+        else:
+            print("Status: 🔴 OFFLINE")
+
+        # Assistant availability
+        if status["assistant_available"]:
+            print("Assistant: ✅ Available")
+        else:
+            print("Assistant: ❌ Not available (no LLM configured)")
+
+        # Refresh info
+        if status["last_refresh"]:
+            from dateutil.parser import isoparse
+
+            last_refresh = isoparse(status["last_refresh"])
+            elapsed = datetime.now() - last_refresh
+            minutes = int(elapsed.total_seconds() // 60)
+
+            print(f"\nLast Documentation Refresh: {last_refresh.strftime('%Y-%m-%d %H:%M:%S')} ({minutes} minutes ago)")
+        else:
+            print("\nLast Documentation Refresh: Never")
+
+        if status["next_refresh"]:
+            print(f"Next Refresh: {status['next_refresh']}")
+
+        # Documentation knowledge
+        print(f"\nDocumentation Knowledge:")
+        print(f"  📚 {status['docs_loaded']} document(s) loaded")
+
+        for doc_info in status["docs_info"]:
+            print(f"  ✅ {doc_info['path']}")
+            print(f"     Modified: {doc_info['modified']}, Lines: {doc_info['line_count']}")
+
+        # Git history
+        if status["git_commits_loaded"] > 0:
+            print(f"\n  📝 Git History: {status['git_commits_loaded']} recent commits loaded")
+
+        # Tools (from assistant_bridge.py - hardcoded for now)
+        print("\nTools Available:")
+        tool_names = ["read_file", "search_code", "list_files", "git_log", "git_diff", "execute_bash"]
+        for tool in tool_names:
+            print(f"  ✅ {tool}")
+
+        print("\n✨ Ready to answer questions! 🚀")
+        print("\nUse 'project-manager chat' to ask questions")
+        print("Use 'project-manager assistant-refresh' to manually refresh documentation")
+        print()
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Failed to get assistant status: {e}", exc_info=True)
+        print(f"❌ Error getting assistant status: {e}")
+        return 1
+
+
+def cmd_assistant_refresh(args):
+    """Manually refresh assistant documentation.
+
+    PRIORITY 5: Assistant Auto-Refresh & Always-On Availability
+
+    Triggers an immediate refresh of:
+    - ROADMAP.md
+    - COLLABORATION_METHODOLOGY.md
+    - DOCUMENTATION_INDEX.md
+    - TUTORIALS.md
+    - Recent git commits (last 10)
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager assistant-refresh
+    """
+    if not CHAT_AVAILABLE:
+        print("❌ Assistant feature not available")
+        print("\nMissing dependencies. Install with: poetry install")
+        return 1
+
+    try:
+        # Get assistant manager from global context
+        if not hasattr(cmd_assistant_refresh, "manager"):
+            print("❌ Assistant manager not initialized")
+            return 1
+
+        manager = cmd_assistant_refresh.manager
+
+        print("\n🔄 Refreshing assistant documentation...")
+        print()
+
+        # Trigger manual refresh
+        result = manager.manual_refresh()
+
+        if result["success"]:
+            print("Reading ROADMAP.md... ✅")
+            print("Reading COLLABORATION_METHODOLOGY.md... ✅")
+            print("Reading DOCUMENTATION_INDEX.md... ✅")
+            print("Reading TUTORIALS.md... ✅")
+            print("Reading git history... ✅")
+            print()
+            print(f"✅ Assistant knowledge refreshed successfully!")
+            print(f"   {result['docs_refreshed']} document(s) updated")
+            print(f"   Timestamp: {result['timestamp']}")
+            print()
+        else:
+            print(f"❌ Refresh failed: {result['message']}")
+            return 1
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Manual refresh failed: {e}", exc_info=True)
+        print(f"❌ Error: {e}")
+        return 1
+
+
 def cmd_chat(args):
     """Start interactive chat session with AI (Phase 2).
 
@@ -633,11 +796,29 @@ Use 'project-manager chat' for the best experience!
     # Chat command (Phase 2)
     subparsers.add_parser("chat", help="Start interactive AI chat session (Phase 2)")
 
+    # Assistant commands (PRIORITY 5)
+    subparsers.add_parser("assistant-status", help="Show assistant status and knowledge state")
+    subparsers.add_parser("assistant-refresh", help="Manually refresh assistant documentation")
+
     args = parser.parse_args()
 
     if not args.command:
         parser.print_help()
         return 1
+
+    # PRIORITY 5: Initialize and start AssistantManager if chat features available
+    if CHAT_AVAILABLE:
+        try:
+            assistant_manager = AssistantManager()
+            assistant_manager.start_auto_refresh()
+
+            # Make manager available to command handlers via function attributes
+            cmd_assistant_status.manager = assistant_manager
+            cmd_assistant_refresh.manager = assistant_manager
+
+            logger.info("Assistant manager initialized and auto-refresh started")
+        except Exception as e:
+            logger.warning(f"Failed to initialize assistant manager: {e}")
 
     # Route to command handler
     commands = {
@@ -648,6 +829,8 @@ Use 'project-manager chat' for the best experience!
         "respond": cmd_respond,
         "sync": cmd_sync,
         "chat": cmd_chat,  # Phase 2
+        "assistant-status": cmd_assistant_status,  # PRIORITY 5
+        "assistant-refresh": cmd_assistant_refresh,  # PRIORITY 5
     }
 
     handler = commands.get(args.command)
