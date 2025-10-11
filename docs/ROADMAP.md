@@ -7507,6 +7507,297 @@ class DeveloperStatusDisplay:
 
 ---
 
+## 📡 PRIORITY 4.1: Real-Time Developer Heartbeat UI Integration
+
+**Goal**: Add guaranteed heartbeat system with auto-refreshing status widget in project-manager chat UI
+
+**Duration**: 4-6 hours
+**Dependencies**: PRIORITY 4 (Developer Status Dashboard)
+**Status**: 📝 Planned
+
+### Why This Is Critical
+
+PRIORITY 4 delivered excellent status tracking infrastructure, but currently:
+- ❌ User must manually run `project-manager developer-status` to see status
+- ❌ No guaranteed heartbeat - developer could be stuck without notification
+- ❌ Status is not always visible in chat UI
+- ❌ No automatic detection when developer goes silent
+
+**This priority makes status truly real-time**: Always visible, always current, always reliable!
+
+---
+
+### Core Features
+
+#### 1. Guaranteed Heartbeat System
+
+**Daemon sends heartbeat every hour minimum**:
+```python
+# In code-developer daemon
+class DevDaemon:
+    def __init__(self):
+        self.last_heartbeat = None
+        self.heartbeat_interval = 3600  # 1 hour in seconds
+
+    def run(self):
+        """Main daemon loop with guaranteed heartbeat."""
+        while True:
+            # ... existing daemon logic ...
+
+            # Guarantee heartbeat every hour
+            if not self.last_heartbeat or \
+               (time.time() - self.last_heartbeat) >= self.heartbeat_interval:
+                self._send_heartbeat()
+                self.last_heartbeat = time.time()
+
+    def _send_heartbeat(self):
+        """Send heartbeat with current status."""
+        self.developer_status.update_status(
+            self.current_state,
+            task=self.current_task,
+            progress=self.current_progress,
+            current_step=self.current_step
+        )
+        logger.info(f"💓 Heartbeat sent: {self.current_state} - {self.current_progress}%")
+```
+
+**Heartbeat includes**:
+- Current task name and priority
+- Progress percentage (0-100%)
+- Current step description
+- ETA in seconds
+- Timestamp for staleness detection
+
+#### 2. Auto-Refreshing Status Widget
+
+**Always-visible status panel at top of chat interface**:
+```
+┌─────────────────────────────────────────────────────────┐
+│ 🤖 DEVELOPER: 🟢 WORKING (60%)                          │
+│ Task: PRIORITY 5 - Frontend Dashboard                   │
+│ Progress: ████████████░░░░░░░░ 60% | ETA: 1h 30m       │
+│ Last heartbeat: 2m ago                                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Updates every 30 seconds automatically**:
+- Non-blocking background thread reads `data/developer_status.json`
+- Updates display without interrupting user typing
+- Visual indicator when heartbeat is stale (> 5 minutes old)
+- Error state when no heartbeat for > 15 minutes
+
+**Integration in chat UI**:
+- Status widget appears at top of chat panel
+- Uses Rich library for color-coded formatting
+- Compact single-line view with expandable details
+- Click/keypress to expand full status view
+
+#### 3. Stale Heartbeat Detection
+
+**Multi-level warning system**:
+```python
+# In DeveloperStatusDisplay
+class HeartbeatMonitor:
+    WARN_THRESHOLD = 300    # 5 minutes
+    ALERT_THRESHOLD = 900   # 15 minutes
+
+    def check_heartbeat_health(self, last_heartbeat_time: str) -> str:
+        """Check if heartbeat is stale."""
+        elapsed = time.time() - datetime.fromisoformat(last_heartbeat_time).timestamp()
+
+        if elapsed < self.WARN_THRESHOLD:
+            return "healthy"  # 🟢 Green
+        elif elapsed < self.ALERT_THRESHOLD:
+            return "stale"    # 🟡 Yellow - Show warning
+        else:
+            return "critical" # 🔴 Red - Show alert
+```
+
+**Warning display**:
+```
+┌─────────────────────────────────────────────────────────┐
+│ 🤖 DEVELOPER: 🟡 STALE (60%)                            │
+│ Task: PRIORITY 5 - Frontend Dashboard                   │
+│ ⚠️  No heartbeat for 7 minutes - may be stuck          │
+│ Last heartbeat: 7m ago                                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Alert display**:
+```
+┌─────────────────────────────────────────────────────────┐
+│ 🤖 DEVELOPER: 🔴 SILENT (60%)                           │
+│ Task: PRIORITY 5 - Frontend Dashboard                   │
+│ ❌ No heartbeat for 18 minutes - likely crashed        │
+│ Actions: Check logs | Restart daemon                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### 4. Background Refresh Thread
+
+**Non-blocking status updates**:
+```python
+# In project-manager chat CLI
+class ChatInterface:
+    def __init__(self):
+        self.status_widget = DeveloperStatusWidget()
+        self.refresh_thread = None
+        self.refresh_interval = 30  # 30 seconds
+
+    def start_status_refresh(self):
+        """Start background status refresh thread."""
+        def refresh_loop():
+            while self.running:
+                self.status_widget.refresh()
+                time.sleep(self.refresh_interval)
+
+        self.refresh_thread = threading.Thread(target=refresh_loop, daemon=True)
+        self.refresh_thread.start()
+
+    def run(self):
+        """Run chat interface with auto-refreshing status."""
+        self.start_status_refresh()
+
+        while self.running:
+            # Render status widget at top
+            self.console.print(self.status_widget.render())
+
+            # Normal chat interface below
+            user_input = self.prompt_user()
+            # ... rest of chat logic ...
+```
+
+---
+
+### Architecture
+
+#### Updated Status File Format
+
+**No changes needed** - `data/developer_status.json` already has everything:
+```json
+{
+  "status": "working",
+  "current_task": {
+    "priority": 5,
+    "name": "Frontend Dashboard",
+    "started_at": "2025-10-11T10:30:00Z",
+    "progress": 60,
+    "current_step": "Implementing React components",
+    "eta_seconds": 5400
+  },
+  "last_activity": {
+    "timestamp": "2025-10-11T11:28:00Z",  // <-- Used for staleness detection
+    "type": "git_commit",
+    "description": "Added component structure"
+  },
+  // ... rest of status data ...
+}
+```
+
+#### New Components
+
+**1. HeartbeatMonitor** (`coffee_maker/cli/heartbeat_monitor.py`)
+- Check heartbeat health (healthy/stale/critical)
+- Calculate time since last heartbeat
+- Provide warning messages
+
+**2. DeveloperStatusWidget** (`coffee_maker/cli/status_widget.py`)
+- Compact status display for chat UI
+- Render status bar with progress
+- Handle state-based colors and emojis
+- Expandable to full status view
+
+**3. BackgroundRefreshThread** (in `roadmap_cli.py`)
+- Non-blocking refresh loop
+- Read status file every 30 seconds
+- Update widget without blocking user input
+
+---
+
+### Implementation Steps
+
+**Phase 1: Guaranteed Heartbeat** (2 hours)
+1. Add heartbeat tracking to `DevDaemon`:
+   - `last_heartbeat` timestamp
+   - `_send_heartbeat()` method
+   - Check heartbeat age in main loop
+   - Force heartbeat every hour minimum
+2. Test heartbeat guarantee:
+   - Daemon runs for 2+ hours
+   - Verify heartbeat every hour
+   - Verify heartbeat on state changes
+
+**Phase 2: Status Widget** (1-2 hours)
+3. Create `DeveloperStatusWidget` class:
+   - Compact single-line status display
+   - Progress bar with color coding
+   - State emoji indicators
+   - Expandable details view
+4. Create `HeartbeatMonitor` class:
+   - Staleness detection logic
+   - Warning/alert thresholds
+   - Time formatting utilities
+
+**Phase 3: Auto-Refresh Integration** (1-2 hours)
+5. Add background refresh to chat UI:
+   - Start background thread on chat start
+   - Refresh status every 30 seconds
+   - Render widget at top of chat panel
+   - Stop thread on chat exit
+6. Test auto-refresh:
+   - Start chat → See status widget
+   - Wait 30s → See status update
+   - Developer changes state → See update within 30s
+
+**Phase 4: Testing & Polish** (1 hour)
+7. Test stale heartbeat detection:
+   - Stop daemon → See "SILENT" after 15 min
+   - Resume daemon → See recovery
+8. Test UI integration:
+   - Status doesn't interfere with typing
+   - Status updates don't scroll chat
+   - Status is always visible at top
+
+---
+
+### Success Criteria
+
+✅ **Guaranteed heartbeat**:
+- Daemon sends heartbeat at least once per hour
+- Heartbeat includes task, progress, ETA, timestamp
+- Heartbeat logged to console for verification
+
+✅ **Always-visible status**:
+- Status widget appears at top of chat UI
+- Widget shows current state, task, progress
+- Widget uses color-coded emojis (🟢🟡🔴)
+
+✅ **Auto-refresh**:
+- Status updates every 30 seconds automatically
+- Updates don't block user input
+- Updates don't scroll chat history
+
+✅ **Stale detection**:
+- Warning after 5 minutes without heartbeat
+- Alert after 15 minutes without heartbeat
+- Clear action suggestions when stale
+
+---
+
+### Future Enhancements
+
+- **Configurable refresh interval**: User can set update frequency (10s-60s)
+- **Desktop notifications**: Pop-up notification when developer goes silent
+- **Heartbeat history**: Graph showing heartbeat gaps over time
+- **Multi-daemon support**: Show status for multiple developers
+- **Mobile push notifications**: SMS/app alerts when developer blocked
+
+---
+
+**This gives the user a real-time "pulse" of the developer's activity, making the autonomous system feel more like a teammate than a black box!** 📡💓
+
+---
+
 ## 🤖 PRIORITY 5: Assistant Auto-Refresh & Always-On Availability
 
 **Goal**: Ensure the LangChain-powered assistant is always available when project-manager runs and automatically refreshes its documentation knowledge
