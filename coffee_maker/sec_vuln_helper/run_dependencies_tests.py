@@ -18,11 +18,12 @@ python test_all_packages.py --quiet | grep "Testing"
 
 """
 
-import json
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from coffee_maker.utils.file_io import write_json_file
 
 # Replace pkg_resources import with:
 try:
@@ -227,8 +228,7 @@ class PackageTester:
         }
 
         if output_file:
-            with open(output_file, "w") as f:
-                json.dump(report, f, indent=2)
+            write_json_file(output_file, report)
 
         return report
 
