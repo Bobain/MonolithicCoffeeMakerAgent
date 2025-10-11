@@ -137,3 +137,8 @@ Thumbs.db
 # SQLite WAL files
 *.db-wal
 *.db-shm
+
+# Runtime database files (notifications, process state, etc.)
+data/*.db
+data/*.sqlite
+data/*.sqlite3
