@@ -51,38 +51,33 @@ logger = logging.getLogger(__name__)
 
 
 class DeveloperStatusMonitor:
-    """Background monitor for developer status changes.
+    """Background monitor for developer status.
 
-    Polls developer_status.json file and detects changes in:
-    - Developer state (working, testing, idle, etc.)
-    - Current task and progress
-    - Activity updates
+    Polls developer_status.json file and maintains current status data
+    for display in a persistent status bar above the prompt.
 
-    When changes are detected, displays them automatically in the chat.
+    Status is displayed as a multi-line toolbar showing:
+    - Current task title and priority
+    - Iteration count
+    - Time elapsed and ETA
+    - Progress bar
     """
 
-    def __init__(self, console: Console, poll_interval: float = 2.0):
+    def __init__(self, poll_interval: float = 2.0):
         """Initialize status monitor.
 
         Args:
-            console: Rich console for output
             poll_interval: Seconds between status checks (default: 2)
         """
-        self.console = console
         self.poll_interval = poll_interval
         # Use the same status file path as the /status command
         self.status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
         self.is_running = False
         self.monitor_thread: Optional[threading.Thread] = None
 
-        # Track last known state to detect changes
-        self.last_state: Optional[str] = None
-        self.last_task_name: Optional[str] = None
-        self.last_progress: Optional[int] = None
-        self.last_step: Optional[str] = None
-
-        # Flag to suppress output during user input
-        self.suppress_output = False
+        # Current status data (thread-safe access)
+        self._status_lock = threading.Lock()
+        self._current_status: Optional[Dict] = None
 
     def start(self):
         """Start background monitoring thread."""
@@ -112,57 +107,20 @@ class DeveloperStatusMonitor:
             time.sleep(self.poll_interval)
 
     def _check_status(self):
-        """Check developer status file for changes."""
+        """Check developer status file and update internal state."""
         if not self.status_file.exists():
             # File doesn't exist yet, daemon probably not running
+            with self._status_lock:
+                self._current_status = None
             return
 
         try:
             with open(self.status_file, "r") as f:
                 status_data = json.load(f)
 
-            # Extract key fields from daemon_status.json format
-            current_state = status_data.get("status", "unknown")
-            current_priority = status_data.get("current_priority")
-
-            # Detect state change (running vs stopped)
-            if current_state != self.last_state and current_state != "running":
-                self._display_state_change(current_state)
-                self.last_state = current_state
-
-            # Detect task changes (current_priority in daemon format)
-            if current_priority and current_state == "running":
-                priority_name = current_priority.get("name", "")
-                priority_title = current_priority.get("title", "")
-                started_at = current_priority.get("started_at")
-
-                # Calculate progress based on time elapsed (rough estimate)
-                progress = 0
-                if started_at:
-                    from datetime import datetime
-
-                    try:
-                        start_time = datetime.fromisoformat(started_at)
-                        elapsed = (datetime.now() - start_time).total_seconds()
-                        # Rough estimate: assume 8 hours for completion
-                        progress = min(100, int((elapsed / (8 * 3600)) * 100))
-                    except:
-                        pass
-
-                task_display = f"{priority_name} - {priority_title}"
-
-                # New task started
-                if priority_name != self.last_task_name:
-                    self._display_new_task(
-                        task_display, {"priority": priority_name, "progress": progress, "current_step": priority_title}
-                    )
-                    self.last_task_name = priority_name
-                    self.last_progress = progress
-
-                # Progress updated (only show if significant change, e.g., 10% increments)
-                elif self.last_progress is not None and abs(progress - self.last_progress) >= 10:
-                    self._display_progress_update(task_display, progress, priority_title)
-                    self.last_progress = progress
+            # Store the full status data
+            with self._status_lock:
+                self._current_status = status_data
 
         except json.JSONDecodeError:
             # File might be mid-write, skip this check
@@ -170,68 +128,131 @@ class DeveloperStatusMonitor:
         except Exception as e:
             logger.debug(f"Error checking status: {e}")
 
-    def _display_state_change(self, new_state: str):
-        """Display developer state change."""
-        if self.suppress_output:
-            return
+    def get_formatted_status(self) -> str:
+        """Get formatted status text for toolbar display.
 
-        # State emoji mapping
-        state_emoji = {
-            "working": "🟢",
-            "testing": "🟡",
-            "blocked": "🔴",
-            "idle": "⚪",
-            "thinking": "🔵",
-            "reviewing": "🟣",
-            "stopped": "⚫",
-        }
+        Returns:
+            Multi-line formatted status string for bottom toolbar
+        """
+        with self._status_lock:
+            status_data = self._current_status
 
-        emoji = state_emoji.get(new_state, "⭕")
-        state_display = new_state.replace("_", " ").title()
+        if not status_data:
+            return "⚫ code_developer: Not running"
 
-        self.console.print(f"\n[cyan]📊 Developer Status: {emoji} {state_display}[/]")
+        daemon_status = status_data.get("status", "unknown")
+        current_priority = status_data.get("current_priority")
+        iteration = status_data.get("iteration", 0)
 
-    def _display_new_task(self, task_name: str, task_data: Dict):
-        """Display new task started."""
-        if self.suppress_output:
-            return
+        # Daemon not working on anything
+        if daemon_status != "running" or not current_priority:
+            return f"⚪ code_developer: Idle (iteration {iteration})"
 
-        priority = task_data.get("priority", "?")
-        progress = task_data.get("progress", 0)
-        current_step = task_data.get("current_step", "")
+        # Extract priority info
+        priority_name = current_priority.get("name", "Unknown")
+        priority_title = current_priority.get("title", "Unknown Task")
+        started_at = current_priority.get("started_at")
 
-        self.console.print(f"\n[cyan]🚀 Started: PRIORITY {priority} - {task_name}[/]")
-        if current_step:
-            self.console.print(f"[dim]   {current_step}[/]")
+        # Calculate time and progress
+        elapsed_str = "0m"
+        progress = 0
+        eta_str = "unknown"
 
-        # Show progress bar
-        self._show_progress_bar(progress)
+        if started_at:
+            try:
+                from datetime import datetime
 
-    def _display_progress_update(self, task_name: str, progress: int, current_step: str):
-        """Display progress update."""
-        if self.suppress_output:
-            return
+                start_time = datetime.fromisoformat(started_at)
+                elapsed = (datetime.now() - start_time).total_seconds()
 
-        self.console.print(f"\n[cyan]📈 Progress: {progress}%[/]")
-        if current_step:
-            self.console.print(f"[dim]   {current_step}[/]")
+                # Format elapsed time
+                hours = int(elapsed / 3600)
+                minutes = int((elapsed % 3600) / 60)
+                if hours > 0:
+                    elapsed_str = f"{hours}h {minutes}m"
+                else:
+                    elapsed_str = f"{minutes}m"
 
-        self._show_progress_bar(progress)
+                # Calculate progress (assume 8 hours per task)
+                progress = min(100, int((elapsed / (8 * 3600)) * 100))
 
-    def _display_step_update(self, task_name: str, progress: int, current_step: str):
-        """Display step change."""
-        if self.suppress_output:
-            return
+                # Calculate ETA
+                if progress > 0:
+                    total_estimated = elapsed / (progress / 100)
+                    remaining = total_estimated - elapsed
+                    eta_hours = int(remaining / 3600)
+                    eta_minutes = int((remaining % 3600) / 60)
+                    if eta_hours > 0:
+                        eta_str = f"~{eta_hours}h {eta_minutes}m"
+                    else:
+                        eta_str = f"~{eta_minutes}m"
+            except:
+                pass
 
-        self.console.print(f"\n[cyan]⚙️  Step: {current_step}[/]")
-        self._show_progress_bar(progress)
-
-    def _show_progress_bar(self, progress: int):
-        """Show progress bar with percentage."""
-        bar_length = 30
+        # Create progress bar
+        bar_length = 20
         filled = int(bar_length * progress / 100)
-        bar = "█" * filled + "░" * (bar_length - filled)
-        self.console.print(f"[dim]   [{bar}] {progress}%[/]")
+        progress_bar = "█" * filled + "░" * (bar_length - filled)
+
+        # Format multi-line status
+        lines = [
+            f"🟢 {priority_title}",
+            f"▸ {priority_name} | Iteration {iteration} | Time: {elapsed_str} | ETA: {eta_str}",
+        ]
+
+        # Add subtasks if available
+        subtasks = status_data.get("subtasks", [])
+        if subtasks:
+            lines.append("▸ Tasks:")
+            for subtask in subtasks:
+                name = subtask.get("name", "Unknown task")
+                status = subtask.get("status", "unknown")
+                duration = subtask.get("duration_seconds", 0)
+                estimated = subtask.get("estimated_seconds", 0)
+
+                # Choose emoji based on status
+                if status == "completed":
+                    emoji = "✓"
+                elif status == "in_progress":
+                    emoji = "🔄"
+                elif status == "failed":
+                    emoji = "❌"
+                else:  # pending
+                    emoji = "⏳"
+
+                # Format duration and estimated time
+                def format_time(seconds):
+                    if seconds >= 60:
+                        mins = seconds // 60
+                        secs = seconds % 60
+                        return f"{mins}m{secs}s" if secs > 0 else f"{mins}m"
+                    else:
+                        return f"{seconds}s"
+
+                # Build subtask line
+                if status in ["completed", "failed"]:
+                    # Show actual vs estimated for finished tasks
+                    actual_str = format_time(duration)
+                    est_str = format_time(estimated) if estimated > 0 else "?"
+                    lines.append(f"   {emoji} {name}: {actual_str} (est: {est_str})")
+                elif status == "in_progress":
+                    # Show current elapsed and estimated
+                    if duration > 0:
+                        actual_str = format_time(duration)
+                        est_str = format_time(estimated) if estimated > 0 else "?"
+                        lines.append(f"   {emoji} {name}: {actual_str} / {est_str}")
+                    else:
+                        est_str = format_time(estimated) if estimated > 0 else "?"
+                        lines.append(f"   {emoji} {name} (est: {est_str})")
+                else:  # pending
+                    # Show only estimated
+                    est_str = format_time(estimated) if estimated > 0 else "?"
+                    lines.append(f"   {emoji} {name} (est: {est_str})")
+
+        # Add progress bar at the end
+        lines.append(f"▸ Progress: [{progress_bar}] {progress}%")
+
+        return "\n".join(lines)
 
 
 class ProjectManagerCompleter(Completer):
@@ -355,7 +376,7 @@ class ChatSession:
         self.assistant = AssistantBridge(action_callback=self._display_assistant_action)
 
         # Initialize developer status monitor for real-time updates
-        self.status_monitor = DeveloperStatusMonitor(console=self.console, poll_interval=2.0)
+        self.status_monitor = DeveloperStatusMonitor(poll_interval=2.0)
 
         # Setup prompt-toolkit for advanced input
         self._setup_prompt_session()
@@ -390,7 +411,7 @@ class ChatSession:
             """Insert newline on Alt+Enter."""
             event.current_buffer.insert_text("\n")
 
-        # Create prompt session with better multi-line support
+        # Create prompt session with better multi-line support and status bar
         self.prompt_session = PromptSession(
             history=FileHistory(str(history_file)),
             completer=ProjectManagerCompleter(self.editor),
@@ -399,6 +420,8 @@ class ChatSession:
             key_bindings=bindings,
             enable_history_search=True,  # Ctrl+R for reverse search
             prompt_continuation="... ",  # Continuation indicator for multi-line (like claude-cli)
+            bottom_toolbar=lambda: self.status_monitor.get_formatted_status(),  # Persistent status bar
+            refresh_interval=2,  # Refresh toolbar every 2 seconds
         )
 
     def _display_assistant_action(self, action: str):
