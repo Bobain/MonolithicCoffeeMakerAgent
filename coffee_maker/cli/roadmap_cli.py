@@ -72,11 +72,14 @@ except ImportError as e:
     CHAT_AVAILABLE = False
 
 
-def cmd_view(args):
+def cmd_view(args: argparse.Namespace) -> int:
     """View roadmap or specific priority.
 
     Args:
         args: Parsed command-line arguments with priority field
+
+    Returns:
+        0 on success, 1 on error
     """
     if not ROADMAP_PATH.exists():
         print(f"❌ ROADMAP not found: {ROADMAP_PATH}")
@@ -127,7 +130,7 @@ def cmd_view(args):
     return 0
 
 
-def cmd_status(args):
+def cmd_status(args: argparse.Namespace) -> int:
     """Show daemon status.
 
     PRIORITY 2.8: Daemon Status Reporting
@@ -296,7 +299,7 @@ def cmd_status(args):
         return 1
 
 
-def cmd_developer_status(args):
+def cmd_developer_status(args: argparse.Namespace) -> int:
     """Show developer status dashboard.
 
     PRIORITY 4: Developer Status Dashboard
@@ -329,11 +332,14 @@ def cmd_developer_status(args):
     return 0
 
 
-def cmd_notifications(args):
+def cmd_notifications(args: argparse.Namespace) -> int:
     """List pending notifications from daemon.
 
     Args:
         args: Parsed command-line arguments
+
+    Returns:
+        0 on success
     """
     print("\n" + "=" * 80)
     print("Pending Notifications")
@@ -383,11 +389,14 @@ def cmd_notifications(args):
     return 0
 
 
-def cmd_respond(args):
+def cmd_respond(args: argparse.Namespace) -> int:
     """Respond to a notification.
 
     Args:
         args: Parsed arguments with notif_id and response
+
+    Returns:
+        0 on success, 1 on error
     """
     db = NotificationDB()
 
@@ -412,11 +421,14 @@ def cmd_respond(args):
     return 0
 
 
-def cmd_sync(args):
+def cmd_sync(args: argparse.Namespace) -> int:
     """Sync roadmap with daemon environment.
 
     Args:
         args: Parsed command-line arguments
+
+    Returns:
+        0 (always successful for MVP placeholder)
     """
     print("\n" + "=" * 80)
     print("Sync with Daemon Environment")
@@ -432,11 +444,14 @@ def cmd_sync(args):
     return 0
 
 
-def cmd_chat(args):
+def cmd_chat(args: argparse.Namespace) -> int:
     """Start interactive chat session with AI (Phase 2).
 
     Args:
         args: Parsed command-line arguments
+
+    Returns:
+        0 on success, 1 on error
     """
     if not CHAT_AVAILABLE:
         print("❌ Chat feature not available")
@@ -560,8 +575,12 @@ def cmd_chat(args):
         return 1
 
 
-def main():
-    """Main CLI entry point."""
+def main() -> int:
+    """Main CLI entry point.
+
+    Returns:
+        0 on success, 1 on error
+    """
     parser = argparse.ArgumentParser(
         prog="project-manager",
         description="Coffee Maker Agent - Project Manager CLI with AI (Phase 2)",
