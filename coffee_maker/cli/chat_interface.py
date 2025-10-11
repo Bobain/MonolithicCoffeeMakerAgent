@@ -368,17 +368,70 @@ class ChatSession:
         else:
             return "❌ Failed to restart daemon. Check logs."
 
+    def _auto_start_daemon_if_needed(self):
+        """Automatically start daemon if not running.
+
+        PRIORITY: Automatic Daemon Management (Priority #3)
+
+        This method is called at project-manager startup to ensure
+        the code_developer daemon is always running when the user
+        interacts with the project-manager.
+
+        No user approval required - just makes sure daemon is live.
+
+        Behavior:
+        - Checks if daemon is running
+        - If not, starts it automatically in background
+        - Shows brief status message
+        - No long explanations or approval dialogs
+
+        Example:
+            >>> session._auto_start_daemon_if_needed()
+            # Silently starts daemon if needed
+        """
+        # Check if daemon is already running
+        if self.process_manager.is_daemon_running():
+            # Already running - nothing to do
+            logger.debug("Daemon already running - no action needed")
+            self._update_status_display()
+            return
+
+        # Daemon not running - start it automatically
+        logger.info("Daemon not running - auto-starting...")
+        self.console.print("\n[dim]Starting code_developer daemon...[/]", end=" ")
+
+        success = self.process_manager.start_daemon(background=True)
+
+        if success:
+            self.console.print("[green]✓[/]")
+            logger.info("Daemon auto-started successfully")
+        else:
+            self.console.print("[yellow]⚠[/]")
+            logger.warning("Failed to auto-start daemon")
+            # Don't block the user - they can manually start later if needed
+
+        self._update_status_display()
+
     def start(self):
         """Start interactive chat session.
 
         Displays welcome message and enters REPL loop.
         Handles user input, routes commands, and displays responses.
 
+        PRIORITY: Automatic Daemon Management (Priority #3)
+        Automatically checks if daemon is running and starts it if needed.
+        No user approval required - just make it work.
+
         Example:
             >>> session.start()
             # Enters interactive mode
+            # Daemon auto-starts if not running
         """
         self.active = True
+
+        # Auto-check and start daemon if needed
+        self._auto_start_daemon_if_needed()
+
         self._display_welcome()
         self._load_roadmap_context()
         self._run_repl_loop()
