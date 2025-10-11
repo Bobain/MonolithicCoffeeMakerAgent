@@ -270,6 +270,13 @@ def cmd_chat(args):
         import os
         import shutil
 
+        # Check if we're ALREADY running inside Claude CLI (Claude Code)
+        # If so, we MUST use API mode to avoid nesting
+        inside_claude_cli = bool(os.environ.get("CLAUDECODE") or os.environ.get("CLAUDE_CODE_ENTRYPOINT"))
+
+        if inside_claude_cli:
+            logger.info("Detected running inside Claude Code - forcing API mode to avoid nesting")
+
         # Auto-detect mode: CLI vs API (same logic as daemon)
         claude_path = "/opt/homebrew/bin/claude"
         has_cli = shutil.which("claude") or os.path.exists(claude_path)
@@ -277,7 +284,32 @@ def cmd_chat(args):
 
         use_claude_cli = False
 
-        if has_cli:
+        if inside_claude_cli:
+            # We're already in Claude CLI - MUST use API to avoid nesting
+            if has_api_key:
+                print("=" * 70)
+                print("ℹ️  Detected: Running inside Claude Code")
+                print("=" * 70)
+                print("🔄 Using Anthropic API to avoid CLI nesting")
+                print("💡 TIP: CLI nesting is not recommended")
+                print("=" * 70 + "\n")
+                use_claude_cli = False
+            else:
+                # No API key - can't proceed
+                print("=" * 70)
+                print("❌ ERROR: Running inside Claude Code without API key")
+                print("=" * 70)
+                print("\nYou're running project-manager chat from within Claude Code.")
+                print("To avoid CLI nesting, we need to use API mode.")
+                print("\n🔧 SOLUTION:")
+                print("  1. Get your API key from: https://console.anthropic.com/")
+                print("  2. Set the environment variable:")
+                print("     export ANTHROPIC_API_KEY='your-api-key-here'")
+                print("  3. Or add it to your .env file")
+                print("\n💡 ALTERNATIVE: Run from a regular terminal (not Claude Code)")
+                print("=" * 70 + "\n")
+                return 1
+        elif has_cli:
             # CLI available - use it as default (free with subscription!)
             print("=" * 70)
             print("ℹ️  Auto-detected: Using Claude CLI (default)")
