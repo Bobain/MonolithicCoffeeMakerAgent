@@ -22,12 +22,13 @@ Example:
 """
 
 import logging
-import os
 import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from anthropic import Anthropic
+
+from coffee_maker.config import ConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -126,11 +127,13 @@ class AIService:
 
         else:
             # Use Anthropic API (requires API credits)
-            api_key = os.environ.get("ANTHROPIC_API_KEY")
-            if not api_key:
+            try:
+                api_key = ConfigManager.get_anthropic_api_key()
+            except Exception as e:
                 raise ValueError(
-                    "ANTHROPIC_API_KEY environment variable not set. " "Please set it in your .env file or environment."
-                )
+                    f"ANTHROPIC_API_KEY environment variable not set. "
+                    f"Please set it in your .env file or environment. Error: {e}"
+                ) from e
 
             self.client = Anthropic(api_key=api_key)
 
