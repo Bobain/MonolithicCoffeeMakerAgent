@@ -142,3 +142,6 @@ Thumbs.db
 data/*.db
 data/*.sqlite
 data/*.sqlite3
+
+# User configuration files (use config.yaml.example as template)
+config.yaml

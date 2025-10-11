@@ -1,7 +1,7 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 1.7
-**Last Updated**: 2025-10-10
+**Version**: 2.0
+**Last Updated**: 2025-10-11
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
 
@@ -491,6 +491,277 @@ class RequestClassifier:
 > "and this document should be referenced by the code, so that project_manager uses it."
 
 This ensures the methodology document is not just documentation, but an **active specification** that drives code behavior.
+
+### 2.8 Documentation and Roadmap Versioning Policy
+
+**User Story**: "As a user I want documentation and roadmap in the branch to always be the most up-to-date version of roadmap and documentation"
+
+**Principle**: Documentation and ROADMAP.md must always reflect the **current, accurate state** of the project. Outdated documentation is worse than no documentation.
+
+**What This Means**:
+
+1. **Every Bug Fix or Feature Update**:
+   - Update ROADMAP.md with "Recent Bug Fixes" or "Recent Completions" section
+   - Update relevant documentation (QUICKSTART, TUTORIALS, etc.)
+   - Update COLLABORATION_METHODOLOGY.md if processes changed
+   - All updates committed in the same PR/branch as the code fix
+
+2. **Documentation is Part of Definition of Done**:
+   - Code changes without documentation updates are INCOMPLETE
+   - Bug fixes must document the problem, solution, and user impact
+   - Features must update user guides, API references, troubleshooting
+   - Cannot mark task complete until documentation is updated
+
+3. **Living Documents Over Static Docs**:
+   - ROADMAP.md: Updated continuously as priorities change
+   - COLLABORATION_METHODOLOGY.md: Updated when processes evolve
+   - QUICKSTART guides: Updated when user workflows change
+   - TUTORIALS: Updated when features change behavior
+
+4. **Version Control Best Practices**:
+   - Feature branches include documentation updates
+   - Documentation committed alongside code changes
+   - PR reviews include documentation review
+   - Main branch always has current documentation
+
+**Example: CLI Nesting Fix (2025-10-11)**
+
+When fixing the CLI nesting detection bug in `project-manager chat`:
+
+✅ **Complete Implementation**:
+```
+Branch: fix/cli-nesting-detection
+
+Commits:
+1. fix: Add CLI nesting detection to project-manager chat
+   - Code changes in coffee_maker/cli/roadmap_cli.py
+
+2. docs: Document CLI nesting detection fix
+   - ROADMAP.md: Added "Recent Bug Fixes" section
+   - QUICKSTART_PROJECT_MANAGER.md: Added troubleshooting section
+   - COLLABORATION_METHODOLOGY.md: Version 1.8 update
+```
+
+❌ **Incomplete** (What NOT to do):
+```
+Branch: fix/cli-nesting-detection
+
+Commits:
+1. fix: Add CLI nesting detection to project-manager chat
+   - Only code changes, no documentation
+   - User doesn't know bug was fixed
+   - No explanation of behavior change
+```
+
+**Bug Fix Documentation Template**:
+
+When fixing a bug, document it in ROADMAP.md:
+```markdown
+**Recent Bug Fixes** (YYYY-MM-DD):
+🔧 **[Short Title]**: [2-3 sentence description of problem, solution, and impact]
+   - Branch: [branch-name]
+   - Files modified: [key files]
+   - Impact: [how this affects users]
+```
+
+And update relevant user guides with troubleshooting information.
+
+**Why This Matters**:
+
+1. **User Confidence**: Users can trust documentation is current
+2. **Knowledge Transfer**: New team members see accurate state
+3. **Debugging**: Users can find solutions to known issues
+4. **Audit Trail**: Clear history of what changed and why
+5. **Professional Standards**: Documentation quality reflects code quality
+
+**See Also**:
+- **Section 6.2** - Documentation Criteria in Definition of Done
+- **Section 8.3** - Version History of this document
+- **US-010** - Living Documentation & Tutorials (completed case study)
+
+---
+
+### 2.9 Working Directory Conflict Prevention (US-024) 🚨 HIGH IMPACT
+
+**User Story**: "As a project_manager I need to get sure the user is not working in my working directory and making any change to the directory I am working in: otherwise we will both get confused"
+
+**User Requirement** (2025-10-11):
+> "We must absolutely avoid conflicts, or they must know how to resolve them" (on doit absolument éviter les conflits, ou bien qu'ils sachent les résoudre)
+
+**Principle**: **AVOID conflicts through locking**, and provide clear guidance when conflicts occur.
+
+**The Problem**:
+
+Multiple team members (user, project_manager, code_developer, assistant) may work in the same git repository simultaneously:
+- User edits ROADMAP.md while project_manager is updating it → **Lost changes**
+- code_developer modifies files while user is testing → **Confusing git status**
+- Two agents try to write the same file → **Overwritten work**
+
+This causes:
+- ❌ Data loss (one person's changes overwrite another's)
+- ❌ Confusion ("I just changed this, why is it different?")
+- ❌ Merge conflicts that are hard to resolve
+- ❌ Wasted effort
+
+**Solution**: Lock File System + Change Detection + Clear Conflict Resolution Guidance
+
+**How It Works**:
+
+**1. Lock Files (.coffee_maker/locks/)**:
+```json
+// .coffee_maker/locks/ROADMAP.md.lock
+{
+  "agent": "project_manager",
+  "pid": 12345,
+  "start_time": "2025-10-11T10:30:00Z",
+  "files": ["docs/ROADMAP.md"],
+  "lock_type": "write"
+}
+```
+
+**2. Lock Acquisition**:
+- Before writing any file, agent must acquire lock
+- Lock contains: agent name, PID, timestamp, files being modified
+- If lock already held, agent waits or notifies user
+- Stale locks (>1 hour old, PID not running) are auto-released
+
+**3. Change Detection**:
+- Before writing, check if file was modified externally (timestamp changed)
+- If modified, reload file and notify
+- Prevents silent overwrites
+
+**4. Read-Write Lock Pattern**:
+- Multiple agents can READ simultaneously (no lock needed)
+- Only ONE agent can WRITE at a time (exclusive lock)
+- Writers must wait for other writers to finish
+
+**Example Workflow**:
+
+```python
+# In roadmap_editor.py
+def save_roadmap(self):
+    # Check for lock
+    lock = WorkspaceLock("ROADMAP.md")
+
+    if not lock.acquire(timeout=5):
+        print("⚠️ ROADMAP.md is currently being edited by another team member")
+        print("   Lock held by: code_developer (PID 12345)")
+        print("   Waiting...")
+        return False
+
+    try:
+        # Check for external modifications
+        if self.change_detector.was_modified_externally("ROADMAP.md"):
+            print("⚠️ ROADMAP.md was modified externally")
+            print("   Reloading...")
+            self.reload()
+
+        # Safe to write
+        self.write_roadmap()
+        print("✅ ROADMAP.md updated successfully")
+
+    finally:
+        lock.release()
+```
+
+**User Experience**:
+
+**Scenario 1: Lock Held by Another Agent**:
+```
+You: project-manager view
+
+🔒 ROADMAP.md is currently locked
+   Locked by: code_developer (PID 54321)
+   Since: 2 minutes ago
+
+Options:
+  1. Wait (locks auto-release after 1 hour)
+  2. View read-only version
+  3. Force unlock (if process crashed)
+
+Your choice: _
+```
+
+**Scenario 2: File Modified Externally**:
+```
+project-manager: Saving ROADMAP...
+
+⚠️ WARNING: ROADMAP.md was modified by another process
+   Last modified: 30 seconds ago
+
+Options:
+  1. Reload and retry (RECOMMENDED)
+  2. Overwrite (YOUR CHANGES WILL BE LOST)
+  3. Cancel
+
+Your choice: 1
+
+✅ Reloaded ROADMAP.md
+✅ Merged your changes
+✅ Saved successfully
+```
+
+**Conflict Resolution Guidance**:
+
+When conflicts are unavoidable, provide clear steps:
+
+**Type 1: Concurrent Edits to Same Section**:
+```
+⚠️ MERGE CONFLICT DETECTED
+
+File: docs/ROADMAP.md
+Conflict: Both you and code_developer edited US-022
+
+Your version:
+  **Status**: 🔄 IN PROGRESS
+
+Their version:
+  **Status**: ✅ COMPLETE
+
+Resolution Steps:
+1. Review both versions
+2. Decide which is correct (or merge manually)
+3. Use `git checkout --ours` or `git checkout --theirs`
+4. Or edit manually to combine both changes
+
+See: docs/CONFLICT_RESOLUTION_GUIDE.md
+```
+
+**Type 2: Lock Timeout**:
+```
+⚠️ LOCK TIMEOUT
+
+Waited 5 minutes for lock on ROADMAP.md
+Lock still held by: code_developer (PID 54321)
+
+Possible causes:
+  1. Long-running operation (normal)
+  2. Process crashed (stale lock)
+  3. Network issue
+
+Actions:
+  - Check if PID 54321 is still running: `ps 54321`
+  - If not running: Force unlock with `--force-unlock`
+  - If running: Contact user or wait longer
+```
+
+**Benefits**:
+
+1. **Prevents data loss**: No more overwritten changes
+2. **Avoids confusion**: Clear who is working on what
+3. **Automatic conflict avoidance**: As user requested
+4. **Team coordination**: Agents and users can coexist safely
+5. **Crash-safe**: Locks automatically cleaned up
+6. **Clear guidance**: Users know how to resolve conflicts
+
+**Implementation**:
+- **Files**: `coffee_maker/cli/workspace_lock.py`, `coffee_maker/cli/change_detector.py`
+- **Status**: 📝 **PLANNED** (US-024 created 2025-10-11)
+- **Estimated**: 4 hours total
+
+**See Also**:
+- **Section 5.7** - Daemon Roadmap Synchronization (US-022)
+- **US-024** - Complete specification in ROADMAP.md
 
 ---
 
@@ -2033,6 +2304,176 @@ v1.0.0 (+7 weeks): Full platform (US-008)
   - Multi-channel monitoring
 ```
 
+### 5.7 Daemon Roadmap Synchronization (US-022) 🚨 EXTREMELY URGENT
+
+**Pattern**: Work → Sync → Reload → Adapt
+
+**Priority**: 🚨 **EXTREMELY URGENT - TOP TECHNICAL PRIORITY** (Elevated 2025-10-11)
+
+**Philosophy**: code_developer must stay current with roadmap changes during long-running implementations
+
+**User Requirement** (2025-10-11):
+> "From a technical point of view, it is extremely urgent that project_manager and code_developer exchange on the roadmap via the roadmap branch"
+>
+> "Each time they want to read or modify the roadmap they will have to do a pull first" (à chaque fois qu'ils voudront lire ou modifier la roadmap il leur faudra faire un pull avant)
+>
+> "We must absolutely avoid conflicts, or they must know how to resolve them" (on doit absolument éviter les conflits, ou bien qu'ils sachent les résoudre)
+
+**The Problem**:
+
+When code_developer works on feature branches for extended periods (hours/days), the roadmap on 'roadmap' branch may change:
+- PM adds new priorities to 'roadmap' branch
+- User reprioritizes work
+- Requirements are updated on 'roadmap' branch
+- Other features complete
+
+Without synchronization, the daemon works with **stale roadmap data** and may:
+- Implement deprioritized features
+- Miss critical priority changes
+- Create massive merge conflicts
+- Waste effort on obsolete work
+
+**Solution**: Automatic periodic sync from 'roadmap' branch + Lock mechanism to avoid conflicts
+
+**Team Member Workflows**:
+
+**🔍 To READ roadmap** (all team members):
+```
+1. git fetch origin roadmap
+2. git merge origin/roadmap       # Pull and merge
+3. Reload RoadmapParser           # Get latest data
+```
+
+**✏️ To WRITE to roadmap** (project_manager, assistant):
+```
+1. git fetch origin roadmap
+2. git merge origin/roadmap       # Get latest FIRST!
+3. Modify ROADMAP.md locally
+4. git add docs/ROADMAP.md
+5. git commit -m "docs: update roadmap"
+6. git push origin HEAD:roadmap   # Push and merge to roadmap branch
+```
+
+**🤖 code_developer Automatic Sync Workflow**:
+
+```
+Daemon working on feature branch
+  ↓
+Every 10 iterations OR 30 minutes (whichever comes first)
+  ↓
+Sync checkpoint:
+  ├─ Fetch origin/roadmap        # From 'roadmap' branch, not 'main'!
+  ├─ Check if ROADMAP.md has changes
+  ↓
+  ├─ No changes? → Continue working
+  ↓
+  └─ Changes detected → Merge origin/roadmap into current branch
+        ↓
+        ├─ Clean merge? → Reload roadmap, re-evaluate priority
+        │                 ↓
+        │                 Priority unchanged? → Continue
+        │                 ↓
+        │                 Priority changed/removed? → Switch to new priority!
+        ↓
+        └─ Merge conflict? → Abort sync, notify user, continue with current work
+```
+
+**Implementation Details**:
+
+```python
+# In daemon.py main loop
+iteration = 0
+last_sync_time = time.time()
+
+while self.running:
+    iteration += 1
+
+    # Sync checkpoint (every 10 iterations or 30 min)
+    if (iteration % 10 == 0) or (time.time() - last_sync_time > 1800):
+        logger.info("🔄 Sync checkpoint - checking for roadmap updates")
+
+        if self.git.has_upstream_changes('origin/roadmap'):  # From 'roadmap' branch!
+            logger.info("📥 Changes detected on 'roadmap' branch - syncing...")
+
+            if self.git.sync_from_roadmap():  # sync_from_roadmap(), not sync_from_main()
+                # Successful sync
+                old_roadmap = self.parser
+                self.parser = RoadmapParser(str(self.roadmap_path))
+
+                old_priority = old_roadmap.get_next_planned_priority()
+                new_priority = self.parser.get_next_planned_priority()
+
+                if old_priority['name'] != new_priority['name']:
+                    logger.warning(f"⚠️  Priority changed! Was: {old_priority['name']}, Now: {new_priority['name']}")
+                    logger.info("Switching to new priority...")
+                    # Abort current work, start new priority
+
+                last_sync_time = time.time()
+                logger.info("✅ Sync complete with 'roadmap' branch, roadmap reloaded")
+            else:
+                # Conflict or error
+                logger.warning("❌ Sync failed - manual intervention needed")
+                self._notify_sync_conflict()
+
+    # Continue normal work
+    next_priority = self.parser.get_next_planned_priority()
+    # ...
+```
+
+**Configuration**:
+
+```yaml
+# config.yaml
+daemon:
+  # Roadmap sync settings (US-022)
+  auto_sync_enabled: true         # Enable automatic sync
+  sync_interval: 30               # Minutes between syncs
+  sync_every_n_iterations: 10     # Also sync every N iterations
+```
+
+**Benefits**:
+
+1. **Never works on stale priorities**: Daemon always has latest roadmap
+2. **Reduces merge conflicts**: Small frequent syncs vs massive conflicts
+3. **User flexibility**: PM/user can update roadmap anytime, daemon adapts
+4. **Efficient**: No wasted work on deprioritized features
+5. **Auditable**: Clear log of sync activity
+
+**Example Scenario**:
+
+```
+10:00 AM: Daemon starts US-016 on branch feature/us-016
+10:30 AM: [Sync 1] No changes on 'roadmap' branch, continue
+11:00 AM: [Sync 2] No changes on 'roadmap' branch, continue
+11:15 AM: PM updates ROADMAP on 'roadmap' branch, makes US-022 TOP PRIORITY
+11:30 AM: [Sync 3] Detects changes on 'roadmap', merges origin/roadmap
+          → Roadmap reloaded
+          → Priority changed: US-016 → US-022
+          → Daemon switches to US-022!
+12:00 PM: Daemon working on US-022 (new priority)
+```
+
+**Edge Cases**:
+
+1. **Merge Conflict**: Abort sync, notify user, continue with current priority until resolved
+2. **Network Error**: Log warning, retry next sync checkpoint
+3. **Mid-Implementation**: Safe to sync (git handles uncommitted changes)
+4. **No Upstream Changes**: Fast-forward or no-op, very fast
+
+**Success Metrics**:
+- Roadmap staleness < 30 minutes
+- Daemon never implements deprioritized work
+- Merge conflicts reduced by 80%
+- Zero manual sync interventions
+
+**Implementation Status**:
+- 📝 **PLANNED** (US-022 created 2025-10-11)
+- See `docs/ROADMAP.md` for complete specification
+- Estimated: 4 hours total implementation time
+
+**User Story Reference**: US-022
+> "As a code_developer I need to merge roadmap branch into mine frequently in order to always be aware of my next priorities"
+
 ---
 
 ## 6. Definition of Done (DoD)
@@ -2318,6 +2759,9 @@ PM documents decision and informs developer
 | 1.5 | 2025-10-10 | Added Section 3.2.1 (Request Categorization and Document Routing) | Implement US-014: PM categorizes user input as feature/methodology/both and routes to correct documents |
 | 1.6 | 2025-10-10 | Enhanced Section 2.4 - Specification Before Implementation (US-016) | PM MUST create detailed technical spec with task-level estimates before providing delivery estimates. PM must refuse to estimate without spec. |
 | 1.7 | 2025-10-10 | Added Section 2.7 - Code References Methodology Document (US-017) | Code implementing PM and code_developer must read and reference COLLABORATION_METHODOLOGY.md to understand processes, rules, and behavioral requirements. Ensures methodology is active specification driving code behavior. |
+| 1.8 | 2025-10-11 | Added Section 2.8 - Documentation and Roadmap Versioning Policy | Documentation and ROADMAP.md must always be up-to-date. Every bug fix or feature must update relevant docs in the same PR. Includes CLI nesting detection fix documentation (fix/cli-nesting-detection branch). User story: "Documentation in branch must always be most up-to-date version." |
+| 1.9 | 2025-10-11 | Added Section 9.1.1 - project-manager chat Modes | Documented CLI vs API modes, nesting detection, mode selection logic, user decision matrix. Addresses CLI nesting prevention feature. |
+| 2.0 | 2025-10-11 | Added Section 9.3 - Updating Roadmap Branch on GitHub | **MAJOR VERSION**: Complete automated workflow for updating 'roadmap' branch on GitHub using Python script (scripts/merge_roadmap_pr.py). Addresses user stories: "main branch always up to date" and "roadmap branch in github always current so developer can see what to achieve". Includes setup instructions, integration examples for all team members (project_manager, code_developer, assistant), safety guarantees, and error handling. Branch strategy documented. |
 
 **To add new version**:
 1. Make changes to document
@@ -2339,6 +2783,127 @@ PM documents decision and informs developer
 | Technical Specs (`docs/US-XXX_TECHNICAL_SPEC.md`) | Detailed implementation plans | PM | Before implementation |
 | Git commits | Implementation history and decisions | Developer | Per commit |
 | Pull Requests | Code review and approval | Developer | Per feature |
+
+#### 9.1.1 `project-manager chat` Modes (Added 2025-10-11)
+
+**Overview**: `project-manager chat` supports two operational modes with automatic detection to prevent CLI nesting issues.
+
+**Mode Selection Logic**:
+
+The system automatically chooses the appropriate mode based on the environment:
+
+```python
+# Detection logic (coffee_maker/cli/roadmap_cli.py:275)
+inside_claude_cli = bool(
+    os.environ.get("CLAUDECODE") or
+    os.environ.get("CLAUDE_CODE_ENTRYPOINT")
+)
+
+if inside_claude_cli:
+    # Force API mode to prevent CLI nesting
+    use_claude_cli = False
+elif has_claude_cli:
+    # Use CLI mode (free with subscription)
+    use_claude_cli = True
+elif has_api_key:
+    # Fallback to API mode
+    use_claude_cli = False
+```
+
+**1. CLI Mode** (Default - Recommended)
+
+**When**: Running from regular terminal (not Claude Code)
+**Cost**: Free with Claude subscription
+**How**: Uses `claude` CLI executable
+
+```bash
+# From regular terminal
+cd /path/to/MonolithicCoffeeMakerAgent
+poetry run project-manager chat
+```
+
+**Advantages**:
+- ✅ Free (included with Claude subscription)
+- ✅ No API credits needed
+- ✅ Same quality as Claude API
+- ✅ Recommended for daily use
+
+**2. API Mode** (Requires Credits)
+
+**When**:
+- Running inside Claude Code (automatic detection)
+- ANTHROPIC_API_KEY is set and no CLI available
+- User explicitly configured API mode
+
+**Cost**: Uses Anthropic API credits
+**How**: Uses Anthropic Python SDK
+
+```bash
+# From Claude Code (automatic API mode)
+poetry run project-manager chat
+
+# Or set API key explicitly
+export ANTHROPIC_API_KEY='your-key-here'
+poetry run project-manager chat
+```
+
+**Advantages**:
+- ✅ Works inside Claude Code (prevents nesting)
+- ✅ Works when Claude CLI not installed
+- ⚠️ Requires API credits
+
+**3. CLI Nesting Prevention**
+
+**Problem**: Running `project-manager chat` inside Claude Code would cause CLI nesting (Claude CLI calling Claude CLI), which can lead to unexpected behavior.
+
+**Solution**: Automatic detection via environment variables:
+- `CLAUDECODE`: Set by Claude Code
+- `CLAUDE_CODE_ENTRYPOINT`: Alternative detection
+
+**Behavior**:
+```
+Running inside Claude Code:
+→ Detects nesting risk
+→ Forces API mode
+→ Shows clear message to user:
+  "ℹ️  Detected: Running inside Claude Code"
+  "🔄 Using Anthropic API to avoid CLI nesting"
+  "💡 TIP: CLI nesting is not recommended"
+```
+
+**User Options**:
+
+| Scenario | Recommendation | Command |
+|----------|---------------|---------|
+| Daily usage | CLI Mode (free) | Run from regular terminal |
+| Inside Claude Code (with API key) | API Mode (costs credits) | Run from Claude Code |
+| Inside Claude Code (no API key) | CLI Mode (free) | Run from regular terminal |
+| CI/CD pipeline | API Mode | Set ANTHROPIC_API_KEY |
+
+**Error Messages**:
+
+If running inside Claude Code without API key:
+```
+❌ ERROR: Running inside Claude Code without API key
+
+You're running project-manager chat from within Claude Code.
+To avoid CLI nesting, we need to use API mode.
+
+🔧 SOLUTION:
+  1. Get your API key from: https://console.anthropic.com/
+  2. Set the environment variable:
+     export ANTHROPIC_API_KEY='your-api-key-here'
+  3. Or add it to your .env file
+
+💡 ALTERNATIVE: Run from a regular terminal (not Claude Code)
+```
+
+**Documentation References**:
+- **QUICKSTART_PROJECT_MANAGER.md**: Troubleshooting section
+- **US-006**: CLI nesting detection feature
+- **ROADMAP.md**: Recent Bug Fixes (2025-10-11)
+
+---
 
 ### 9.2 Artifact Templates
 
@@ -2413,7 +2978,399 @@ PM documents decision and informs developer
 }
 ```
 
-### 9.3 File Organization
+### 9.3 Updating Roadmap Branch on GitHub
+
+**🚨 CRITICAL PROCESS: For project_manager, code_developer, and assistant 🚨**
+
+**User Stories**:
+- "As a user: I always want the main branch to always be up to date as regards to the roadmap"
+- "As a developer I need the roadmap to be always up to date in the branch roadmap in github so that I can see what I will achieve"
+
+#### Problem
+
+GitHub has a dedicated `roadmap` branch that must always reflect the current state of `docs/ROADMAP.md` and `docs/COLLABORATION_METHODOLOGY.md`. Team members (project_manager, code_developer, assistant) need to update this branch frequently, but manual PR process creates overhead.
+
+#### When To Use This Process
+
+✅ **ALWAYS use this automated merge process when updating**:
+- `docs/ROADMAP.md` - Single source of truth for priorities
+- `docs/COLLABORATION_METHODOLOGY.md` - Team processes and methodology
+- `docs/*.md` - Any documentation files
+- Changes made by project_manager agent
+- Changes made by code_developer daemon
+- Documentation updates by assistant
+
+❌ **NEVER use this automated merge for**:
+- Code changes (`coffee_maker/**/*.py`)
+- Dependency changes (`pyproject.toml`)
+- Configuration changes (`config.yaml`, `.env`)
+- CI/CD changes (`.github/**`)
+- Any non-documentation changes
+
+**Why**: Code changes require manual review for quality, security, and correctness. Documentation changes are lower risk and need to stay current for the team to function effectively.
+
+#### Setup (One-Time per Team Member)
+
+Each team member needs a GitHub token to use the automated process:
+
+**1. Create GitHub Personal Access Token**:
+```
+1. Go to: https://github.com/settings/tokens
+2. Click "Generate new token (classic)"
+3. Name: "roadmap-automation" (or similar)
+4. Select scope: ✅ repo (full control of private repositories)
+5. Click "Generate token"
+6. Copy token (starts with "ghp_")
+```
+
+**2. Set Token in Environment**:
+```bash
+# Add to .env file (recommended - persistent)
+echo "GITHUB_TOKEN=ghp_your_token_here" >> .env
+
+# Or export in shell (temporary - current session only)
+export GITHUB_TOKEN=ghp_your_token_here
+```
+
+**3. Install PyGithub** (if not already installed):
+```bash
+poetry add PyGithub
+```
+
+#### Automated Process Using Script
+
+**Location**: `scripts/merge_roadmap_pr.py`
+
+**Usage**:
+```bash
+# After making roadmap changes on a feature branch:
+git checkout -b feature/roadmap-update-$(date +%Y%m%d-%H%M%S)
+git add docs/ROADMAP.md docs/COLLABORATION_METHODOLOGY.md
+git commit -m "docs: Update roadmap with latest priorities"
+git push -u origin HEAD
+
+# Use automated script to create and merge PR to 'roadmap' branch
+python scripts/merge_roadmap_pr.py feature/roadmap-update-YYYYMMDD-HHMMSS --base roadmap
+
+# Output:
+# ✅ All changes are in docs/ (2 files)
+# ✅ PR created targeting 'roadmap' branch: https://github.com/.../pull/123
+# ⏳ Attempting auto-merge...
+# ✅ PR merged successfully to 'roadmap'!
+# 🎉 Success!
+```
+
+**Script Features**:
+- ✅ **Validation**: Only merges if ALL changes are in `docs/`
+- ✅ **Safety**: Detects merge conflicts, fails if non-doc files changed
+- ✅ **Auto-merge**: Automatically merges if safe
+- ⚠️ **Fallback**: Outputs PR URL for manual review if auto-merge fails
+
+**Script Options**:
+```bash
+# Target different branch (default: roadmap)
+python scripts/merge_roadmap_pr.py feature/branch-name --base roadmap
+
+# Target main branch instead
+python scripts/merge_roadmap_pr.py feature/branch-name --base main
+
+# Create PR but don't auto-merge (manual review)
+python scripts/merge_roadmap_pr.py feature/branch-name --no-merge
+```
+
+#### Manual Process (Alternative)
+
+If the script is unavailable or you prefer manual control:
+
+```python
+from github import Github
+import os
+
+# Initialize
+g = Github(os.environ['GITHUB_TOKEN'])
+repo = g.get_repo("Bobain/MonolithicCoffeeMakerAgent")
+
+# Create PR
+pr = repo.create_pull(
+    title="docs: Update roadmap and documentation",
+    body="""## Summary
+Automated roadmap update.
+
+## Changes
+- Updated ROADMAP.md
+- Updated COLLABORATION_METHODOLOGY.md
+
+🤖 Auto-generated via team member
+    """,
+    head="feature/your-branch",
+    base="roadmap"  # Target roadmap branch, not main
+)
+
+print(f"✅ PR: {pr.html_url}")
+
+# Auto-merge if safe
+if pr.mergeable:
+    pr.merge(merge_method="squash")
+    print("✅ Merged!")
+else:
+    print(f"⚠️ Manual review: {pr.html_url}")
+```
+
+#### Integration in project_manager
+
+The `project_manager` should use this process automatically when updating roadmap:
+
+```python
+# In coffee_maker/cli/roadmap_editor.py
+
+def save_and_update_main(self):
+    """Save roadmap changes and update main branch automatically."""
+    import subprocess
+    from datetime import datetime
+
+    # Create timestamped branch
+    timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+    branch = f"roadmap-update-{timestamp}"
+
+    # Commit and push
+    subprocess.run(["git", "checkout", "-b", branch])
+    subprocess.run(["git", "add", "docs/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"])
+    subprocess.run(["git", "commit", "-m", "docs: Update roadmap"])
+    subprocess.run(["git", "push", "-u", "origin", branch])
+
+    # Auto-merge via script to 'roadmap' branch
+    result = subprocess.run(
+        ["python", "scripts/merge_roadmap_pr.py", branch, "--base", "roadmap"],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode == 0:
+        print("✅ Roadmap updated on GitHub 'roadmap' branch!")
+        # Clean up
+        subprocess.run(["git", "checkout", "main"])
+        subprocess.run(["git", "pull", "origin", "roadmap"])  # Sync local roadmap branch
+        subprocess.run(["git", "branch", "-d", branch])
+    else:
+        print(f"⚠️ Manual review needed:\n{result.stdout}")
+```
+
+#### Integration in code_developer
+
+**User Story**: "As a project_manager I need the code-developer to always be aware of the last up to date roadmap, therefore I need him to pull the branch roadmap frequently so that he can read the fresh roadmap."
+
+The `code_developer` daemon must pull the `roadmap` branch at the start of each iteration to ensure it reads the latest priorities:
+
+```python
+# In coffee_maker/autonomous/daemon.py
+
+def run(self):
+    """Run daemon main loop."""
+    self.running = True
+    logger.info("🤖 DevDaemon starting...")
+
+    while self.running:
+        iteration += 1
+        logger.info(f"Iteration {iteration}")
+
+        try:
+            # 🚨 CRITICAL: Pull latest roadmap from GitHub
+            self.sync_roadmap_from_github()
+
+            # Reload roadmap (now reads latest version)
+            self.parser = RoadmapParser(str(self.roadmap_path))
+
+            # Get next task from FRESH roadmap
+            next_priority = self.parser.get_next_planned_priority()
+            # ... rest of implementation
+
+def sync_roadmap_from_github(self):
+    """Pull latest roadmap from GitHub 'roadmap' branch.
+
+    This ensures code_developer always reads the most up-to-date
+    priorities set by project_manager and user.
+
+    User Story: "code-developer must be aware of last up to date roadmap"
+    """
+    import subprocess
+
+    logger.info("📥 Syncing roadmap from GitHub...")
+
+    try:
+        # Fetch latest roadmap branch
+        subprocess.run(
+            ["git", "fetch", "origin", "roadmap"],
+            check=True,
+            capture_output=True
+        )
+
+        # Update local roadmap file from remote branch
+        # (without checking out the branch)
+        subprocess.run(
+            ["git", "show", "origin/roadmap:docs/ROADMAP.md"],
+            stdout=open(self.roadmap_path, 'w'),
+            check=True
+        )
+
+        logger.info("✅ Roadmap synced from GitHub (origin/roadmap)")
+
+    except subprocess.CalledProcessError as e:
+        logger.warning(f"⚠️ Failed to sync roadmap from GitHub: {e}")
+        logger.warning("   Using local roadmap instead")
+
+def update_roadmap_status(self, priority_name: str, new_status: str):
+    """Update priority status in roadmap and push to roadmap branch."""
+    # Update roadmap
+    self.parser.update_priority_status(priority_name, new_status)
+
+    # Use automated script to update roadmap branch
+    branch = f"roadmap-{priority_name.lower().replace(' ', '-')}-{new_status}"
+    subprocess.run(["git", "checkout", "-b", branch])
+    subprocess.run(["git", "add", "docs/ROADMAP.md"])
+    subprocess.run(["git", "commit", "-m", f"docs: Mark {priority_name} as {new_status}"])
+    subprocess.run(["git", "push", "-u", "origin", branch])
+
+    # Auto-merge to roadmap branch
+    subprocess.run(["python", "scripts/merge_roadmap_pr.py", branch, "--base", "roadmap"])
+
+    # Sync back to get any changes made by merge
+    self.sync_roadmap_from_github()
+```
+
+**Why This Matters**:
+- ✅ code_developer always sees latest priorities
+- ✅ project_manager can update priorities anytime
+- ✅ No stale roadmap issues
+- ✅ Team stays synchronized
+
+#### Integration for assistant
+
+When assistant helps user update roadmap:
+
+```python
+# In assistant workflow
+
+def help_update_roadmap(user_changes: str):
+    """Help user update roadmap and sync to main."""
+    print("I'll update the roadmap and sync it to main for you.")
+
+    # Make changes to ROADMAP.md
+    # ... (update logic here)
+
+    # Use automated process
+    print("📝 Creating automated PR...")
+    branch = f"roadmap-user-update-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+    subprocess.run(["git", "checkout", "-b", branch])
+    subprocess.run(["git", "add", "docs/ROADMAP.md"])
+    subprocess.run(["git", "commit", "-m", "docs: User-requested roadmap update"])
+    subprocess.run(["git", "push", "-u", "origin", branch])
+    subprocess.run(["python", "scripts/merge_roadmap_pr.py", branch, "--base", "roadmap"])
+
+    print("✅ Roadmap is now up-to-date on GitHub 'roadmap' branch!")
+```
+
+#### Safety Guarantees
+
+The automated script includes these safety checks:
+
+1. ✅ **Documentation-only validation**: Fails if ANY non-docs/ file is changed
+2. ✅ **Conflict detection**: Fails if branch has merge conflicts with main
+3. ✅ **Branch protection respect**: Works within GitHub's protection rules
+4. ⚠️ **Manual fallback**: If unsafe, provides PR URL for manual review
+5. ✅ **Audit trail**: All changes tracked in PR history
+
+#### Error Handling
+
+**If script fails**:
+```
+❌ Non-documentation files detected: coffee_maker/cli/roadmap_cli.py
+
+⚠️  This script is ONLY for docs/ updates!
+```
+
+**Solution**: Create separate PRs - one for docs, one for code.
+
+**If merge blocked**:
+```
+⚠️  PR has merge conflicts - manual review required
+   Please review and merge manually: https://github.com/.../pull/123
+```
+
+**Solution**: Manually resolve conflicts on GitHub or locally.
+
+#### Example Complete Workflow
+
+```bash
+# 1. project_manager updates roadmap during chat
+$ poetry run project-manager chat
+You: Mark US-020 as complete
+Claude: ✅ Updated ROADMAP.md to mark US-020 complete
+        📝 Creating automated PR to 'roadmap' branch...
+        ✅ PR created: https://github.com/.../pull/124
+        ✅ PR merged successfully to 'roadmap'!
+        🎉 Roadmap branch is now current!
+
+# 2. Verify roadmap branch is updated
+$ git fetch origin roadmap
+$ git checkout roadmap
+$ git pull origin roadmap
+From github.com:Bobain/MonolithicCoffeeMakerAgent
+ * branch            main       -> FETCH_HEAD
+Updating abc1234..def5678
+Fast-forward
+ docs/ROADMAP.md | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+# 3. View updated roadmap
+$ cat docs/ROADMAP.md
+# Shows US-020 marked as ✅ Complete
+
+# 4. Continue working on main
+$ git checkout main
+```
+
+#### Verification
+
+After automated merge, verify `roadmap` branch is current:
+
+```bash
+# Check latest commit on roadmap branch
+git log origin/roadmap -1 --oneline
+
+# Should show your roadmap update commit
+# Example: abc1234 docs: Update roadmap with US-020 completion
+
+# View roadmap on GitHub
+# https://github.com/Bobain/MonolithicCoffeeMakerAgent/tree/roadmap/docs
+```
+
+#### Branch Strategy
+
+- **`main` branch**: Stable production code + documentation
+- **`roadmap` branch**: Always current roadmap and methodology docs
+  - Updated frequently by team members
+  - Reflects latest planning and priorities
+  - Used by developer to see what to achieve next
+- **Feature branches**: Individual changes (merged to roadmap for docs, to main for code)
+
+**Why separate roadmap branch?**
+- ✅ Roadmap updates don't trigger CI/CD pipelines on main
+- ✅ Developers can easily view current roadmap without switching to feature branches
+- ✅ Clear separation: `roadmap` = planning, `main` = implementation
+- ✅ Roadmap can be updated without affecting stable main branch
+
+```
+
+#### Documentation References
+
+- **Script**: `scripts/merge_roadmap_pr.py` (implementation)
+- **Contributing Guide**: `CONTRIBUTING.md` (external contributor process)
+- **Section 2.8**: Documentation Versioning Policy (why this matters)
+
+---
+
+### 9.4 File Organization
 
 ```
 MonolithicCoffeeMakerAgent/
@@ -2423,6 +3380,8 @@ MonolithicCoffeeMakerAgent/
 │   ├── US-XXX_TECHNICAL_SPEC.md      # User story specs
 │   ├── ADR-XXX_[decision].md         # Architecture decisions
 │   └── CHANGELOG_YYYY_MM_DD_[topic].md # Change logs
+├── scripts/
+│   └── merge_roadmap_pr.py           # Automated PR merge for roadmap
 ├── coffee_maker/
 │   ├── cli/                          # Project manager code
 │   ├── autonomous/                   # Developer daemon code
