@@ -49,6 +49,14 @@ from coffee_maker.cli.notifications import (
 )
 from coffee_maker.config import ROADMAP_PATH
 
+# Configure logging BEFORE imports that might fail
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+
+logger = logging.getLogger(__name__)
+
 # Import chat components for Phase 2
 try:
     from coffee_maker.cli.ai_service import AIService
@@ -62,13 +70,6 @@ try:
 except ImportError as e:
     logger.warning(f"Chat features not available: {e}")
     CHAT_AVAILABLE = False
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
-
-logger = logging.getLogger(__name__)
 
 
 def cmd_view(args):
