@@ -63,7 +63,7 @@ class DevDaemon:
     def __init__(
         self,
         roadmap_path: str = "docs/ROADMAP.md",
-        auto_approve: bool = False,
+        auto_approve: bool = True,  # BUG FIX: Should be autonomous by default
         create_prs: bool = True,
         sleep_interval: int = 30,
         model: str = "sonnet",
@@ -143,6 +143,11 @@ class DevDaemon:
             logger.info(f"{'='*60}")
 
             try:
+                # BUG FIX #2: Sync roadmap branch BEFORE reading priorities
+                logger.info("🔄 Syncing with 'roadmap' branch...")
+                if not self._sync_roadmap_branch():
+                    logger.warning("⚠️  Roadmap sync failed - continuing with local version")
+
                 # Reload roadmap
                 self.parser = RoadmapParser(str(self.roadmap_path))
 
@@ -155,6 +160,12 @@ class DevDaemon:
                     break
 
                 logger.info(f"📋 Next priority: {next_priority['name']} - {next_priority['title']}")
+
+                # BUG FIX #3 & #4: Check for technical spec, create if missing
+                if not self._ensure_technical_spec(next_priority):
+                    logger.warning("⚠️  Could not ensure technical spec exists - skipping this priority")
+                    time.sleep(self.sleep_interval)
+                    continue
 
                 # Ask for approval if needed
                 if not self.auto_approve:
@@ -225,6 +236,175 @@ class DevDaemon:
         logger.info("✅ ROADMAP.md found")
 
         return True
+
+    def _sync_roadmap_branch(self) -> bool:
+        """Sync with 'roadmap' branch before each iteration.
+
+        This ensures the daemon always works with the latest priorities
+        and prevents working on stale/obsolete tasks.
+
+        Returns:
+            True if sync successful or not needed, False if sync failed
+
+        Implementation:
+            1. Fetch origin/roadmap
+            2. Merge origin/roadmap into current branch
+            3. Handle conflicts gracefully
+        """
+        try:
+            # Fetch latest from roadmap branch
+            import subprocess
+
+            result = subprocess.run(
+                ["git", "fetch", "origin", "roadmap"],
+                cwd=self.git.repo_path,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            if result.returncode != 0:
+                logger.warning(f"Failed to fetch roadmap branch: {result.stderr}")
+                return False
+
+            # Merge origin/roadmap
+            result = subprocess.run(
+                ["git", "merge", "origin/roadmap", "--no-edit"],
+                cwd=self.git.repo_path,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            if result.returncode != 0:
+                # Check if merge conflict
+                if "CONFLICT" in result.stdout or "CONFLICT" in result.stderr:
+                    logger.error("❌ Merge conflict with roadmap branch!")
+                    logger.error("Manual intervention required to resolve conflicts")
+
+                    # Abort merge
+                    subprocess.run(
+                        ["git", "merge", "--abort"],
+                        cwd=self.git.repo_path,
+                        capture_output=True,
+                    )
+                    return False
+                else:
+                    logger.warning(f"Merge failed: {result.stderr}")
+                    return False
+
+            logger.info("✅ Synced with 'roadmap' branch")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error syncing roadmap branch: {e}")
+            return False
+
+    def _ensure_technical_spec(self, priority: dict) -> bool:
+        """Ensure technical specification exists for this priority.
+
+        If spec doesn't exist, create it before implementing.
+
+        Args:
+            priority: Priority dictionary
+
+        Returns:
+            True if spec exists or was created successfully
+        """
+        priority_name = priority["name"]
+
+        # Determine spec filename
+        # US-XXX -> US-XXX_TECHNICAL_SPEC.md
+        # PRIORITY X -> PRIORITY_X_TECHNICAL_SPEC.md
+        if priority_name.startswith("US-"):
+            spec_filename = f"{priority_name}_TECHNICAL_SPEC.md"
+        elif priority_name.startswith("PRIORITY"):
+            # PRIORITY 2.6 -> PRIORITY_2_6_TECHNICAL_SPEC.md
+            spec_name = priority_name.replace(" ", "_").replace(".", "_")
+            spec_filename = f"{spec_name}_TECHNICAL_SPEC.md"
+        else:
+            # Generic fallback
+            spec_name = priority_name.replace(" ", "_").replace(":", "")
+            spec_filename = f"{spec_name}_TECHNICAL_SPEC.md"
+
+        spec_path = self.roadmap_path.parent / spec_filename
+
+        # Check if spec already exists
+        if spec_path.exists():
+            logger.info(f"✅ Technical spec exists: {spec_filename}")
+            return True
+
+        logger.info(f"📝 Technical spec not found: {spec_filename}")
+        logger.info("Creating technical specification...")
+
+        # Create spec using Claude
+        spec_prompt = self._build_spec_creation_prompt(priority, spec_filename)
+
+        try:
+            result = self.claude.execute_prompt(spec_prompt, timeout=600)  # 10 min timeout
+
+            if not result.success:
+                logger.error(f"Failed to create technical spec: {result.error}")
+                return False
+
+            # Check if spec file was created
+            if not spec_path.exists():
+                logger.error("Claude completed but spec file was not created")
+                return False
+
+            logger.info(f"✅ Created technical spec: {spec_filename}")
+
+            # Commit the spec
+            self.git.commit(f"docs: Add technical spec for {priority_name}")
+            self.git.push()
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error creating technical spec: {e}")
+            return False
+
+    def _build_spec_creation_prompt(self, priority: dict, spec_filename: str) -> str:
+        """Build prompt for creating technical specification.
+
+        Args:
+            priority: Priority dictionary
+            spec_filename: Name of spec file to create
+
+        Returns:
+            Prompt string
+        """
+        return f"""Create a detailed technical specification for implementing {priority['name']}.
+
+Read the user story from docs/ROADMAP.md and create a comprehensive technical spec.
+
+**Your Task:**
+1. Read docs/ROADMAP.md to understand {priority['name']}
+2. Create docs/{spec_filename} with detailed technical specification
+3. Include:
+   - Prerequisites & Dependencies
+   - Architecture Overview
+   - Component Specifications
+   - Data Flow Diagrams (in text/mermaid format)
+   - Implementation Plan (step-by-step with time estimates)
+   - Testing Strategy
+   - Security Considerations
+   - Performance Requirements
+   - Risk Analysis
+   - Success Criteria
+
+**Important:**
+- Be VERY specific and detailed
+- Include file paths, class names, method signatures
+- Provide code examples
+- Break down into concrete tasks
+- Estimate time for each task
+- Make it actionable for implementation
+
+**User Story Context:**
+{priority['content'][:2000]}...
+
+Create the spec now in docs/{spec_filename}."""
 
     def _request_approval(self, priority: dict) -> bool:
         """Request user approval to implement a priority.
