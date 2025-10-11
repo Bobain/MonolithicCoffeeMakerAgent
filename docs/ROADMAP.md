@@ -18126,6 +18126,245 @@ project-manager config set notifications.sound_enabled true
 
 ---
 
+### 🔴 **PRIORITY 2.10: Natural Conversational Responses in project-manager** 💬 **HIGH PRIORITY**
+
+**Estimated Duration**: 2-3 hours
+**Impact**: ⭐⭐⭐⭐⭐ (Critical - User experience)
+**Status**: 📝 Planned
+**Dependency**: None
+**Why Important**: Users want concise, natural answers - not technical dumps
+
+#### User Story: More Natural Conversations
+
+**As a** user interacting with project-manager
+**I want** natural, conversational responses that directly answer my question
+**So that** I get the information I need without overwhelming technical details
+
+**Problem Statement**:
+Currently, when users ask simple questions like "is the daemon running?", they get overly detailed technical responses:
+
+```
+🟢 Daemon Status: RUNNING
+
+• PID: 78575
+• Status: IDLE
+• Current Task: None (Idle)
+• Uptime: 0:16:38
+• CPU: 0.0%
+• Memory: 21.8 MB
+
+💡 Tip: code_developer may take time to respond (12+ hours is normal).
+   He needs focus time and rest, just like a human developer!
+
+Use /stop to shut down the daemon gracefully.
+```
+
+**What users actually want**: "Yes, the daemon is running."
+
+**Desired Behavior**:
+
+**Example 1 - Simple Question**:
+```
+User: "is the daemon running?"
+
+Current Response: [Technical dump with PID, CPU, memory, etc.]
+
+Desired Response:
+"Yes, code_developer is running! 🟢
+
+He's currently idle, waiting for work. Been up for about 17 minutes.
+
+Want more details? Ask me for 'daemon details' or use /status."
+```
+
+**Example 2 - What is he doing?**:
+```
+User: "what is the daemon doing?"
+
+Current Response: [Full status dump]
+
+Desired Response:
+"He's working on PRIORITY 2.8 - Daemon Status Reporting. 🔧
+
+Started about 5 minutes ago. So far so good!
+
+Need full details? Type /status for the complete picture."
+```
+
+**Example 3 - Natural follow-ups**:
+```
+User: "how long has he been working on that?"
+
+Response: "About 5 minutes now. Pretty fresh!"
+
+User: "any problems?"
+
+Response: "Nope, everything's smooth. No crashes, no issues. 👍"
+```
+
+**Design Principles**:
+
+1. **Answer the actual question first**
+   - Direct answer in first sentence
+   - Details come second (if needed)
+
+2. **Be conversational, not technical**
+   - "Running for 17 minutes" not "Uptime: 0:16:38"
+   - "Working on Priority 2.8" not "Current Task: PRIORITY 2.8"
+   - "Everything's smooth" not "Crashes: 0/3"
+
+3. **Progressive disclosure**
+   - Basic info by default
+   - Offer more details if user wants them
+   - Use /status for full technical details
+
+4. **Use natural language**
+   - "He's idle" not "Status: IDLE"
+   - "Been up for 17 minutes" not "Uptime: 0:16:38"
+   - "No problems" not "Crashes: 0/3"
+
+5. **Context-aware responses**
+   - If daemon just crashed → mention it naturally
+   - If making good progress → be encouraging
+   - If stuck/blocked → explain in plain terms
+
+**Implementation**:
+
+**1. Add Response Formatter** (`coffee_maker/cli/chat_interface.py`)
+```python
+class NaturalResponseFormatter:
+    """Format technical data into natural conversational responses."""
+
+    def format_daemon_status(self, status: dict, user_question: str) -> str:
+        """Format status based on what user actually asked.
+
+        Args:
+            status: Raw daemon status dict
+            user_question: What the user asked (for context)
+
+        Returns:
+            Natural language response
+        """
+        # Analyze what user wants to know
+        question_lower = user_question.lower()
+
+        # Simple running check
+        if any(word in question_lower for word in ["running", "up", "alive", "started"]):
+            return self._format_simple_running_check(status)
+
+        # What's he doing?
+        elif any(word in question_lower for word in ["doing", "working on", "task"]):
+            return self._format_current_activity(status)
+
+        # Any problems?
+        elif any(word in question_lower for word in ["problem", "issue", "crash", "error"]):
+            return self._format_health_check(status)
+
+        # Default: brief overview
+        else:
+            return self._format_brief_overview(status)
+
+    def _format_simple_running_check(self, status: dict) -> str:
+        """Simple yes/no with brief context."""
+        if status["running"]:
+            uptime = self._humanize_duration(status["uptime"])
+
+            if status["current_task"]:
+                return (
+                    f"Yes, code_developer is running! 🟢\n\n"
+                    f"He's working on {status['current_task']}. "
+                    f"Been up for {uptime}.\n\n"
+                    f"Want more details? Ask 'daemon details' or use /status."
+                )
+            else:
+                return (
+                    f"Yes, he's running! 🟢\n\n"
+                    f"Currently idle, waiting for work. Up for {uptime}.\n\n"
+                    f"Type 'start priority X' to give him something to do!"
+                )
+        else:
+            return (
+                "No, the daemon isn't running right now. ⚪\n\n"
+                "Want me to start it? Just say 'start daemon' or use /start."
+            )
+
+    def _humanize_duration(self, seconds: int) -> str:
+        """Convert seconds to natural language."""
+        if seconds < 60:
+            return f"{seconds} seconds"
+        elif seconds < 3600:
+            mins = seconds // 60
+            return f"{mins} minute{'s' if mins != 1 else ''}"
+        else:
+            hours = seconds // 3600
+            mins = (seconds % 3600) // 60
+            if mins > 0:
+                return f"{hours}h {mins}m"
+            return f"{hours} hour{'s' if hours != 1 else ''}"
+```
+
+**2. Update Chat Handler** (`coffee_maker/cli/chat_interface.py`)
+```python
+def _handle_natural_language_stream(self, text: str, context: Dict) -> str:
+    """Handle natural language with context-aware responses."""
+
+    # Check if asking about daemon status
+    status_keywords = [
+        "daemon", "running", "code_developer", "status",
+        "what's he doing", "is he", "what is he"
+    ]
+
+    if any(keyword in text.lower() for keyword in status_keywords):
+        # Get daemon status
+        status = self.process_manager.get_daemon_status()
+
+        # Format naturally based on question
+        formatter = NaturalResponseFormatter()
+        return formatter.format_daemon_status(status, text)
+
+    # Continue with AI for other questions...
+```
+
+**3. Keep /status for Technical Details**
+- Keep the full technical dump for /status command
+- That's for when users really need all the details
+- But natural questions get natural answers
+
+**Testing Examples**:
+```bash
+# Test natural responses
+poetry run project-manager chat
+
+> is the daemon running?
+"Yes, code_developer is running! 🟢
+He's working on PRIORITY 2.8..."
+
+> what's he doing?
+"He's working on PRIORITY 2.8 - Daemon Status Reporting.
+Started about 10 minutes ago..."
+
+> any problems?
+"Nope, everything's smooth! No crashes, no issues. 👍"
+
+> how long has it been running?
+"About 30 minutes now."
+
+# Full details still available
+> /status
+[Full technical dump]
+```
+
+**Benefits**:
+1. **Better UX**: Users get what they ask for
+2. **Less Overwhelming**: No technical overload
+3. **More Natural**: Feels like talking to a person
+4. **Context-Aware**: Responses match the question
+5. **Progressive**: Can drill down for details if needed
+
+**Implementation Priority**: **HIGH** (After PRIORITY 2.9)
+
+---
+
 ### 🔴 **PRIORITY 5: Streamlit Analytics Dashboard** ⚡ NEW
 
 **Estimated Duration**: 1-2 weeks
