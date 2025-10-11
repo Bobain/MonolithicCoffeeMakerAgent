@@ -12,7 +12,7 @@ Conversations are stored in the data/conversations/ directory.
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 
 class ConversationStorage:
@@ -29,7 +29,7 @@ class ConversationStorage:
         storage_dir: Directory where conversations are stored
     """
 
-    def __init__(self, storage_dir: Optional[str] = None):
+    def __init__(self, storage_dir: Optional[Union[str, Path]] = None):
         """Initialize conversation storage.
 
         Args:
@@ -39,9 +39,11 @@ class ConversationStorage:
         if storage_dir is None:
             # Default to data/conversations relative to project root
             project_root = Path(__file__).parents[3]
-            storage_dir = project_root / "data" / "conversations"
+            storage_dir_path = project_root / "data" / "conversations"
+        else:
+            storage_dir_path = Path(storage_dir)
 
-        self.storage_dir = Path(storage_dir)
+        self.storage_dir = storage_dir_path
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
     def save_conversation(
