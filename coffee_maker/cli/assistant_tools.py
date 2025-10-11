@@ -4,9 +4,11 @@ This module provides tools that the assistant can use to help answer
 complex questions and perform technical analysis.
 
 PRIORITY 2.9.5: Transparent Assistant Integration
++ Bug Ticket Creation for DoD Validation
 """
 
 import subprocess
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
@@ -214,6 +216,191 @@ class ExecuteBashTool(BaseTool):
             return f"Error: {str(e)}"
 
 
+class CreateBugTicketInput(BaseModel):
+    """Input for CreateBugTicketTool."""
+
+    title: str = Field(description="Brief description of the bug (e.g., 'Tests failing in test_developer_status.py')")
+    dod_criterion: str = Field(description="Which DoD criterion was being validated (e.g., 'All tests passing')")
+    priority_name: str = Field(description="Priority or feature being tested (e.g., 'PRIORITY 4')")
+    command_run: str = Field(description="Exact command that was run (e.g., 'pytest tests/ -v')")
+    expected_behavior: str = Field(description="What should have happened")
+    actual_behavior: str = Field(description="What actually happened")
+    exit_code: Optional[int] = Field(default=None, description="Command exit code (if available)")
+    error_output: Optional[str] = Field(default=None, description="Error output or relevant excerpts")
+    error_analysis: Optional[str] = Field(default=None, description="Brief analysis of what went wrong")
+    related_files: Optional[str] = Field(default=None, description="Comma-separated list of related files")
+    suggested_actions: Optional[str] = Field(
+        default=None, description="Suggested actions to fix (one per line, numbered)"
+    )
+
+
+class CreateBugTicketTool(BaseTool):
+    """Tool to create bug tickets when DoD validation fails."""
+
+    name: str = "create_bug_ticket"
+    description: str = (
+        "Create a bug ticket when DoD validation fails, tests crash, or unexpected behavior is discovered. "
+        "Use this whenever a command fails (non-zero exit code) or produces unexpected results during validation."
+    )
+    args_schema: type[BaseModel] = CreateBugTicketInput
+
+    def _run(
+        self,
+        title: str,
+        dod_criterion: str,
+        priority_name: str,
+        command_run: str,
+        expected_behavior: str,
+        actual_behavior: str,
+        exit_code: Optional[int] = None,
+        error_output: Optional[str] = None,
+        error_analysis: Optional[str] = None,
+        related_files: Optional[str] = None,
+        suggested_actions: Optional[str] = None,
+    ) -> str:
+        """Create bug ticket."""
+        try:
+            # Find next BUG number
+            tickets_dir = Path("tickets")
+            tickets_dir.mkdir(exist_ok=True)
+
+            existing_bugs = list(tickets_dir.glob("BUG-*.md"))
+            if existing_bugs:
+                # Extract numbers and find max
+                numbers = []
+                for bug_file in existing_bugs:
+                    try:
+                        num = int(bug_file.stem.split("-")[1])
+                        numbers.append(num)
+                    except (IndexError, ValueError):
+                        continue
+                next_num = max(numbers) + 1 if numbers else 1
+            else:
+                next_num = 1
+
+            bug_id = f"BUG-{next_num:03d}"
+            bug_file = tickets_dir / f"{bug_id}.md"
+
+            # Get current git commit
+            try:
+                result = subprocess.run(
+                    ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=5
+                )
+                git_commit = result.stdout.strip() if result.returncode == 0 else "unknown"
+            except Exception:
+                git_commit = "unknown"
+
+            # Build bug ticket content
+            timestamp = datetime.utcnow().isoformat() + "Z"
+
+            # Determine priority based on keywords
+            priority = "Critical"
+            if "test" in title.lower() or "failing" in title.lower():
+                priority = "Critical"
+            elif "build" in title.lower():
+                priority = "Critical"
+            elif "crash" in title.lower():
+                priority = "High"
+
+            content = f"""# {bug_id}: {title}
+
+**Status**: 🔴 Open
+**Priority**: {priority}
+**Created**: {timestamp}
+**Reporter**: Assistant (DoD Validation)
+**Assigned**: code_developer
+
+## Description
+
+Bug discovered during DoD validation for {priority_name}.
+
+## What I Was Testing
+
+**DoD Criterion**: {dod_criterion}
+
+**Priority/Feature**: {priority_name}
+
+## Steps to Reproduce
+
+1. Run: `{command_run}`
+2. Observe: {actual_behavior}
+
+## Expected Behavior
+
+{expected_behavior}
+
+## Actual Behavior
+
+"""
+
+            if exit_code is not None:
+                content += f"**Exit Code**: {exit_code} {'(failure)' if exit_code != 0 else '(success)'}\n\n"
+
+            if error_output:
+                content += f"""**Output**:
+```
+{error_output}
+```
+
+"""
+
+            if error_analysis:
+                content += f"""**Error Analysis**:
+{error_analysis}
+
+"""
+
+            content += f"""## Impact on DoD
+
+❌ DoD criterion "{dod_criterion}" is **NOT MET**
+
+This blocks:
+- [ ] Marking {priority_name} as complete
+- [ ] Merging PR
+- [ ] Moving to next priority
+
+## Additional Context
+
+**Environment**:
+- Git commit: {git_commit}
+- Timestamp: {timestamp}
+
+"""
+
+            if related_files:
+                content += f"""**Related Files**:
+{chr(10).join('- ' + f.strip() for f in related_files.split(','))}
+
+"""
+
+            if suggested_actions:
+                content += f"""## Suggested Actions
+
+{suggested_actions}
+
+"""
+
+            content += """## Definition of Done
+
+- [ ] Bug reproduced locally
+- [ ] Root cause identified
+- [ ] Fix implemented
+- [ ] Tests added (if needed)
+- [ ] All tests passing
+- [ ] DoD criterion validated
+- [ ] Bug ticket updated with resolution
+"""
+
+            # Write bug ticket
+            with open(bug_file, "w") as f:
+                f.write(content)
+
+            return f"✅ Created {bug_id}: {title}\nFile: {bug_file}\n\nBug ticket created successfully. PM should review and assign to code_developer."
+
+        except Exception as e:
+            return f"Error creating bug ticket: {str(e)}"
+
+
 def get_assistant_tools() -> List[BaseTool]:
     """Get all tools available to the assistant.
 
@@ -227,4 +414,5 @@ def get_assistant_tools() -> List[BaseTool]:
         GitLogTool(),
         GitDiffTool(),
         ExecuteBashTool(),
+        CreateBugTicketTool(),
     ]

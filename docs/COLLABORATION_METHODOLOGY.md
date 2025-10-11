@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 2.2
+**Version**: 2.3
 **Last Updated**: 2025-10-11
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -1616,13 +1616,16 @@ PM → Daemon: "Approved: Use pytest for US-009 tests"
 - Help troubleshoot issues and debug problems
 - Keep documentation up-to-date in memory (auto-refresh every 30 minutes)
 - Assist project_manager with complex research tasks
+- **Validate DoD criteria** by running tests, builds, and checks
+- **Create bug tickets** when discovering crashes or unexpected behavior during validation
 
 **Authorities**:
 - Can read any file in the codebase
 - Can search code and documentation
 - Can view git history and diffs
 - Can execute read-only bash commands
-- **CANNOT** write files, commit changes, or modify code
+- **CAN create bug tickets** in tickets/ directory (when discovering bugs)
+- **CANNOT** write arbitrary files, commit changes, or modify code (except bug tickets)
 
 **Tools Available**:
 - `read_file`: Read contents of any file
@@ -1631,6 +1634,7 @@ PM → Daemon: "Approved: Use pytest for US-009 tests"
 - `git_log`: View commit history
 - `git_diff`: View file differences
 - `execute_bash`: Run read-only commands (ls, cat, ps, etc.)
+- `create_bug_ticket`: Create bug tickets when DoD validation fails
 
 **When project_manager Should Delegate to Assistant**:
 
@@ -1743,6 +1747,254 @@ Assistant responds:
 
 PM updates DoD checklist based on assistant's validation
 ```
+
+**Bug Ticket Creation (When DoD Validation Fails)**:
+
+When the assistant discovers bugs, crashes, or DoD criteria that are NOT met, it should **automatically create a bug ticket** with full details.
+
+**When to Create Bug Tickets**:
+1. **Crash/Exception**: Command crashes with error (exit code != 0)
+2. **Tests Failing**: pytest reports failures
+3. **Build Failure**: poetry build or npm build fails
+4. **DoD Not Met**: Any DoD criterion fails validation
+5. **Unexpected Behavior**: Command runs but output is wrong
+
+**Bug Ticket Format** (tickets/BUG-XXX.md):
+
+```markdown
+# BUG-XXX: [Brief description of issue]
+
+**Status**: 🔴 Open
+**Priority**: [Critical/High/Medium/Low]
+**Created**: [ISO timestamp]
+**Reporter**: Assistant (DoD Validation)
+**Assigned**: code_developer
+
+## Description
+
+[Clear description of what is broken]
+
+## What I Was Testing
+
+**DoD Criterion**: [Which DoD criterion was being validated]
+
+**Priority/Feature**: [PRIORITY X or feature name]
+
+## Steps to Reproduce
+
+1. Run: `[exact command that was run]`
+2. Observe: [what happens]
+
+## Expected Behavior
+
+[What should happen according to DoD]
+
+## Actual Behavior
+
+**Exit Code**: [exit code if available]
+
+**Output**:
+```
+[Full error output or relevant excerpts]
+```
+
+**Error Analysis**:
+- [Brief analysis of what went wrong]
+- [Possible root cause if identifiable]
+
+## Impact on DoD
+
+❌ DoD criterion "[criterion name]" is **NOT MET**
+
+This blocks:
+- [ ] Marking PRIORITY X as complete
+- [ ] Merging PR
+- [ ] Moving to next priority
+
+## Additional Context
+
+**Environment**:
+- Python version: [if relevant]
+- Dependencies: [if relevant]
+- Git commit: [current commit hash]
+
+**Related Files**:
+- [List of files that might be involved]
+
+## Suggested Actions
+
+1. [Immediate fix needed]
+2. [Tests to add]
+3. [Validation after fix]
+```
+
+**Example - Test Failure Bug Ticket**:
+```markdown
+# BUG-003: Tests failing in test_developer_status.py
+
+**Status**: 🔴 Open
+**Priority**: Critical
+**Created**: 2025-10-11T15:30:00Z
+**Reporter**: Assistant (DoD Validation)
+**Assigned**: code_developer
+
+## Description
+
+Unit tests for DeveloperStatus class are failing with AttributeError.
+
+## What I Was Testing
+
+**DoD Criterion**: "All tests passing"
+
+**Priority/Feature**: PRIORITY 4 - Developer Status Dashboard
+
+## Steps to Reproduce
+
+1. Run: `pytest tests/test_developer_status.py -v`
+2. Observe: 3 tests fail with AttributeError
+
+## Expected Behavior
+
+All tests should pass (100% success rate) as per DoD requirement.
+
+## Actual Behavior
+
+**Exit Code**: 1 (failure)
+
+**Output**:
+```
+tests/test_developer_status.py::test_status_update FAILED
+tests/test_developer_status.py::test_eta_calculation FAILED
+tests/test_developer_status.py::test_activity_log PASSED
+
+ERROR: AttributeError: 'DeveloperStatus' object has no attribute '_calculate_eta'
+
+3 failed, 1 passed in 0.42s
+```
+
+**Error Analysis**:
+- DeveloperStatus class is missing `_calculate_eta` method
+- Method is called in `update_status()` but not defined
+- Likely implementation oversight
+
+## Impact on DoD
+
+❌ DoD criterion "All tests passing" is **NOT MET**
+
+This blocks:
+- [ ] Marking PRIORITY 4 as complete
+- [ ] Merging PR
+- [ ] Moving to next priority
+
+## Additional Context
+
+**Environment**:
+- Python version: 3.11.5
+- pytest version: 7.4.0
+- Git commit: 93b0a71
+
+**Related Files**:
+- coffee_maker/autonomous/developer_status.py (line 133)
+- tests/test_developer_status.py (lines 25-35)
+
+## Suggested Actions
+
+1. Implement `_calculate_eta()` method in DeveloperStatus class
+2. Add test coverage for ETA calculation edge cases
+3. Re-run pytest to validate fix
+```
+
+**Example - Build Failure Bug Ticket**:
+```markdown
+# BUG-004: Poetry build fails with import error
+
+**Status**: 🔴 Open
+**Priority**: Critical
+**Created**: 2025-10-11T16:00:00Z
+**Reporter**: Assistant (DoD Validation)
+**Assigned**: code_developer
+
+## Description
+
+`poetry build` command fails with ModuleNotFoundError.
+
+## What I Was Testing
+
+**DoD Criterion**: "Code builds successfully"
+
+**Priority/Feature**: PRIORITY 4 - Developer Status Dashboard
+
+## Steps to Reproduce
+
+1. Run: `poetry build`
+2. Observe: Build fails immediately
+
+## Expected Behavior
+
+Build should complete successfully and create wheel + sdist in dist/.
+
+## Actual Behavior
+
+**Exit Code**: 1 (failure)
+
+**Output**:
+```
+Building coffee-maker (1.0.0)
+  - Building sdist
+  - Built coffee_maker-1.0.0.tar.gz
+
+  - Building wheel
+  ERROR: ModuleNotFoundError: No module named 'rich'
+
+Build failed
+```
+
+**Error Analysis**:
+- Missing dependency: `rich` package not in pyproject.toml
+- DeveloperStatusDisplay uses Rich but it's not declared
+- Other modules may have same issue
+
+## Impact on DoD
+
+❌ DoD criterion "Code builds successfully" is **NOT MET**
+
+This blocks:
+- [ ] Marking PRIORITY 4 as complete
+- [ ] Publishing to PyPI
+- [ ] Distribution to users
+
+## Additional Context
+
+**Environment**:
+- Poetry version: 1.6.1
+- Git commit: 93b0a71
+
+**Related Files**:
+- pyproject.toml (missing rich dependency)
+- coffee_maker/cli/developer_status_display.py (uses Rich)
+
+## Suggested Actions
+
+1. Add `rich>=13.0.0` to pyproject.toml dependencies
+2. Run `poetry lock` to update lockfile
+3. Re-run `poetry build` to validate
+4. Check for other missing dependencies
+```
+
+**Workflow**:
+1. Assistant runs DoD validation command
+2. Command fails OR produces unexpected output
+3. Assistant **immediately creates bug ticket** with full details
+4. Assistant reports to PM: "❌ DoD validation failed. Created BUG-XXX with details."
+5. PM notifies user and assigns to code_developer
+6. code_developer reads bug ticket and fixes issue
+7. code_developer updates bug ticket status to ✅ Fixed
+8. Assistant re-validates DoD criterion
+
+**Bug Ticket Numbering**:
+- Check existing tickets/ directory for highest BUG-XXX number
+- Increment by 1 for new ticket
+- Format: BUG-001, BUG-002, BUG-003, etc.
 
 **Auto-Refresh Documentation (Every 30 Minutes)**:
 
@@ -3182,6 +3434,7 @@ PM documents decision and informs developer
 | 2.0 | 2025-10-11 | Added Section 9.3 - Updating Roadmap Branch on GitHub | **MAJOR VERSION**: Complete automated workflow for updating 'roadmap' branch on GitHub using Python script (scripts/merge_roadmap_pr.py). Addresses user stories: "main branch always up to date" and "roadmap branch in github always current so developer can see what to achieve". Includes setup instructions, integration examples for all team members (project_manager, code_developer, assistant), safety guarantees, and error handling. Branch strategy documented. |
 | 2.1 | 2025-10-11 | Added Section 3.4 - Role: Assistant (LangChain-Powered AI Helper) | Defined assistant role, responsibilities, authorities, and task delegation guidelines. Includes: delegation decision matrix (ALWAYS/COLLABORATIVE/NEVER), 6 tools available to assistant (read_file, search_code, list_files, git_log, git_diff, execute_bash), best practices for PM→Assistant delegation, auto-refresh documentation requirement (every 30 minutes), availability requirements (always up when project-manager running). Renumbered Team Dynamics to 3.5. Addresses user request: "project_manager should know which tasks to delegate to assistant thanks to team collaboration document". |
 | 2.2 | 2025-10-11 | Enhanced Section 3.4 - Added DoD Validation Capability for Assistant | Added "DoD Validation" to assistant delegation matrix (ALWAYS DELEGATE category). Documented assistant's ability to validate Definition of Done criteria using execute_bash tool. Includes comprehensive DoD validation example: running pytest, checking exit codes, parsing test results, validating build success. Assistant can now answer "Are all tests passing?" by running tests and reporting clear ✅/❌ status. Critical for PM to validate DoD without manual testing. Addresses assistant's need to run bash commands for DoD validation. |
+| 2.3 | 2025-10-11 | **MAJOR**: Added Bug Ticket Creation Capability for Assistant | Implemented create_bug_ticket tool (7th tool for assistant). Assistant can now automatically create bug tickets in tickets/ directory when DoD validation fails. Added comprehensive bug ticket format with sections: Description, What I Was Testing, Steps to Reproduce, Expected/Actual Behavior, Exit Code, Error Output, Error Analysis, Impact on DoD, Additional Context, Suggested Actions. Includes 2 complete examples (test failure, build failure). Documented workflow: Assistant validates DoD → Command fails → Assistant creates BUG-XXX ticket → Reports to PM → code_developer fixes. Updated assistant responsibilities and authorities. Bug tickets auto-numbered (BUG-001, BUG-002, etc.). Critical for autonomous DoD validation and issue tracking. Addresses: "assistant should create bug issue if DoD validation crashes/fails". |
 
 **To add new version**:
 1. Make changes to document
