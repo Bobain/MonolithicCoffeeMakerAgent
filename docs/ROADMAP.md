@@ -79,25 +79,18 @@ The daemon operates autonomously by:
 
 ### Example: Well-Prioritized Roadmap
 
-```markdown
-## 🔴 TOP PRIORITY FOR code_developer (START HERE)
-PRIORITY 2: Project Manager with UI ← Current focus
-
-### PRIORITY 1: Analytics ✅ Complete
-### PRIORITY 1.5: Database Sync ✅ Complete
-### PRIORITY 2: Project Manager CLI ✅ Complete (Phase 2)
-### PRIORITY 2.5: UX Documentation ✅ Complete
-### PRIORITY 2.6: Daemon Fix Verification 📝 Planned
-### PRIORITY 2.7: Daemon Crash Recovery 📝 Planned
-### PRIORITY 3: code_developer ✅ Complete
-### PRIORITY 5: Streamlit Analytics Dashboard 📝 Planned
-### PRIORITY 5.5: Streamlit Error Dashboard 📝 Planned
-### PRIORITY 6: Streamlit Agent UI ✅ Complete
-### PRIORITY 6.5: GCP Deployment 📝 Planned ← After Streamlit apps
-### PRIORITY 7: Professional Documentation ✅ Complete
-### PRIORITY 8: Multi-AI Provider Support 📝 Planned
-### PRIORITY 9: Enhanced Communication 📝 Planned
 ```
+## 🔴 TOP PRIORITY FOR code_developer (START HERE)
+US-XXX: Example Feature ← Current focus
+
+### US-001: Example Feature A ✅ Complete
+### US-002: Example Feature B ✅ Complete
+### US-003: Example Feature C 📝 Planned ← Next to implement
+### US-004: Example Feature D 📝 Planned
+### US-005: Example Feature E 📝 Planned
+```
+
+**Note**: Use actual user story IDs (like US-022, US-023) not PRIORITY X numbers to avoid parser confusion.
 
 **Remember**: The daemon trusts this roadmap completely. Keep it organized, prioritized, and up-to-date! 🎯
 
