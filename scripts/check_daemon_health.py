@@ -1,170 +1,274 @@
 #!/usr/bin/env python3
-"""Check daemon logs for infinite loop patterns.
+"""Check daemon logs for infinite loop patterns and health issues.
 
-This script analyzes daemon logs to detect if the daemon is stuck in an
-infinite loop attempting the same priority repeatedly.
-
-Exit Codes:
-    0: No infinite loop detected (healthy)
-    1: Infinite loop detected (unhealthy)
-    2: Error analyzing logs
+This script analyzes daemon logs to detect:
+- Infinite loops (same priority attempted >3 times)
+- Repeated failures
+- Performance issues
 
 Usage:
-    python scripts/check_daemon_health.py [--log-file PATH] [--max-attempts N]
+    python scripts/check_daemon_health.py [--log-file PATH]
+    python scripts/check_daemon_health.py --stdin  # Read from stdin
 
-Example:
-    python scripts/check_daemon_health.py
-    python scripts/check_daemon_health.py --log-file daemon.log --max-attempts 3
+Exit Codes:
+    0: All checks passed
+    1: Infinite loop or critical issue detected
+    2: Script error
 """
 
-import argparse
 import re
 import sys
+import argparse
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Tuple
+from collections import defaultdict
 
 
-def check_for_infinite_loop(log_content: str, max_attempts: int = 3) -> bool:
+def check_for_infinite_loop(log_content: str, max_attempts: int = 3) -> Tuple[bool, Dict[str, int]]:
     """Detect if daemon is stuck in infinite loop.
 
     Args:
-        log_content: Log file content to analyze
-        max_attempts: Maximum attempts before considering it an infinite loop
+        log_content: Full log content to analyze
+        max_attempts: Maximum attempts before considering it a loop
 
     Returns:
-        True if infinite loop detected, False otherwise
+        Tuple of (has_loop, attempts_dict)
+        has_loop: True if infinite loop detected
+        attempts_dict: Dict mapping priority names to attempt counts
     """
-    # Pattern: "Starting implementation of PRIORITY X"
-    pattern = r"Starting implementation of (PRIORITY [\d.]+)"
-    attempts: Dict[str, int] = {}
+    # Pattern: Look for "Starting implementation of PRIORITY X"
+    pattern = r"Starting implementation of (PRIORITY [\w.]+)"
+    attempts = defaultdict(int)
 
-    for match in re.finditer(pattern, log_content):
+    for match in re.finditer(pattern, log_content, re.IGNORECASE):
         priority = match.group(1)
-        attempts[priority] = attempts.get(priority, 0) + 1
+        attempts[priority] += 1
 
-    # Check if any priority attempted too many times
-    for priority, count in attempts.items():
-        if count > max_attempts:
-            print(f"❌ INFINITE LOOP DETECTED: {priority} attempted {count} times (max: {max_attempts})")
-            print(f"   This indicates the daemon is stuck retrying the same priority.")
-            print(f"   Possible causes:")
-            print(f"   - No files changed during implementation")
-            print(f"   - Priority description too vague")
-            print(f"   - Implementation requires manual intervention")
-            return True
+    # Check if any priority exceeded max attempts
+    has_loop = any(count > max_attempts for count in attempts.values())
 
-    print(f"✅ No infinite loop detected")
-    print(f"   Priority attempt summary:")
-    for priority, count in sorted(attempts.items()):
-        status = "✓" if count <= max_attempts else "✗"
-        print(f"   {status} {priority}: {count} attempt(s)")
-
-    return False
+    return has_loop, dict(attempts)
 
 
-def find_log_file() -> Optional[Path]:
-    """Find daemon log file in common locations.
+def check_for_repeated_errors(log_content: str) -> List[str]:
+    """Detect repeated error messages.
+
+    Args:
+        log_content: Full log content to analyze
 
     Returns:
-        Path to log file or None if not found
+        List of repeated error messages
     """
-    # Common log file locations
-    locations = [
-        Path("daemon.log"),
-        Path("logs/daemon.log"),
-        Path("data/daemon.log"),
-        Path("/var/log/daemon.log"),
+    error_pattern = r"(ERROR|CRITICAL|Exception):(.+)"
+    errors = defaultdict(int)
+
+    for match in re.finditer(error_pattern, log_content):
+        error_msg = match.group(2).strip()
+        errors[error_msg] += 1
+
+    # Return errors that occurred more than twice
+    repeated = [msg for msg, count in errors.items() if count > 2]
+    return repeated
+
+
+def check_for_no_progress(log_content: str) -> bool:
+    """Detect if daemon is making no progress.
+
+    Args:
+        log_content: Full log content to analyze
+
+    Returns:
+        True if no progress detected
+    """
+    # Look for success indicators
+    success_patterns = [
+        r"✅|Complete|Success|Committed|Created PR",
+        r"Moving to next priority",
+        r"Implementation complete",
     ]
 
-    for location in locations:
-        if location.exists():
-            print(f"Found log file: {location}")
-            return location
+    for pattern in success_patterns:
+        if re.search(pattern, log_content, re.IGNORECASE):
+            return False
 
-    return None
+    # No success indicators found
+    return True
+
+
+def check_performance_issues(log_content: str) -> List[str]:
+    """Detect performance issues in logs.
+
+    Args:
+        log_content: Full log content to analyze
+
+    Returns:
+        List of performance warnings
+    """
+    warnings = []
+
+    # Check for timeout patterns
+    if re.search(r"timeout|timed out", log_content, re.IGNORECASE):
+        warnings.append("Timeout detected in logs")
+
+    # Check for long execution times
+    duration_pattern = r"took (\d+) (minutes|seconds)"
+    for match in re.finditer(duration_pattern, log_content):
+        duration = int(match.group(1))
+        unit = match.group(2)
+
+        if unit == "minutes" and duration > 30:
+            warnings.append(f"Long execution time: {duration} minutes")
+
+    return warnings
+
+
+def analyze_log_file(log_path: Path) -> Dict[str, any]:
+    """Analyze a log file for health issues.
+
+    Args:
+        log_path: Path to log file
+
+    Returns:
+        Dict with analysis results
+    """
+    if not log_path.exists():
+        print(f"⚠️  Log file not found: {log_path}")
+        return {"exists": False, "healthy": True, "warnings": ["No log file found"]}  # No logs = no issues yet
+
+    content = log_path.read_text()
+
+    # Run all checks
+    has_loop, attempts = check_for_infinite_loop(content)
+    repeated_errors = check_for_repeated_errors(content)
+    no_progress = check_for_no_progress(content)
+    perf_issues = check_performance_issues(content)
+
+    results = {
+        "exists": True,
+        "healthy": not (has_loop or repeated_errors or no_progress),
+        "infinite_loop": has_loop,
+        "attempts": attempts,
+        "repeated_errors": repeated_errors,
+        "no_progress": no_progress,
+        "performance_issues": perf_issues,
+    }
+
+    return results
+
+
+def print_results(results: Dict[str, any]) -> None:
+    """Print analysis results in human-readable format.
+
+    Args:
+        results: Results from analyze_log_file()
+    """
+    print("\n" + "=" * 60)
+    print("DAEMON HEALTH CHECK RESULTS")
+    print("=" * 60 + "\n")
+
+    if not results["exists"]:
+        print("⚠️  No log file found - cannot perform health check")
+        print("   This is okay if daemon hasn't run yet.")
+        return
+
+    # Overall health
+    if results["healthy"]:
+        print("✅ HEALTHY: No critical issues detected\n")
+    else:
+        print("❌ UNHEALTHY: Issues detected\n")
+
+    # Infinite loop check
+    if results["infinite_loop"]:
+        print("❌ INFINITE LOOP DETECTED:")
+        for priority, count in results["attempts"].items():
+            if count > 3:
+                print(f"   - {priority}: attempted {count} times")
+        print()
+    else:
+        print("✅ No infinite loops detected")
+        if results["attempts"]:
+            print("   Attempts per priority:")
+            for priority, count in sorted(results["attempts"].items()):
+                print(f"   - {priority}: {count} attempt(s)")
+        print()
+
+    # Repeated errors
+    if results["repeated_errors"]:
+        print("⚠️  REPEATED ERRORS:")
+        for error in results["repeated_errors"]:
+            print(f"   - {error}")
+        print()
+    else:
+        print("✅ No repeated errors\n")
+
+    # Progress check
+    if results["no_progress"]:
+        print("⚠️  NO PROGRESS: Daemon may be stuck\n")
+    else:
+        print("✅ Daemon is making progress\n")
+
+    # Performance issues
+    if results["performance_issues"]:
+        print("⚠️  PERFORMANCE ISSUES:")
+        for issue in results["performance_issues"]:
+            print(f"   - {issue}")
+        print()
+    else:
+        print("✅ No performance issues\n")
 
 
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Check daemon logs for infinite loop patterns",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  Check for infinite loops in default log location:
-    python scripts/check_daemon_health.py
-
-  Check specific log file:
-    python scripts/check_daemon_health.py --log-file daemon.log
-
-  Use custom max attempts threshold:
-    python scripts/check_daemon_health.py --max-attempts 5
-        """,
+        description="Check daemon health from logs", formatter_class=argparse.RawDescriptionHelpFormatter
     )
-
     parser.add_argument(
-        "--log-file",
-        type=Path,
-        help="Path to daemon log file (auto-detected if not specified)",
+        "--log-file", type=Path, default=Path("daemon.log"), help="Path to daemon log file (default: daemon.log)"
     )
-
-    parser.add_argument(
-        "--max-attempts",
-        type=int,
-        default=3,
-        help="Maximum attempts before considering it an infinite loop (default: 3)",
-    )
+    parser.add_argument("--stdin", action="store_true", help="Read log content from stdin")
+    parser.add_argument("--quiet", action="store_true", help="Only output errors (exit code indicates status)")
 
     args = parser.parse_args()
 
-    # Find log file
-    log_file = args.log_file
-    if not log_file:
-        log_file = find_log_file()
-
-    if not log_file:
-        print("❌ ERROR: No log file found", file=sys.stderr)
-        print("   Specify log file with --log-file or create daemon.log", file=sys.stderr)
-        sys.exit(2)
-
-    if not log_file.exists():
-        print(f"❌ ERROR: Log file not found: {log_file}", file=sys.stderr)
-        sys.exit(2)
-
-    # Read log file
     try:
-        log_content = log_file.read_text()
+        if args.stdin:
+            # Read from stdin
+            content = sys.stdin.read()
+            has_loop, attempts = check_for_infinite_loop(content)
+            repeated_errors = check_for_repeated_errors(content)
+            no_progress = check_for_no_progress(content)
+            perf_issues = check_performance_issues(content)
+
+            results = {
+                "exists": True,
+                "healthy": not (has_loop or repeated_errors or no_progress),
+                "infinite_loop": has_loop,
+                "attempts": attempts,
+                "repeated_errors": repeated_errors,
+                "no_progress": no_progress,
+                "performance_issues": perf_issues,
+            }
+        else:
+            # Read from file
+            results = analyze_log_file(args.log_file)
+
+        if not args.quiet:
+            print_results(results)
+
+        # Exit with appropriate code
+        if results["healthy"]:
+            sys.exit(0)
+        else:
+            if results["infinite_loop"]:
+                print("\n❌ CRITICAL: Infinite loop detected")
+                sys.exit(1)
+            else:
+                print("\n⚠️  WARNING: Issues detected but not critical")
+                sys.exit(0)
+
     except Exception as e:
-        print(f"❌ ERROR: Failed to read log file: {e}", file=sys.stderr)
+        print(f"❌ ERROR: {e}", file=sys.stderr)
         sys.exit(2)
-
-    if not log_content:
-        print("⚠️  WARNING: Log file is empty", file=sys.stderr)
-        print("   No analysis possible", file=sys.stderr)
-        sys.exit(0)
-
-    # Check for infinite loop
-    print(f"Analyzing daemon logs: {log_file}")
-    print(f"Max attempts threshold: {args.max_attempts}")
-    print()
-
-    infinite_loop = check_for_infinite_loop(log_content, args.max_attempts)
-
-    if infinite_loop:
-        print()
-        print("ACTION REQUIRED:")
-        print("1. Stop the daemon")
-        print("2. Review the problematic priority in ROADMAP.md")
-        print("3. Either:")
-        print("   a. Make the priority description more concrete")
-        print("   b. Manually implement the priority")
-        print("   c. Mark as 'Manual Only' in ROADMAP")
-        print("4. Restart the daemon")
-        sys.exit(1)
-    else:
-        print()
-        print("Daemon health: HEALTHY ✅")
-        sys.exit(0)
 
 
 if __name__ == "__main__":

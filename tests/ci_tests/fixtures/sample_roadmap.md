@@ -1,115 +1,97 @@
-# Project Roadmap
+# Sample Test Roadmap
 
-### 🔴 **PRIORITY 1: Initial Setup** ✅ Complete
+This is a sample roadmap used for testing the code_developer daemon.
 
-**Estimated Duration**: 1 day
-**Impact**: ⭐⭐⭐⭐⭐
+## 🔴 TOP PRIORITY FOR code_developer (START HERE)
+
+**Next Task**: PRIORITY 2 (First Planned)
+
+## Priorities
+
+### PRIORITY 1: Initial Setup ✅ Complete
+
+**Estimated Duration**: 1 hour
 **Status**: ✅ Complete
-**Dependency**: None
-
-#### Project: Initial Project Setup
-
-**Problem Statement**:
-Set up the basic project structure and development environment.
-
-**Objectives**:
-1. Create project structure
-2. Configure development tools
-3. Set up CI/CD pipeline
-
-**Success Criteria**:
-- ✅ Project structure created
-- ✅ Development environment configured
-- ✅ CI/CD pipeline running
+**Description**: Set up the project structure and initial configuration.
 
 **Deliverables**:
-- Create project directory structure
-- Configure git repository
-- Set up dependency management
+- ✅ Create project directory
+- ✅ Initialize git repository
+- ✅ Create README.md
+
+**Completed**: 2025-10-11
 
 ---
 
-### 🔴 **PRIORITY 2: Core Feature Implementation** 📝 Planned
+### PRIORITY 2: First Feature 📝 Planned
 
-**Estimated Duration**: 3 days
-**Impact**: ⭐⭐⭐⭐⭐
-**Status**: 📝 Planned
-**Dependency**: PRIORITY 1
-
-#### Project: Implement Core Functionality
-
-**Problem Statement**:
-Implement the core features of the application.
+**Estimated Duration**: 2 hours
+**Status**: 📝 Planned - **START HERE**
+**Description**: Implement the first feature for testing.
 
 **Objectives**:
-1. Implement main feature set
-2. Add comprehensive testing
-3. Document functionality
-
-**Success Criteria**:
-- ✅ All core features implemented
-- ✅ Test coverage > 80%
-- ✅ Documentation complete
+1. Create a Python module
+2. Add basic functionality
+3. Write unit tests
 
 **Deliverables**:
-- Create src/core/main.py with core logic
-- Create tests/test_core.py with unit tests
-- Update docs/API.md with API documentation
+- Create `src/feature1.py`
+- Add `calculate()` function
+- Create `tests/test_feature1.py`
+
+**Implementation Notes**:
+- Use Python 3.11+ features
+- Follow PEP 8 style guide
+- Include docstrings
+
+**Success Criteria**:
+- ✅ All tests pass
+- ✅ Code coverage >80%
+- ✅ Linting passes
 
 ---
 
-### 🔴 **PRIORITY 3: User Documentation** 📝 Planned
+### PRIORITY 3: Second Feature 📝 Planned
 
-**Estimated Duration**: 1 day
-**Impact**: ⭐⭐⭐⭐
+**Estimated Duration**: 3 hours
 **Status**: 📝 Planned
-**Dependency**: PRIORITY 2
-
-#### Project: Create User Documentation
-
-**Problem Statement**:
-Users need comprehensive documentation to use the system.
-
-**Objectives**:
-1. Create user guide
-2. Create quickstart tutorial
-3. Add examples
-
-**Success Criteria**:
-- ✅ User guide complete
-- ✅ Quickstart tutorial works
-- ✅ Multiple examples provided
+**Description**: Add the second feature.
 
 **Deliverables**:
-- Create docs/USER_GUIDE.md
-- Create docs/QUICKSTART.md
-- Create docs/examples/ directory with examples
+- Create `src/feature2.py`
+- Integrate with feature1
+- Add integration tests
 
 ---
 
-### 🔴 **PRIORITY 4: Advanced Features** 📝 Planned
+### PRIORITY 4: Documentation 📝 Planned
 
-**Estimated Duration**: 5 days
-**Impact**: ⭐⭐⭐
+**Estimated Duration**: 1 hour
 **Status**: 📝 Planned
-**Dependency**: PRIORITY 2
-
-#### Project: Implement Advanced Features
-
-**Problem Statement**:
-Add advanced functionality for power users.
-
-**Objectives**:
-1. Implement advanced feature set
-2. Optimize performance
-3. Add configuration options
-
-**Success Criteria**:
-- ✅ Advanced features working
-- ✅ Performance meets targets
-- ✅ Highly configurable
+**Description**: Create user documentation.
 
 **Deliverables**:
-- Create src/advanced/ module
-- Add configuration system
-- Optimize critical paths
+- Create `docs/USER_GUIDE.md`
+- Add usage examples
+- Create API reference
+
+---
+
+### PRIORITY 5: Future Feature ⏸️ Blocked
+
+**Estimated Duration**: 4 hours
+**Status**: ⏸️ Blocked
+**Dependency**: Waiting for external API access
+**Description**: Feature that requires external dependency.
+
+**Why Blocked**: Need API credentials from vendor
+
+---
+
+## Meta
+
+**Last Updated**: 2025-10-11
+**Total Priorities**: 5
+**Completed**: 1
+**Planned**: 3
+**Blocked**: 1
