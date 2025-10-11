@@ -45,6 +45,8 @@ Example:
 
 import json
 import logging
+import os
+import platform
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -76,6 +78,76 @@ NOTIF_STATUS_PENDING = "pending"
 NOTIF_STATUS_READ = "read"
 NOTIF_STATUS_RESPONDED = "responded"
 NOTIF_STATUS_DISMISSED = "dismissed"
+
+
+def play_notification_sound(priority: str = "normal") -> bool:
+    """Play system notification sound.
+
+    PRIORITY 2.9: Sound Notifications for project-manager
+
+    Plays a platform-specific notification sound based on the priority level.
+    Handles cross-platform differences gracefully.
+
+    Args:
+        priority: Sound priority level - "normal", "high", or "critical"
+
+    Returns:
+        True if sound played successfully, False otherwise
+
+    Platform Support:
+        - macOS: Uses afplay with system sounds
+        - Linux: Uses paplay with freedesktop sounds
+        - Windows: Uses winsound module
+
+    Example:
+        >>> play_notification_sound("normal")   # Gentle notification
+        >>> play_notification_sound("high")     # Attention needed
+        >>> play_notification_sound("critical") # Urgent alert
+    """
+    try:
+        system = platform.system()
+
+        if system == "Darwin":  # macOS
+            if priority == "critical":
+                os.system("afplay /System/Library/Sounds/Sosumi.aiff &")
+            elif priority == "high":
+                os.system("afplay /System/Library/Sounds/Glass.aiff &")
+            else:
+                os.system("afplay /System/Library/Sounds/Pop.aiff &")
+            return True
+
+        elif system == "Linux":
+            # Try to play freedesktop sound
+            sound_file = "/usr/share/sounds/freedesktop/stereo/message.oga"
+            if os.path.exists(sound_file):
+                os.system(f"paplay {sound_file} &")
+                return True
+            else:
+                logger.debug(f"Sound file not found: {sound_file}")
+                return False
+
+        elif system == "Windows":
+            try:
+                import winsound
+
+                if priority == "critical":
+                    winsound.MessageBeep(winsound.MB_ICONHAND)
+                elif priority == "high":
+                    winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                else:
+                    winsound.MessageBeep(winsound.MB_ICONASTERISK)
+                return True
+            except ImportError:
+                logger.debug("winsound module not available on Windows")
+                return False
+
+        else:
+            logger.debug(f"Unsupported platform for sound notifications: {system}")
+            return False
+
+    except Exception as e:
+        logger.debug(f"Failed to play notification sound: {e}")
+        return False
 
 
 CREATE_NOTIFICATIONS_TABLE = """
@@ -172,8 +244,11 @@ class NotificationDB:
         message: str,
         priority: str = NOTIF_PRIORITY_NORMAL,
         context: Optional[Dict] = None,
+        play_sound: bool = True,
     ) -> int:
-        """Create a new notification.
+        """Create a new notification with optional sound alert.
+
+        PRIORITY 2.9: Enhanced with sound notifications
 
         Args:
             type: Notification type (question, info, warning, error, completion)
@@ -181,6 +256,7 @@ class NotificationDB:
             message: Full message
             priority: Priority level (critical, high, normal, low)
             context: Optional context data (will be JSON serialized)
+            play_sound: Whether to play notification sound (default: True)
 
         Returns:
             Notification ID
@@ -192,7 +268,8 @@ class NotificationDB:
             ...     title="Dependency Approval",
             ...     message="Install pandas?",
             ...     priority="high",
-            ...     context={"dependency": "pandas"}
+            ...     context={"dependency": "pandas"},
+            ...     play_sound=True
             ... )
         """
         now = datetime.utcnow().isoformat()
@@ -211,6 +288,20 @@ class NotificationDB:
             notif_id = cursor.lastrowid
 
         logger.info(f"Created notification {notif_id}: {title}")
+
+        # PRIORITY 2.9: Play notification sound based on priority
+        if play_sound:
+            sound_priority = "normal"
+            if priority == NOTIF_PRIORITY_CRITICAL:
+                sound_priority = "critical"
+            elif priority == NOTIF_PRIORITY_HIGH:
+                sound_priority = "high"
+
+            if play_notification_sound(sound_priority):
+                logger.debug(f"Played {sound_priority} notification sound")
+            else:
+                logger.debug("Sound notification disabled or unavailable")
+
         return notif_id
 
     @with_retry(max_attempts=3, retriable_exceptions=(sqlite3.OperationalError,))
