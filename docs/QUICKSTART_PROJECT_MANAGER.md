@@ -340,6 +340,40 @@ echo "ANTHROPIC_API_KEY=your-key-here" >> .env
 export ANTHROPIC_API_KEY='your-key-here'
 ```
 
+**Problem: "project-manager chat" forces API mode when running inside Claude Code**
+
+When you run `project-manager chat` from within Claude Code (the Claude CLI interface), it automatically detects CLI nesting and switches to API mode to prevent issues.
+
+**What's happening:**
+- Claude Code is running on Claude CLI
+- Running `project-manager chat` would try to call Claude CLI again (nesting)
+- The system detects this and uses API mode instead
+
+**Solutions:**
+
+Option 1: Run from regular terminal (Recommended - Free)
+```bash
+# Open a new terminal (not Claude Code)
+cd /path/to/MonolithicCoffeeMakerAgent
+poetry run project-manager chat
+```
+This will use Claude CLI mode and is free with your subscription.
+
+Option 2: Use API mode with credits
+```bash
+# Add API key to your .env file
+echo "ANTHROPIC_API_KEY=your-key-here" >> .env
+
+# Then run from Claude Code
+poetry run project-manager chat
+```
+This will use API mode with your API credits.
+
+**Why this matters:**
+- CLI nesting (Claude CLI calling Claude CLI) can cause unexpected behavior
+- The system automatically prevents this by detecting when you're already inside Claude Code
+- You'll see a clear message explaining the situation and your options
+
 ## Next Steps
 
 Now that you have the basics:

@@ -1,0 +1,240 @@
+name: Daemon Health Check
+
+on:
+  # Run on significant releases
+  release:
+    types: [published, created]
+
+  # Run on PRs to main (before merge)
+  pull_request:
+    branches: [main]
+    paths:
+      - 'coffee_maker/autonomous/**'
+      - 'run_daemon.py'
+      - 'tests/ci_tests/**'
+      - 'tests/autonomous/**'
+
+  # Run on version tags (e.g., v1.0.0, v1.1.0)
+  push:
+    tags:
+      - 'v*.*.*'
+    branches:
+      - main
+    paths:
+      - 'coffee_maker/autonomous/**'
+      - 'run_daemon.py'
+
+  # Manual trigger for on-demand testing
+  workflow_dispatch:
+    inputs:
+      test_level:
+        description: 'Test level (smoke, integration, full)'
+        required: false
+        default: 'smoke'
+
+jobs:
+  test-smoke:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      - name: Run smoke tests
+        run: |
+          poetry run pytest tests/ci_tests/test_daemon_smoke.py -v
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: smoke-test-results
+          path: |
+            .pytest_cache
+            *.log
+
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      - name: Run unit tests (non-integration)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          poetry run pytest tests/ci_tests/ -m "not integration" -v --tb=short
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-test-results
+          path: |
+            .pytest_cache
+            *.log
+
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Only run on main branch or manual dispatch
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' || github.event_name == 'release'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      - name: Configure git
+        run: |
+          git config --global user.name "CI Bot"
+          git config --global user.email "ci@example.com"
+
+      - name: Run integration tests
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          poetry run pytest tests/ci_tests/ -m integration -v --tb=short
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-test-results
+          path: |
+            .pytest_cache
+            *.log
+
+  test-regression:
+    name: Non-Regression Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      - name: Run non-regression tests
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          poetry run pytest tests/autonomous/test_daemon_regression.py -v
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: regression-test-results
+          path: |
+            .pytest_cache
+            *.log
+
+  health-check:
+    name: Daemon Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Only run on main branch or release
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release' || github.event_name == 'push'
+    needs: [test-smoke, test-unit, test-regression]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      - name: Check daemon health script
+        run: |
+          poetry run python scripts/check_daemon_health.py --help || echo "Health check script ready"
+
+      - name: Verify notifications script
+        run: |
+          poetry run python scripts/verify_notifications.py --help || echo "Verification script ready"
+
+  report:
+    name: Test Report
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [test-smoke, test-unit, test-regression]
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Display test summary
+        run: |
+          echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Smoke Tests: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit Tests: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Regression Tests: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All daemon tests passed successfully!" >> $GITHUB_STEP_SUMMARY

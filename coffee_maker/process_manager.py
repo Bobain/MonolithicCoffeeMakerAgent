@@ -40,7 +40,10 @@ class ProcessManager:
         """Check if code_developer daemon is running.
 
         Verifies both that the PID exists and that it's actually
-        the code_developer daemon (not a recycled PID).
+        the autonomous daemon (not just any Claude process).
+
+        IMPORTANT: Only recognizes autonomous daemon with --auto-approve flag.
+        This distinguishes the daemon from interactive Claude Code sessions.
 
         Returns:
             True if daemon is running, False otherwise
@@ -53,17 +56,29 @@ class ProcessManager:
             # Check if process exists
             process = psutil.Process(pid)
 
-            # Verify it's actually the daemon (not a recycled PID)
+            # Verify it's actually the daemon (not a recycled PID or interactive session)
             cmdline = " ".join(process.cmdline())
-            is_daemon = (
+
+            # Must be code-developer process
+            is_code_developer = (
                 "code-developer" in cmdline
                 or "daemon_cli.py" in cmdline
                 or "coffee_maker.autonomous.daemon_cli" in cmdline
             )
 
-            if not is_daemon:
-                logger.warning(f"PID {pid} exists but is not code_developer daemon: {cmdline}")
+            # Should have --auto-approve flag (autonomous mode)
+            # This distinguishes daemon from interactive Claude Code sessions
+            has_auto_approve = "--auto-approve" in cmdline
+
+            if not is_code_developer:
+                logger.warning(f"PID {pid} exists but is not code_developer: {cmdline}")
                 self._clean_stale_pid()
+                return False
+
+            if not has_auto_approve:
+                logger.info(f"PID {pid} is code_developer but not autonomous (missing --auto-approve)")
+                # Don't clean PID - it might be an interactive session we don't want to interfere with
+                # But report it as "not the daemon"
                 return False
 
             return True
@@ -130,7 +145,10 @@ class ProcessManager:
             }
 
     def start_daemon(self, background: bool = True) -> bool:
-        """Start the code_developer daemon.
+        """Start the code_developer daemon in autonomous mode.
+
+        IMPORTANT: Always starts daemon with --auto-approve flag for autonomous operation.
+        This distinguishes the daemon from interactive Claude Code sessions.
 
         Args:
             background: If True, start in background. If False, run in foreground.
@@ -142,10 +160,11 @@ class ProcessManager:
             logger.info("Daemon is already running")
             return True
 
-        logger.info("Starting code_developer daemon...")
+        logger.info("Starting code_developer daemon in autonomous mode...")
 
-        # Build command
-        cmd = ["poetry", "run", "code-developer"]
+        # Build command with --auto-approve for autonomous operation
+        # This flag distinguishes daemon from interactive Claude sessions
+        cmd = ["poetry", "run", "code-developer", "--auto-approve"]
 
         try:
             if background:

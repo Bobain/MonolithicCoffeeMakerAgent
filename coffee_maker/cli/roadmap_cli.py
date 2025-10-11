@@ -130,21 +130,201 @@ def cmd_view(args):
 def cmd_status(args):
     """Show daemon status.
 
+    PRIORITY 2.8: Daemon Status Reporting
+
+    Reads ~/.coffee_maker/daemon_status.json and displays current daemon status.
+
     Args:
         args: Parsed command-line arguments
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager status
+
+        Daemon Status: Running
+        PID: 12345
+        Started: 2025-10-11 10:30:00
+        Current Priority: PRIORITY 2.8 - Daemon Status Reporting
+        Iteration: 5
+        Crashes: 0/3
     """
+    import json
+    from datetime import datetime
+    from pathlib import Path
+
     print("\n" + "=" * 80)
-    print("Daemon Status")
+    print("Code Developer Daemon Status")
     print("=" * 80 + "\n")
 
-    # For MVP, this is a placeholder
-    # In Phase 2, this will query daemon's actual status
-    print("Status: Not implemented yet (MVP Phase 1)")
-    print("\nDaemon status will be available in Phase 2:")
-    print("  - Running/Stopped status")
-    print("  - Current task")
-    print("  - Progress")
-    print("  - Last activity")
+    # Read status file
+    status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
+
+    if not status_file.exists():
+        print("❌ Daemon status file not found")
+        print("\nThe daemon is either:")
+        print("  - Not running")
+        print("  - Never been started")
+        print("\n💡 Start the daemon with: poetry run code-developer")
+        return 1
+
+    try:
+        with open(status_file, "r") as f:
+            status = json.load(f)
+
+        # Display daemon status
+        daemon_status = status.get("status", "unknown")
+        if daemon_status == "running":
+            print("Status: 🟢 Running")
+        elif daemon_status == "stopped":
+            print("Status: 🔴 Stopped")
+        else:
+            print(f"Status: ⚪ {daemon_status}")
+
+        # PID and process info
+        pid = status.get("pid")
+        if pid:
+            print(f"PID: {pid}")
+
+            # Check if process is actually running
+            import psutil
+
+            try:
+                process = psutil.Process(pid)
+                if process.is_running():
+                    print(
+                        f"Process: ✅ Running (CPU: {process.cpu_percent()}%, Memory: {process.memory_info().rss / 1024 / 1024:.1f} MB)"
+                    )
+                else:
+                    print("Process: ⚠️  Not running (stale status file)")
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                print("Process: ⚠️  Not found (stale status file)")
+
+        # Start time
+        started_at = status.get("started_at")
+        if started_at:
+            try:
+                start_dt = datetime.fromisoformat(started_at)
+                print(f"Started: {start_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+
+                # Calculate uptime
+                uptime = datetime.now() - start_dt
+                hours = int(uptime.total_seconds() // 3600)
+                minutes = int((uptime.total_seconds() % 3600) // 60)
+                print(f"Uptime: {hours}h {minutes}m")
+            except ValueError:
+                print(f"Started: {started_at}")
+
+        # Current priority
+        current_priority = status.get("current_priority")
+        if current_priority:
+            name = current_priority.get("name", "Unknown")
+            title = current_priority.get("title", "")
+            print(f"\nCurrent Priority: {name}")
+            if title:
+                print(f"  {title}")
+
+            priority_started = current_priority.get("started_at")
+            if priority_started:
+                try:
+                    priority_dt = datetime.fromisoformat(priority_started)
+                    elapsed = datetime.now() - priority_dt
+                    minutes = int(elapsed.total_seconds() // 60)
+                    print(f"  Working on this for: {minutes} minutes")
+                except ValueError:
+                    pass
+        else:
+            print("\nCurrent Priority: None (idle)")
+
+        # Iteration count
+        iteration = status.get("iteration", 0)
+        print(f"\nIteration: {iteration}")
+
+        # Crash info
+        crashes = status.get("crashes", {})
+        crash_count = crashes.get("count", 0)
+        max_crashes = crashes.get("max", 3)
+        print(f"Crashes: {crash_count}/{max_crashes}")
+
+        if crash_count > 0:
+            print("⚠️  Recent crashes detected!")
+            crash_history = crashes.get("history", [])
+            if crash_history:
+                print("\nRecent crash history:")
+                for i, crash in enumerate(crash_history[-3:], 1):
+                    timestamp = crash.get("timestamp", "Unknown")
+                    exception_type = crash.get("exception_type", "Unknown")
+                    print(f"  {i}. {timestamp} - {exception_type}")
+
+        # Context management info
+        context = status.get("context", {})
+        iterations_since_compact = context.get("iterations_since_compact", 0)
+        compact_interval = context.get("compact_interval", 10)
+        last_compact = context.get("last_compact")
+
+        print(f"\nContext Management:")
+        print(f"  Iterations since last compact: {iterations_since_compact}/{compact_interval}")
+        if last_compact:
+            try:
+                compact_dt = datetime.fromisoformat(last_compact)
+                print(f"  Last compact: {compact_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+            except ValueError:
+                print(f"  Last compact: {last_compact}")
+        else:
+            print("  Last compact: Never")
+
+        # Last update time
+        last_update = status.get("last_update")
+        if last_update:
+            try:
+                update_dt = datetime.fromisoformat(last_update)
+                time_since = datetime.now() - update_dt
+                seconds = int(time_since.total_seconds())
+                print(f"\nLast update: {seconds}s ago ({update_dt.strftime('%H:%M:%S')})")
+            except ValueError:
+                print(f"\nLast update: {last_update}")
+
+        return 0
+
+    except json.JSONDecodeError:
+        print("❌ Status file is corrupted")
+        print(f"\nFile: {status_file}")
+        return 1
+    except Exception as e:
+        print(f"❌ Error reading status: {e}")
+        return 1
+
+
+def cmd_developer_status(args):
+    """Show developer status dashboard.
+
+    PRIORITY 4: Developer Status Dashboard
+
+    Displays real-time developer status including current task, progress,
+    activities, and metrics.
+
+    Args:
+        args: Parsed command-line arguments with optional --watch flag
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager developer-status
+        $ project-manager developer-status --watch
+    """
+    from coffee_maker.cli.developer_status_display import DeveloperStatusDisplay
+
+    display = DeveloperStatusDisplay()
+
+    if hasattr(args, "watch") and args.watch:
+        # Continuous watch mode
+        display.watch(interval=args.interval if hasattr(args, "interval") else 5)
+    else:
+        # One-time display
+        if not display.show():
+            return 1
 
     return 0
 
@@ -270,6 +450,13 @@ def cmd_chat(args):
         import os
         import shutil
 
+        # Check if we're ALREADY running inside Claude CLI (Claude Code)
+        # If so, we MUST use API mode to avoid nesting
+        inside_claude_cli = bool(os.environ.get("CLAUDECODE") or os.environ.get("CLAUDE_CODE_ENTRYPOINT"))
+
+        if inside_claude_cli:
+            logger.info("Detected running inside Claude Code - forcing API mode to avoid nesting")
+
         # Auto-detect mode: CLI vs API (same logic as daemon)
         claude_path = "/opt/homebrew/bin/claude"
         has_cli = shutil.which("claude") or os.path.exists(claude_path)
@@ -277,7 +464,32 @@ def cmd_chat(args):
 
         use_claude_cli = False
 
-        if has_cli:
+        if inside_claude_cli:
+            # We're already in Claude CLI - MUST use API to avoid nesting
+            if has_api_key:
+                print("=" * 70)
+                print("ℹ️  Detected: Running inside Claude Code")
+                print("=" * 70)
+                print("🔄 Using Anthropic API to avoid CLI nesting")
+                print("💡 TIP: CLI nesting is not recommended")
+                print("=" * 70 + "\n")
+                use_claude_cli = False
+            else:
+                # No API key - can't proceed
+                print("=" * 70)
+                print("❌ ERROR: Running inside Claude Code without API key")
+                print("=" * 70)
+                print("\nYou're running project-manager chat from within Claude Code.")
+                print("To avoid CLI nesting, we need to use API mode.")
+                print("\n🔧 SOLUTION:")
+                print("  1. Get your API key from: https://console.anthropic.com/")
+                print("  2. Set the environment variable:")
+                print("     export ANTHROPIC_API_KEY='your-api-key-here'")
+                print("  3. Or add it to your .env file")
+                print("\n💡 ALTERNATIVE: Run from a regular terminal (not Claude Code)")
+                print("=" * 70 + "\n")
+                return 1
+        elif has_cli:
             # CLI available - use it as default (free with subscription!)
             print("=" * 70)
             print("ℹ️  Auto-detected: Using Claude CLI (default)")
@@ -402,6 +614,11 @@ Use 'project-manager chat' for the best experience!
     # Status command
     subparsers.add_parser("status", help="Show daemon status")
 
+    # Developer status command (PRIORITY 4)
+    dev_status_parser = subparsers.add_parser("developer-status", help="Show developer status dashboard")
+    dev_status_parser.add_argument("--watch", action="store_true", help="Continuous watch mode")
+    dev_status_parser.add_argument("--interval", type=int, default=5, help="Update interval in seconds (default: 5)")
+
     # Notifications command
     subparsers.add_parser("notifications", help="List pending notifications")
 
@@ -426,6 +643,7 @@ Use 'project-manager chat' for the best experience!
     commands = {
         "view": cmd_view,
         "status": cmd_status,
+        "developer-status": cmd_developer_status,  # PRIORITY 4
         "notifications": cmd_notifications,
         "respond": cmd_respond,
         "sync": cmd_sync,

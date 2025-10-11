@@ -79,25 +79,18 @@ The daemon operates autonomously by:
 
 ### Example: Well-Prioritized Roadmap
 
-```markdown
-## 🔴 TOP PRIORITY FOR code_developer (START HERE)
-PRIORITY 2: Project Manager with UI ← Current focus
-
-### PRIORITY 1: Analytics ✅ Complete
-### PRIORITY 1.5: Database Sync ✅ Complete
-### PRIORITY 2: Project Manager CLI ✅ Complete (Phase 2)
-### PRIORITY 2.5: UX Documentation ✅ Complete
-### PRIORITY 2.6: Daemon Fix Verification 📝 Planned
-### PRIORITY 2.7: Daemon Crash Recovery 📝 Planned
-### PRIORITY 3: code_developer ✅ Complete
-### PRIORITY 5: Streamlit Analytics Dashboard 📝 Planned
-### PRIORITY 5.5: Streamlit Error Dashboard 📝 Planned
-### PRIORITY 6: Streamlit Agent UI ✅ Complete
-### PRIORITY 6.5: GCP Deployment 📝 Planned ← After Streamlit apps
-### PRIORITY 7: Professional Documentation ✅ Complete
-### PRIORITY 8: Multi-AI Provider Support 📝 Planned
-### PRIORITY 9: Enhanced Communication 📝 Planned
 ```
+## 🔴 TOP PRIORITY FOR code_developer (START HERE)
+US-XXX: Example Feature ← Current focus
+
+### US-001: Example Feature A ✅ Complete
+### US-002: Example Feature B ✅ Complete
+### US-003: Example Feature C 📝 Planned ← Next to implement
+### US-004: Example Feature D 📝 Planned
+### US-005: Example Feature E 📝 Planned
+```
+
+**Note**: Use actual user story IDs (like US-022, US-023) not PRIORITY X numbers to avoid parser confusion.
 
 **Remember**: The daemon trusts this roadmap completely. Keep it organized, prioritized, and up-to-date! 🎯
 
@@ -105,107 +98,170 @@ PRIORITY 2: Project Manager with UI ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
-**Project**: **🧠 US-014 - Intelligent Request Categorization and Document Routing**
+**Next Priority**: To be determined (check roadmap for next planned priority)
 
-**Status**: 📝 **READY TO IMPLEMENT** (Spec approved 2025-10-10)
+**Status Update**:
+- PRIORITY 2.11 (Bug Workflow): ✅ Part 1 Complete (project-manager side)
+  - Bug ticket creation system implemented
+  - Natural language bug detection added
+  - User notifications working
+  - Branch: feature/priority-2.11-bug-workflow
+  - Commit: 6ccd981
 
-**Goal**: Build intelligent classification system that automatically detects whether user input is a feature request, methodology change, or both, and routes information to the correct documents
+- PRIORITY 2.9.5 (Assistant Integration): ✅ COMPLETE (2025-10-11)
+  - LangChain-powered assistant with 6 tools
+  - Transparent action streaming to user
+  - Seamless integration into project-manager chat
+  - Falls back gracefully if assistant unavailable
+  - Commit: 56157ee
 
-**Why This Is Critical**:
-Currently PM doesn't consistently identify what type of information users are providing:
-- Feature requests may be documented as methodology changes (or vice versa)
-- Information gets lost or placed in wrong documents
-- No clear process for handling hybrid requests (both feature + methodology)
-- PM doesn't ask clarifying questions when ambiguous
+---
 
-**User Story**:
-> "As a project manager, I need to be able to interpret the user's context: what part of what he is saying are user stories, and what parts concerns the collaboration methodologies, or both. I can ask him to make sure I understood as I need to get sure which documents should be updated (roadmap, collaboration methodology, etc)"
+## ✅ RECENTLY COMPLETED: Critical Daemon Bug Fixes (2025-10-11)
 
-**Implementation Plan** (3-5 days):
+**Project**: **🚨 BUG FIXES - Critical code_developer Bugs**
 
-**Phase 1: Core Classification Engine** (Day 1 - 6 hours)
-- [ ] Create `RequestClassifier` class with keyword matching
-- [ ] Implement pattern detection (imperative vs prescriptive mood)
-- [ ] Build confidence scoring algorithm
-- [ ] Write comprehensive unit tests (>90% coverage)
-- [ ] Test 20+ classification scenarios
+**Status**: ✅ **COMPLETE** (Completed: 2025-10-11)
 
-**Phase 2: AI Service Integration** (Day 2 - 4 hours)
-- [ ] Integrate classifier into `ai_service.py`
-- [ ] Add clarification prompt generation (A/B/C format)
-- [ ] Implement routing logic based on classification
-- [ ] Add explicit document update statements
-- [ ] Write integration tests
+**Critical Bugs Fixed**:
 
-**Phase 3: Document Routing** (Day 3 - 6 hours)
-- [ ] Create `DocumentRouter` class
-- [ ] Implement ROADMAP.md update logic
-- [ ] Implement COLLABORATION_METHODOLOGY.md update logic
-- [ ] Add format validation
-- [ ] Handle hybrid requests (update both docs)
+### Bug 1: Daemon Stops and Waits for Approval ✅
+**Problem**: Daemon asked for user approval before implementing each priority
+**Expected**: Daemon should be fully autonomous (--auto-approve should be default)
+**Fix**: ✅ FIXED
+- Updated `ProcessManager.start_daemon()` to always include `--auto-approve` flag
+- Enhanced process detection to require `--auto-approve` flag
+- Updated daemon detection logic to distinguish autonomous daemon from interactive sessions
+- Commit: 491a438
+- Files: `coffee_maker/process_manager.py`
 
-**Phase 4: Testing & Documentation** (Day 4-5 - 8 hours)
-- [ ] End-to-end testing with real documents
-- [ ] Test all edge cases
-- [ ] Update documentation (4 docs)
-- [ ] User validation with 10+ test inputs
-- [ ] Mark US-014 complete
+### Bug 2: Daemon Doesn't Sync Roadmap Branch ✅
+**Problem**: Daemon never pulled/merged roadmap branch, worked with stale priorities
+**Expected**: Before each iteration, daemon should sync with roadmap branch
+**Fix**: ✅ ALREADY IMPLEMENTED
+- `_sync_roadmap_branch()` method implemented in daemon.py (lines 380-441)
+- Called at start of each iteration (line 206)
+- Fetches origin/roadmap and merges automatically
+- Handles conflicts gracefully with abort + notification
 
-**Success Criteria** (19 acceptance criteria from US-014):
+### Bug 3: Daemon Doesn't Check for Technical Specs ✅
+**Problem**: Daemon started implementing without checking if technical spec exists
+**Expected**: Before implementing, check if spec exists
+**Fix**: ✅ ALREADY IMPLEMENTED
+- `_ensure_technical_spec()` method implemented in daemon.py (lines 443-505)
+- Called before implementation (line 228)
+- Validates spec existence before proceeding
 
-**Detection & Classification**:
-- [ ] PM analyzes user input to detect type: feature, methodology, or both
-- [ ] PM uses contextual clues (keywords, phrasing, intent) to classify
-- [ ] PM correctly identifies ambiguous requests requiring clarification
+### Bug 4: Daemon Doesn't Create Specs When Missing ✅
+**Problem**: When spec was missing, daemon just proceeded without creating it
+**Expected**: If spec doesn't exist, create it first
+**Fix**: ✅ ALREADY IMPLEMENTED
+- Spec creation workflow in `_ensure_technical_spec()` method
+- Uses `_build_spec_creation_prompt()` to generate comprehensive specs
+- Commits spec before implementation begins
 
-**Clarifying Questions**:
-- [ ] When ambiguous, PM asks: "Is this a feature to build, or a process change?"
-- [ ] PM presents options clearly (A/B/C format)
-- [ ] PM explains why question matters (which docs get updated)
-- [ ] User can respond naturally, PM interprets the response
+---
 
-**Document Routing**:
-- [ ] Feature requests → ROADMAP.md (user stories)
-- [ ] Methodology changes → COLLABORATION_METHODOLOGY.md (process updates)
-- [ ] Hybrid requests → Both documents (cross-referenced)
-- [ ] PM explicitly states which documents will be updated before doing so
+## 🚨 US-022 - Automatic Roadmap Synchronization (SPEC FOR BUG 2)
 
-**Technical Specification**: See `docs/US-014_TECHNICAL_SPEC.md` (1,343 lines)
+**Status**: 📝 **PLANNED** - Spec for Bug Fix #2 above
 
-**Files to Create**:
-- `coffee_maker/cli/request_classifier.py` (new - ~250 lines)
-- `coffee_maker/cli/document_router.py` (new - ~200 lines)
-- `tests/test_request_classifier.py` (new - ~300 lines)
-- `tests/test_document_router.py` (new - ~200 lines)
-- `tests/test_e2e_request_classification.py` (new - ~150 lines)
+**Goal**: Enable code_developer and project_manager to synchronize roadmap via the 'roadmap' branch on GitHub, ensuring all team members always work with the latest roadmap
+
+**Why This Is EXTREMELY URGENT**:
+From a technical point of view, it is **critical** that project_manager and code_developer exchange roadmap updates via the 'roadmap' branch:
+- ❌ code_developer currently works with stale roadmap data for hours/days
+- ❌ project_manager updates aren't visible to code_developer during long feature branches
+- ❌ **Each time they want to modify the roadmap, they MUST do a pull first**
+- ❌ Without this, we get massive conflicts and wasted work on obsolete priorities
+- ✅ This MUST be the absolute top technical priority
+
+**User Stories** (Multiple stakeholders):
+> "As a code_developer I need to merge roadmap branch into mine frequently in order to always be aware of my next priorities"
+
+> "As a project_manager I need the code-developer to always be aware of the last up to date roadmap, therefore I need him to pull the branch roadmap frequently"
+
+> "Each time they want to read or modify the roadmap they will have to do a pull first" (à chaque fois qu'ils voudront lire ou modifier la roadmap il leur faudra faire un pull avant)
+
+**Implementation Plan** (0.5 days = 4 hours):
+
+**Phase 1: Sync Detection** (1 hour)
+- [ ] Check if 'roadmap' branch has new commits since last sync
+- [ ] Compare ROADMAP.md timestamps between local and origin/roadmap
+- [ ] Detect when sync is needed (every N iterations or when ROADMAP changed)
+
+**Phase 2: Automatic Merge from 'roadmap' Branch** (1.5 hours)
+- [ ] Implement `git fetch origin roadmap`
+- [ ] Implement `git merge origin/roadmap` in daemon's current branch
+- [ ] Handle merge conflicts automatically for safe files (ROADMAP.md, docs/*)
+- [ ] Abort and notify user if complex conflicts occur
+
+**Phase 3: Roadmap Reload** (0.5 hours)
+- [ ] After successful merge, reload RoadmapParser
+- [ ] Re-evaluate current priority (may have changed!)
+- [ ] Log sync activity for audit trail
+- [ ] Notify if priority changed during sync
+
+**Phase 4: Configuration & Safety** (1 hour)
+- [ ] Add `sync_interval` config (default: every 10 iterations or 30 minutes)
+- [ ] Add `auto_sync_enabled` flag (default: true)
+- [ ] Add safety checks (don't sync during active git operations)
+- [ ] Add notification on successful sync
+
+**Success Criteria**:
+- [ ] code_developer syncs with 'roadmap' branch every 10 iterations (or 30 minutes)
+- [ ] project_manager syncs with 'roadmap' branch before reading/modifying roadmap
+- [ ] ROADMAP.md changes from 'roadmap' branch are pulled automatically
+- [ ] Daemon reloads roadmap after sync
+- [ ] Daemon re-evaluates priority after sync (may switch tasks!)
+- [ ] Clean merges happen automatically
+- [ ] Conflicts trigger user notification
+- [ ] Sync activity logged to daemon.log
+- [ ] Can be disabled via config if needed
 
 **Files to Modify**:
-- `coffee_maker/cli/ai_service.py` (~150 lines added)
-- `docs/COLLABORATION_METHODOLOGY.md` (already updated with Section 3.2.1)
+- `coffee_maker/autonomous/daemon.py` (~50 lines added to main loop)
+- `coffee_maker/cli/roadmap_cli.py` (~30 lines for sync before read/modify)
+- `config.yaml.example` (add sync_interval, auto_sync_enabled)
+- `coffee_maker/autonomous/git_manager.py` (~30 lines for sync methods)
 
 **Key Technical Decisions**:
-- ✅ Rule-based classification (not ML) - fast, explainable, maintainable
-- ✅ Confidence thresholds: >80% (auto), 50-80% (mention), <50% (ask)
-- ✅ Keyword dictionaries for each category + pattern detection
-- ✅ Classification completes in <100ms
+- ✅ Sync from 'roadmap' branch (dedicated branch for roadmap updates)
+- ✅ Sync every 10 iterations OR 30 minutes (whichever comes first)
+- ✅ Auto-merge safe files (docs/*), abort on complex conflicts
+- ✅ Reload roadmap after every successful sync
+- ✅ Re-evaluate priority after sync (may switch to new top priority)
 
-**Target Accuracy**:
-- Feature detection: >92%
-- Methodology detection: >92%
-- Hybrid detection: >85%
-- Overall accuracy: >90%
+**Configuration**:
+```yaml
+# config.yaml
+daemon:
+  # Roadmap sync settings
+  auto_sync_enabled: true         # Enable automatic sync from 'roadmap' branch
+  sync_interval: 30               # Minutes between syncs (minimum)
+  sync_every_n_iterations: 10     # Sync every N iterations
+```
 
 **Recent Completions**:
 ✅ US-009: Process Management & Status Monitoring (2025-10-10)
 ✅ US-010: Living Documentation & Tutorials (2025-10-10)
 
+**Recent Bug Fixes** (2025-10-11):
+🔧 **CLI Nesting Detection**: Fixed `project-manager chat` to detect when running inside Claude Code and automatically use API mode instead of CLI mode to prevent nesting issues. Previously, running `project-manager chat` from within Claude Code would cause Claude CLI to call Claude CLI (nesting), which could lead to unexpected behavior. Now detects `CLAUDECODE` or `CLAUDE_CODE_ENTRYPOINT` environment variables and switches to API mode with clear user messaging.
+   - Branch: `fix/cli-nesting-detection`
+   - Files modified: `coffee_maker/cli/roadmap_cli.py` (lines 273-314)
+   - Impact: Prevents CLI nesting issues for users running project-manager from Claude Code
+
 **Next After US-014** (Priority Order):
-1. **US-016**: Technical Spec Generation with Task-Level Estimates (4-5 days) - NEXT PRIORITY
-2. US-015: Estimation Metrics & Velocity Tracking (3-4 days)
-3. US-017: Summary & Calendar of Deliverables (5-7 days)
-4. US-012/US-013: `/US` Command for natural user story creation
-5. US-007: IDE Code Completion (developer productivity)
-6. PRIORITY 2.6: CI Testing (ensure daemon stability)
+1. **US-022**: Automatic Roadmap Sync for code_developer (0.5 days) - **🚨 EXTREMELY URGENT - TOP PRIORITY**
+2. **US-023**: Document Index Enhancement (0.25 days) - **HIGH IMPACT**
+3. **US-024**: Working Directory Conflict Prevention (0.5 days) - **HIGH IMPACT - CRITICAL**
+4. **US-016**: Technical Spec Generation with Task-Level Estimates (4-5 days)
+5. US-015: Estimation Metrics & Velocity Tracking (3-4 days)
+6. US-017: Summary & Calendar of Deliverables (5-7 days)
+7. US-012/US-013: `/US` Command for natural user story creation
+8. US-007: IDE Code Completion (developer productivity)
+9. PRIORITY 2.6: CI Testing (ensure daemon stability)
 
 ---
 
@@ -233,6 +289,391 @@ Currently PM doesn't consistently identify what type of information users are pr
 - ✅ TUTORIALS.md (7 practical tutorials)
 - ✅ Updated COLLABORATION_METHODOLOGY.md (all user stories documented)
 - ✅ Updated QUICKSTART_PROJECT_MANAGER.md (US-009 features)
+
+---
+
+## 🚨 CRITICAL: US-022 - Automatic Roadmap Sync for code_developer
+
+**Project**: **🔄 US-022 - Automatic Roadmap Synchronization for Daemon**
+
+**As a**: code_developer (autonomous daemon)
+**I want**: To automatically merge main branch into my feature branch frequently
+**So that**: I'm always aware of my next priorities and roadmap changes while working
+
+**Business Value**: ⭐⭐⭐⭐⭐ (Critical - prevents daemon from working on obsolete priorities)
+**Estimated Effort**: 0.5 days (4 hours)
+**Status**: 📝 **PLANNED** (Created: 2025-10-11)
+
+**The Problem**:
+
+Currently, code_developer works on feature branches for extended periods (hours/days) while implementing priorities. During this time:
+- The PM may update ROADMAP.md on 'roadmap' branch (new priorities, changed requirements)
+- The user may reprioritize work
+- Other team members may merge documentation changes to 'roadmap' branch
+- code_developer continues working with **stale roadmap** data
+
+**Real-World Impact**:
+- ❌ Daemon implements feature that was deprioritized hours ago
+- ❌ Daemon misses critical priority changes
+- ❌ Massive merge conflicts when finally merging to main
+- ❌ Wasted effort on obsolete work
+
+**User Story Context** (2025-10-11):
+> "As a code_developer I need to merge roadmap branch into mine frequently in order to always be aware of my next priorities"
+
+**Solution**: Automatic Periodic Sync from 'roadmap' branch
+
+**Implementation**:
+
+**Phase 1: Sync Detection** (1 hour)
+- [ ] Check if 'roadmap' branch has new commits since last sync
+- [ ] Compare ROADMAP.md timestamps between local and origin/roadmap
+- [ ] Detect when sync is needed (every N iterations or when ROADMAP changed)
+
+**Phase 2: Automatic Merge** (1.5 hours)
+- [ ] Implement `git fetch origin roadmap`
+- [ ] Implement `git merge origin/roadmap` in daemon's current branch
+- [ ] Handle merge conflicts automatically for safe files (ROADMAP.md, docs/*)
+- [ ] Abort and notify user if complex conflicts occur
+
+**Phase 3: Roadmap Reload** (0.5 hours)
+- [ ] After successful merge, reload RoadmapParser
+- [ ] Re-evaluate current priority (may have changed!)
+- [ ] Log sync activity for audit trail
+
+**Phase 4: Configuration & Safety** (1 hour)
+- [ ] Add `sync_interval` config (default: every 10 iterations or 30 minutes)
+- [ ] Add `auto_sync_enabled` flag (default: true)
+- [ ] Add safety checks (don't sync during active git operations)
+- [ ] Add notification on successful sync
+
+**Acceptance Criteria**:
+- [ ] Daemon syncs with 'roadmap' branch every 10 iterations (or 30 minutes)
+- [ ] ROADMAP.md changes from 'roadmap' branch are pulled automatically
+- [ ] Daemon reloads roadmap after sync
+- [ ] Daemon re-evaluates priority after sync (may switch tasks!)
+- [ ] Clean merges happen automatically
+- [ ] Conflicts trigger user notification
+- [ ] Sync activity logged to daemon.log
+- [ ] Can be disabled via config if needed
+
+**Files to Modify**:
+- `coffee_maker/autonomous/daemon.py` (~50 lines added to main loop)
+- `config.yaml.example` (add sync_interval, auto_sync_enabled)
+- `coffee_maker/autonomous/git_manager.py` (~30 lines for sync methods)
+
+**Workflow Example**:
+
+```python
+# In daemon main loop (daemon.py)
+iteration = 0
+last_sync_time = time.time()
+
+while self.running:
+    iteration += 1
+
+    # Sync every 10 iterations or 30 minutes
+    if (iteration % 10 == 0) or (time.time() - last_sync_time > 1800):
+        logger.info("Syncing with 'roadmap' branch...")
+        if self.git.sync_from_roadmap():
+            # Successful sync - reload roadmap
+            self.parser = RoadmapParser(str(self.roadmap_path))
+            last_sync_time = time.time()
+            logger.info("✅ Synced with 'roadmap' branch, roadmap reloaded")
+        else:
+            # Conflict or error
+            logger.warning("⚠️ Sync failed - manual intervention needed")
+            self._notify_sync_conflict()
+
+    # Continue with normal iteration
+    next_priority = self.parser.get_next_planned_priority()
+    # ...
+```
+
+**Workflow for Team Members**:
+
+**To READ roadmap** (code_developer, project_manager, assistant):
+1. `git fetch origin roadmap`
+2. `git merge origin/roadmap` (pull and merge)
+3. Reload RoadmapParser to get latest data
+
+**To WRITE to roadmap** (project_manager, assistant):
+1. `git fetch origin roadmap`
+2. `git merge origin/roadmap` (get latest first!)
+3. Modify ROADMAP.md locally
+4. `git add docs/ROADMAP.md`
+5. `git commit -m "docs: update roadmap"`
+6. `git push origin HEAD:roadmap` (push and merge to roadmap branch)
+7. Or use `scripts/merge_roadmap_pr.py` for automated PR workflow
+
+**Why This is Critical**:
+
+1. **Up-to-date priorities**: Daemon never works on obsolete tasks
+2. **Reduced conflicts**: Small frequent syncs vs massive conflicts later
+3. **User confidence**: Users can update roadmap anytime, daemon adapts
+4. **Efficiency**: No wasted work on deprioritized features
+5. **Audit trail**: Clear log of when syncs occurred
+
+**Configuration**:
+
+```yaml
+# config.yaml
+daemon:
+  # Roadmap sync settings
+  auto_sync_enabled: true         # Enable automatic sync from 'roadmap' branch
+  sync_interval: 30               # Minutes between syncs (minimum)
+  sync_every_n_iterations: 10     # Sync every N iterations
+```
+
+**Edge Cases**:
+
+1. **Merge Conflict**: Abort sync, notify user, continue with current priority
+2. **Network Error**: Log warning, retry next iteration
+3. **Mid-Implementation**: Don't sync during active file writing
+4. **No Changes**: Fast-forward merge, no reload needed
+
+**Success Metrics**:
+- Daemon never implements deprioritized work
+- Merge conflicts reduced by 80%
+- Roadmap staleness < 30 minutes
+- Zero manual sync interventions needed
+
+**Documentation Updates**:
+- COLLABORATION_METHODOLOGY.md: Add Section 5.X "Daemon Roadmap Sync Workflow"
+- QUICKSTART_DAEMON.md: Explain auto-sync behavior
+- config.yaml.example: Document sync settings
+
+---
+
+## 🚨 HIGH IMPACT: US-023 - Document Index Enhancement for Team Members
+
+**Project**: **📚 US-023 - Enhanced Documentation Index with Role-Based Guidance**
+
+**As a**: Team member (project_manager, code_developer, assistant)
+**I want**: A document that clearly explains what documents are useful for me and what is their content
+**So that**: I can quickly find the right documentation for my role and current task
+
+**Business Value**: ⭐⭐⭐⭐ (High - improves team efficiency and onboarding)
+**Estimated Effort**: 0.25 days (2 hours)
+**Status**: 📝 **PLANNED** (Created: 2025-10-11)
+
+**The Problem**:
+
+Currently, DOCUMENTATION_INDEX.md exists (from US-010) but may not provide sufficient role-based guidance:
+- Team members don't know which documents are relevant for their role
+- No clear "when to use this document" guidance
+- No examples of common scenarios → document mapping
+- No search or quick reference guide
+
+**User Story Context** (2025-10-11):
+> "As a team member I need a document that explains what documents are useful for me and what is their content"
+
+**Solution**: Enhance DOCUMENTATION_INDEX.md with Role-Based Guide
+
+**Implementation Plan** (2 hours):
+
+**Phase 1: Role-Based Organization** (45 minutes)
+- [ ] Add "For project_manager" section with relevant docs
+- [ ] Add "For code_developer" section with relevant docs
+- [ ] Add "For assistant" section with relevant docs
+- [ ] Add "For external contributors" section
+
+**Phase 2: Scenario-Based Quick Reference** (45 minutes)
+- [ ] Add "Common Scenarios" section:
+  * "I want to add a new feature" → Which docs to read
+  * "I need to understand team processes" → Which docs to read
+  * "I want to fix a bug" → Which docs to read
+  * "I need to update the roadmap" → Which docs to read
+- [ ] Add search tips and keyword index
+
+**Phase 3: Enhanced Document Descriptions** (30 minutes)
+- [ ] For each document, add:
+  * **Purpose**: What is this document for?
+  * **Audience**: Who should read this?
+  * **When to use**: In what situations?
+  * **Key sections**: What are the most important parts?
+  * **Related docs**: Links to related documentation
+
+**Acceptance Criteria**:
+- [ ] Each team role has clear list of relevant documents
+- [ ] Common scenarios mapped to specific documents
+- [ ] Each document has purpose, audience, and when-to-use guidance
+- [ ] Quick reference table for fast lookup
+- [ ] Search keywords provided for finding information
+- [ ] New team members can navigate docs within 5 minutes
+
+**Files to Modify**:
+- `docs/DOCUMENTATION_INDEX.md` (~100-150 lines added)
+
+**Example Enhancement**:
+
+```markdown
+## For project_manager
+
+### Essential Documents
+1. **ROADMAP.md** - Your primary workspace
+   - **Purpose**: Single source of truth for priorities
+   - **When to use**: Daily - check priorities, update status
+   - **Key sections**: TOP PRIORITY, priority list, user stories
+
+2. **COLLABORATION_METHODOLOGY.md** - Team processes
+   - **Purpose**: How the team works together
+   - **When to use**: When unsure about process, creating new workflows
+   - **Key sections**: Section 2.4 (spec before estimate), Section 9.3 (roadmap updates)
+
+### Common Scenarios
+- **"User requested a new feature"** → Read ROADMAP.md, create user story, use /US command
+- **"Need to update methodology"** → Read COLLABORATION_METHODOLOGY.md, update relevant section
+```
+
+**Why This Has High Impact**:
+1. **Faster onboarding**: New team members productive in hours, not days
+2. **Reduced confusion**: Clear role-based guidance
+3. **Better decisions**: Know which document to check for what
+4. **Time savings**: No hunting through docs to find information
+
+---
+
+## 🚨 HIGH IMPACT: US-024 - Working Directory Conflict Prevention
+
+**Project**: **🔒 US-024 - Concurrent Work Detection and Conflict Prevention**
+
+**As a**: project_manager
+**I want**: To ensure the user is not working in my working directory and making changes
+**So that**: We don't both get confused by concurrent modifications
+
+**Business Value**: ⭐⭐⭐⭐⭐ (Critical - prevents data loss and confusion)
+**Estimated Effort**: 0.5 days (4 hours)
+**Status**: 📝 **PLANNED** (Created: 2025-10-11)
+
+**The Problem**:
+
+Multiple team members (or user + agent) may work in the same git repository simultaneously:
+- User edits ROADMAP.md while project_manager is updating it
+- code_developer modifies files while user is testing
+- Results in:
+  * Lost changes (overwrites)
+  * Confusing git status
+  * Merge conflicts
+  * Wasted work
+
+**User Story Context** (2025-10-11):
+> "As a project_manager I need to get sure the user is not working in my working directory and making any change to the directory I am working in: otherwise we will both get confused"
+
+**Solution**: Lock File + Change Detection System
+
+**Implementation Plan** (4 hours):
+
+**Phase 1: Lock File Mechanism** (1.5 hours)
+- [ ] Create `.coffee_maker/locks/` directory
+- [ ] Implement `WorkspaceLock` class:
+  * Create lock file when agent starts work
+  * Lock file contains: agent name, PID, start time, files being modified
+  * Release lock when agent finishes
+  * Auto-release stale locks (>1 hour old, PID not running)
+- [ ] Add lock checking to all write operations
+
+**Phase 2: Change Detection** (1.5 hours)
+- [ ] Implement `ChangeDetector` class:
+  * Monitor file timestamps before starting work
+  * Compare timestamps before writing
+  * Detect if file was modified externally
+- [ ] Add warning messages:
+  * "⚠️ User is currently editing ROADMAP.md - waiting..."
+  * "⚠️ File was modified externally - reloading..."
+
+**Phase 3: Conflict Resolution Guidance** (1 hour)
+- [ ] When conflict detected:
+  * Show clear message explaining what happened
+  * Suggest resolution steps
+  * Offer to reload and retry
+  * Offer to notify other party
+- [ ] Add to COLLABORATION_METHODOLOGY.md Section 2.9
+
+**Acceptance Criteria**:
+- [ ] Lock file created when agent starts modifying files
+- [ ] Lock file checked before any write operation
+- [ ] Clear warning if another party holds lock
+- [ ] Stale locks auto-released after 1 hour
+- [ ] File timestamps checked before writing
+- [ ] Warning if file was modified externally
+- [ ] Guidance provided for conflict resolution
+- [ ] Locks survive process crashes (PID-based cleanup)
+- [ ] Multiple agents can read simultaneously (read-write lock pattern)
+
+**Files to Create**:
+- `coffee_maker/cli/workspace_lock.py` (~150 lines)
+- `coffee_maker/cli/change_detector.py` (~100 lines)
+- `tests/test_workspace_lock.py` (~150 lines)
+
+**Files to Modify**:
+- `coffee_maker/cli/roadmap_cli.py` (~30 lines - add lock/unlock calls)
+- `coffee_maker/cli/roadmap_editor.py` (~40 lines - check locks before write)
+- `coffee_maker/autonomous/daemon.py` (~30 lines - acquire lock on start)
+- `docs/COLLABORATION_METHODOLOGY.md` (add Section 2.9)
+
+**Key Technical Decisions**:
+- ✅ File-based locks (simple, works across processes)
+- ✅ PID-based lock ownership (auto-cleanup on crash)
+- ✅ Per-file locks (granular, allows concurrent work on different files)
+- ✅ Read-write lock pattern (multiple readers, single writer)
+- ✅ 1-hour timeout for stale locks
+
+**Lock File Example**:
+
+```json
+// .coffee_maker/locks/ROADMAP.md.lock
+{
+  "agent": "project_manager",
+  "pid": 12345,
+  "start_time": "2025-10-11T10:30:00Z",
+  "files": ["docs/ROADMAP.md"],
+  "lock_type": "write"
+}
+```
+
+**Workflow Example**:
+
+```python
+# In roadmap_editor.py
+def save_roadmap(self):
+    # Check for lock
+    lock = WorkspaceLock("ROADMAP.md")
+
+    if not lock.acquire(timeout=5):
+        print("⚠️ ROADMAP.md is currently being edited by another team member")
+        print("   Lock held by: code_developer (PID 12345)")
+        print("   Waiting...")
+        return False
+
+    try:
+        # Check for external modifications
+        if self.change_detector.was_modified_externally("ROADMAP.md"):
+            print("⚠️ ROADMAP.md was modified externally")
+            print("   Reloading...")
+            self.reload()
+
+        # Safe to write
+        self.write_roadmap()
+        print("✅ ROADMAP.md updated successfully")
+
+    finally:
+        lock.release()
+```
+
+**Why This Has High Impact**:
+1. **Prevents data loss**: No more overwritten changes
+2. **Avoids confusion**: Clear who is working on what
+3. **Automatic conflict avoidance**: As user requested
+4. **Team coordination**: Agents and users can coexist safely
+5. **Crash-safe**: Locks automatically cleaned up
+
+**User's Constraint** (2025-10-11):
+> "We must absolutely avoid conflicts, or they must know how to resolve them" (on doit absolument éviter les conflits, ou bien qu'ils sachent les résoudre)
+
+This user story addresses BOTH:
+- ✅ AVOIDS conflicts through locking mechanism
+- ✅ RESOLVES conflicts when they occur with clear guidance
 
 ---
 
@@ -5990,13 +6431,14 @@ code-developer back to CSV export feature."
 
 ---
 
-## 📦 PRIORITY 3: PyPI Package & Binaries
+## 📦 PRIORITY 3: PyPI Package & Binaries ✅ COMPLETE
 
 **Goal**: Package coffee-maker as installable PyPI package with `project-manager` and `code-developer` command-line tools
 
 **Duration**: 1 day (4-8 hours)
 **Dependencies**: PRIORITY 1 (Daemon core), PRIORITY 2 (PM CLI core)
-**Status**: 📝 Planned
+**Status**: ✅ Complete (Dev Mode - 2025-10-11)
+**Note**: Package is functional in development mode. PyPI publishing pending for production release.
 
 ### Why This Is Critical
 
@@ -6691,7 +7133,7 @@ Users can now install:
 
 **Duration**: 1-2 days (6-12 hours)
 **Dependencies**: PRIORITY 1 (Daemon), PRIORITY 2 (PM CLI), PRIORITY 3 (Package & Binaries)
-**Status**: 📝 Planned
+**Status**: ✅ Complete (2025-10-11)
 
 ### Why This Is Critical
 
@@ -7062,6 +7504,542 @@ class DeveloperStatusDisplay:
 ---
 
 **This gives the user complete visibility into what the autonomous developer is doing, removing the "black box" feeling and building trust!** 📊🤖
+
+---
+
+## 📡 PRIORITY 4.1: Real-Time Developer Heartbeat UI Integration
+
+**Goal**: Add guaranteed heartbeat system with auto-refreshing status widget in project-manager chat UI
+
+**Duration**: 4-6 hours
+**Dependencies**: PRIORITY 4 (Developer Status Dashboard)
+**Status**: 📝 Planned
+
+### Why This Is Critical
+
+PRIORITY 4 delivered excellent status tracking infrastructure, but currently:
+- ❌ User must manually run `project-manager developer-status` to see status
+- ❌ No guaranteed heartbeat - developer could be stuck without notification
+- ❌ Status is not always visible in chat UI
+- ❌ No automatic detection when developer goes silent
+
+**This priority makes status truly real-time**: Always visible, always current, always reliable!
+
+---
+
+### Core Features
+
+#### 1. Guaranteed Heartbeat System
+
+**Daemon sends heartbeat every hour minimum**:
+```python
+# In code-developer daemon
+class DevDaemon:
+    def __init__(self):
+        self.last_heartbeat = None
+        self.heartbeat_interval = 3600  # 1 hour in seconds
+
+    def run(self):
+        """Main daemon loop with guaranteed heartbeat."""
+        while True:
+            # ... existing daemon logic ...
+
+            # Guarantee heartbeat every hour
+            if not self.last_heartbeat or \
+               (time.time() - self.last_heartbeat) >= self.heartbeat_interval:
+                self._send_heartbeat()
+                self.last_heartbeat = time.time()
+
+    def _send_heartbeat(self):
+        """Send heartbeat with current status."""
+        self.developer_status.update_status(
+            self.current_state,
+            task=self.current_task,
+            progress=self.current_progress,
+            current_step=self.current_step
+        )
+        logger.info(f"💓 Heartbeat sent: {self.current_state} - {self.current_progress}%")
+```
+
+**Heartbeat includes**:
+- Current task name and priority
+- Progress percentage (0-100%)
+- Current step description
+- ETA in seconds
+- Timestamp for staleness detection
+
+#### 2. Auto-Refreshing Status Widget
+
+**Always-visible status panel at top of chat interface**:
+```
+┌─────────────────────────────────────────────────────────┐
+│ 🤖 DEVELOPER: 🟢 WORKING (60%)                          │
+│ Task: PRIORITY 5 - Frontend Dashboard                   │
+│ Progress: ████████████░░░░░░░░ 60% | ETA: 1h 30m       │
+│ Last heartbeat: 2m ago                                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Updates every 30 seconds automatically**:
+- Non-blocking background thread reads `data/developer_status.json`
+- Updates display without interrupting user typing
+- Visual indicator when heartbeat is stale (> 5 minutes old)
+- Error state when no heartbeat for > 15 minutes
+
+**Integration in chat UI**:
+- Status widget appears at top of chat panel
+- Uses Rich library for color-coded formatting
+- Compact single-line view with expandable details
+- Click/keypress to expand full status view
+
+#### 3. Stale Heartbeat Detection
+
+**Multi-level warning system**:
+```python
+# In DeveloperStatusDisplay
+class HeartbeatMonitor:
+    WARN_THRESHOLD = 300    # 5 minutes
+    ALERT_THRESHOLD = 900   # 15 minutes
+
+    def check_heartbeat_health(self, last_heartbeat_time: str) -> str:
+        """Check if heartbeat is stale."""
+        elapsed = time.time() - datetime.fromisoformat(last_heartbeat_time).timestamp()
+
+        if elapsed < self.WARN_THRESHOLD:
+            return "healthy"  # 🟢 Green
+        elif elapsed < self.ALERT_THRESHOLD:
+            return "stale"    # 🟡 Yellow - Show warning
+        else:
+            return "critical" # 🔴 Red - Show alert
+```
+
+**Warning display**:
+```
+┌─────────────────────────────────────────────────────────┐
+│ 🤖 DEVELOPER: 🟡 STALE (60%)                            │
+│ Task: PRIORITY 5 - Frontend Dashboard                   │
+│ ⚠️  No heartbeat for 7 minutes - may be stuck          │
+│ Last heartbeat: 7m ago                                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Alert display**:
+```
+┌─────────────────────────────────────────────────────────┐
+│ 🤖 DEVELOPER: 🔴 SILENT (60%)                           │
+│ Task: PRIORITY 5 - Frontend Dashboard                   │
+│ ❌ No heartbeat for 18 minutes - likely crashed        │
+│ Actions: Check logs | Restart daemon                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### 4. Background Refresh Thread
+
+**Non-blocking status updates**:
+```python
+# In project-manager chat CLI
+class ChatInterface:
+    def __init__(self):
+        self.status_widget = DeveloperStatusWidget()
+        self.refresh_thread = None
+        self.refresh_interval = 30  # 30 seconds
+
+    def start_status_refresh(self):
+        """Start background status refresh thread."""
+        def refresh_loop():
+            while self.running:
+                self.status_widget.refresh()
+                time.sleep(self.refresh_interval)
+
+        self.refresh_thread = threading.Thread(target=refresh_loop, daemon=True)
+        self.refresh_thread.start()
+
+    def run(self):
+        """Run chat interface with auto-refreshing status."""
+        self.start_status_refresh()
+
+        while self.running:
+            # Render status widget at top
+            self.console.print(self.status_widget.render())
+
+            # Normal chat interface below
+            user_input = self.prompt_user()
+            # ... rest of chat logic ...
+```
+
+---
+
+### Architecture
+
+#### Updated Status File Format
+
+**No changes needed** - `data/developer_status.json` already has everything:
+```json
+{
+  "status": "working",
+  "current_task": {
+    "priority": 5,
+    "name": "Frontend Dashboard",
+    "started_at": "2025-10-11T10:30:00Z",
+    "progress": 60,
+    "current_step": "Implementing React components",
+    "eta_seconds": 5400
+  },
+  "last_activity": {
+    "timestamp": "2025-10-11T11:28:00Z",  // <-- Used for staleness detection
+    "type": "git_commit",
+    "description": "Added component structure"
+  },
+  // ... rest of status data ...
+}
+```
+
+#### New Components
+
+**1. HeartbeatMonitor** (`coffee_maker/cli/heartbeat_monitor.py`)
+- Check heartbeat health (healthy/stale/critical)
+- Calculate time since last heartbeat
+- Provide warning messages
+
+**2. DeveloperStatusWidget** (`coffee_maker/cli/status_widget.py`)
+- Compact status display for chat UI
+- Render status bar with progress
+- Handle state-based colors and emojis
+- Expandable to full status view
+
+**3. BackgroundRefreshThread** (in `roadmap_cli.py`)
+- Non-blocking refresh loop
+- Read status file every 30 seconds
+- Update widget without blocking user input
+
+---
+
+### Implementation Steps
+
+**Phase 1: Guaranteed Heartbeat** (2 hours)
+1. Add heartbeat tracking to `DevDaemon`:
+   - `last_heartbeat` timestamp
+   - `_send_heartbeat()` method
+   - Check heartbeat age in main loop
+   - Force heartbeat every hour minimum
+2. Test heartbeat guarantee:
+   - Daemon runs for 2+ hours
+   - Verify heartbeat every hour
+   - Verify heartbeat on state changes
+
+**Phase 2: Status Widget** (1-2 hours)
+3. Create `DeveloperStatusWidget` class:
+   - Compact single-line status display
+   - Progress bar with color coding
+   - State emoji indicators
+   - Expandable details view
+4. Create `HeartbeatMonitor` class:
+   - Staleness detection logic
+   - Warning/alert thresholds
+   - Time formatting utilities
+
+**Phase 3: Auto-Refresh Integration** (1-2 hours)
+5. Add background refresh to chat UI:
+   - Start background thread on chat start
+   - Refresh status every 30 seconds
+   - Render widget at top of chat panel
+   - Stop thread on chat exit
+6. Test auto-refresh:
+   - Start chat → See status widget
+   - Wait 30s → See status update
+   - Developer changes state → See update within 30s
+
+**Phase 4: Testing & Polish** (1 hour)
+7. Test stale heartbeat detection:
+   - Stop daemon → See "SILENT" after 15 min
+   - Resume daemon → See recovery
+8. Test UI integration:
+   - Status doesn't interfere with typing
+   - Status updates don't scroll chat
+   - Status is always visible at top
+
+---
+
+### Success Criteria
+
+✅ **Guaranteed heartbeat**:
+- Daemon sends heartbeat at least once per hour
+- Heartbeat includes task, progress, ETA, timestamp
+- Heartbeat logged to console for verification
+
+✅ **Always-visible status**:
+- Status widget appears at top of chat UI
+- Widget shows current state, task, progress
+- Widget uses color-coded emojis (🟢🟡🔴)
+
+✅ **Auto-refresh**:
+- Status updates every 30 seconds automatically
+- Updates don't block user input
+- Updates don't scroll chat history
+
+✅ **Stale detection**:
+- Warning after 5 minutes without heartbeat
+- Alert after 15 minutes without heartbeat
+- Clear action suggestions when stale
+
+---
+
+### Future Enhancements
+
+- **Configurable refresh interval**: User can set update frequency (10s-60s)
+- **Desktop notifications**: Pop-up notification when developer goes silent
+- **Heartbeat history**: Graph showing heartbeat gaps over time
+- **Multi-daemon support**: Show status for multiple developers
+- **Mobile push notifications**: SMS/app alerts when developer blocked
+
+---
+
+**This gives the user a real-time "pulse" of the developer's activity, making the autonomous system feel more like a teammate than a black box!** 📡💓
+
+---
+
+## 🤖 PRIORITY 5: Assistant Auto-Refresh & Always-On Availability
+
+**Goal**: Ensure the LangChain-powered assistant is always available when project-manager runs and automatically refreshes its documentation knowledge
+
+**Duration**: 1 day (4-6 hours)
+**Dependencies**: PRIORITY 2.9.5 (Transparent Assistant Integration)
+**Status**: 📝 Planned
+
+### Why This Is Critical
+
+The assistant was integrated in PRIORITY 2.9.5, but currently:
+- ❌ Assistant doesn't automatically refresh documentation
+- ❌ Assistant's knowledge can become stale
+- ❌ No guarantee assistant is available when project-manager runs
+
+**This priority makes the assistant reliably useful**: Always up-to-date, always available!
+
+---
+
+### Core Features
+
+#### 1. Auto-Refresh Documentation (Every 30 Minutes)
+
+**Requirement**: Assistant automatically re-reads key documentation to stay current
+
+**Documentation to Refresh**:
+- `docs/ROADMAP.md` - Current priorities and completion status
+- `docs/COLLABORATION_METHODOLOGY.md` - Team processes and rules
+- `docs/DOCUMENTATION_INDEX.md` - Available documentation
+- `docs/TUTORIALS.md` - Usage guides
+- Recent git commits (last 10) - Recent changes
+
+**Implementation**:
+```python
+# In chat_interface.py or new assistant_manager.py
+
+import threading
+import time
+from datetime import datetime, timedelta
+
+class AssistantManager:
+    def __init__(self, assistant_bridge):
+        self.assistant = assistant_bridge
+        self.last_refresh = None
+        self.refresh_interval = 1800  # 30 minutes in seconds
+        self.refresh_thread = None
+
+    def start_auto_refresh(self):
+        """Start background thread for auto-refresh."""
+        self.refresh_thread = threading.Thread(
+            target=self._auto_refresh_loop,
+            daemon=True
+        )
+        self.refresh_thread.start()
+
+    def _auto_refresh_loop(self):
+        """Background loop that refreshes documentation every 30 minutes."""
+        while True:
+            self._refresh_documentation()
+            time.sleep(self.refresh_interval)
+
+    def _refresh_documentation(self):
+        """Read and process key documentation files."""
+        docs_to_refresh = [
+            "docs/ROADMAP.md",
+            "docs/COLLABORATION_METHODOLOGY.md",
+            "docs/DOCUMENTATION_INDEX.md",
+            "docs/TUTORIALS.md"
+        ]
+
+        # Read each doc and update assistant's memory
+        for doc_path in docs_to_refresh:
+            self.assistant.refresh_document(doc_path)
+
+        # Update git history
+        self.assistant.refresh_git_history()
+
+        self.last_refresh = datetime.now()
+```
+
+#### 2. Always-On Availability
+
+**Requirement**: Assistant must always be available when project-manager is running
+
+**Current State**: Assistant is initialized in chat interface
+
+**Enhanced State**: Assistant starts automatically with project-manager
+
+**Implementation**:
+```python
+# In roadmap_cli.py main()
+
+def main():
+    """Main entry point for project-manager CLI."""
+
+    # Initialize assistant on startup
+    assistant_manager = AssistantManager(assistant_bridge)
+    assistant_manager.start_auto_refresh()
+
+    # Make assistant available globally
+    cli_context = {
+        'assistant': assistant_manager,
+        'roadmap_parser': parser,
+        'notif_service': notif_service
+    }
+
+    # All commands can now access assistant via cli_context
+    # ...
+```
+
+#### 3. Status Indicator
+
+**Command**: `project-manager assistant-status`
+
+**Output**:
+```
+🤖 ASSISTANT STATUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Status: 🟢 ONLINE
+Last Documentation Refresh: 2025-10-11 14:30:00 (5 minutes ago)
+Next Refresh: in 25 minutes
+
+Documentation Knowledge:
+  ✅ ROADMAP.md (Current as of: 2025-10-11 14:30:00)
+  ✅ COLLABORATION_METHODOLOGY.md (v2.1)
+  ✅ DOCUMENTATION_INDEX.md (26 documents indexed)
+  ✅ Git History (Last 10 commits loaded)
+
+Tools Available:
+  ✅ read_file
+  ✅ search_code
+  ✅ list_files
+  ✅ git_log
+  ✅ git_diff
+  ✅ execute_bash
+
+Ready to answer questions! 🚀
+```
+
+#### 4. Refresh on Demand
+
+**Command**: `project-manager assistant-refresh`
+
+**Purpose**: Manually trigger documentation refresh (useful after making major changes)
+
+**Output**:
+```
+🔄 Refreshing assistant documentation...
+
+Reading ROADMAP.md... ✅
+Reading COLLABORATION_METHODOLOGY.md... ✅
+Reading DOCUMENTATION_INDEX.md... ✅
+Reading git history... ✅
+
+✅ Assistant knowledge refreshed successfully!
+```
+
+---
+
+### Technical Design
+
+#### Architecture
+
+```
+project-manager (main process)
+  ├── AssistantManager (background thread)
+  │   ├── Auto-refresh timer (every 30 min)
+  │   └── Document loader
+  ├── ChatInterface
+  │   └── Uses AssistantManager.assistant
+  └── CLI Commands
+      └── Can query assistant via context
+```
+
+#### Key Files to Modify
+
+1. **coffee_maker/cli/assistant_manager.py** (NEW)
+   - AssistantManager class
+   - Auto-refresh logic
+   - Background thread management
+
+2. **coffee_maker/cli/roadmap_cli.py** (MODIFY)
+   - Initialize AssistantManager on startup
+   - Add `cmd_assistant_status()` command
+   - Add `cmd_assistant_refresh()` command
+
+3. **coffee_maker/cli/assistant_bridge.py** (MODIFY)
+   - Add `refresh_document(path)` method
+   - Add `refresh_git_history()` method
+   - Cache documentation in memory
+
+4. **coffee_maker/cli/chat_interface.py** (MODIFY)
+   - Use shared AssistantManager instance
+   - Remove local initialization
+
+---
+
+### Acceptance Criteria
+
+- [ ] Assistant starts automatically when project-manager starts
+- [ ] Background thread refreshes documentation every 30 minutes
+- [ ] `project-manager assistant-status` shows refresh status and next refresh time
+- [ ] `project-manager assistant-refresh` manually triggers refresh
+- [ ] Assistant can answer questions using latest documentation
+- [ ] Documentation refresh doesn't block user interaction
+- [ ] Thread shuts down cleanly when project-manager exits
+- [ ] Assistant memory doesn't grow unbounded (old data cleared on refresh)
+
+---
+
+### Testing Plan
+
+1. **Unit Tests**:
+   - Test AssistantManager initialization
+   - Test refresh timer logic
+   - Test document loading
+
+2. **Integration Tests**:
+   - Start project-manager, verify assistant available
+   - Wait 30+ minutes, verify refresh occurs
+   - Run manual refresh, verify documents updated
+   - Check assistant-status command output
+
+3. **Manual Tests**:
+   - Update ROADMAP.md, run `assistant-refresh`, ask assistant about changes
+   - Run project-manager for 1+ hour, verify multiple auto-refreshes
+   - Ask assistant questions before/after refresh to verify knowledge updates
+
+---
+
+### Future Enhancements
+
+- **Selective Refresh**: Only refresh documents that changed (use file mtimes)
+- **Refresh Notifications**: Notify user when major documentation changes detected
+- **Smart Refresh Intervals**: Increase refresh frequency when developer is active
+- **Memory Optimization**: Use embeddings and vector search for large docs
+- **Assistant Health Check**: Detect and recover from assistant failures
+
+---
+
+**This ensures the assistant is always ready to help with up-to-date knowledge!** 🤖📚
 
 ---
 
@@ -9969,6 +10947,19 @@ pygments = "^2.17.0"         # Syntax highlighting
 - ✅ User prefers project-manager chat over claude-cli for project work
 - ✅ Sprint 7 demo receives positive feedback on UX quality
 - ✅ Daily usage is enjoyable, not just functional
+
+**CLI Nesting Detection** (Added 2025-10-11):
+- ✅ Detects when running inside Claude Code (CLAUDECODE/CLAUDE_CODE_ENTRYPOINT env vars)
+- ✅ Automatically switches to API mode to prevent CLI nesting (Claude CLI calling Claude CLI)
+- ✅ Displays clear user messages explaining the mode switch and options
+- ✅ Documented in QUICKSTART troubleshooting section
+
+**Usage Modes**:
+1. **CLI Mode** (Default - Free with subscription): When running from regular terminal
+2. **API Mode** (Requires credits): When running from Claude Code or if ANTHROPIC_API_KEY is set
+3. **Auto-detection**: System automatically chooses correct mode based on environment
+
+**Important Note**: When running `project-manager chat` from within Claude Code (this session), it will automatically use API mode to prevent nesting issues. For free CLI mode, run from a regular terminal.
 
 **Related Stories**:
 - Complements US-004 (Claude CLI integration for daemon)
@@ -15958,11 +16949,11 @@ def interactive_setup():
 
 ---
 
-### 🔴 **PRIORITY 2.6: code_developer Functional Testing & CI Integration** 🚨 **CRITICAL - TOP PRIORITY**
+### 🔴 **PRIORITY 2.6: code_developer Functional Testing & CI Integration** ✅ **COMPLETE**
 
 **Estimated Duration**: 1 day (8 hours)
 **Impact**: ⭐⭐⭐⭐⭐ (Critical - blocks all future development)
-**Status**: 📝 Planned - **START IMMEDIATELY**
+**Status**: ✅ Complete
 **Dependency**: None (self-contained testing infrastructure)
 **Why Important**: **Must guarantee code_developer remains functional for end users**
 
@@ -16977,13 +17968,14 @@ poetry run code-developer --auto-approve
 
 ---
 
-### 🔴 **PRIORITY 2.7: Daemon Crash Recovery & Context Management** 🔄 **RELIABILITY**
+### 🔴 **PRIORITY 2.7: Daemon Crash Recovery & Context Management** ✅ **COMPLETE**
 
 **Estimated Duration**: 4-6 hours
 **Impact**: ⭐⭐⭐⭐⭐ (Critical for autonomous reliability)
-**Status**: 📝 Planned
+**Status**: ✅ Complete (2025-10-11)
 **Dependency**: Requires PRIORITY 2.6 completion
 **Why Important**: Autonomous systems need crash recovery and context management to ensure continuous operation
+**Commit**: 3718b2f
 
 #### Project: Implement Crash Recovery with Context Reset
 
@@ -17244,6 +18236,1437 @@ daemon:
 2. Track crash rates and causes
 3. Optimize compact interval based on token usage
 4. Consider implementing isolated sessions
+
+---
+
+### 🔴 **PRIORITY 2.8: Daemon Status Reporting in project-manager** 🎯 **HIGH PRIORITY**
+
+**Estimated Duration**: 2-3 hours
+**Impact**: ⭐⭐⭐⭐⭐ (Critical for daemon monitoring and debugging)
+**Status**: 📝 Planned
+**Dependency**: Requires PRIORITY 2.7 completion
+**Why Important**: Users need visibility into daemon status for monitoring and debugging
+
+#### User Story: Real-time Daemon Status Command
+
+**As a** developer using code_developer
+**I want** to query daemon status via `project-manager status`
+**So that** I can monitor the daemon's current activity and health
+
+**Background**:
+Currently, users have no easy way to check:
+- Is the daemon running?
+- What priority is it working on?
+- How many crashes have occurred?
+- When did it last compact context?
+- What's the current iteration count?
+
+This makes debugging and monitoring difficult.
+
+**Example Desired Output**:
+```bash
+$ project-manager status
+
+🤖 Daemon Status
+================
+Status: 🟢 Running
+PID: 73437
+Uptime: 2h 34m
+
+Current Activity:
+  Priority: PRIORITY 2.7 - Daemon Crash Recovery
+  Iteration: 12
+  Last success: 3 minutes ago
+
+Health:
+  Crashes: 0/3
+  Last compact: 2 iterations ago (8 minutes)
+  Next compact: in 8 iterations
+
+Recent Activity:
+  [12:45] ✅ Completed PRIORITY 2.6
+  [13:15] 🔄 Started PRIORITY 2.7
+  [13:20] 🔄 Context refresh (periodic)
+```
+
+**Deliverables**:
+
+**1. Daemon Status File** (`~/.coffee_maker/daemon_status.json`)
+```json
+{
+  "pid": 73437,
+  "status": "running",
+  "started_at": "2025-10-11T11:11:29",
+  "current_priority": {
+    "name": "PRIORITY 2.7",
+    "title": "Daemon Crash Recovery",
+    "started_at": "2025-10-11T13:15:00"
+  },
+  "iteration": 12,
+  "crashes": {
+    "count": 0,
+    "max": 3,
+    "history": []
+  },
+  "context": {
+    "iterations_since_compact": 2,
+    "compact_interval": 10,
+    "last_compact": "2025-10-11T13:20:00"
+  },
+  "last_update": "2025-10-11T13:30:00"
+}
+```
+
+**2. DevDaemon Status Writer** (`coffee_maker/autonomous/daemon.py`)
+```python
+def _write_status(self, priority=None):
+    """Write current daemon status to file.
+
+    Called at:
+    - Start of each iteration
+    - After priority completion
+    - After crash/recovery
+    - On daemon stop
+    """
+    status = {
+        "pid": os.getpid(),
+        "status": "running" if self.running else "stopped",
+        "started_at": self.start_time.isoformat(),
+        "current_priority": {
+            "name": priority["name"] if priority else None,
+            "title": priority["title"] if priority else None,
+            "started_at": self.current_priority_start_time.isoformat() if priority else None
+        } if priority else None,
+        "iteration": self.iteration_count,
+        "crashes": {
+            "count": self.crash_count,
+            "max": self.max_crashes,
+            "history": self.crash_history[-5:]  # Last 5 crashes
+        },
+        "context": {
+            "iterations_since_compact": self.iterations_since_compact,
+            "compact_interval": self.compact_interval,
+            "last_compact": self.last_compact_time.isoformat() if self.last_compact_time else None
+        },
+        "last_update": datetime.now().isoformat()
+    }
+
+    status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
+    status_file.parent.mkdir(exist_ok=True, parents=True)
+
+    with open(status_file, 'w') as f:
+        json.dump(status, f, indent=2)
+```
+
+**3. project-manager status command** (`coffee_maker/cli/roadmap_cli.py`)
+```python
+@cli.command()
+def status():
+    """Show daemon status and current activity."""
+    status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
+
+    if not status_file.exists():
+        click.echo("❌ Daemon status file not found")
+        click.echo("   Is the daemon running?")
+        return
+
+    with open(status_file) as f:
+        status = json.load(f)
+
+    # Check if process is actually running
+    try:
+        os.kill(status["pid"], 0)
+        is_running = True
+    except OSError:
+        is_running = False
+
+    # Display formatted status
+    click.echo("\n🤖 Daemon Status")
+    click.echo("=" * 50)
+
+    if is_running:
+        click.echo(f"Status: 🟢 Running")
+        click.echo(f"PID: {status['pid']}")
+        uptime = datetime.now() - datetime.fromisoformat(status['started_at'])
+        click.echo(f"Uptime: {format_duration(uptime)}")
+    else:
+        click.echo(f"Status: 🔴 Stopped")
+        click.echo(f"Last PID: {status['pid']}")
+
+    if status.get("current_priority"):
+        click.echo(f"\nCurrent Activity:")
+        click.echo(f"  Priority: {status['current_priority']['name']} - {status['current_priority']['title']}")
+        click.echo(f"  Iteration: {status['iteration']}")
+
+        if status['current_priority']['started_at']:
+            duration = datetime.now() - datetime.fromisoformat(status['current_priority']['started_at'])
+            click.echo(f"  Working for: {format_duration(duration)}")
+
+    # Health metrics
+    click.echo(f"\nHealth:")
+    click.echo(f"  Crashes: {status['crashes']['count']}/{status['crashes']['max']}")
+
+    if status['context']['last_compact']:
+        time_since = datetime.now() - datetime.fromisoformat(status['context']['last_compact'])
+        click.echo(f"  Last compact: {format_duration(time_since)} ago")
+
+    remaining = status['context']['compact_interval'] - status['context']['iterations_since_compact']
+    click.echo(f"  Next compact: in {remaining} iterations")
+```
+
+**4. Update daemon.py run() loop**
+```python
+def run(self):
+    """Run daemon main loop."""
+    self.running = True
+    self.start_time = datetime.now()
+    self.iteration_count = 0
+
+    logger.info("🤖 DevDaemon starting...")
+
+    # Write initial status
+    self._write_status()
+
+    # ... existing prerequisite checks ...
+
+    while self.running:
+        self.iteration_count += 1
+
+        # ... existing code ...
+
+        try:
+            # ... get next_priority ...
+
+            # Update status with current priority
+            self._write_status(priority=next_priority)
+
+            # ... implement priority ...
+
+            if success:
+                # Update status after completion
+                self._write_status()
+
+        except Exception as e:
+            # Update status after crash
+            self._write_status()
+            # ... existing crash handling ...
+
+    # Write final status on stop
+    self.running = False
+    self._write_status()
+```
+
+**Acceptance Criteria**:
+- ✅ `project-manager status` shows daemon PID and running state
+- ✅ Shows current priority being worked on
+- ✅ Shows crash count and history
+- ✅ Shows context management metrics
+- ✅ Shows uptime and iteration count
+- ✅ Detects if daemon process is actually running (not stale)
+- ✅ Status file updated at each iteration
+- ✅ Clean output formatting with colors
+
+**Technical Notes**:
+- Status file location: `~/.coffee_maker/daemon_status.json`
+- Updated at start of each iteration (line 169 in daemon.py)
+- PID check uses `os.kill(pid, 0)` to verify process exists
+- Format durations as human-readable (2h 34m, not 9240s)
+
+**Testing**:
+```bash
+# Start daemon
+poetry run code-developer --auto-approve
+
+# Check status in another terminal
+poetry run project-manager status
+
+# Should show running daemon with current priority
+
+# Stop daemon (Ctrl+C)
+# Check status again
+poetry run project-manager status
+
+# Should show stopped with last known state
+```
+
+**Benefits**:
+1. **Visibility**: Users can see what the daemon is doing
+2. **Debugging**: Quick access to crash history and health metrics
+3. **Monitoring**: Check if daemon is hung or making progress
+4. **Operations**: Essential for production deployment
+
+**Implementation Priority**: **HIGH** (Behind PRIORITY 3, as requested by user)
+
+---
+
+### ✅ **PRIORITY 2.9: Sound Notifications for project-manager** 🔔 **COMPLETE**
+
+**Estimated Duration**: 3-4 hours (Actual: ~2 hours)
+**Impact**: ⭐⭐⭐⭐ (High - Improves user workflow and responsiveness)
+**Status**: ✅ Complete (2025-10-11)
+**Dependency**: None
+**Why Important**: Allows users to focus on their work while being notified when project-manager needs their attention
+
+#### User Story: Sound Notifications for Attention
+
+**As a** user working on my projects
+**I want** project-manager to produce a sound on my laptop when it needs my attention
+**So that** I can focus on my work but know when approvals, user tests, or other inputs are needed as the project progresses
+
+**Background**:
+Currently, the project-manager and daemon may need user input (approvals, test feedback, decisions) but users don't know unless they actively check. This forces users to:
+- Constantly monitor the terminal/chat
+- Check notifications manually
+- Miss important requests that block progress
+
+A sound notification system would allow users to:
+- Work on other tasks without missing important requests
+- Respond quickly when the daemon needs input
+- Improve overall development workflow efficiency
+
+**Use Cases**:
+
+1. **Approval Requests**
+   - Daemon needs approval to implement a priority
+   - Sound plays when notification created
+   - User responds when convenient
+
+2. **User Testing Needed**
+   - Feature implemented, needs user testing
+   - Sound alerts user to test
+   - Faster feedback loop
+
+3. **Critical Issues**
+   - Daemon crashes or hits max retries
+   - Sound + critical notification
+   - User can intervene immediately
+
+4. **Milestone Completion**
+   - Priority completed successfully
+   - Sound confirms progress
+   - User can review/merge PR
+
+**Deliverables**:
+
+**1. Sound Notification System** (`coffee_maker/cli/notifications.py`)
+```python
+import os
+import platform
+
+def play_notification_sound(priority: str = "normal"):
+    """Play system notification sound.
+
+    Args:
+        priority: "normal", "high", "critical"
+    """
+    system = platform.system()
+
+    if system == "Darwin":  # macOS
+        if priority == "critical":
+            os.system('afplay /System/Library/Sounds/Sosumi.aiff')
+        elif priority == "high":
+            os.system('afplay /System/Library/Sounds/Glass.aiff')
+        else:
+            os.system('afplay /System/Library/Sounds/Pop.aiff')
+    elif system == "Linux":
+        os.system('paplay /usr/share/sounds/freedesktop/stereo/message.oga')
+    elif system == "Windows":
+        import winsound
+        if priority == "critical":
+            winsound.MessageBeep(winsound.MB_ICONHAND)
+        else:
+            winsound.MessageBeep(winsound.MB_ICONASTERISK)
+```
+
+**2. Enhanced NotificationDB** (`coffee_maker/cli/notifications.py`)
+```python
+def create_notification(
+    self,
+    type: str,
+    title: str,
+    message: str,
+    priority: str = NOTIF_PRIORITY_NORMAL,
+    play_sound: bool = True,  # NEW: Play sound by default
+    context: dict = None
+) -> int:
+    """Create notification with optional sound."""
+    notif_id = self._create_notification(...)
+
+    # Play sound if enabled
+    if play_sound:
+        sound_priority = "normal"
+        if priority == NOTIF_PRIORITY_CRITICAL:
+            sound_priority = "critical"
+        elif priority == NOTIF_PRIORITY_HIGH:
+            sound_priority = "high"
+
+        play_notification_sound(sound_priority)
+
+    return notif_id
+```
+
+**3. Configuration Options** (`~/.coffee_maker/config.yaml`)
+```yaml
+notifications:
+  sound_enabled: true
+  sound_volume: 0.5
+  sound_priority_threshold: "normal"  # Only play for normal+ priority
+  custom_sounds:
+    critical: "/path/to/critical.mp3"
+    high: "/path/to/high.mp3"
+    normal: "/path/to/normal.mp3"
+```
+
+**4. CLI Sound Control** (Add to `project-manager`)
+```bash
+# Enable/disable sounds
+project-manager config set notifications.sound_enabled true
+project-manager config set notifications.sound_enabled false
+
+# Set volume
+project-manager config set notifications.sound_volume 0.7
+
+# Set custom sounds
+project-manager config set notifications.custom_sounds.critical /path/to/sound.mp3
+```
+
+**Implementation Steps**:
+
+1. **Add sound playback function** (30 min)
+   - Cross-platform sound support (macOS, Linux, Windows)
+   - Multiple sound types for different priorities
+   - Fallback if sound unavailable
+
+2. **Integrate with NotificationDB** (45 min)
+   - Add `play_sound` parameter to `create_notification()`
+   - Play appropriate sound based on priority
+   - Handle errors gracefully (no sound = no crash)
+
+3. **Add configuration system** (1 hour)
+   - Create config file parser
+   - Allow users to enable/disable sounds
+   - Support custom sound files
+   - Volume control
+
+4. **Update all notification callers** (1 hour)
+   - Daemon approval requests → sound
+   - Crash notifications → critical sound
+   - Completion notifications → normal sound
+   - Test request notifications → high sound
+
+5. **Add CLI commands** (30 min)
+   - `project-manager config set/get` commands
+   - List available sounds
+   - Test sound playback
+
+**Testing**:
+```bash
+# Test different sound priorities
+python -c "from coffee_maker.cli.notifications import play_notification_sound; play_notification_sound('normal')"
+python -c "from coffee_maker.cli.notifications import play_notification_sound; play_notification_sound('high')"
+python -c "from coffee_maker.cli.notifications import play_notification_sound; play_notification_sound('critical')"
+
+# Test with daemon
+poetry run code-developer
+# Wait for approval notification - should hear sound
+
+# Disable sounds
+project-manager config set notifications.sound_enabled false
+# No sound on next notification
+
+# Re-enable
+project-manager config set notifications.sound_enabled true
+```
+
+**Benefits**:
+1. **Better User Experience**: No need to constantly check terminal
+2. **Faster Response Time**: Users notified immediately when needed
+3. **Improved Workflow**: Focus on work, respond when alerted
+4. **Configurable**: Users can customize or disable as needed
+5. **Cross-Platform**: Works on macOS, Linux, Windows
+
+**Implementation Priority**: **HIGH** (After PRIORITY 2.8, as requested by user)
+
+---
+
+### ✅ **PRIORITY 2.9.5: Transparent Assistant Integration for project-manager** 🤝 **COMPLETE**
+
+**Estimated Duration**: 2-3 hours (Actual: ~2.5 hours)
+**Impact**: ⭐⭐⭐⭐⭐ (Critical - Seamless AI assistance)
+**Status**: ✅ Complete (2025-10-11)
+**Dependency**: None
+**Why Important**: project-manager should be able to get help from Claude Code assistant transparently without user knowing
+
+#### User Story: Invisible Assistant Help
+
+**As a** user interacting with project-manager
+**I want** project-manager to seamlessly get help from the assistant when needed
+**So that** I get better answers without knowing there's a backend assistant involved
+
+**Background**:
+When the project-manager chat receives complex questions or tasks, it may need help from Claude Code (the assistant) to:
+- Perform technical analysis
+- Search and understand code
+- Execute complex operations
+- Provide more accurate answers
+
+However, the user should **not be aware** of this backend assistance. It should be completely transparent.
+
+**Current Behavior**:
+- project-manager handles everything directly
+- May give incomplete or less accurate answers for complex queries
+- User sees all the internal workings
+
+**Desired Behavior**:
+- project-manager detects when it needs help
+- Invokes Claude Code assistant transparently
+- **Flushes/displays assistant's action steps** so user knows what's happening
+- Gets the help it needs
+- Responds to user with complete answer
+- **User never knows there's a separate assistant** (just sees actions being performed)
+
+**Use Cases**:
+
+1. **Complex Code Analysis** (with visible steps)
+   ```
+   User: "Why is the daemon crashing on priority 2.7?"
+
+   [User sees]
+   project-manager: 🔍 Analyzing daemon logs...
+   project-manager: 📖 Reading daemon.py and related files...
+   project-manager: 🔎 Checking recent changes...
+   project-manager: "The daemon is crashing because the context reset
+   is failing when the CLI returns a non-zero exit code in daemon.py:345..."
+   ```
+
+2. **Technical Implementation Questions** (with visible steps)
+   ```
+   User: "How should we implement the sound notification system?"
+
+   [User sees]
+   project-manager: 📚 Reviewing architecture and best practices...
+   project-manager: 🔍 Checking existing notification system...
+   project-manager: 💡 Analyzing cross-platform requirements...
+   project-manager: "For sound notifications, I suggest using a
+   platform-specific approach with afplay for macOS, paplay for Linux..."
+   ```
+
+3. **File Operations** (with visible steps)
+   ```
+   User: "Find all places where we create notifications"
+
+   [User sees]
+   project-manager: 🔎 Searching codebase for notification creation...
+   project-manager: 📂 Found 8 locations across 3 files
+   project-manager: "Notifications are created in:
+   - daemon.py:425 (approval requests)
+   - daemon.py:653 (manual review needed)
+   - chat_interface.py:892 (daemon commands)
+   ..."
+   ```
+
+**Key Point**: User sees **what's being done** (the steps), but doesn't know it's a separate "assistant" doing it - it appears as if project-manager itself is performing these actions.
+
+**Interactive Refinement**: User can add information/clarifications while seeing actions:
+```
+User: "Why is the daemon crashing?"
+
+project-manager: 🔍 Analyzing daemon logs...
+User: "check only the last 100 lines"
+
+project-manager: 📖 Reading last 100 lines of daemon.log...
+project-manager: 🔎 Found 3 errors in recent logs...
+User: "focus on the timeout errors"
+
+project-manager: 🎯 Analyzing timeout errors...
+project-manager: "The daemon is timing out because..."
+```
+
+This allows **real-time guidance** - user can steer the investigation as it happens.
+
+**Deliverables**:
+
+**1. Assistant Invocation Interface** (`coffee_maker/cli/assistant_bridge.py`)
+```python
+class AssistantBridge:
+    """Bridge to invoke Claude Code assistant transparently."""
+
+    def __init__(self):
+        """Initialize bridge to assistant."""
+        self.assistant_available = self._check_assistant()
+
+    def _check_assistant(self) -> bool:
+        """Check if running inside Claude Code."""
+        return bool(os.environ.get("CLAUDECODE"))
+
+    def invoke_assistant(
+        self,
+        task: str,
+        context: dict = None,
+        timeout: int = 120,
+        on_action: callable = None  # NEW: Callback for action steps
+    ) -> dict:
+        """Invoke assistant for help with visible action steps.
+
+        Args:
+            task: What to ask assistant to do
+            context: Additional context (files, logs, etc.)
+            timeout: Max wait time
+            on_action: Callback to display actions (e.g., "🔍 Analyzing logs...")
+
+        Returns:
+            {
+                "success": bool,
+                "result": str,
+                "files_changed": List[str],
+                "actions_taken": List[str],  # NEW: List of actions performed
+                "error": str (if failed)
+            }
+        """
+        if not self.assistant_available:
+            return {"success": False, "error": "Assistant not available"}
+
+        # Invoke assistant via special marker
+        # The assistant (Claude Code) will see this and respond
+        marker = f"[ASSISTANT_REQUEST:{uuid.uuid4()}]"
+        print(f"\n{marker}\n{task}\n[/ASSISTANT_REQUEST]\n")
+
+        # Wait for response WITH action streaming
+        # Assistant will send action updates like:
+        # [ACTION:uuid] 🔍 Analyzing daemon logs...
+        # [ACTION:uuid] 📖 Reading daemon.py...
+        response = self._wait_for_response_with_actions(
+            marker,
+            timeout,
+            on_action_callback=on_action
+        )
+        return response
+```
+
+**2. Enhanced Chat Interface** (`coffee_maker/cli/chat_interface.py`)
+```python
+class ChatSession:
+    def __init__(self, ...):
+        # ...existing code...
+        self.assistant = AssistantBridge()
+        self.assistant_running = False
+        self.pending_user_input = None  # For interactive refinement
+
+    def _handle_natural_language(self, text: str) -> str:
+        """Handle natural language with optional assistant help."""
+
+        # Detect if we need assistant help
+        needs_assistant = self._should_invoke_assistant(text)
+
+        if needs_assistant and self.assistant.assistant_available:
+            # Get help with VISIBLE action steps
+            self.assistant_running = True
+
+            result = self.assistant.invoke_assistant(
+                task=f"Help me respond to: {text}",
+                context=self._build_context(),
+                on_action=self._display_action_step  # Display each action
+            )
+
+            self.assistant_running = False
+
+            if result["success"]:
+                # Use assistant's result, format nicely
+                return self._format_assistant_response(result["result"])
+
+        # Normal AI response
+        return self._get_ai_response(text)
+
+    def _display_action_step(self, action: str):
+        """Display an action step from assistant.
+
+        Args:
+            action: Action description (e.g., "🔍 Analyzing logs...")
+
+        This is called for EACH action the assistant takes, making the
+        process transparent to the user.
+
+        Also allows user to interrupt with additional guidance.
+        """
+        # Display the action
+        self.console.print(f"[cyan]{action}[/]")
+
+        # Check if user wants to add input (non-blocking)
+        # This allows interactive refinement:
+        # User sees: "🔍 Analyzing logs..."
+        # User types: "check only last 100 lines"
+        # Next action reflects this input
+        if self._check_user_input_available():
+            user_guidance = input()  # Get user's additional input
+            self.pending_user_input = user_guidance
+            # This will be picked up by assistant for next action
+
+    def _should_invoke_assistant(self, text: str) -> bool:
+        """Determine if assistant help needed."""
+        assistant_keywords = [
+            "search", "find", "analyze", "debug",
+            "how to implement", "why is", "what's wrong",
+            "check code", "review", "investigate"
+        ]
+        return any(kw in text.lower() for kw in assistant_keywords)
+```
+
+**3. Action Streaming Protocol**
+```python
+# Assistant streams actions WHILE working (user sees in real-time):
+
+[ASSISTANT_REQUEST:abc-123]
+Task: Analyze why daemon is crashing
+[/ASSISTANT_REQUEST]
+
+# Assistant sends action updates:
+[ACTION:abc-123] 🔍 Analyzing daemon logs...
+[ACTION:abc-123] 📖 Reading daemon.py (lines 200-300)...
+[ACTION:abc-123] 🔎 Checking recent git commits...
+
+# User can interrupt:
+[USER_INPUT:abc-123] "check only timeout errors"
+
+# Assistant adjusts:
+[ACTION:abc-123] 🎯 Filtering for timeout errors only...
+[ACTION:abc-123] 📊 Found 3 timeout occurrences...
+
+# Final response:
+[ASSISTANT_RESPONSE:abc-123]
+{
+    "success": true,
+    "result": "The daemon crashes because of timeout in daemon.py:245...",
+    "files_analyzed": ["daemon.py", "claude_cli_interface.py"],
+    "actions_taken": [
+        "🔍 Analyzing daemon logs...",
+        "📖 Reading daemon.py...",
+        "🎯 Filtering for timeout errors...",
+        "📊 Found 3 timeout occurrences..."
+    ],
+    "confidence": "high"
+}
+[/ASSISTANT_RESPONSE]
+```
+
+**Key Innovation**: Actions are streamed DURING execution, not after. User sees progress and can guide in real-time.
+
+**Implementation Steps**:
+
+1. **Create AssistantBridge with Action Streaming** (1.5 hours)
+   - Check if running inside Claude Code
+   - Implement request/response protocol with ACTION markers
+   - Stream actions in real-time via callbacks
+   - Handle USER_INPUT interruptions
+   - Handle timeouts and errors
+
+2. **Integrate with ChatSession** (1 hour)
+   - Detect when assistant help needed
+   - Invoke assistant with action callback
+   - Display each action as it happens
+   - Allow user to interrupt with additional input
+   - Format responses naturally
+
+3. **Add Action Display & User Input** (1 hour)
+   - Display action steps with emojis and formatting
+   - Non-blocking user input check during actions
+   - Pass user guidance to assistant mid-execution
+   - Maintain conversation flow
+
+4. **Testing & Refinement** (30 min)
+   - Test various question types
+   - Test user interruption scenarios
+   - Ensure actions are visible but assistant is invisible
+   - Verify response quality with user guidance
+
+**Testing**:
+```bash
+# User asks complex question
+project-manager chat
+> "Why does the daemon keep crashing on priority 2.7?"
+
+# User sees (actions streamed in real-time):
+project-manager: 🔍 Analyzing daemon logs...
+project-manager: 📖 Reading daemon.py and related files...
+project-manager: 🔎 Checking recent changes...
+
+# User can interrupt:
+> "focus on timeout errors only"
+
+# Actions adjust to user input:
+project-manager: 🎯 Filtering for timeout errors...
+project-manager: 📊 Found 3 timeout occurrences...
+
+# Final answer:
+project-manager: "The daemon crashes on priority 2.7 because the
+context reset is timing out when the CLI takes too long to respond.
+This is in daemon.py:345..."
+
+# User saw WHAT was done, doesn't know WHO did it (assistant invisible)!
+```
+
+**Benefits**:
+1. **Better Answers**: Complex queries get expert help
+2. **Seamless UX**: User unaware of backend assistance
+3. **Smart Routing**: Only invoke assistant when needed
+4. **Faster Development**: Assistant does heavy lifting
+5. **Transparent**: No UX changes, just better results
+
+**Implementation Priority**: **HIGH** (After PRIORITY 2.9, enables better user experience)
+
+---
+
+### ✅ **PRIORITY 2.10: Natural Conversational Responses in project-manager** 💬 **COMPLETE**
+
+**Estimated Duration**: 2-3 hours
+**Impact**: ⭐⭐⭐⭐⭐ (Critical - User experience)
+**Status**: ✅ Complete (2025-10-11)
+**Dependency**: None
+**Why Important**: Users want concise, natural answers - not technical dumps
+**Branch**: feature/priority-2.10-natural-responses
+**Commit**: d960d75
+
+#### User Story: More Natural Conversations
+
+**As a** user interacting with project-manager
+**I want** natural, conversational responses that directly answer my question
+**So that** I get the information I need without overwhelming technical details
+
+**Problem Statement**:
+Currently, when users ask simple questions like "is the daemon running?", they get overly detailed technical responses:
+
+```
+🟢 Daemon Status: RUNNING
+
+• PID: 78575
+• Status: IDLE
+• Current Task: None (Idle)
+• Uptime: 0:16:38
+• CPU: 0.0%
+• Memory: 21.8 MB
+
+💡 Tip: code_developer may take time to respond (12+ hours is normal).
+   He needs focus time and rest, just like a human developer!
+
+Use /stop to shut down the daemon gracefully.
+```
+
+**What users actually want**: "Yes, the daemon is running."
+
+**Desired Behavior**:
+
+**Example 1 - Simple Question**:
+```
+User: "is the daemon running?"
+
+Current Response: [Technical dump with PID, CPU, memory, etc.]
+
+Desired Response:
+"Yes, code_developer is running! 🟢
+
+He's currently idle, waiting for work. Been up for about 17 minutes.
+
+Want more details? Ask me for 'daemon details' or use /status."
+```
+
+**Example 2 - What is he doing?**:
+```
+User: "what is the daemon doing?"
+
+Current Response: [Full status dump]
+
+Desired Response:
+"He's working on PRIORITY 2.8 - Daemon Status Reporting. 🔧
+
+Started about 5 minutes ago. So far so good!
+
+Need full details? Type /status for the complete picture."
+```
+
+**Example 3 - Natural follow-ups**:
+```
+User: "how long has he been working on that?"
+
+Response: "About 5 minutes now. Pretty fresh!"
+
+User: "any problems?"
+
+Response: "Nope, everything's smooth. No crashes, no issues. 👍"
+```
+
+**Design Principles**:
+
+1. **Answer the actual question first**
+   - Direct answer in first sentence
+   - Details come second (if needed)
+
+2. **Be conversational, not technical**
+   - "Running for 17 minutes" not "Uptime: 0:16:38"
+   - "Working on Priority 2.8" not "Current Task: PRIORITY 2.8"
+   - "Everything's smooth" not "Crashes: 0/3"
+
+3. **Progressive disclosure**
+   - Basic info by default
+   - Offer more details if user wants them
+   - Use /status for full technical details
+
+4. **Use natural language**
+   - "He's idle" not "Status: IDLE"
+   - "Been up for 17 minutes" not "Uptime: 0:16:38"
+   - "No problems" not "Crashes: 0/3"
+
+5. **Context-aware responses**
+   - If daemon just crashed → mention it naturally
+   - If making good progress → be encouraging
+   - If stuck/blocked → explain in plain terms
+
+**Implementation**:
+
+**1. Add Response Formatter** (`coffee_maker/cli/chat_interface.py`)
+```python
+class NaturalResponseFormatter:
+    """Format technical data into natural conversational responses."""
+
+    def format_daemon_status(self, status: dict, user_question: str) -> str:
+        """Format status based on what user actually asked.
+
+        Args:
+            status: Raw daemon status dict
+            user_question: What the user asked (for context)
+
+        Returns:
+            Natural language response
+        """
+        # Analyze what user wants to know
+        question_lower = user_question.lower()
+
+        # Simple running check
+        if any(word in question_lower for word in ["running", "up", "alive", "started"]):
+            return self._format_simple_running_check(status)
+
+        # What's he doing?
+        elif any(word in question_lower for word in ["doing", "working on", "task"]):
+            return self._format_current_activity(status)
+
+        # Any problems?
+        elif any(word in question_lower for word in ["problem", "issue", "crash", "error"]):
+            return self._format_health_check(status)
+
+        # Default: brief overview
+        else:
+            return self._format_brief_overview(status)
+
+    def _format_simple_running_check(self, status: dict) -> str:
+        """Simple yes/no with brief context."""
+        if status["running"]:
+            uptime = self._humanize_duration(status["uptime"])
+
+            if status["current_task"]:
+                return (
+                    f"Yes, code_developer is running! 🟢\n\n"
+                    f"He's working on {status['current_task']}. "
+                    f"Been up for {uptime}.\n\n"
+                    f"Want more details? Ask 'daemon details' or use /status."
+                )
+            else:
+                return (
+                    f"Yes, he's running! 🟢\n\n"
+                    f"Currently idle, waiting for work. Up for {uptime}.\n\n"
+                    f"Type 'start priority X' to give him something to do!"
+                )
+        else:
+            return (
+                "No, the daemon isn't running right now. ⚪\n\n"
+                "Want me to start it? Just say 'start daemon' or use /start."
+            )
+
+    def _humanize_duration(self, seconds: int) -> str:
+        """Convert seconds to natural language."""
+        if seconds < 60:
+            return f"{seconds} seconds"
+        elif seconds < 3600:
+            mins = seconds // 60
+            return f"{mins} minute{'s' if mins != 1 else ''}"
+        else:
+            hours = seconds // 3600
+            mins = (seconds % 3600) // 60
+            if mins > 0:
+                return f"{hours}h {mins}m"
+            return f"{hours} hour{'s' if hours != 1 else ''}"
+```
+
+**2. Update Chat Handler** (`coffee_maker/cli/chat_interface.py`)
+```python
+def _handle_natural_language_stream(self, text: str, context: Dict) -> str:
+    """Handle natural language with context-aware responses."""
+
+    # Check if asking about daemon status
+    status_keywords = [
+        "daemon", "running", "code_developer", "status",
+        "what's he doing", "is he", "what is he"
+    ]
+
+    if any(keyword in text.lower() for keyword in status_keywords):
+        # Get daemon status
+        status = self.process_manager.get_daemon_status()
+
+        # Format naturally based on question
+        formatter = NaturalResponseFormatter()
+        return formatter.format_daemon_status(status, text)
+
+    # Continue with AI for other questions...
+```
+
+**3. Keep /status for Technical Details**
+- Keep the full technical dump for /status command
+- That's for when users really need all the details
+- But natural questions get natural answers
+
+**Testing Examples**:
+```bash
+# Test natural responses
+poetry run project-manager chat
+
+> is the daemon running?
+"Yes, code_developer is running! 🟢
+He's working on PRIORITY 2.8..."
+
+> what's he doing?
+"He's working on PRIORITY 2.8 - Daemon Status Reporting.
+Started about 10 minutes ago..."
+
+> any problems?
+"Nope, everything's smooth! No crashes, no issues. 👍"
+
+> how long has it been running?
+"About 30 minutes now."
+
+# Full details still available
+> /status
+[Full technical dump]
+```
+
+**4. Clean UI - No Technical Pollution**
+
+**Problem**: Users also see distracting technical noise:
+```
+⠸ Claude is thinking...
+
+Claude: 2025-10-11 12:08:21,476 - INFO - Executing CLI request: You are an AI project manager assistant...
+```
+
+**Solution**:
+```python
+# Remove spinner for simple status checks
+# Only show spinner for actual AI processing
+
+# Suppress INFO logs from user view
+# Logs go to file only, not terminal
+
+# Clean output:
+User: "is the daemon running?"
+Claude: "Yes, he's running! 🟢"
+```
+
+**Implementation**:
+```python
+# In chat_interface.py
+def _handle_natural_language_stream(self, text: str, context: Dict) -> str:
+    # For status checks - NO SPINNER
+    if self._is_simple_status_check(text):
+        return self._format_simple_response(text)  # Direct, no AI call
+
+    # For AI processing - show spinner
+    with Live(Spinner(...)):
+        return self._get_ai_response(text)
+
+# Configure logging
+# User terminal: WARNING and above only
+# Log file: DEBUG and above
+```
+
+**Benefits**:
+1. **Better UX**: Users get what they ask for
+2. **Less Overwhelming**: No technical overload
+3. **More Natural**: Feels like talking to a person
+4. **Context-Aware**: Responses match the question
+5. **Progressive**: Can drill down for details if needed
+6. **Clean UI**: No spinners or logs for simple queries
+7. **Fast**: Direct responses without AI overhead
+
+**Implementation Priority**: **HIGH** (After PRIORITY 2.9)
+
+---
+
+### ✅ **PRIORITY 2.11: Integrated Bug Fixing Workflow** 🐛 **COMPLETE**
+
+**Estimated Duration**: 4-5 hours (Actual: ~3 hours)
+**Impact**: ⭐⭐⭐⭐⭐ (Critical - Developer productivity and quality)
+**Status**: ✅ Complete (2025-10-11)
+**Dependency**: None
+**Why Important**: Streamlined bug fixing from user report to implementation with proper analysis and documentation
+
+#### User Story: Seamless Bug Fixing Workflow
+
+**As a** user
+**I want** to ask project-manager to fix a bug and have it automatically analyzed, documented, and implemented
+**So that** bugs are handled professionally with proper analysis, technical specs, and Definition of Done
+
+**Background**:
+Currently, when bugs are discovered:
+- No structured process for reporting
+- No automatic ticket creation
+- No analysis before fixing
+- No technical specification
+- Direct implementation without proper planning
+- Risk of incomplete fixes or introducing new bugs
+
+**Desired Workflow**:
+
+```
+User → Reports Bug → project-manager → Creates Ticket (with DoD) →
+code_developer → Analyzes Bug → Writes Technical Spec → Implements Fix → Tests → Done
+```
+
+**Step-by-Step Process**:
+
+1. **User Reports Bug**
+   ```
+   User: "There's a bug - the daemon crashes when priority has no technical spec"
+   ```
+
+2. **project-manager Creates Ticket**
+   ```
+   project-manager: "🐛 Creating bug ticket...
+
+   BUG-001: Daemon crashes on priority without technical spec
+
+   **Description**:
+   When daemon encounters a priority without technical spec, it crashes
+   instead of handling gracefully.
+
+   **Reproduction Steps**:
+   1. Add priority to ROADMAP without technical spec
+   2. Start daemon
+   3. Daemon crashes when reaching that priority
+
+   **Expected Behavior**:
+   Daemon should create technical spec or skip gracefully
+
+   **Definition of Done**:
+   - [ ] Bug reproduced and root cause identified
+   - [ ] Technical specification written
+   - [ ] Fix implemented with error handling
+   - [ ] Unit tests added for edge case
+   - [ ] Integration test verifies fix
+   - [ ] No regressions in existing functionality
+   - [ ] Documentation updated if needed
+
+   Ticket saved to: tickets/BUG-001.md
+   Assigned to: code_developer
+
+   Would you like me to ask code_developer to start working on this?"
+   ```
+
+3. **User Approves**
+   ```
+   User: "yes, fix it"
+   ```
+
+4. **code_developer Analyzes Bug**
+   ```
+   code_developer: 🔍 Analyzing BUG-001...
+   code_developer: 📖 Reading daemon.py and related code...
+   code_developer: 🔎 Reproducing the bug...
+   code_developer: ✅ Bug confirmed in daemon.py:450
+
+   **Analysis Complete**:
+
+   Root Cause: _ensure_technical_spec() raises exception when spec file
+   doesn't exist, but exception not caught in run() loop.
+
+   Impact: High - daemon crashes and stops working
+   Affected: All priorities without technical specs
+   Risk: Medium - fix is straightforward, low regression risk
+   ```
+
+5. **code_developer Writes Technical Spec**
+   ```
+   code_developer: 📝 Writing technical specification...
+
+   Created: docs/BUG-001_TECHNICAL_SPEC.md
+
+   **Technical Specification - BUG-001**
+
+   **Solution Approach**:
+   1. Add try-catch around spec creation in run() loop
+   2. Log warning instead of crashing
+   3. Continue to next priority
+   4. Add unit tests for missing spec scenario
+
+   **Files to Modify**:
+   - daemon.py:450-460 (add exception handling)
+   - tests/test_daemon.py (add test case)
+
+   **Testing Strategy**:
+   - Unit test: priority without spec
+   - Integration test: daemon continues after missing spec
+   - Manual test: verify error message clarity
+
+   **Rollback Plan**:
+   If issues occur, revert commit and re-analyze
+   ```
+
+6. **code_developer Implements Fix**
+   ```
+   code_developer: 🔧 Implementing fix for BUG-001...
+   code_developer: ✏️ Modifying daemon.py...
+   code_developer: ✅ Added exception handling
+   code_developer: 📝 Writing unit tests...
+   code_developer: ✅ Tests passing
+   code_developer: 🧪 Running integration tests...
+   code_developer: ✅ All tests pass
+
+   **Fix Complete**:
+   - daemon.py: Added graceful handling for missing specs
+   - tests/test_daemon.py: Added test_missing_technical_spec()
+   - All DoD items: ✅ Complete
+
+   PR created: #234 "Fix: Handle missing technical specs gracefully"
+   Branch: bugfix/BUG-001
+
+   Ready for your review!
+   ```
+
+**Deliverables**:
+
+**1. Bug Ticket Format** (`tickets/BUG-{number}.md`)
+```markdown
+# BUG-{number}: {Title}
+
+**Status**: Open | In Analysis | In Progress | Testing | Fixed
+**Priority**: Critical | High | Medium | Low
+**Reported By**: User
+**Assigned To**: code_developer
+**Created**: 2025-10-11
+**Updated**: 2025-10-11
+
+## Description
+[Clear description of the bug]
+
+## Reproduction Steps
+1. Step 1
+2. Step 2
+3. Expected vs Actual
+
+## Expected Behavior
+[What should happen]
+
+## Actual Behavior
+[What actually happens]
+
+## Definition of Done
+- [ ] Root cause identified
+- [ ] Technical spec written
+- [ ] Fix implemented
+- [ ] Tests added
+- [ ] Tests passing
+- [ ] No regressions
+- [ ] Documentation updated
+- [ ] PR reviewed and merged
+
+## Analysis
+[code_developer fills this in]
+
+## Technical Spec
+See: docs/BUG-{number}_TECHNICAL_SPEC.md
+
+## Implementation
+PR: #{pr_number}
+Branch: bugfix/BUG-{number}
+Commits: [list]
+```
+
+**2. project-manager Bug Command** (`coffee_maker/cli/chat_interface.py`)
+```python
+def _handle_bug_report(self, bug_description: str) -> str:
+    """Handle user bug report.
+
+    Args:
+        bug_description: User's description of the bug
+
+    Returns:
+        Ticket creation confirmation and next steps
+
+    Workflow:
+        1. Generate ticket number (BUG-xxx)
+        2. Create ticket file with description and DoD
+        3. Notify code_developer via notification
+        4. Return ticket info to user
+    """
+    # Generate ticket number
+    ticket_num = self._get_next_bug_number()
+
+    # Create ticket with DoD
+    ticket = {
+        "number": ticket_num,
+        "title": self._extract_bug_title(bug_description),
+        "description": bug_description,
+        "reproduction_steps": self._extract_reproduction_steps(bug_description),
+        "definition_of_done": [
+            "Root cause identified",
+            "Technical spec written",
+            "Fix implemented",
+            "Tests added",
+            "Tests passing",
+            "No regressions",
+            "Documentation updated",
+            "PR reviewed and merged"
+        ],
+        "status": "Open",
+        "priority": self._assess_bug_priority(bug_description),
+        "assigned_to": "code_developer",
+        "created": datetime.now().isoformat()
+    }
+
+    # Write ticket file
+    ticket_path = self._write_bug_ticket(ticket)
+
+    # Create notification for code_developer
+    self.notif_db.create_notification(
+        type="bug_report",
+        title=f"BUG-{ticket_num}: {ticket['title']}",
+        message=f"New bug reported. See {ticket_path} for details.",
+        priority=NOTIF_PRIORITY_HIGH if ticket['priority'] in ['Critical', 'High'] else NOTIF_PRIORITY_NORMAL,
+        context={"ticket": ticket, "ticket_path": str(ticket_path)}
+    )
+
+    return self._format_bug_ticket_response(ticket, ticket_path)
+```
+
+**3. code_developer Bug Handling** (`coffee_maker/autonomous/daemon.py`)
+```python
+def _handle_bug_ticket(self, ticket: dict) -> bool:
+    """Handle bug ticket with full workflow.
+
+    Args:
+        ticket: Bug ticket dictionary
+
+    Returns:
+        True if bug fixed successfully
+
+    Workflow:
+        1. Read ticket and understand bug
+        2. Analyze: reproduce bug, find root cause
+        3. Write technical specification
+        4. Implement fix with tests
+        5. Verify all DoD items complete
+        6. Create PR and update ticket
+    """
+    ticket_num = ticket['number']
+    logger.info(f"🐛 Handling {ticket_num}: {ticket['title']}")
+
+    # Phase 1: Analysis
+    logger.info("🔍 Phase 1: Analyzing bug...")
+    analysis = self._analyze_bug(ticket)
+
+    if not analysis['reproduced']:
+        return self._mark_cannot_reproduce(ticket_num)
+
+    # Phase 2: Technical Spec
+    logger.info("📝 Phase 2: Writing technical specification...")
+    spec_path = self._write_bug_technical_spec(ticket_num, analysis)
+
+    # Phase 3: Implementation
+    logger.info("🔧 Phase 3: Implementing fix...")
+    impl_result = self._implement_bug_fix(ticket_num, spec_path)
+
+    if not impl_result['success']:
+        return False
+
+    # Phase 4: Testing
+    logger.info("🧪 Phase 4: Running tests...")
+    test_result = self._run_tests()
+
+    if not test_result['passed']:
+        return False
+
+    # Phase 5: PR Creation
+    logger.info("📤 Phase 5: Creating PR...")
+    pr_url = self._create_bug_fix_pr(ticket_num, impl_result)
+
+    # Update ticket
+    self._update_bug_ticket(ticket_num, {
+        'status': 'Fixed',
+        'pr_url': pr_url,
+        'fixed_at': datetime.now().isoformat()
+    })
+
+    logger.info(f"✅ {ticket_num} fixed! PR: {pr_url}")
+    return True
+```
+
+**Implementation Steps**:
+
+1. **Create Ticket System** (1.5 hours)
+   - tickets/ directory structure
+   - BUG-{number}.md template
+   - Auto-increment bug numbers
+   - Ticket file generation
+
+2. **project-manager Bug Commands** (1 hour)
+   - Detect bug reports in chat
+   - Create ticket with DoD
+   - Notify code_developer
+   - Display ticket to user
+
+3. **code_developer Bug Workflow** (2 hours)
+   - Read and parse bug tickets
+   - Analysis phase (reproduce + root cause)
+   - Tech spec phase
+   - Implementation phase with tests
+   - PR creation and ticket update
+
+4. **Testing & Integration** (30 min)
+   - Test full workflow end-to-end
+   - Verify DoD completion
+   - Test edge cases
+
+**Testing**:
+```bash
+# Test full workflow
+project-manager chat
+
+User: "There's a bug - daemon crashes when priority has no spec"
+
+project-manager: 🐛 Creating BUG-001...
+project-manager: [Shows ticket with DoD]
+project-manager: "Assign to code_developer? (yes/no)"
+
+User: "yes"
+
+project-manager: ✅ Notified code_developer
+
+# code_developer (daemon) picks it up
+# [Analyzes bug]
+# [Writes technical spec]
+# [Implements fix]
+# [Creates PR]
+
+project-manager: 🎉 BUG-001 fixed!
+project-manager: PR #234: https://github.com/.../pull/234
+project-manager: All DoD items complete ✅
+```
+
+**Benefits**:
+1. **Structured Process**: Every bug handled professionally
+2. **Proper Analysis**: Root cause identified before fixing
+3. **Documentation**: Technical specs for complex bugs
+4. **Quality**: DoD ensures complete fixes
+5. **Traceability**: Tickets track entire bug lifecycle
+6. **Automation**: code_developer handles heavy lifting
+7. **Transparency**: User sees progress at each phase
+
+**Implementation Priority**: **HIGH** (After PRIORITY 2.10)
 
 ---
 

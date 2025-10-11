@@ -41,6 +41,8 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 from coffee_maker.cli.ai_service import AIService
+from coffee_maker.cli.assistant_bridge import AssistantBridge
+from coffee_maker.cli.bug_tracker import BugTracker
 from coffee_maker.cli.commands import get_command_handler, list_commands
 from coffee_maker.cli.notifications import NotificationDB, NOTIF_PRIORITY_HIGH
 from coffee_maker.cli.roadmap_editor import RoadmapEditor
@@ -162,6 +164,13 @@ class ChatSession:
         # Initialize notification database for bidirectional communication
         self.notif_db = NotificationDB()
 
+        # Initialize bug tracker for integrated bug fixing workflow (PRIORITY 2.11)
+        self.bug_tracker = BugTracker()
+
+        # Initialize LangChain-powered assistant for complex questions (PRIORITY 2.9.5)
+        # Assistant uses tools to help with analysis, debugging, code search, etc.
+        self.assistant = AssistantBridge(action_callback=self._display_assistant_action)
+
         # Setup prompt-toolkit for advanced input
         self._setup_prompt_session()
 
@@ -190,14 +199,9 @@ class ChatSession:
             """Submit on Enter."""
             event.current_buffer.validate_and_handle()
 
-        @bindings.add("s-enter")  # Shift+Enter
+        @bindings.add("escape", "enter")  # Alt+Enter for multi-line
         def _(event):
-            """Insert newline on Shift+Enter."""
-            event.current_buffer.insert_text("\n")
-
-        @bindings.add("escape", "enter")  # Alt+Enter (fallback)
-        def _(event):
-            """Insert newline on Alt+Enter (alternative to Shift+Enter)."""
+            """Insert newline on Alt+Enter."""
             event.current_buffer.insert_text("\n")
 
         # Create prompt session
@@ -209,6 +213,19 @@ class ChatSession:
             key_bindings=bindings,
             enable_history_search=True,  # Ctrl+R for reverse search
         )
+
+    def _display_assistant_action(self, action: str):
+        """Display assistant action in real-time.
+
+        PRIORITY 2.9.5: Transparent Assistant Integration
+
+        Called by AssistantBridge when assistant uses a tool.
+        Shows user what the assistant is doing.
+
+        Args:
+            action: Action description (e.g., "🔧 read_file: daemon.py")
+        """
+        self.console.print(f"[dim]{action}[/]")
 
     def _load_session(self):
         """Load previous conversation history from file."""
@@ -257,41 +274,129 @@ class ChatSession:
         logger.debug(f"Status updated: {self.daemon_status_text}")
 
     def _cmd_daemon_status(self) -> str:
-        """Show detailed daemon status."""
-        import time
-        from datetime import timedelta
+        """Show detailed daemon status with progress bar and work information.
+
+        PRIORITY 2.11: Enhanced status reporting
+        - Shows what daemon is working on
+        - Progress bar for current priority
+        - Time elapsed on current work
+        - Iteration count
+        - Crash history
+        """
+        import json
+        from datetime import datetime
+        from pathlib import Path
 
         self._update_status_display()
-        status = self.process_manager.get_daemon_status()
 
-        if not status["running"]:
+        # Read daemon status file directly for detailed info
+        status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
+
+        if not status_file.exists():
+            return (
+                "❌ **Daemon Status: NOT FOUND**\n\n"
+                "The daemon status file doesn't exist.\n\n"
+                "The daemon may not be running or hasn't been started yet.\n\n"
+                "Use `/start` to launch the daemon."
+            )
+
+        try:
+            with open(status_file, "r") as f:
+                daemon_status = json.load(f)
+        except Exception as e:
+            return f"❌ **Error Reading Status**: {str(e)}"
+
+        if daemon_status["status"] != "running":
             return (
                 "❌ **Daemon Status: STOPPED**\n\n"
                 "The code_developer daemon is not currently running.\n\n"
-                "Use `/start` to launch it.\n\n"
-                "💡 **Note**: The daemon can take 12+ hours to respond to tasks.\n"
-                "   Like a human developer, he needs focus time and rest periods!"
+                "Use `/start` to launch it."
             )
 
-        # Calculate uptime
-        uptime_seconds = time.time() - status["uptime"]
-        uptime = str(timedelta(seconds=int(uptime_seconds)))
+        # Get process info
+        status = self.process_manager.get_daemon_status()
 
-        # Format current task
-        task = status["current_task"] or "None (Idle)"
+        # Parse timestamps
+        started_at = datetime.fromisoformat(daemon_status["started_at"])
+        uptime = datetime.now() - started_at
 
-        return (
-            f"🟢 **Daemon Status: RUNNING**\n\n"
-            f"- **PID**: {status['pid']}\n"
-            f"- **Status**: {status['status'].upper()}\n"
-            f"- **Current Task**: {task}\n"
-            f"- **Uptime**: {uptime}\n"
-            f"- **CPU**: {status['cpu_percent']:.1f}%\n"
-            f"- **Memory**: {status['memory_mb']:.1f} MB\n\n"
-            "💡 **Tip**: code_developer may take time to respond (12+ hours is normal).\n"
-            "   He needs focus time and rest, just like a human developer!\n\n"
-            "Use `/stop` to shut down the daemon gracefully."
-        )
+        # Build status message
+        lines = []
+        lines.append("🟢 **code_developer is running!**\n")
+
+        # Current work section
+        current_priority = daemon_status.get("current_priority")
+        if current_priority and current_priority.get("name"):
+            lines.append("**📋 Current Work:**")
+            lines.append(f"- **Priority**: {current_priority['name']}")
+            lines.append(f"- **Title**: {current_priority['title']}")
+
+            # Calculate time on current priority
+            if current_priority.get("started_at"):
+                priority_start = datetime.fromisoformat(current_priority["started_at"])
+                time_on_priority = datetime.now() - priority_start
+                hours = int(time_on_priority.total_seconds() / 3600)
+                minutes = int((time_on_priority.total_seconds() % 3600) / 60)
+
+                lines.append(f"- **Time Elapsed**: {hours}h {minutes}m")
+
+                # Progress bar based on time (assuming typical priority takes 4-8 hours)
+                # Show progress up to 8 hours, then just show it's ongoing
+                max_hours = 8
+                progress_pct = min(100, int((time_on_priority.total_seconds() / 3600 / max_hours) * 100))
+
+                # Create progress bar
+                bar_length = 20
+                filled = int(bar_length * progress_pct / 100)
+                bar = "█" * filled + "░" * (bar_length - filled)
+                lines.append(f"- **Progress**: [{bar}] {progress_pct}%")
+
+                if progress_pct >= 100:
+                    lines.append("  _(This is a complex task taking longer than usual)_")
+
+            # Iteration count
+            iteration = daemon_status.get("iteration", 0)
+            lines.append(f"- **Iterations**: {iteration}")
+
+        else:
+            lines.append("**Status**: Idle (waiting for work)")
+
+        lines.append("")
+
+        # Process health section
+        lines.append("**⚙️  Process Health:**")
+        lines.append(f"- **PID**: {daemon_status['pid']}")
+        lines.append(f"- **Uptime**: {str(uptime).split('.')[0]}")
+        lines.append(f"- **CPU**: {status['cpu_percent']:.1f}%")
+        lines.append(f"- **Memory**: {status['memory_mb']:.1f} MB")
+
+        # Crash history
+        crashes = daemon_status.get("crashes", {})
+        crash_count = crashes.get("count", 0)
+        if crash_count > 0:
+            max_crashes = crashes.get("max", 3)
+            lines.append(f"- **Crashes**: {crash_count}/{max_crashes} ⚠️")
+
+            history = crashes.get("history", [])
+            if history:
+                lines.append(f"  _Last crash: {history[-1]}_")
+        else:
+            lines.append(f"- **Crashes**: 0 ✓")
+
+        lines.append("")
+
+        # Context management
+        context = daemon_status.get("context", {})
+        if context:
+            iterations_since_compact = context.get("iterations_since_compact", 0)
+            compact_interval = context.get("compact_interval", 10)
+            lines.append("**🔄 Context Management:**")
+            lines.append(f"- **Next refresh**: {compact_interval - iterations_since_compact} iterations")
+
+        lines.append("")
+        lines.append("_Use `/stop` to shut down the daemon, or just let him work!_")
+
+        return "\n".join(lines)
 
     def _cmd_daemon_start(self) -> str:
         """Start the daemon."""
@@ -373,17 +478,70 @@ class ChatSession:
         else:
             return "❌ Failed to restart daemon. Check logs."
 
+    def _auto_start_daemon_if_needed(self):
+        """Automatically start daemon if not running.
+
+        PRIORITY: Automatic Daemon Management (Priority #3)
+
+        This method is called at project-manager startup to ensure
+        the code_developer daemon is always running when the user
+        interacts with the project-manager.
+
+        No user approval required - just makes sure daemon is live.
+
+        Behavior:
+        - Checks if daemon is running
+        - If not, starts it automatically in background
+        - Shows brief status message
+        - No long explanations or approval dialogs
+
+        Example:
+            >>> session._auto_start_daemon_if_needed()
+            # Silently starts daemon if needed
+        """
+        # Check if daemon is already running
+        if self.process_manager.is_daemon_running():
+            # Already running - nothing to do
+            logger.debug("Daemon already running - no action needed")
+            self._update_status_display()
+            return
+
+        # Daemon not running - start it automatically
+        logger.info("Daemon not running - auto-starting...")
+        self.console.print("\n[dim]Starting code_developer daemon...[/]", end=" ")
+
+        success = self.process_manager.start_daemon(background=True)
+
+        if success:
+            self.console.print("[green]✓[/]")
+            logger.info("Daemon auto-started successfully")
+        else:
+            self.console.print("[yellow]⚠[/]")
+            logger.warning("Failed to auto-start daemon")
+            # Don't block the user - they can manually start later if needed
+
+        self._update_status_display()
+
     def start(self):
         """Start interactive chat session.
 
         Displays welcome message and enters REPL loop.
         Handles user input, routes commands, and displays responses.
 
+        PRIORITY: Automatic Daemon Management (Priority #3)
+        Automatically checks if daemon is running and starts it if needed.
+        No user approval required - just make it work.
+
         Example:
             >>> session.start()
             # Enters interactive mode
+            # Daemon auto-starts if not running
         """
         self.active = True
+
+        # Auto-check and start daemon if needed
+        self._auto_start_daemon_if_needed()
+
         self._display_welcome()
         self._load_roadmap_context()
         self._run_repl_loop()
@@ -581,6 +739,12 @@ class ChatSession:
     def _handle_natural_language_stream(self, text: str, context: Dict) -> str:
         """Handle natural language with streaming response and daemon awareness.
 
+        PRIORITY 2.11: Integrated bug fixing workflow
+        Detects bug reports and creates tickets automatically.
+
+        PRIORITY 2.9.5: Transparent Assistant Integration
+        Uses LangChain assistant for complex questions requiring analysis.
+
         Args:
             text: Natural language input
             context: Roadmap context
@@ -589,6 +753,10 @@ class ChatSession:
             Complete response message
         """
         try:
+            # PRIORITY 2.11: Detect bug reports
+            if self.bug_tracker.detect_bug_report(text):
+                return self._handle_bug_report(text)
+
             # Detect daemon-related commands
             daemon_keywords = [
                 "ask daemon",
@@ -617,30 +785,12 @@ class ChatSession:
             if any(keyword in text.lower() for keyword in status_keywords):
                 return self._cmd_daemon_status()
 
+            # PRIORITY 2.9.5: Check if assistant should help with complex question
+            if self.assistant.is_available() and self.assistant.should_invoke_for_question(text):
+                return self._invoke_assistant(text)
+
             # Normal AI-powered response with streaming
-            # Show typing indicator briefly
-            with Live(
-                Spinner("dots", text="[cyan]Claude is thinking...[/]"), console=self.console, refresh_per_second=10
-            ):
-                # Brief pause for UX (let user see the indicator)
-                import time
-
-                time.sleep(0.3)
-
-            # Stream response
-            self.console.print("\n[bold green]Claude:[/] ", end="")
-
-            full_response = ""
-            for chunk in self.ai_service.process_request_stream(user_input=text, context=context, history=self.history):
-                self.console.print(chunk, end="")
-                full_response += chunk
-
-            self.console.print()  # Final newline
-
-            # TODO: Extract action from full_response if needed
-            # For now, streaming responses don't support actions
-
-            return full_response
+            return self._get_normal_ai_response(text)
 
         except Exception as e:
             logger.error(f"Streaming natural language processing failed: {e}", exc_info=True)
@@ -743,7 +893,7 @@ class ChatSession:
             "  • [cyan]Streaming responses[/] - Text appears progressively\n"
             "  • [cyan]↑/↓[/] - Navigate input history\n"
             "  • [cyan]Tab[/] - Auto-complete commands and priorities\n"
-            "  • [cyan]Shift+Enter[/] - Multi-line input\n"
+            "  • [cyan]Alt+Enter[/] - Multi-line input\n"
             "  • [cyan]Ctrl+R[/] - Reverse history search\n\n"
         )
 
@@ -873,6 +1023,113 @@ class ChatSession:
         self.console.print(table)
         self.console.print("\n[italic]You can also use natural language![/]")
         self.console.print('[dim]Example: "Add a priority for user authentication"[/]\n')
+
+    def _invoke_assistant(self, question: str) -> str:
+        """Invoke LangChain assistant for complex question.
+
+        PRIORITY 2.9.5: Transparent Assistant Integration
+
+        Args:
+            question: User's complex question
+
+        Returns:
+            Assistant's answer with transparent action steps
+        """
+        try:
+            # Show indicator that assistant is working
+            self.console.print("\n[cyan]🔍 Using intelligent assistant to analyze...[/]\n")
+
+            # Invoke assistant (actions will be displayed via callback)
+            result = self.assistant.invoke(question)
+
+            if result["success"]:
+                # Display final answer
+                return result["answer"]
+            else:
+                # Fall back to normal AI if assistant fails
+                error_msg = result.get("error", "Unknown error")
+                logger.warning(f"Assistant failed: {error_msg}, falling back to Claude AI")
+                self.console.print(f"[yellow]Assistant unavailable ({error_msg}), using Claude AI instead...[/]\n")
+
+                # Continue to normal AI response (will be handled by caller)
+                return self._get_normal_ai_response(question)
+
+        except Exception as e:
+            logger.error(f"Assistant invocation failed: {e}", exc_info=True)
+            # Fall back to normal AI
+            return self._get_normal_ai_response(question)
+
+    def _get_normal_ai_response(self, text: str) -> str:
+        """Get normal Claude AI streaming response.
+
+        Args:
+            text: User input
+
+        Returns:
+            Complete AI response
+        """
+        context = self._build_context()
+
+        # Show typing indicator briefly
+        with Live(Spinner("dots", text="[cyan]Claude is thinking...[/]"), console=self.console, refresh_per_second=10):
+            import time
+
+            time.sleep(0.3)
+
+        # Stream response
+        self.console.print("\n[bold green]Claude:[/] ", end="")
+
+        full_response = ""
+        for chunk in self.ai_service.process_request_stream(user_input=text, context=context, history=self.history):
+            self.console.print(chunk, end="")
+            full_response += chunk
+
+        self.console.print()  # Final newline
+
+        return full_response
+
+    def _handle_bug_report(self, bug_description: str) -> str:
+        """Handle user bug report.
+
+        PRIORITY 2.11: Integrated Bug Fixing Workflow
+
+        Args:
+            bug_description: User's description of the bug
+
+        Returns:
+            Ticket creation confirmation and next steps
+
+        Workflow:
+            1. Generate ticket number (BUG-xxx)
+            2. Create ticket file with description and DoD
+            3. Notify code_developer via notification
+            4. Return ticket info to user
+        """
+        try:
+            # Create bug ticket
+            bug_number, ticket_path = self.bug_tracker.create_bug_ticket(description=bug_description)
+
+            # Extract info for notification
+            title = self.bug_tracker.extract_bug_title(bug_description)
+            priority = self.bug_tracker.assess_bug_priority(bug_description)
+
+            # Create notification for code_developer
+            notif_id = self.notif_db.create_notification(
+                type="bug",
+                title=f"BUG-{bug_number:03d}: {title}",
+                message=f"New bug reported. See {ticket_path} for details.\n\n{bug_description}",
+                priority=NOTIF_PRIORITY_HIGH if priority in ["Critical", "High"] else "normal",
+                context={"bug_number": bug_number, "ticket_path": str(ticket_path), "priority": priority},
+            )
+
+            logger.info(f"Bug ticket {bug_number} created, notification #{notif_id} sent to daemon")
+
+            # Format response for user
+            return self.bug_tracker.format_ticket_response(bug_number, ticket_path, title, priority)
+
+        except Exception as e:
+            logger.error(f"Failed to create bug ticket: {e}", exc_info=True)
+            return f"❌ Failed to create bug ticket: {str(e)}"
 
     def _send_command_to_daemon(self, command: str) -> str:
         """Send command to daemon via notifications.
