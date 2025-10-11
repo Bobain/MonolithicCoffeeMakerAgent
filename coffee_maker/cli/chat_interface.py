@@ -33,10 +33,7 @@ from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from rich.console import Console
-from rich.live import Live
 from rich.markdown import Markdown
-from rich.panel import Panel
-from rich.spinner import Spinner
 from rich.syntax import Syntax
 from rich.table import Table
 
@@ -204,7 +201,7 @@ class ChatSession:
             """Insert newline on Alt+Enter."""
             event.current_buffer.insert_text("\n")
 
-        # Create prompt session
+        # Create prompt session with better multi-line support
         self.prompt_session = PromptSession(
             history=FileHistory(str(history_file)),
             completer=ProjectManagerCompleter(self.editor),
@@ -212,6 +209,7 @@ class ChatSession:
             multiline=False,  # Will be controlled by key bindings
             key_bindings=bindings,
             enable_history_search=True,  # Ctrl+R for reverse search
+            prompt_continuation="... ",  # Continuation indicator for multi-line (like claude-cli)
         )
 
     def _display_assistant_action(self, action: str):
@@ -563,12 +561,12 @@ class ChatSession:
 
         while self.active:
             try:
-                # Show prompt with Rich styling hint
-                self.console.print("\n[bold cyan]You:[/] ", end="")
+                # Show prompt in a clean, claude-cli style
+                self.console.print("\n[bold]You[/]")
 
                 # Get user input with prompt-toolkit
-                # (supports: ↑/↓ history, Tab completion, Shift+Enter multi-line)
-                user_input = self.prompt_session.prompt("")
+                # (supports: ↑/↓ history, Tab completion, Alt+Enter multi-line)
+                user_input = self.prompt_session.prompt("› ")
 
                 if not user_input.strip():
                     continue
@@ -887,37 +885,39 @@ class ChatSession:
             return f"❌ Failed to execute action: {str(e)}"
 
     def _display_welcome(self):
-        """Display welcome message with rich formatting."""
-        features = (
-            "✨ [bold]New Features:[/] ✨\n"
-            "  • [cyan]Streaming responses[/] - Text appears progressively\n"
-            "  • [cyan]↑/↓[/] - Navigate input history\n"
-            "  • [cyan]Tab[/] - Auto-complete commands and priorities\n"
-            "  • [cyan]Alt+Enter[/] - Multi-line input\n"
-            "  • [cyan]Ctrl+R[/] - Reverse history search\n\n"
-        )
+        """Display welcome message with clean, claude-cli inspired formatting."""
+        # Clean, minimal welcome similar to claude-cli
+        self.console.print()
+        self.console.print("[bold]Coffee Maker[/] [dim]·[/] AI Project Manager")
+        self.console.print("[dim]Powered by Claude AI[/]")
+        self.console.print()
 
-        panel = Panel.fit(
-            "[bold cyan]Coffee Maker - AI Project Manager[/]\n\n"
-            "Powered by Claude AI - Your intelligent roadmap assistant\n\n"
-            f"{features}"
-            "Type [bold]/help[/] for commands or just chat naturally\n\n"
-            "[dim]Session started. Type /exit to quit.[/]",
-            title="🤖 Welcome",
-            border_style="cyan",
+        # Show keyboard shortcuts in a clean way
+        self.console.print("[dim]Keyboard shortcuts:[/]")
+        self.console.print("[dim]  /help[/] [dim]- Show commands[/]")
+        self.console.print("[dim]  Alt+Enter[/] [dim]- Multi-line input[/]")
+        self.console.print(
+            "[dim]  ↑↓[/] [dim]- History    [/][dim]Tab[/] [dim]- Complete    [/][dim]/exit[/] [dim]- Quit[/]"
         )
-        self.console.print(panel)
+        self.console.print()
 
-        # Show daemon status
-        self.console.print(f"\n[cyan]{self.daemon_status_text}[/]")
-        self.console.print("[dim]Use /status for detailed info, /start to launch daemon, /stop to shut down[/]\n")
+        # Show daemon status in a subtle way
+        status_icon = (
+            "🟢" if "Active" in self.daemon_status_text else "🔴" if "Stopped" in self.daemon_status_text else "🟡"
+        )
+        self.console.print(
+            f"[dim]{status_icon} code_developer: {self.daemon_status_text.split(': ')[1] if ': ' in self.daemon_status_text else self.daemon_status_text}[/]"
+        )
+        self.console.print()
+        self.console.print("[dim]" + "─" * 60 + "[/]")
+        self.console.print()
 
     def _display_goodbye(self):
         """Display goodbye message and save session."""
         self.active = False
         self._save_session()  # Final save on exit
-        self.console.print("\n[bold cyan]Thank you for using Coffee Maker Project Manager![/]")
-        self.console.print(f"[dim]Session saved ({len(self.history)} messages). All changes have been saved.[/]\n")
+        self.console.print("\n[dim]Session saved. Goodbye![/]")
+        self.console.print()
 
     def _display_response(self, response: str):
         """Display AI response with enhanced syntax highlighting.
@@ -928,7 +928,8 @@ class ChatSession:
         Example:
             >>> session._display_response("**Success!** Priority added.")
         """
-        self.console.print("\n[bold green]Claude:[/]")
+        # Clean, claude-cli style header
+        self.console.print("\n[bold]Claude[/]")
 
         # Extract and render code blocks with syntax highlighting
         try:
@@ -1070,18 +1071,18 @@ class ChatSession:
         """
         context = self._build_context()
 
-        # Show typing indicator briefly
-        with Live(Spinner("dots", text="[cyan]Claude is thinking...[/]"), console=self.console, refresh_per_second=10):
-            import time
+        # Show thinking indicator briefly (very subtle, like claude-cli)
+        self.console.print("\n[dim]...[/]", end="\r")  # Will be overwritten
+        import time
 
-            time.sleep(0.3)
+        time.sleep(0.2)  # Brief pause
 
-        # Stream response
-        self.console.print("\n[bold green]Claude:[/] ", end="")
+        # Stream response with clean header
+        self.console.print("\n[bold]Claude[/]")
 
         full_response = ""
         for chunk in self.ai_service.process_request_stream(user_input=text, context=context, history=self.history):
-            self.console.print(chunk, end="")
+            self.console.print(chunk, end="", flush=True)  # flush=True for immediate display
             full_response += chunk
 
         self.console.print()  # Final newline

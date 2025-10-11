@@ -248,12 +248,17 @@ class AIService:
                 # and yield it in chunks to simulate streaming
                 response = self.process_request(user_input, context, history, stream=False)
 
-                # Yield in chunks of ~50 chars for better UX
-                chunk_size = 50
-                for i in range(0, len(response.message), chunk_size):
-                    yield response.message[i : i + chunk_size]
+                # Yield in smaller chunks with word-boundary awareness for smooth streaming
+                # Similar to claude-cli's character-by-character appearance
+                import time
 
-                logger.info("CLI response yielded in chunks")
+                words = response.message.split()
+                for word in words:
+                    yield word + " "
+                    # Small delay to simulate natural typing (adjustable)
+                    time.sleep(0.01)  # 10ms per word feels natural
+
+                logger.info("CLI response yielded word-by-word")
                 return
 
             # Build system prompt with context
