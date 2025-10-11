@@ -289,12 +289,14 @@ See `LICENSE` file.
 **Built with coffee by the Coffee Maker Agent team**
 """
 
-__version__ = "1.0.0"
-__author__ = "Coffee Maker Agent Team"
-__license__ = "MIT"
+from typing import List
+
+__version__: str = "1.0.0"
+__author__: str = "Coffee Maker Agent Team"
+__license__: str = "MIT"
 
 # Public API exports
-__all__ = [
+__all__: List[str] = [
     # Core LLM interface
     "AutoPickerLLM",
     # Strategies

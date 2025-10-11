@@ -4,7 +4,7 @@ All specialized perspectives inherit from this base class.
 """
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 
 from coffee_maker.code_reviewer.models import ReviewIssue
 
@@ -70,9 +70,9 @@ class BasePerspective(ABC):
         category: str,
         title: str,
         description: str,
-        line_number: int = None,
-        code_snippet: str = None,
-        suggestion: str = None,
+        line_number: Optional[int] = None,
+        code_snippet: Optional[str] = None,
+        suggestion: Optional[str] = None,
     ) -> ReviewIssue:
         """Helper to create a ReviewIssue.
 

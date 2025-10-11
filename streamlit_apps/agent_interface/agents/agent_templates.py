@@ -16,10 +16,10 @@ Each template includes:
 - Example tasks
 """
 
-from typing import Dict, List
+from typing import Any, Dict, List
 
 # Agent template structure
-AgentTemplate = Dict[str, any]
+AgentTemplate = Dict[str, Any]
 
 
 class AgentTemplates:
@@ -314,7 +314,7 @@ Write tests that catch bugs before production.""",
         return template["system_prompt"]
 
     @staticmethod
-    def get_recommended_config(name: str) -> Dict[str, any]:
+    def get_recommended_config(name: str) -> Dict[str, Any]:
         """Get recommended configuration for an agent template.
 
         Args:

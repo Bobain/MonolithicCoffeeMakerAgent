@@ -20,7 +20,6 @@ Example:
     >>> session.start()
 """
 
-import json
 import logging
 import os
 import re
@@ -29,6 +28,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+
+from coffee_maker.utils.file_io import read_json_file, write_json_file
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
@@ -441,10 +442,9 @@ class ChatSession:
         """Load previous conversation history from file."""
         if self.session_file.exists():
             try:
-                with open(self.session_file, "r") as f:
-                    data = json.load(f)
-                    self.history = data.get("history", [])
-                    logger.info(f"Loaded {len(self.history)} messages from previous session")
+                data = read_json_file(self.session_file, default={"history": []})
+                self.history = data.get("history", [])
+                logger.info(f"Loaded {len(self.history)} messages from previous session")
             except Exception as e:
                 logger.warning(f"Failed to load session: {e}")
                 self.history = []
@@ -452,15 +452,13 @@ class ChatSession:
     def _save_session(self):
         """Save conversation history to file."""
         try:
-            with open(self.session_file, "w") as f:
-                json.dump(
-                    {
-                        "history": self.history,
-                        "last_updated": datetime.now().isoformat(),
-                    },
-                    f,
-                    indent=2,
-                )
+            write_json_file(
+                self.session_file,
+                {
+                    "history": self.history,
+                    "last_updated": datetime.now().isoformat(),
+                },
+            )
             logger.debug(f"Saved {len(self.history)} messages to session")
         except Exception as e:
             logger.warning(f"Failed to save session: {e}")
@@ -493,7 +491,6 @@ class ChatSession:
         - Iteration count
         - Crash history
         """
-        import json
         from datetime import datetime
         from pathlib import Path
 
@@ -511,8 +508,7 @@ class ChatSession:
             )
 
         try:
-            with open(status_file, "r") as f:
-                daemon_status = json.load(f)
+            daemon_status = read_json_file(status_file)
         except Exception as e:
             return f"❌ **Error Reading Status**: {str(e)}"
 

@@ -1,25 +1,75 @@
 """Autonomous development daemon - minimal MVP.
 
-This module implements the core autonomous daemon that:
-1. Reads ROADMAP.md continuously
-2. Finds next planned priority
-3. Executes Claude API to implement it
-4. Commits, pushes, creates PR
-5. Updates ROADMAP status
-6. Repeats until all priorities complete
+This module implements the core autonomous daemon that continuously reads
+ROADMAP.md and autonomously implements features by invoking Claude API.
 
-Example:
-    >>> from coffee_maker.autonomous.daemon import DevDaemon
-    >>>
-    >>> daemon = DevDaemon(
-    ...     roadmap_path="docs/ROADMAP.md",
-    ...     auto_approve=True,
-    ...     create_prs=True
-    ... )
+Architecture:
+    DevDaemon: Main daemon loop
+    ├── RoadmapParser: Reads and parses ROADMAP.md
+    ├── ClaudeAPI/ClaudeCLI: Interfaces with Claude for implementation
+    ├── GitManager: Handles git operations (branch, commit, push, PR)
+    ├── DeveloperStatus: Real-time status tracking (PRIORITY 4)
+    └── NotificationDB: Bidirectional communication with project-manager
+
+Workflow:
+    1. Parse ROADMAP.md for next planned priority
+    2. Ensure technical specification exists (create if missing)
+    3. Create feature branch
+    4. Execute Claude API with implementation prompt
+    5. Commit changes with proper message
+    6. Push and create PR
+    7. Update status and notify user
+    8. Sleep and repeat
+
+Key Features:
+    - Crash Recovery: Automatic recovery from crashes (max 3 attempts)
+    - Context Management: Periodic context refresh (every 10 iterations)
+    - Status Tracking: Real-time status reporting via data/developer_status.json
+    - Retry Logic: Smart retry with max attempts per priority
+    - Notifications: Bidirectional communication with user
+    - Auto-approval Mode: Fully autonomous operation
+    - PR Creation: Automatic pull request generation
+
+Prerequisites:
+    - ANTHROPIC_API_KEY environment variable (for API mode)
+    - Claude CLI installed (for CLI mode)
+    - Git repository with remote
+    - docs/ROADMAP.md exists
+    - Clean working directory
+
+Usage Examples:
+    Basic usage (autonomous mode):
+    >>> daemon = DevDaemon(auto_approve=True)
+    >>> daemon.run()  # Runs until all priorities complete
+
+    With user approval:
+    >>> daemon = DevDaemon(auto_approve=False)
+    >>> daemon.run()  # Asks for approval before each priority
+
+    Using Claude CLI (subscription):
+    >>> daemon = DevDaemon(use_claude_cli=True, claude_cli_path="/path/to/claude")
     >>> daemon.run()
+
+    Custom crash recovery:
+    >>> daemon = DevDaemon(max_crashes=5, crash_sleep_interval=120)
+    >>> daemon.run()
+
+Status Tracking:
+    The daemon writes status to ~/.coffee_maker/daemon_status.json
+    which project-manager reads to display current progress.
+
+    Use `project-manager developer-status` to view daemon status.
+
+Configuration:
+    - roadmap_path: Path to ROADMAP.md (default: docs/ROADMAP.md)
+    - auto_approve: Auto-approve without confirmation (default: True)
+    - create_prs: Create PRs automatically (default: True)
+    - sleep_interval: Seconds between iterations (default: 30)
+    - model: Claude model to use (default: sonnet)
+    - max_crashes: Max crashes before stopping (default: 3)
+    - compact_interval: Iterations between context resets (default: 10)
 """
 
-import json
 import logging
 import os
 import time
@@ -27,6 +77,7 @@ from datetime import datetime
 from pathlib import Path
 
 from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
+from coffee_maker.utils.file_io import write_json_file
 from coffee_maker.autonomous.developer_status import (
     ActivityType,
     DeveloperState,
@@ -88,7 +139,7 @@ class DevDaemon:
         max_crashes: int = 3,
         crash_sleep_interval: int = 60,
         compact_interval: int = 10,
-    ):
+    ) -> None:
         """Initialize development daemon.
 
         Args:
@@ -321,7 +372,9 @@ class DevDaemon:
                     "timestamp": datetime.now().isoformat(),
                     "exception": str(e),
                     "exception_type": type(e).__name__,
-                    "priority": next_priority.get("name") if "next_priority" in locals() else "Unknown",
+                    "priority": (
+                        next_priority.get("name") if "next_priority" in locals() and next_priority else "Unknown"
+                    ),
                     "iteration": iteration,
                 }
                 self.crash_history.append(crash_info)
@@ -1215,10 +1268,8 @@ The daemon will remain stopped until manually restarted.
 
             # Write to status file
             status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
-            status_file.parent.mkdir(exist_ok=True, parents=True)
 
-            with open(status_file, "w") as f:
-                json.dump(status, f, indent=2)
+            write_json_file(status_file, status)
 
             logger.debug(f"Status written to {status_file}")
 

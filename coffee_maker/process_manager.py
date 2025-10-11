@@ -10,7 +10,8 @@ import subprocess
 import time
 from pathlib import Path
 from typing import Optional, Dict
-import json
+
+from coffee_maker.utils.file_io import read_json_file, write_json_file
 
 logger = logging.getLogger(__name__)
 
@@ -262,11 +263,10 @@ class ProcessManager:
         # Try status file first (most accurate)
         if self.status_file.exists():
             try:
-                with open(self.status_file) as f:
-                    data = json.load(f)
-                    task = data.get("current_task")
-                    if task:
-                        return task
+                data = read_json_file(self.status_file, default={})
+                task = data.get("current_task")
+                if task:
+                    return task
             except Exception as e:
                 logger.warning(f"Failed to read status file: {e}")
 
@@ -274,7 +274,7 @@ class ProcessManager:
         try:
             from coffee_maker.cli.roadmap_editor import RoadmapEditor
 
-            editor = RoadmapEditor("docs/ROADMAP.md")
+            editor = RoadmapEditor(Path("docs/ROADMAP.md"))
             priorities = editor.list_priorities()
 
             for p in priorities:
@@ -336,17 +336,15 @@ class ProcessManager:
         from datetime import datetime
 
         try:
-            if self.status_file.exists():
-                with open(self.status_file) as f:
-                    data = json.load(f)
-            else:
-                data = {"started_at": datetime.now().isoformat()}
+            # Read existing data or create new
+            data = read_json_file(self.status_file, default={"started_at": datetime.now().isoformat()})
 
+            # Update fields
             data["current_task"] = current_task
             data["last_updated"] = datetime.now().isoformat()
 
-            with open(self.status_file, "w") as f:
-                json.dump(data, f, indent=2)
+            # Write back atomically
+            write_json_file(self.status_file, data)
 
             logger.debug(f"Updated status: {current_task or 'idle'}")
         except Exception as e:

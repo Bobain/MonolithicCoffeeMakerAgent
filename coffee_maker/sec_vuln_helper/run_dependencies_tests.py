@@ -18,10 +18,12 @@ python test_all_packages.py --quiet | grep "Testing"
 
 """
 
-import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from coffee_maker.utils.file_io import write_json_file
 
 # Replace pkg_resources import with:
 try:
@@ -40,14 +42,14 @@ else:
 
 
 class PackageTester:
-    def __init__(self, timeout=60, verbose=True):
+    def __init__(self, timeout: int = 60, verbose: bool = True) -> None:
         self.timeout = timeout
         self.verbose = verbose
-        self.results = {}
+        self.results: Dict[str, Any] = {}
 
-    def find_test_directories(self, package_location):
+    def find_test_directories(self, package_location: str) -> List[Path]:
         """Find test directories within a package"""
-        test_dirs = []
+        test_dirs: List[Path] = []
         package_path = Path(package_location)
 
         # Common test directory patterns
@@ -59,9 +61,9 @@ class PackageTester:
         # Filter to keep only directories containing Python files
         return [d for d in test_dirs if d.is_dir() and any(d.glob("*.py"))]
 
-    def detect_test_framework(self, test_dir):
+    def detect_test_framework(self, test_dir: Path) -> List[str]:
         """Detect which test framework is being used"""
-        frameworks = []
+        frameworks: List[str] = []
 
         # Look for configuration files
         config_files = {
@@ -91,7 +93,7 @@ class PackageTester:
 
         return list(set(frameworks)) or ["pytest"]  # Default to pytest
 
-    def run_pytest(self, test_dir, package_name):
+    def run_pytest(self, test_dir: Path, package_name: str) -> Dict[str, Any]:
         """Run pytest with fixture handling"""
         cmd = [
             sys.executable,
@@ -110,19 +112,19 @@ class PackageTester:
 
         return self._run_command(cmd, test_dir)
 
-    def run_unittest(self, test_dir, package_name):
+    def run_unittest(self, test_dir: Path, package_name: str) -> Dict[str, Any]:
         """Run unittest discover"""
         cmd = [sys.executable, "-m", "unittest", "discover", "-s", str(test_dir), "-p", "test*.py", "-v"]
 
         return self._run_command(cmd, test_dir)
 
-    def run_nose(self, test_dir, package_name):
+    def run_nose(self, test_dir: Path, package_name: str) -> Dict[str, Any]:
         """Run nose tests"""
         cmd = [sys.executable, "-m", "nose", str(test_dir), "-v"]
 
         return self._run_command(cmd, test_dir)
 
-    def _run_command(self, cmd, cwd):
+    def _run_command(self, cmd: List[str], cwd: Path) -> Dict[str, Any]:
         """Execute a command with timeout"""
         try:
             result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=self.timeout)
@@ -137,7 +139,7 @@ class PackageTester:
         except Exception as e:
             return {"success": False, "stdout": "", "stderr": str(e), "returncode": -2}
 
-    def test_package(self, package):
+    def test_package(self, package: Any) -> None:
         """Test a specific package"""
         package_name = package.project_name
         package_location = package.location
@@ -186,7 +188,7 @@ class PackageTester:
 
         self.results[package_name] = {"status": "tested", "results": package_results}
 
-    def test_all_packages(self, exclude_patterns=None):
+    def test_all_packages(self, exclude_patterns: Optional[List[str]] = None) -> None:
         """Test all installed packages"""
         if exclude_patterns is None:
             exclude_patterns = ["pip", "setuptools", "wheel", "pkg-resources"]
@@ -213,7 +215,7 @@ class PackageTester:
                 if self.verbose:
                     print(f"  Error: {e}")
 
-    def generate_report(self, output_file=None):
+    def generate_report(self, output_file: Optional[str] = None) -> Dict[str, Any]:
         """Generate a test results report"""
         report = {
             "summary": {
@@ -226,13 +228,12 @@ class PackageTester:
         }
 
         if output_file:
-            with open(output_file, "w") as f:
-                json.dump(report, f, indent=2)
+            write_json_file(output_file, report)
 
         return report
 
 
-def main():
+def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="Test all installed packages")

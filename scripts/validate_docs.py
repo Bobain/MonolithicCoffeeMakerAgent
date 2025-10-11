@@ -24,7 +24,7 @@ import argparse
 import ast
 import sys
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 # ANSI color codes
 GREEN = "\033[92m"
@@ -154,7 +154,7 @@ class DocstringValidator:
                 )
 
 
-def find_python_files(directory: Path, exclude: List[str] = None) -> List[Path]:
+def find_python_files(directory: Path, exclude: Optional[List[str]] = None) -> List[Path]:
     """Find all Python files in directory.
 
     Args:
@@ -179,7 +179,7 @@ def find_python_files(directory: Path, exclude: List[str] = None) -> List[Path]:
     return sorted(python_files)
 
 
-def generate_report(validator: DocstringValidator, files_checked: int, output_file: Path = None) -> str:
+def generate_report(validator: DocstringValidator, files_checked: int, output_file: Optional[Path] = None) -> str:
     """Generate validation report.
 
     Args:

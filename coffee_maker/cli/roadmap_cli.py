@@ -47,7 +47,7 @@ from coffee_maker.cli.notifications import (
     NOTIF_STATUS_PENDING,
     NotificationDB,
 )
-from coffee_maker.config import ROADMAP_PATH
+from coffee_maker.config import ROADMAP_PATH, ConfigManager
 
 # Configure logging BEFORE imports that might fail
 logging.basicConfig(
@@ -73,11 +73,14 @@ except ImportError as e:
     CHAT_AVAILABLE = False
 
 
-def cmd_view(args):
+def cmd_view(args: argparse.Namespace) -> int:
     """View roadmap or specific priority.
 
     Args:
         args: Parsed command-line arguments with priority field
+
+    Returns:
+        0 on success, 1 on error
     """
     if not ROADMAP_PATH.exists():
         print(f"❌ ROADMAP not found: {ROADMAP_PATH}")
@@ -128,7 +131,7 @@ def cmd_view(args):
     return 0
 
 
-def cmd_status(args):
+def cmd_status(args: argparse.Namespace) -> int:
     """Show daemon status.
 
     PRIORITY 2.8: Daemon Status Reporting
@@ -151,9 +154,10 @@ def cmd_status(args):
         Iteration: 5
         Crashes: 0/3
     """
-    import json
     from datetime import datetime
     from pathlib import Path
+
+    from coffee_maker.utils.file_io import read_json_file, FileOperationError
 
     print("\n" + "=" * 80)
     print("Code Developer Daemon Status")
@@ -171,8 +175,7 @@ def cmd_status(args):
         return 1
 
     try:
-        with open(status_file, "r") as f:
-            status = json.load(f)
+        status = read_json_file(status_file)
 
         # Display daemon status
         daemon_status = status.get("status", "unknown")
@@ -288,16 +291,17 @@ def cmd_status(args):
 
         return 0
 
-    except json.JSONDecodeError:
+    except FileOperationError as e:
         print("❌ Status file is corrupted")
         print(f"\nFile: {status_file}")
+        print(f"Error: {e}")
         return 1
     except Exception as e:
         print(f"❌ Error reading status: {e}")
         return 1
 
 
-def cmd_developer_status(args):
+def cmd_developer_status(args: argparse.Namespace) -> int:
     """Show developer status dashboard.
 
     PRIORITY 4: Developer Status Dashboard
@@ -330,11 +334,14 @@ def cmd_developer_status(args):
     return 0
 
 
-def cmd_notifications(args):
+def cmd_notifications(args: argparse.Namespace) -> int:
     """List pending notifications from daemon.
 
     Args:
         args: Parsed command-line arguments
+
+    Returns:
+        0 on success
     """
     print("\n" + "=" * 80)
     print("Pending Notifications")
@@ -384,11 +391,14 @@ def cmd_notifications(args):
     return 0
 
 
-def cmd_respond(args):
+def cmd_respond(args: argparse.Namespace) -> int:
     """Respond to a notification.
 
     Args:
         args: Parsed arguments with notif_id and response
+
+    Returns:
+        0 on success, 1 on error
     """
     db = NotificationDB()
 
@@ -413,11 +423,14 @@ def cmd_respond(args):
     return 0
 
 
-def cmd_sync(args):
+def cmd_sync(args: argparse.Namespace) -> int:
     """Sync roadmap with daemon environment.
 
     Args:
         args: Parsed command-line arguments
+
+    Returns:
+        0 (always successful for MVP placeholder)
     """
     print("\n" + "=" * 80)
     print("Sync with Daemon Environment")
@@ -461,6 +474,8 @@ def cmd_assistant_status(args):
         return 1
 
     try:
+        from datetime import datetime
+
         # Get assistant manager from global context (will be set in main())
         if not hasattr(cmd_assistant_status, "manager"):
             print("❌ Assistant manager not initialized")
@@ -600,6 +615,9 @@ def cmd_chat(args):
 
     Args:
         args: Parsed command-line arguments
+
+    Returns:
+        0 on success, 1 on error
     """
     if not CHAT_AVAILABLE:
         print("❌ Chat feature not available")
@@ -623,7 +641,7 @@ def cmd_chat(args):
         # Auto-detect mode: CLI vs API (same logic as daemon)
         claude_path = "/opt/homebrew/bin/claude"
         has_cli = shutil.which("claude") or os.path.exists(claude_path)
-        has_api_key = bool(os.environ.get("ANTHROPIC_API_KEY"))
+        has_api_key = ConfigManager.has_anthropic_api_key()
 
         use_claude_cli = False
 
@@ -723,8 +741,12 @@ def cmd_chat(args):
         return 1
 
 
-def main():
-    """Main CLI entry point."""
+def main() -> int:
+    """Main CLI entry point.
+
+    Returns:
+        0 on success, 1 on error
+    """
     parser = argparse.ArgumentParser(
         prog="project-manager",
         description="Coffee Maker Agent - Project Manager CLI with AI (Phase 2)",

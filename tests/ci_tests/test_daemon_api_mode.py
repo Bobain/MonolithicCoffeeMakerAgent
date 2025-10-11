@@ -9,6 +9,7 @@ import os
 from unittest.mock import patch
 from coffee_maker.autonomous.daemon import DevDaemon
 from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
+from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
 
 
 class TestClaudeAPIInterface:

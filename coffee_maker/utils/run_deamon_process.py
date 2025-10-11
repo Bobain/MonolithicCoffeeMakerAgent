@@ -4,7 +4,7 @@ import socket
 import sys
 import time
 from multiprocessing import Process  # Import the Process class
-from typing import Optional
+from typing import Callable, Optional
 
 import psutil
 
@@ -45,7 +45,7 @@ def kill_process_on_port(port: int, logger=LOGGER):
         logger.info(f"No existing server found on port {port}.")
 
 
-def run_daemon(function_to_run: callable, port: int, logger=LOGGER):
+def run_daemon(function_to_run: Callable, port: int, logger=LOGGER):
     """
     Finds and kills an existing server process on the specified port,
     then starts a new one as a background daemon using multiprocessing.
@@ -115,7 +115,7 @@ def find_process_on_port(port: int) -> Optional[psutil.Process]:
 
 
 class DeamonProcessOnPortHandler:
-    def __init__(self, port: int, function_to_run: callable):
+    def __init__(self, port: int, function_to_run: Callable):
         self.port = port
         self.function_to_run = function_to_run
         logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")

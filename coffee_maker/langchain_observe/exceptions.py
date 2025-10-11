@@ -13,6 +13,8 @@ Example:
     ... )
 """
 
+from typing import Optional
+
 
 class ContextLengthError(Exception):
     """Raised when input exceeds model's context length.
@@ -75,7 +77,7 @@ class ModelNotAvailableError(Exception):
         reason: Optional reason for unavailability
     """
 
-    def __init__(self, model: str, provider: str, reason: str = None):
+    def __init__(self, model: str, provider: str, reason: Optional[str] = None):
         """Initialize ModelNotAvailableError.
 
         Args:
@@ -105,7 +107,7 @@ class RateLimitExceededError(Exception):
         retry_after: Optional seconds to wait before retrying
     """
 
-    def __init__(self, provider: str, limit_type: str, retry_after: int = None):
+    def __init__(self, provider: str, limit_type: str, retry_after: Optional[int] = None):
         """Initialize RateLimitExceededError.
 
         Args:
@@ -148,8 +150,8 @@ class QuotaExceededError(Exception):
         provider: str,
         model: str,
         quota_type: str = "unknown",
-        message_detail: str = None,
-        retry_after: int = None,
+        message_detail: Optional[str] = None,
+        retry_after: Optional[int] = None,
     ):
         """Initialize QuotaExceededError.
 

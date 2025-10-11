@@ -7,6 +7,8 @@ Simply import this module to load all commands:
     >>> from coffee_maker.cli.commands import all_commands
 """
 
+from typing import List, Type
+
 # Import all command handlers to trigger @register_command decorator
 from coffee_maker.cli.commands.add_priority import AddPriorityCommand
 from coffee_maker.cli.commands.analyze_roadmap import AnalyzeRoadmapCommand
@@ -15,7 +17,7 @@ from coffee_maker.cli.commands.user_story import UserStoryCommand
 from coffee_maker.cli.commands.view_roadmap import ViewRoadmapCommand
 
 # List of all command classes
-ALL_COMMANDS = [
+ALL_COMMANDS: List[Type] = [
     AddPriorityCommand,
     UpdatePriorityCommand,
     ViewRoadmapCommand,

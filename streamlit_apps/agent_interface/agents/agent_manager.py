@@ -11,7 +11,7 @@ and the underlying AI models.
 """
 
 import time
-from typing import Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, List, Optional
 
 from .agent_templates import AgentTemplates
 
@@ -407,7 +407,7 @@ I understand you're interested in this topic. Here's what I can tell you:
 
 *Note: This is a placeholder response showing the interface works. Real AI responses coming soon!*"""
 
-    def get_metrics(self) -> Dict[str, any]:
+    def get_metrics(self) -> Dict[str, Any]:
         """Get current conversation metrics.
 
         Returns:

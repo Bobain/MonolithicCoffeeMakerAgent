@@ -16,6 +16,8 @@ import logging
 import os
 import signal
 import sys
+from types import FrameType
+from typing import Optional
 
 # Load environment variables from .env file
 try:
@@ -26,10 +28,11 @@ except ImportError:
     pass  # python-dotenv not installed, env vars must be set manually
 
 from coffee_maker.autonomous.daemon import DevDaemon
+from coffee_maker.config import ConfigManager
 from coffee_maker.process_manager import ProcessManager
 
 
-def check_claude_session():
+def check_claude_session() -> bool:
     """Check if running inside a Claude Code session and warn user.
 
     Returns:
@@ -54,7 +57,7 @@ def check_claude_session():
     return False
 
 
-def main():
+def main() -> None:
     """Run the code-developer daemon."""
     parser = argparse.ArgumentParser(
         description="Code Developer Daemon - Autonomous development agent",
@@ -132,7 +135,7 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
             sys.exit(1)
     else:
         # API mode (--use-api flag) - Check if API key is set
-        if not os.environ.get("ANTHROPIC_API_KEY"):
+        if not ConfigManager.has_anthropic_api_key():
             print("=" * 70)
             print("❌ ERROR: ANTHROPIC_API_KEY not set!")
             print("=" * 70)
@@ -173,7 +176,7 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
     process_manager = ProcessManager()
 
     # Register signal handlers for graceful shutdown
-    def signal_handler(signum, frame):
+    def signal_handler(signum: int, frame: Optional[FrameType]) -> None:
         """Handle shutdown signals gracefully."""
         logger = logging.getLogger(__name__)
         logger.info(f"Received signal {signum}, shutting down gracefully...")

@@ -78,6 +78,8 @@ print(budget.get_budget_status())
 Full API documentation available at: https://bobain.github.io/MonolithicCoffeeMakerAgent/
 """
 
+from typing import List
+
 from coffee_maker.langchain_observe.auto_picker_llm_refactored import (
     AutoPickerLLMRefactored,
     create_auto_picker_llm_refactored,
@@ -94,7 +96,7 @@ from coffee_maker.langchain_observe.http_pool import (
     get_async_http_client,
 )
 
-__all__ = [
+__all__: List[str] = [
     "AutoPickerLLMRefactored",
     "create_auto_picker_llm_refactored",
     "LLMBuilder",

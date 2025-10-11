@@ -1,10 +1,28 @@
+"""Google Gemini LLM provider configuration and utilities.
+
+This module provides configuration data for Google's Gemini models including:
+- Available models (chat, embeddings, code, reasoning)
+- Rate limits for free and paid tiers
+- Model pricing and context lengths
+- API limit handling with fallback support
+
+The module supports automatic rate limit handling with fallback to alternative
+models when quotas are exceeded.
+
+Example:
+    >>> from coffee_maker.langchain_observe.llm_providers.gemini import MODELS_LIST
+    >>> best_chat_model = MODELS_LIST["chat"]["best_models"][0]
+    >>> print(best_chat_model)  # gemini-2.5-pro
+"""
+
 import google
 import logging
+from typing import Any, Callable, Dict, Optional
 
 logger = logging.getLogger(__name__)
 import langchain_google_genai as lg
 
-MODELS_LIST = {
+MODELS_LIST: Dict[str, Any] = {
     "chat": dict(
         best_models=[
             "gemini-2.5-pro",
@@ -22,7 +40,7 @@ MODELS_LIST = {
     "cheapest general purpose": ["gemini-2.5-flash-lite"],
 }
 
-MODELS_ÌNFO = dict(
+MODELS_ÌNFO: Dict[str, Dict[str, Any]] = dict(
     gemini=dict(
         reference="https://ai.google.dev/gemini-api/docs/rate-limits",
         values=dict(
@@ -159,9 +177,9 @@ MODELS_ÌNFO = dict(
 )
 
 
-def set_api_limits(providers_fallback, model, **kwargs):
+def set_api_limits(providers_fallback: Callable, model: Any, **kwargs: Any) -> None:
 
-    def _run_with_api_limits(self, **kwargs):
+    def _run_with_api_limits(self: Any, **kwargs: Any) -> Any:
         try:
             return self.invoke(**kwargs)
         except google.api_core.exceptions.ResourceExhausted as e:
@@ -173,7 +191,7 @@ def set_api_limits(providers_fallback, model, **kwargs):
 
 if __name__ == "__main__":
 
-    def update_rate_limits(model_kwargs=None):
+    def update_rate_limits(model_kwargs: Optional[Dict[str, Any]] = None) -> None:
         from dotenv import load_dotenv
 
         load_dotenv()

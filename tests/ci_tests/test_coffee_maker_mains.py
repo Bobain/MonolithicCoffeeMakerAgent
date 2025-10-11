@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import os
 import runpy
 from pathlib import Path
 
 import pytest
+
+from coffee_maker.config import ConfigManager
 
 _REPO_ROOT = Path(__file__).resolve().parents[1].parent
 _COFFEE_MAKER_DIR = _REPO_ROOT / "coffee_maker"
@@ -48,9 +49,11 @@ def test_main_script_imports_without_running_main(script_path: Path, monkeypatch
         script_path (Path): The path to the script to test.
         monkeypatch (pytest.MonkeyPatch): The pytest fixture for modifying environments.
     """
-    monkeypatch.setenv("COFFEE_MAKER_GEMINI_API_KEY", os.getenv("COFFEE_MAKER_GEMINI_API_KEY", "dummy"))
-    monkeypatch.setenv("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", "dummy"))
-    monkeypatch.setenv("GOOGLE_API_KEY", os.getenv("GOOGLE_API_KEY", "dummy"))
+    # Set dummy Gemini API keys for import testing
+    # Use existing keys if available, otherwise use dummy values
+    monkeypatch.setenv("COFFEE_MAKER_GEMINI_API_KEY", ConfigManager.get_gemini_api_key(required=False) or "dummy")
+    monkeypatch.setenv("GEMINI_API_KEY", ConfigManager.get_gemini_api_key(required=False) or "dummy")
+    monkeypatch.setenv("GOOGLE_API_KEY", ConfigManager.get_gemini_api_key(required=False) or "dummy")
 
     try:
         runpy.run_path(str(script_path), run_name="__coffee_maker_test__")
