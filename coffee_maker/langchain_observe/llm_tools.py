@@ -486,7 +486,7 @@ def get_llm_tools_summary() -> Dict[str, Any]:
     Returns:
         Dictionary with tools organized by purpose and provider
     """
-    summary = {}
+    summary: Dict[str, Any] = {}
     for purpose, providers_config in MODEL_PURPOSES.items():
         summary[purpose] = {}
         for provider, (prov_name, primary, fallback, desc) in providers_config.items():

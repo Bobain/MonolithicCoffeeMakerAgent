@@ -117,14 +117,14 @@ def create_react_formatter_agent(
         llm = create_auto_picker_for_react_agent(tier=tier, streaming=True)
 
     # 2. Define the tools
-    tools = github_tools + [get_pr_modified_files, get_pr_file_content, post_suggestion_in_pr_review]
+    tools = list(github_tools) + [get_pr_modified_files, get_pr_file_content, post_suggestion_in_pr_review]
 
     # Add LLM tools if requested
     if include_llm_tools:
         from coffee_maker.langchain_observe.llm_tools import create_llm_tools
 
         llm_tools = create_llm_tools(tier=tier)
-        tools = tools + llm_tools
+        tools = tools + list(llm_tools)
         logger.info(f"Added {len(llm_tools)} LLM tools to ReAct agent")
 
     styleguide = langfuse_client.get_prompt("styleguide.md").prompt
