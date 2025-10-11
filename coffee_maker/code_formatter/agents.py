@@ -262,11 +262,42 @@ def create_langchain_code_formatter_agent(
             raise
 
     def get_result_from_llm(file_content: str, file_path: str) -> str:
+        """Invoke the formatter LLM and return raw output.
+
+        Args:
+            file_content: Source code content to format
+            file_path: Logical file path for context
+
+        Returns:
+            Raw LLM response as string (may include markdown formatting)
+
+        Example:
+            >>> result = get_result_from_llm("def foo():\\n  pass", "demo.py")
+            >>> print(result)  # Returns formatted code suggestions
+        """
         return _invoke_formatter(file_content, file_path)
 
     def get_list_of_dict_from_llm(
         file_content: str, file_path: str, *, skip_empty_files: bool = True
     ) -> list[dict[str, Any]]:
+        """Invoke formatter LLM and parse output as structured list of suggestions.
+
+        Args:
+            file_content: Source code content to format
+            file_path: Logical file path for context
+            skip_empty_files: If True, return empty list for empty files without LLM call
+
+        Returns:
+            List of dictionaries containing parsed code suggestions.
+            Returns empty list if file is empty and skip_empty_files=True.
+
+        Raises:
+            json.JSONDecodeError: If LLM output cannot be parsed as valid JSON
+
+        Example:
+            >>> suggestions = get_list_of_dict_from_llm("def foo():\\n  pass", "demo.py")
+            >>> print(len(suggestions))  # Number of formatting suggestions
+        """
         if skip_empty_files and not file_content.strip():
             return []
         raw_output = _invoke_formatter(file_content, file_path)
@@ -287,7 +318,25 @@ def create_langchain_code_formatter_agent(
     return agent
 
 
-def extract_brackets(s: str):
+def extract_brackets(s: str) -> str:
+    """Extract content between first opening and last closing bracket.
+
+    Finds the first occurrence of '[' or '{' and the last occurrence of ']' or '}'
+    in the string, then returns the substring between them (inclusive).
+
+    Args:
+        s: Input string to extract from
+
+    Returns:
+        Substring between first opening and last closing bracket,
+        or empty string if no valid brackets found
+
+    Example:
+        >>> extract_brackets('text before [{"key": "value"}] text after')
+        '[{"key": "value"}]'
+        >>> extract_brackets('no brackets here')
+        ''
+    """
     # Remove any char surrounding the json list of dict
     first_open = min((i for i in [s.find("["), s.find("{")] if i != -1), default=-1)
     last_close = max((i for i in [s.rfind("]"), s.rfind("}")] if i != -1), default=-1)
