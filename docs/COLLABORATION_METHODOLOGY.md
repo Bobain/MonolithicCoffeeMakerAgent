@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 2.0
+**Version**: 2.1
 **Last Updated**: 2025-10-11
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -1607,7 +1607,128 @@ User: "pytest"
 PM → Daemon: "Approved: Use pytest for US-009 tests"
 ```
 
-### 3.4 Team Dynamics
+### 3.4 Role: Assistant (LangChain-Powered AI Helper)
+
+**Primary Responsibilities**:
+- Answer user questions about codebase, features, and usage
+- Provide technical explanations and code examples
+- Search codebase for specific implementations
+- Help troubleshoot issues and debug problems
+- Keep documentation up-to-date in memory (auto-refresh every 30 minutes)
+- Assist project_manager with complex research tasks
+
+**Authorities**:
+- Can read any file in the codebase
+- Can search code and documentation
+- Can view git history and diffs
+- Can execute read-only bash commands
+- **CANNOT** write files, commit changes, or modify code
+
+**Tools Available**:
+- `read_file`: Read contents of any file
+- `search_code`: Search for patterns using grep
+- `list_files`: Find files matching patterns
+- `git_log`: View commit history
+- `git_diff`: View file differences
+- `execute_bash`: Run read-only commands (ls, cat, ps, etc.)
+
+**When project_manager Should Delegate to Assistant**:
+
+**🟢 ALWAYS DELEGATE** (Assistant handles better):
+
+| Task Type | Examples | Why Assistant | How to Delegate |
+|-----------|----------|---------------|-----------------|
+| **Code Search** | "Where is X implemented?" | Has search tools | Let assistant search with grep |
+| **Implementation Details** | "How does feature Y work?" | Can read/analyze code | Let assistant read files |
+| **Documentation Questions** | "How do I use Z?" | Keeps docs in memory | Let assistant reference docs |
+| **Git History** | "When was X changed?" | Has git tools | Let assistant use git_log |
+| **File Structure** | "What files exist in X?" | Has list_files tool | Let assistant use glob patterns |
+| **Troubleshooting** | "Why is X not working?" | Can debug systematically | Let assistant investigate |
+
+**🟡 COLLABORATIVE TASKS** (PM + Assistant):
+
+| Task Type | PM Role | Assistant Role |
+|-----------|---------|----------------|
+| **Requirement Clarification** | Ask questions, structure requirements | Provide examples from codebase |
+| **Technical Spec Writing** | Define architecture, make decisions | Research existing patterns |
+| **Roadmap Updates** | Update ROADMAP.md | Verify consistency with existing priorities |
+| **Complex Analysis** | Interpret results, make recommendations | Gather data, search code |
+
+**🔴 NEVER DELEGATE** (PM must handle):
+
+| Task Type | Why PM Only |
+|-----------|-------------|
+| **Write Operations** | Assistant has read-only access |
+| **Git Commits** | Requires write permissions |
+| **Product Decisions** | Requires product owner judgment |
+| **Priority Management** | Requires strategic thinking |
+| **User Communication** | Requires empathy and context |
+
+**Best Practices for Delegation**:
+
+1. **Be Specific**: "Assistant, search for all usages of `NotificationService`" not "What does notification do?"
+2. **Leverage Tools**: Use assistant's tools (grep, git_log) rather than doing it yourself
+3. **Parallel Work**: Let assistant research while you work on other tasks
+4. **Verify Results**: Always validate assistant findings before acting on them
+5. **Document Context**: When assistant finds something, update ROADMAP or docs
+
+**Communication Style**:
+- Clear, specific questions with context
+- Acknowledge assistant's findings
+- Correct misunderstandings promptly
+- Provide feedback on answer quality
+
+**Example Delegation Flow**:
+```
+User: "How do I use the daemon status command?"
+
+PM delegates to Assistant:
+  "Assistant, can you explain how the daemon status command works?
+   Please read the relevant code and provide usage examples."
+
+Assistant uses tools:
+  - Searches for 'cmd_status' using search_code tool
+  - Reads coffee_maker/cli/roadmap_cli.py:cmd_status()
+  - Reads daemon status JSON format
+
+Assistant responds with:
+  "The `poetry run project-manager status` command shows daemon status.
+   It reads ~/.coffee_maker/daemon_status.json and displays:
+   - Daemon running/stopped status
+   - Current priority and elapsed time
+   - Iteration count
+   - Crash statistics
+
+   Example:
+   ```bash
+   $ poetry run project-manager status
+   Daemon Status: RUNNING
+   PID: 12345
+   Current Priority: PRIORITY 4 - Developer Status Dashboard
+   Elapsed: 15 minutes
+   Iteration: 3
+   ```"
+
+PM relays to User (or lets user see assistant's response directly)
+```
+
+**Auto-Refresh Documentation (Every 30 Minutes)**:
+
+The assistant automatically refreshes its memory with latest documentation:
+- Re-reads ROADMAP.md for current priorities
+- Re-reads COLLABORATION_METHODOLOGY.md for process updates
+- Re-reads DOCUMENTATION_INDEX.md for new docs
+- Updates understanding of recent code changes
+
+This ensures the assistant always has current context when answering questions.
+
+**Availability**:
+- Assistant should always be available when project-manager is running
+- Runs in same process as project-manager chat
+- No separate startup required
+- Integrated seamlessly via LangChain agent
+
+### 3.5 Team Dynamics
 
 **Decision Flow**:
 ```
@@ -3027,6 +3148,7 @@ PM documents decision and informs developer
 | 1.8 | 2025-10-11 | Added Section 2.8 - Documentation and Roadmap Versioning Policy | Documentation and ROADMAP.md must always be up-to-date. Every bug fix or feature must update relevant docs in the same PR. Includes CLI nesting detection fix documentation (fix/cli-nesting-detection branch). User story: "Documentation in branch must always be most up-to-date version." |
 | 1.9 | 2025-10-11 | Added Section 9.1.1 - project-manager chat Modes | Documented CLI vs API modes, nesting detection, mode selection logic, user decision matrix. Addresses CLI nesting prevention feature. |
 | 2.0 | 2025-10-11 | Added Section 9.3 - Updating Roadmap Branch on GitHub | **MAJOR VERSION**: Complete automated workflow for updating 'roadmap' branch on GitHub using Python script (scripts/merge_roadmap_pr.py). Addresses user stories: "main branch always up to date" and "roadmap branch in github always current so developer can see what to achieve". Includes setup instructions, integration examples for all team members (project_manager, code_developer, assistant), safety guarantees, and error handling. Branch strategy documented. |
+| 2.1 | 2025-10-11 | Added Section 3.4 - Role: Assistant (LangChain-Powered AI Helper) | Defined assistant role, responsibilities, authorities, and task delegation guidelines. Includes: delegation decision matrix (ALWAYS/COLLABORATIVE/NEVER), 6 tools available to assistant (read_file, search_code, list_files, git_log, git_diff, execute_bash), best practices for PM→Assistant delegation, auto-refresh documentation requirement (every 30 minutes), availability requirements (always up when project-manager running). Renumbered Team Dynamics to 3.5. Addresses user request: "project_manager should know which tasks to delegate to assistant thanks to team collaboration document". |
 
 **To add new version**:
 1. Make changes to document
