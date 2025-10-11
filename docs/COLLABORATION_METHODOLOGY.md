@@ -2803,17 +2803,73 @@ def save_and_update_main(self):
 
 #### Integration in code_developer
 
-The `code_developer` daemon should use this when completing features that update roadmap:
+**User Story**: "As a project_manager I need the code-developer to always be aware of the last up to date roadmap, therefore I need him to pull the branch roadmap frequently so that he can read the fresh roadmap."
+
+The `code_developer` daemon must pull the `roadmap` branch at the start of each iteration to ensure it reads the latest priorities:
 
 ```python
 # In coffee_maker/autonomous/daemon.py
 
+def run(self):
+    """Run daemon main loop."""
+    self.running = True
+    logger.info("🤖 DevDaemon starting...")
+
+    while self.running:
+        iteration += 1
+        logger.info(f"Iteration {iteration}")
+
+        try:
+            # 🚨 CRITICAL: Pull latest roadmap from GitHub
+            self.sync_roadmap_from_github()
+
+            # Reload roadmap (now reads latest version)
+            self.parser = RoadmapParser(str(self.roadmap_path))
+
+            # Get next task from FRESH roadmap
+            next_priority = self.parser.get_next_planned_priority()
+            # ... rest of implementation
+
+def sync_roadmap_from_github(self):
+    """Pull latest roadmap from GitHub 'roadmap' branch.
+
+    This ensures code_developer always reads the most up-to-date
+    priorities set by project_manager and user.
+
+    User Story: "code-developer must be aware of last up to date roadmap"
+    """
+    import subprocess
+
+    logger.info("📥 Syncing roadmap from GitHub...")
+
+    try:
+        # Fetch latest roadmap branch
+        subprocess.run(
+            ["git", "fetch", "origin", "roadmap"],
+            check=True,
+            capture_output=True
+        )
+
+        # Update local roadmap file from remote branch
+        # (without checking out the branch)
+        subprocess.run(
+            ["git", "show", "origin/roadmap:docs/ROADMAP.md"],
+            stdout=open(self.roadmap_path, 'w'),
+            check=True
+        )
+
+        logger.info("✅ Roadmap synced from GitHub (origin/roadmap)")
+
+    except subprocess.CalledProcessError as e:
+        logger.warning(f"⚠️ Failed to sync roadmap from GitHub: {e}")
+        logger.warning("   Using local roadmap instead")
+
 def update_roadmap_status(self, priority_name: str, new_status: str):
-    """Update priority status in roadmap and push to main."""
+    """Update priority status in roadmap and push to roadmap branch."""
     # Update roadmap
     self.parser.update_priority_status(priority_name, new_status)
 
-    # Use automated script
+    # Use automated script to update roadmap branch
     branch = f"roadmap-{priority_name.lower().replace(' ', '-')}-{new_status}"
     subprocess.run(["git", "checkout", "-b", branch])
     subprocess.run(["git", "add", "docs/ROADMAP.md"])
@@ -2822,7 +2878,16 @@ def update_roadmap_status(self, priority_name: str, new_status: str):
 
     # Auto-merge to roadmap branch
     subprocess.run(["python", "scripts/merge_roadmap_pr.py", branch, "--base", "roadmap"])
+
+    # Sync back to get any changes made by merge
+    self.sync_roadmap_from_github()
 ```
+
+**Why This Matters**:
+- ✅ code_developer always sees latest priorities
+- ✅ project_manager can update priorities anytime
+- ✅ No stale roadmap issues
+- ✅ Team stays synchronized
 
 #### Integration for assistant
 
