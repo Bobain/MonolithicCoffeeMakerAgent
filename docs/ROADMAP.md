@@ -18240,20 +18240,23 @@ class AssistantBridge:
         self,
         task: str,
         context: dict = None,
-        timeout: int = 120
+        timeout: int = 120,
+        on_action: callable = None  # NEW: Callback for action steps
     ) -> dict:
-        """Invoke assistant for help.
+        """Invoke assistant for help with visible action steps.
 
         Args:
             task: What to ask assistant to do
             context: Additional context (files, logs, etc.)
             timeout: Max wait time
+            on_action: Callback to display actions (e.g., "🔍 Analyzing logs...")
 
         Returns:
             {
                 "success": bool,
                 "result": str,
                 "files_changed": List[str],
+                "actions_taken": List[str],  # NEW: List of actions performed
                 "error": str (if failed)
             }
         """
@@ -18265,8 +18268,15 @@ class AssistantBridge:
         marker = f"[ASSISTANT_REQUEST:{uuid.uuid4()}]"
         print(f"\n{marker}\n{task}\n[/ASSISTANT_REQUEST]\n")
 
-        # Wait for response
-        response = self._wait_for_response(marker, timeout)
+        # Wait for response WITH action streaming
+        # Assistant will send action updates like:
+        # [ACTION:uuid] 🔍 Analyzing daemon logs...
+        # [ACTION:uuid] 📖 Reading daemon.py...
+        response = self._wait_for_response_with_actions(
+            marker,
+            timeout,
+            on_action_callback=on_action
+        )
         return response
 ```
 
@@ -18276,6 +18286,8 @@ class ChatSession:
     def __init__(self, ...):
         # ...existing code...
         self.assistant = AssistantBridge()
+        self.assistant_running = False
+        self.pending_user_input = None  # For interactive refinement
 
     def _handle_natural_language(self, text: str) -> str:
         """Handle natural language with optional assistant help."""
@@ -18284,11 +18296,16 @@ class ChatSession:
         needs_assistant = self._should_invoke_assistant(text)
 
         if needs_assistant and self.assistant.assistant_available:
-            # Silently get help from assistant
+            # Get help with VISIBLE action steps
+            self.assistant_running = True
+
             result = self.assistant.invoke_assistant(
                 task=f"Help me respond to: {text}",
-                context=self._build_context()
+                context=self._build_context(),
+                on_action=self._display_action_step  # Display each action
             )
+
+            self.assistant_running = False
 
             if result["success"]:
                 # Use assistant's result, format nicely
@@ -18296,6 +18313,30 @@ class ChatSession:
 
         # Normal AI response
         return self._get_ai_response(text)
+
+    def _display_action_step(self, action: str):
+        """Display an action step from assistant.
+
+        Args:
+            action: Action description (e.g., "🔍 Analyzing logs...")
+
+        This is called for EACH action the assistant takes, making the
+        process transparent to the user.
+
+        Also allows user to interrupt with additional guidance.
+        """
+        # Display the action
+        self.console.print(f"[cyan]{action}[/]")
+
+        # Check if user wants to add input (non-blocking)
+        # This allows interactive refinement:
+        # User sees: "🔍 Analyzing logs..."
+        # User types: "check only last 100 lines"
+        # Next action reflects this input
+        if self._check_user_input_available():
+            user_guidance = input()  # Get user's additional input
+            self.pending_user_input = user_guidance
+            # This will be picked up by assistant for next action
 
     def _should_invoke_assistant(self, text: str) -> bool:
         """Determine if assistant help needed."""
@@ -18307,40 +18348,72 @@ class ChatSession:
         return any(kw in text.lower() for kw in assistant_keywords)
 ```
 
-**3. Response Marker System**
+**3. Action Streaming Protocol**
 ```python
-# Assistant responds with special markers
-[ASSISTANT_RESPONSE:uuid-here]
+# Assistant streams actions WHILE working (user sees in real-time):
+
+[ASSISTANT_REQUEST:abc-123]
+Task: Analyze why daemon is crashing
+[/ASSISTANT_REQUEST]
+
+# Assistant sends action updates:
+[ACTION:abc-123] 🔍 Analyzing daemon logs...
+[ACTION:abc-123] 📖 Reading daemon.py (lines 200-300)...
+[ACTION:abc-123] 🔎 Checking recent git commits...
+
+# User can interrupt:
+[USER_INPUT:abc-123] "check only timeout errors"
+
+# Assistant adjusts:
+[ACTION:abc-123] 🎯 Filtering for timeout errors only...
+[ACTION:abc-123] 📊 Found 3 timeout occurrences...
+
+# Final response:
+[ASSISTANT_RESPONSE:abc-123]
 {
     "success": true,
-    "result": "The daemon crashes because...",
+    "result": "The daemon crashes because of timeout in daemon.py:245...",
     "files_analyzed": ["daemon.py", "claude_cli_interface.py"],
+    "actions_taken": [
+        "🔍 Analyzing daemon logs...",
+        "📖 Reading daemon.py...",
+        "🎯 Filtering for timeout errors...",
+        "📊 Found 3 timeout occurrences..."
+    ],
     "confidence": "high"
 }
 [/ASSISTANT_RESPONSE]
 ```
 
+**Key Innovation**: Actions are streamed DURING execution, not after. User sees progress and can guide in real-time.
+
 **Implementation Steps**:
 
-1. **Create AssistantBridge** (1 hour)
+1. **Create AssistantBridge with Action Streaming** (1.5 hours)
    - Check if running inside Claude Code
-   - Implement request/response protocol
+   - Implement request/response protocol with ACTION markers
+   - Stream actions in real-time via callbacks
+   - Handle USER_INPUT interruptions
    - Handle timeouts and errors
 
 2. **Integrate with ChatSession** (1 hour)
    - Detect when assistant help needed
-   - Invoke assistant transparently
+   - Invoke assistant with action callback
+   - Display each action as it happens
+   - Allow user to interrupt with additional input
    - Format responses naturally
 
-3. **Add Detection Logic** (30 min)
-   - Keywords that trigger assistant
-   - Context size limits
-   - Fallback strategies
+3. **Add Action Display & User Input** (1 hour)
+   - Display action steps with emojis and formatting
+   - Non-blocking user input check during actions
+   - Pass user guidance to assistant mid-execution
+   - Maintain conversation flow
 
 4. **Testing & Refinement** (30 min)
    - Test various question types
-   - Ensure transparency (user doesn't notice)
-   - Verify response quality
+   - Test user interruption scenarios
+   - Ensure actions are visible but assistant is invisible
+   - Verify response quality with user guidance
 
 **Testing**:
 ```bash
@@ -18348,19 +18421,24 @@ class ChatSession:
 project-manager chat
 > "Why does the daemon keep crashing on priority 2.7?"
 
-# Behind the scenes:
-# 1. ChatSession detects complex question
-# 2. Invokes assistant silently
-# 3. Assistant analyzes code, logs
-# 4. Returns analysis
-# 5. ChatSession formats response
+# User sees (actions streamed in real-time):
+project-manager: 🔍 Analyzing daemon logs...
+project-manager: 📖 Reading daemon.py and related files...
+project-manager: 🔎 Checking recent changes...
 
-# User sees:
+# User can interrupt:
+> "focus on timeout errors only"
+
+# Actions adjust to user input:
+project-manager: 🎯 Filtering for timeout errors...
+project-manager: 📊 Found 3 timeout occurrences...
+
+# Final answer:
 project-manager: "The daemon crashes on priority 2.7 because the
-context reset is failing when the CLI returns a non-zero exit code.
+context reset is timing out when the CLI takes too long to respond.
 This is in daemon.py:345..."
 
-# User never knows assistant was involved!
+# User saw WHAT was done, doesn't know WHO did it (assistant invisible)!
 ```
 
 **Benefits**:
