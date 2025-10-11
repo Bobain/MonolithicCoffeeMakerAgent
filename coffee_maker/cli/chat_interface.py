@@ -198,8 +198,38 @@ class DeveloperStatusMonitor:
         lines = [
             f"🟢 {priority_title}",
             f"▸ {priority_name} | Iteration {iteration} | Time: {elapsed_str} | ETA: {eta_str}",
-            f"▸ Progress: [{progress_bar}] {progress}%",
         ]
+
+        # Add subtasks if available
+        subtasks = status_data.get("subtasks", [])
+        if subtasks:
+            lines.append("▸ Tasks:")
+            for subtask in subtasks:
+                name = subtask.get("name", "Unknown task")
+                status = subtask.get("status", "unknown")
+                duration = subtask.get("duration_seconds", 0)
+
+                # Choose emoji based on status
+                if status == "completed":
+                    emoji = "✓"
+                elif status == "in_progress":
+                    emoji = "🔄"
+                elif status == "failed":
+                    emoji = "❌"
+                else:  # pending
+                    emoji = "⏳"
+
+                # Format duration
+                if duration > 0:
+                    mins = duration // 60
+                    secs = duration % 60
+                    duration_str = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+                    lines.append(f"   {emoji} {name}: {duration_str}")
+                else:
+                    lines.append(f"   {emoji} {name}")
+
+        # Add progress bar at the end
+        lines.append(f"▸ Progress: [{progress_bar}] {progress}%")
 
         return "\n".join(lines)
 
