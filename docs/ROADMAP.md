@@ -199,6 +199,12 @@ Currently PM doesn't consistently identify what type of information users are pr
 ✅ US-009: Process Management & Status Monitoring (2025-10-10)
 ✅ US-010: Living Documentation & Tutorials (2025-10-10)
 
+**Recent Bug Fixes** (2025-10-11):
+🔧 **CLI Nesting Detection**: Fixed `project-manager chat` to detect when running inside Claude Code and automatically use API mode instead of CLI mode to prevent nesting issues. Previously, running `project-manager chat` from within Claude Code would cause Claude CLI to call Claude CLI (nesting), which could lead to unexpected behavior. Now detects `CLAUDECODE` or `CLAUDE_CODE_ENTRYPOINT` environment variables and switches to API mode with clear user messaging.
+   - Branch: `fix/cli-nesting-detection`
+   - Files modified: `coffee_maker/cli/roadmap_cli.py` (lines 273-314)
+   - Impact: Prevents CLI nesting issues for users running project-manager from Claude Code
+
 **Next After US-014** (Priority Order):
 1. **US-016**: Technical Spec Generation with Task-Level Estimates (4-5 days) - NEXT PRIORITY
 2. US-015: Estimation Metrics & Velocity Tracking (3-4 days)
