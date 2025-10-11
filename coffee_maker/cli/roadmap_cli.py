@@ -153,9 +153,10 @@ def cmd_status(args: argparse.Namespace) -> int:
         Iteration: 5
         Crashes: 0/3
     """
-    import json
     from datetime import datetime
     from pathlib import Path
+
+    from coffee_maker.utils.file_io import read_json_file, FileOperationError
 
     print("\n" + "=" * 80)
     print("Code Developer Daemon Status")
@@ -173,8 +174,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        with open(status_file, "r") as f:
-            status = json.load(f)
+        status = read_json_file(status_file)
 
         # Display daemon status
         daemon_status = status.get("status", "unknown")
@@ -290,9 +290,10 @@ def cmd_status(args: argparse.Namespace) -> int:
 
         return 0
 
-    except json.JSONDecodeError:
+    except FileOperationError as e:
         print("❌ Status file is corrupted")
         print(f"\nFile: {status_file}")
+        print(f"Error: {e}")
         return 1
     except Exception as e:
         print(f"❌ Error reading status: {e}")
