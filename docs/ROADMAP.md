@@ -168,7 +168,7 @@ Currently PM doesn't consistently identify what type of information users are pr
 
 ## 🚨 US-021 - Code Refactoring & Technical Debt Reduction (HIGHEST PRIORITY)
 
-**Status**: 🔄 **IN PROGRESS** - Phase 1: Code Quality Foundations (~80% Complete)
+**Status**: 🔄 **IN PROGRESS** - Phase 1 (~80%), Phase 2 Started
 
 **Progress Update** (2025-10-12):
 - ✅ Type hints: 100% coverage achieved (up from 68%)
@@ -216,7 +216,15 @@ Currently PM doesn't consistently identify what type of information users are pr
   - Fixed DATABASE_PATHS export from config package (6000a88)
   - Fixed missing json import in chat_interface.py (e6bd5f1)
 - ✅ Branch: `feature/us-021-refactoring-phase-1` → merged to `roadmap` (visibility complete)
-- 📝 Next: Phase 2 - Architecture Improvements or continue Phase 1 with file splitting
+- ✅ Phase 2 Started: Exception Hierarchy (2025-10-12)
+  - Created coffee_maker/exceptions.py with unified CoffeeMakerError hierarchy
+  - 6 domain-specific base exceptions (ConfigError, ProviderError, ResourceError, ModelError, FileError, DaemonError)
+  - Re-exported 15+ existing exceptions for backward compatibility
+  - New daemon management exceptions (DaemonCrashError, DaemonStateError)
+  - Unified RateLimitError consolidates duplicate definitions
+  - Comprehensive documentation with hierarchy diagram and usage examples
+  - All imports tested and verified
+- 📝 Next: Continue Phase 2 - Consistent error messages and logging, or Phase 1 file splitting
 
 **As a**: Development team
 **I want**: Systematic refactoring to improve code quality, maintainability, and reduce technical debt
@@ -261,17 +269,23 @@ Currently PM doesn't consistently identify what type of information users are pr
 - [ ] All functions < 50 lines (extract helper functions) 📝 DEFERRED TO PHASE 2
 - [ ] Consistent naming conventions across all modules 📝 DEFERRED TO PHASE 2
 
-**Phase 2: Architecture Improvements** (2-3 days)
-- [ ] Standardize error handling:
-  - [ ] Custom exception hierarchy (`coffee_maker/exceptions.py`)
-  - [ ] Consistent error messages and logging
-  - [ ] Error recovery strategies documented
-- [ ] Unified configuration management:
-  - [ ] Single `ConfigManager` class
-  - [ ] All config in one place (`coffee_maker/config/`)
-  - [ ] Environment variable validation
-  - [ ] Config schema with defaults
-- [ ] Dependency injection for testability:
+**Phase 2: Architecture Improvements** 🔄 **STARTED** (2-3 days)
+- [x] Standardize error handling: ✅ **STARTED** (2025-10-12)
+  - [x] Custom exception hierarchy (`coffee_maker/exceptions.py`) ✅ COMPLETE
+    - Created unified CoffeeMakerError base exception
+    - Domain-specific bases: ConfigError, ProviderError, ResourceError, ModelError, FileError, DaemonError
+    - Re-exported 15+ existing exceptions for backward compatibility
+    - New exceptions: DaemonCrashError, DaemonStateError, unified RateLimitError
+    - Rich error messages with context attributes
+    - Full hierarchy documented with usage examples
+  - [ ] Consistent error messages and logging 📝 NEXT
+  - [ ] Error recovery strategies documented 📝 NEXT
+- [x] Unified configuration management: ✅ **COMPLETE** (Phase 1)
+  - [x] Single `ConfigManager` class ✅ COMPLETE
+  - [x] All config in one place (`coffee_maker/config/`) ✅ COMPLETE
+  - [x] Environment variable validation ✅ COMPLETE
+  - [x] Config schema with defaults ✅ COMPLETE
+- [ ] Dependency injection for testability: 📝 FUTURE
   - [ ] Extract interfaces for major components
   - [ ] Constructor injection instead of global state
   - [ ] Mock-friendly architecture
