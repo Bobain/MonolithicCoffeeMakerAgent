@@ -208,6 +208,7 @@ class DeveloperStatusMonitor:
                 name = subtask.get("name", "Unknown task")
                 status = subtask.get("status", "unknown")
                 duration = subtask.get("duration_seconds", 0)
+                estimated = subtask.get("estimated_seconds", 0)
 
                 # Choose emoji based on status
                 if status == "completed":
@@ -219,14 +220,34 @@ class DeveloperStatusMonitor:
                 else:  # pending
                     emoji = "⏳"
 
-                # Format duration
-                if duration > 0:
-                    mins = duration // 60
-                    secs = duration % 60
-                    duration_str = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
-                    lines.append(f"   {emoji} {name}: {duration_str}")
-                else:
-                    lines.append(f"   {emoji} {name}")
+                # Format duration and estimated time
+                def format_time(seconds):
+                    if seconds >= 60:
+                        mins = seconds // 60
+                        secs = seconds % 60
+                        return f"{mins}m{secs}s" if secs > 0 else f"{mins}m"
+                    else:
+                        return f"{seconds}s"
+
+                # Build subtask line
+                if status in ["completed", "failed"]:
+                    # Show actual vs estimated for finished tasks
+                    actual_str = format_time(duration)
+                    est_str = format_time(estimated) if estimated > 0 else "?"
+                    lines.append(f"   {emoji} {name}: {actual_str} (est: {est_str})")
+                elif status == "in_progress":
+                    # Show current elapsed and estimated
+                    if duration > 0:
+                        actual_str = format_time(duration)
+                        est_str = format_time(estimated) if estimated > 0 else "?"
+                        lines.append(f"   {emoji} {name}: {actual_str} / {est_str}")
+                    else:
+                        est_str = format_time(estimated) if estimated > 0 else "?"
+                        lines.append(f"   {emoji} {name} (est: {est_str})")
+                else:  # pending
+                    # Show only estimated
+                    est_str = format_time(estimated) if estimated > 0 else "?"
+                    lines.append(f"   {emoji} {name} (est: {est_str})")
 
         # Add progress bar at the end
         lines.append(f"▸ Progress: [{progress_bar}] {progress}%")
