@@ -31,6 +31,17 @@ from anthropic import Anthropic
 
 logger = logging.getLogger(__name__)
 
+# Import Claude CLI interface (optional)
+try:
+    from coffee_maker.autonomous.claude_cli_interface import (
+        ClaudeCLIInterface,
+    )
+
+    CLI_AVAILABLE = True
+except ImportError:
+    CLI_AVAILABLE = False
+    logger.warning("ClaudeCLIInterface not available, API mode only")
+
 
 @dataclass
 class AIResponse:
@@ -71,26 +82,59 @@ class AIService:
         self,
         model: str = "claude-sonnet-4-20250514",
         max_tokens: int = 4000,
+        use_claude_cli: bool = False,
+        claude_cli_path: str = "/opt/homebrew/bin/claude",
     ):
         """Initialize AI service.
 
         Args:
             model: Claude model to use
             max_tokens: Maximum tokens per response
+            use_claude_cli: If True, use Claude CLI instead of API (default: False)
+            claude_cli_path: Path to claude CLI executable (default: /opt/homebrew/bin/claude)
         """
         self.model = model
         self.max_tokens = max_tokens
+        self.use_claude_cli = use_claude_cli
+        self.client = None
+        self.cli_interface = None
 
-        # Initialize Anthropic client
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "ANTHROPIC_API_KEY environment variable not set. " "Please set it in your .env file or environment."
+        if use_claude_cli:
+            # Use Claude CLI (subscription-based, no API credits needed)
+            if not CLI_AVAILABLE:
+                raise ValueError(
+                    "Claude CLI mode requested but ClaudeCLIInterface not available. "
+                    "Please check the import or use API mode instead."
+                )
+
+            # For CLI mode, convert model name to CLI alias if needed
+            cli_model = model
+            if "sonnet" in model.lower():
+                cli_model = "sonnet"
+            elif "opus" in model.lower():
+                cli_model = "opus"
+            elif "haiku" in model.lower():
+                cli_model = "haiku"
+
+            self.cli_interface = ClaudeCLIInterface(
+                claude_path=claude_cli_path,
+                model=cli_model,
+                max_tokens=max_tokens,
             )
 
-        self.client = Anthropic(api_key=api_key)
+            logger.info(f"AIService initialized with Claude CLI: {cli_model}")
 
-        logger.info(f"AIService initialized with model: {model}")
+        else:
+            # Use Anthropic API (requires API credits)
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "ANTHROPIC_API_KEY environment variable not set. " "Please set it in your .env file or environment."
+                )
+
+            self.client = Anthropic(api_key=api_key)
+
+            logger.info(f"AIService initialized with Anthropic API: {model}")
 
     def process_request(self, user_input: str, context: Dict, history: List[Dict], stream: bool = True) -> AIResponse:
         """Process user request with AI.
@@ -133,16 +177,39 @@ class AIService:
 
             logger.debug(f"Processing request: {user_input[:100]}...")
 
-            # Call Claude API
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                system=system_prompt,
-                messages=messages,
-            )
+            if self.use_claude_cli:
+                # Use Claude CLI interface
+                # Build full prompt: system + history + user input
+                full_prompt = system_prompt + "\n\n"
 
-            # Extract content
-            content = response.content[0].text
+                # Add conversation history
+                for msg in messages[:-1]:  # All except last (current user input)
+                    role = msg["role"]
+                    content = msg["content"]
+                    full_prompt += f"\n{role.upper()}: {content}\n"
+
+                # Add current user input
+                full_prompt += f"\nUSER: {user_input}\n\nASSISTANT:"
+
+                # Execute via CLI
+                result = self.cli_interface.execute_prompt(full_prompt)
+
+                if not result.success:
+                    raise Exception(result.error)
+
+                content = result.content
+
+            else:
+                # Use Anthropic API
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=self.max_tokens,
+                    system=system_prompt,
+                    messages=messages,
+                )
+
+                # Extract content
+                content = response.content[0].text
 
             logger.info(f"AI response generated ({len(content)} chars)")
 
@@ -176,6 +243,19 @@ class AIService:
             Hello! How can I help you today?
         """
         try:
+            if self.use_claude_cli:
+                # Claude CLI doesn't support streaming, so we get the full response
+                # and yield it in chunks to simulate streaming
+                response = self.process_request(user_input, context, history, stream=False)
+
+                # Yield in chunks of ~50 chars for better UX
+                chunk_size = 50
+                for i in range(0, len(response.message), chunk_size):
+                    yield response.message[i : i + chunk_size]
+
+                logger.info("CLI response yielded in chunks")
+                return
+
             # Build system prompt with context
             system_prompt = self._build_system_prompt(context)
 
@@ -464,14 +544,20 @@ Remember:
 
             logger.debug(f"Extracting User Story from: {user_input[:100]}...")
 
-            # Call Claude API
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=500,
-                messages=[{"role": "user", "content": prompt}],
-            )
-
-            content = response.content[0].text.strip()
+            if self.use_claude_cli:
+                # Use Claude CLI
+                result = self.cli_interface.execute_prompt(prompt)
+                if not result.success:
+                    raise Exception(result.error)
+                content = result.content.strip()
+            else:
+                # Use Anthropic API
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=500,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                content = response.content[0].text.strip()
 
             # Check if it's not a User Story
             if "NOT_A_USER_STORY" in content:
@@ -599,14 +685,20 @@ Provide a concise analysis in markdown format.
 
             logger.debug(f"Analyzing roadmap impact for story: {story.get('title')}")
 
-            # Call Claude API
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=1000,
-                messages=[{"role": "user", "content": prompt}],
-            )
-
-            analysis = response.content[0].text
+            if self.use_claude_cli:
+                # Use Claude CLI
+                result = self.cli_interface.execute_prompt(prompt)
+                if not result.success:
+                    raise Exception(result.error)
+                analysis = result.content
+            else:
+                # Use Anthropic API
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=1000,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                analysis = response.content[0].text
 
             logger.info("Roadmap impact analysis generated")
             return analysis
@@ -626,15 +718,21 @@ Provide a concise analysis in markdown format.
             ...     print("AI service ready!")
         """
         try:
-            # Try a minimal API call
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=10,
-                messages=[{"role": "user", "content": "Hello"}],
-            )
+            if self.use_claude_cli:
+                # Check if Claude CLI is available
+                available = self.cli_interface.check_available()
+                logger.info(f"Claude CLI service available: {available}")
+                return available
+            else:
+                # Try a minimal API call
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=10,
+                    messages=[{"role": "user", "content": "Hello"}],
+                )
 
-            logger.info(f"AI service available: {response.model}")
-            return True
+                logger.info(f"AI service available: {response.model}")
+                return True
 
         except Exception as e:
             logger.error(f"AI service not available: {e}")
