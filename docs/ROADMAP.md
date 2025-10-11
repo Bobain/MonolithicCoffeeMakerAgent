@@ -206,12 +206,13 @@ Currently PM doesn't consistently identify what type of information users are pr
    - Impact: Prevents CLI nesting issues for users running project-manager from Claude Code
 
 **Next After US-014** (Priority Order):
-1. **US-016**: Technical Spec Generation with Task-Level Estimates (4-5 days) - NEXT PRIORITY
-2. US-015: Estimation Metrics & Velocity Tracking (3-4 days)
-3. US-017: Summary & Calendar of Deliverables (5-7 days)
-4. US-012/US-013: `/US` Command for natural user story creation
-5. US-007: IDE Code Completion (developer productivity)
-6. PRIORITY 2.6: CI Testing (ensure daemon stability)
+1. **US-022**: Automatic Roadmap Sync for code_developer (0.5 days) - **CRITICAL FOR DAEMON**
+2. **US-016**: Technical Spec Generation with Task-Level Estimates (4-5 days)
+3. US-015: Estimation Metrics & Velocity Tracking (3-4 days)
+4. US-017: Summary & Calendar of Deliverables (5-7 days)
+5. US-012/US-013: `/US` Command for natural user story creation
+6. US-007: IDE Code Completion (developer productivity)
+7. PRIORITY 2.6: CI Testing (ensure daemon stability)
 
 ---
 
@@ -239,6 +240,143 @@ Currently PM doesn't consistently identify what type of information users are pr
 - ✅ TUTORIALS.md (7 practical tutorials)
 - ✅ Updated COLLABORATION_METHODOLOGY.md (all user stories documented)
 - ✅ Updated QUICKSTART_PROJECT_MANAGER.md (US-009 features)
+
+---
+
+## 🚨 CRITICAL: US-022 - Automatic Roadmap Sync for code_developer
+
+**Project**: **🔄 US-022 - Automatic Roadmap Synchronization for Daemon**
+
+**As a**: code_developer (autonomous daemon)
+**I want**: To automatically merge main branch into my feature branch frequently
+**So that**: I'm always aware of my next priorities and roadmap changes while working
+
+**Business Value**: ⭐⭐⭐⭐⭐ (Critical - prevents daemon from working on obsolete priorities)
+**Estimated Effort**: 0.5 days (4 hours)
+**Status**: 📝 **PLANNED** (Created: 2025-10-11)
+
+**The Problem**:
+
+Currently, code_developer works on feature branches for extended periods (hours/days) while implementing priorities. During this time:
+- The PM may update ROADMAP.md on main (new priorities, changed requirements)
+- The user may reprioritize work
+- Other team members may merge documentation changes
+- code_developer continues working with **stale roadmap** data
+
+**Real-World Impact**:
+- ❌ Daemon implements feature that was deprioritized hours ago
+- ❌ Daemon misses critical priority changes
+- ❌ Massive merge conflicts when finally merging to main
+- ❌ Wasted effort on obsolete work
+
+**User Story Context** (2025-10-11):
+> "As a code_developer I need to merge roadmap branch into mine frequently in order to always be aware of my next priorities"
+
+**Solution**: Automatic Periodic Sync from main
+
+**Implementation**:
+
+**Phase 1: Sync Detection** (1 hour)
+- [ ] Check if main has new commits since last sync
+- [ ] Compare ROADMAP.md timestamps between branches
+- [ ] Detect when sync is needed (every N iterations or when ROADMAP changed)
+
+**Phase 2: Automatic Merge** (1.5 hours)
+- [ ] Implement `git fetch origin main`
+- [ ] Implement `git merge origin/main` in daemon's current branch
+- [ ] Handle merge conflicts automatically for safe files (ROADMAP.md, docs/*)
+- [ ] Abort and notify user if complex conflicts occur
+
+**Phase 3: Roadmap Reload** (0.5 hours)
+- [ ] After successful merge, reload RoadmapParser
+- [ ] Re-evaluate current priority (may have changed!)
+- [ ] Log sync activity for audit trail
+
+**Phase 4: Configuration & Safety** (1 hour)
+- [ ] Add `sync_interval` config (default: every 10 iterations or 30 minutes)
+- [ ] Add `auto_sync_enabled` flag (default: true)
+- [ ] Add safety checks (don't sync during active git operations)
+- [ ] Add notification on successful sync
+
+**Acceptance Criteria**:
+- [ ] Daemon syncs with main every 10 iterations (or 30 minutes)
+- [ ] ROADMAP.md changes from main are pulled automatically
+- [ ] Daemon reloads roadmap after sync
+- [ ] Daemon re-evaluates priority after sync (may switch tasks!)
+- [ ] Clean merges happen automatically
+- [ ] Conflicts trigger user notification
+- [ ] Sync activity logged to daemon.log
+- [ ] Can be disabled via config if needed
+
+**Files to Modify**:
+- `coffee_maker/autonomous/daemon.py` (~50 lines added to main loop)
+- `config.yaml.example` (add sync_interval, auto_sync_enabled)
+- `coffee_maker/autonomous/git_manager.py` (~30 lines for sync methods)
+
+**Workflow Example**:
+
+```python
+# In daemon main loop (daemon.py)
+iteration = 0
+last_sync_time = time.time()
+
+while self.running:
+    iteration += 1
+
+    # Sync every 10 iterations or 30 minutes
+    if (iteration % 10 == 0) or (time.time() - last_sync_time > 1800):
+        logger.info("Syncing with main branch...")
+        if self.git.sync_from_main():
+            # Successful sync - reload roadmap
+            self.parser = RoadmapParser(str(self.roadmap_path))
+            last_sync_time = time.time()
+            logger.info("✅ Synced with main, roadmap reloaded")
+        else:
+            # Conflict or error
+            logger.warning("⚠️ Sync failed - manual intervention needed")
+            self._notify_sync_conflict()
+
+    # Continue with normal iteration
+    next_priority = self.parser.get_next_planned_priority()
+    # ...
+```
+
+**Why This is Critical**:
+
+1. **Up-to-date priorities**: Daemon never works on obsolete tasks
+2. **Reduced conflicts**: Small frequent syncs vs massive conflicts later
+3. **User confidence**: Users can update roadmap anytime, daemon adapts
+4. **Efficiency**: No wasted work on deprioritized features
+5. **Audit trail**: Clear log of when syncs occurred
+
+**Configuration**:
+
+```yaml
+# config.yaml
+daemon:
+  # Roadmap sync settings
+  auto_sync_enabled: true         # Enable automatic sync from main
+  sync_interval: 30               # Minutes between syncs (minimum)
+  sync_every_n_iterations: 10     # Sync every N iterations
+```
+
+**Edge Cases**:
+
+1. **Merge Conflict**: Abort sync, notify user, continue with current priority
+2. **Network Error**: Log warning, retry next iteration
+3. **Mid-Implementation**: Don't sync during active file writing
+4. **No Changes**: Fast-forward merge, no reload needed
+
+**Success Metrics**:
+- Daemon never implements deprioritized work
+- Merge conflicts reduced by 80%
+- Roadmap staleness < 30 minutes
+- Zero manual sync interventions needed
+
+**Documentation Updates**:
+- COLLABORATION_METHODOLOGY.md: Add Section 5.X "Daemon Roadmap Sync Workflow"
+- QUICKSTART_DAEMON.md: Explain auto-sync behavior
+- config.yaml.example: Document sync settings
 
 ---
 

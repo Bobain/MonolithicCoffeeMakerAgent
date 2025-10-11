@@ -2120,6 +2120,148 @@ v1.0.0 (+7 weeks): Full platform (US-008)
   - Multi-channel monitoring
 ```
 
+### 5.7 Daemon Roadmap Synchronization (US-022)
+
+**Pattern**: Work → Sync → Reload → Adapt
+
+**Philosophy**: code_developer must stay current with roadmap changes during long-running implementations
+
+**The Problem**:
+
+When code_developer works on feature branches for extended periods (hours/days), the roadmap on main may change:
+- PM adds new priorities
+- User reprioritizes work
+- Requirements are updated
+- Other features complete
+
+Without synchronization, the daemon works with **stale roadmap data** and may:
+- Implement deprioritized features
+- Miss critical priority changes
+- Create massive merge conflicts
+- Waste effort on obsolete work
+
+**Solution**: Automatic periodic sync from main branch
+
+**Workflow**:
+
+```
+Daemon working on feature branch
+  ↓
+Every 10 iterations OR 30 minutes (whichever comes first)
+  ↓
+Sync checkpoint:
+  ├─ Fetch origin/main
+  ├─ Check if ROADMAP.md has changes
+  ↓
+  ├─ No changes? → Continue working
+  ↓
+  └─ Changes detected → Merge main into current branch
+        ↓
+        ├─ Clean merge? → Reload roadmap, re-evaluate priority
+        │                 ↓
+        │                 Priority unchanged? → Continue
+        │                 ↓
+        │                 Priority changed/removed? → Switch to new priority!
+        ↓
+        └─ Merge conflict? → Abort sync, notify user, continue with current work
+```
+
+**Implementation Details**:
+
+```python
+# In daemon.py main loop
+iteration = 0
+last_sync_time = time.time()
+
+while self.running:
+    iteration += 1
+
+    # Sync checkpoint (every 10 iterations or 30 min)
+    if (iteration % 10 == 0) or (time.time() - last_sync_time > 1800):
+        logger.info("🔄 Sync checkpoint - checking for roadmap updates")
+
+        if self.git.has_upstream_changes('origin/main'):
+            logger.info("📥 Changes detected on main - syncing...")
+
+            if self.git.sync_from_main():
+                # Successful sync
+                old_roadmap = self.parser
+                self.parser = RoadmapParser(str(self.roadmap_path))
+
+                old_priority = old_roadmap.get_next_planned_priority()
+                new_priority = self.parser.get_next_planned_priority()
+
+                if old_priority['name'] != new_priority['name']:
+                    logger.warning(f"⚠️  Priority changed! Was: {old_priority['name']}, Now: {new_priority['name']}")
+                    logger.info("Switching to new priority...")
+                    # Abort current work, start new priority
+
+                last_sync_time = time.time()
+                logger.info("✅ Sync complete, roadmap reloaded")
+            else:
+                # Conflict or error
+                logger.warning("❌ Sync failed - manual intervention needed")
+                self._notify_sync_conflict()
+
+    # Continue normal work
+    next_priority = self.parser.get_next_planned_priority()
+    # ...
+```
+
+**Configuration**:
+
+```yaml
+# config.yaml
+daemon:
+  # Roadmap sync settings (US-022)
+  auto_sync_enabled: true         # Enable automatic sync
+  sync_interval: 30               # Minutes between syncs
+  sync_every_n_iterations: 10     # Also sync every N iterations
+```
+
+**Benefits**:
+
+1. **Never works on stale priorities**: Daemon always has latest roadmap
+2. **Reduces merge conflicts**: Small frequent syncs vs massive conflicts
+3. **User flexibility**: PM/user can update roadmap anytime, daemon adapts
+4. **Efficient**: No wasted work on deprioritized features
+5. **Auditable**: Clear log of sync activity
+
+**Example Scenario**:
+
+```
+10:00 AM: Daemon starts US-016 on branch feature/us-016
+10:30 AM: [Sync 1] No changes on main, continue
+11:00 AM: [Sync 2] No changes on main, continue
+11:15 AM: User updates ROADMAP, makes US-022 TOP PRIORITY
+11:30 AM: [Sync 3] Detects changes, merges main
+          → Roadmap reloaded
+          → Priority changed: US-016 → US-022
+          → Daemon switches to US-022!
+12:00 PM: Daemon working on US-022 (new priority)
+```
+
+**Edge Cases**:
+
+1. **Merge Conflict**: Abort sync, notify user, continue with current priority until resolved
+2. **Network Error**: Log warning, retry next sync checkpoint
+3. **Mid-Implementation**: Safe to sync (git handles uncommitted changes)
+4. **No Upstream Changes**: Fast-forward or no-op, very fast
+
+**Success Metrics**:
+- Roadmap staleness < 30 minutes
+- Daemon never implements deprioritized work
+- Merge conflicts reduced by 80%
+- Zero manual sync interventions
+
+**Implementation Status**:
+- 📝 **PLANNED** (US-022 created 2025-10-11)
+- See `docs/ROADMAP.md` for complete specification
+- Estimated: 4 hours total implementation time
+
+**User Story Reference**: US-022
+> "As a code_developer I need to merge roadmap branch into mine frequently in order to always be aware of my next priorities"
+
 ---
 
 ## 6. Definition of Done (DoD)
