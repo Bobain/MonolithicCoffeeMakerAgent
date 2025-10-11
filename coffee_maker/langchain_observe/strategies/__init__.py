@@ -80,7 +80,9 @@ from coffee_maker.langchain_observe.strategies.context import (
     NoContextCheckStrategy,
 )
 
-__all__ = [
+from typing import List
+
+__all__: List[str] = [
     # Retry
     "RetryStrategy",
     "ExponentialBackoffRetry",

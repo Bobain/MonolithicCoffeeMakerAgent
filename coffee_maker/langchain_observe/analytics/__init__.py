@@ -36,11 +36,13 @@ See Also:
     - :mod:`coffee_maker.langchain_observe.analytics.models_sqlite`: Data models
 """
 
+from typing import List
+
 from coffee_maker.langchain_observe.analytics.config import ExportConfig
 from coffee_maker.langchain_observe.analytics.exporter_sqlite import LangfuseExporter
 from coffee_maker.langchain_observe.analytics.analyzer_sqlite import PerformanceAnalyzer
 
-__all__ = [
+__all__: List[str] = [
     "LangfuseExporter",
     "PerformanceAnalyzer",
     "ExportConfig",

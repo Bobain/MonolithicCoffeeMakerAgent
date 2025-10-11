@@ -10,4 +10,6 @@ Modules:
     notifications: Notification database and management
 """
 
-__all__ = ["roadmap_cli", "notifications"]
+from typing import List
+
+__all__: List[str] = ["roadmap_cli", "notifications"]

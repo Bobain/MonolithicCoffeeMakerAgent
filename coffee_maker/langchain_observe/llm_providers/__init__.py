@@ -1,10 +1,11 @@
 """LLM Provider configurations."""
 
 import logging
+from typing import Any, Dict, Tuple
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_PROVIDERS = {}
+SUPPORTED_PROVIDERS: Dict[str, Tuple[Any, str, str, Dict[str, int]]] = {}
 
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
