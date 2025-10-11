@@ -11,6 +11,22 @@ LOGGER = logging.getLogger(__name__)
 
 
 def get_github_client_instance() -> Github:
+    """Create and return an authenticated GitHub client instance.
+
+    Reads the GITHUB_TOKEN from environment variables and creates an authenticated
+    GitHub client using PyGithub.
+
+    Returns:
+        Github: Authenticated GitHub client instance
+
+    Raises:
+        ValueError: If GITHUB_TOKEN environment variable is not set or empty
+
+    Example:
+        >>> client = get_github_client_instance()
+        >>> user = client.get_user()
+        >>> print(user.login)
+    """
     token = os.getenv("GITHUB_TOKEN")
     if not token or not len(token):
         LOGGER.critical("Error: GITHUB_TOKEN environment variable is not set.")
@@ -288,6 +304,17 @@ class GitHubPRClient:
     """Convenience wrapper that reuses a persistent Github client for PR utilities."""
 
     def __init__(self, github_client: Optional[Github] = None) -> None:
+        """Initialize GitHubPRClient with an optional GitHub client.
+
+        Args:
+            github_client: Optional Github client instance. If None, uses the global instance.
+
+        Example:
+            >>> client = GitHubPRClient()
+            >>> # Or with custom client:
+            >>> custom_client = Github(auth=Auth.Token("custom_token"))
+            >>> client = GitHubPRClient(custom_client)
+        """
         self._client = github_client or github_client_instance
 
     @property
@@ -306,6 +333,29 @@ class GitHubPRClient:
         suggestion_body: str,
         comment_text: str,
     ) -> str:
+        """Post a code suggestion as a review comment on a GitHub pull request.
+
+        Wrapper method that uses the client instance to post suggestions.
+
+        Args:
+            repo_full_name: Full repository name, e.g., 'owner/repo'
+            pr_number: Pull request number
+            file_path: Path to the file in the repository
+            start_line: Starting line number (1-indexed)
+            end_line: Ending line number (1-indexed)
+            suggestion_body: The suggested code (plain text, no markdown)
+            comment_text: Explanatory text for the suggestion
+
+        Returns:
+            Success message string
+
+        Example:
+            >>> client = GitHubPRClient()
+            >>> result = client.post_suggestion_in_pr_review(
+            ...     "owner/repo", 123, "src/main.py", 10, 12,
+            ...     "improved code", "Better implementation"
+            ... )
+        """
         return post_suggestion_in_pr_review(
             repo_full_name=repo_full_name,
             pr_number=pr_number,
@@ -318,9 +368,39 @@ class GitHubPRClient:
         )
 
     def get_pr_modified_files(self, repo_full_name: str, pr_number: int):
+        """Fetch the list of modified files from a pull request.
+
+        Args:
+            repo_full_name: Full repository name, e.g., 'owner/repo'
+            pr_number: Pull request number
+
+        Returns:
+            Dict with "python_files" (list of .py filenames) and "total_files" count
+
+        Example:
+            >>> client = GitHubPRClient()
+            >>> files = client.get_pr_modified_files("owner/repo", 123)
+            >>> print(f"Found {files['total_files']} files")
+        """
         return get_pr_modified_files(repo_full_name=repo_full_name, pr_number=pr_number, g=self._client)
 
     def get_pr_file_content(self, repo_full_name: str, pr_number: int, file_path: str):
+        """Fetch the content of a specific file from a PR's head commit.
+
+        Args:
+            repo_full_name: Full repository name, e.g., 'owner/repo'
+            pr_number: Pull request number
+            file_path: Path to the file in the repository
+
+        Returns:
+            File content as string, or None if fetch fails
+
+        Example:
+            >>> client = GitHubPRClient()
+            >>> content = client.get_pr_file_content("owner/repo", 123, "src/main.py")
+            >>> if content:
+            ...     print(f"File has {len(content)} bytes")
+        """
         return get_pr_file_content(
             repo_full_name=repo_full_name,
             pr_number=pr_number,
