@@ -1,6 +1,6 @@
 # Coffee Maker Agent - Collaboration Methodology
 
-**Version**: 1.8
+**Version**: 1.9
 **Last Updated**: 2025-10-11
 **Status**: 🔄 Living Document (Continuously Evolving)
 **Purpose**: Define how we work together, communicate, and evolve our processes
@@ -2427,6 +2427,127 @@ PM documents decision and informs developer
 | Technical Specs (`docs/US-XXX_TECHNICAL_SPEC.md`) | Detailed implementation plans | PM | Before implementation |
 | Git commits | Implementation history and decisions | Developer | Per commit |
 | Pull Requests | Code review and approval | Developer | Per feature |
+
+#### 9.1.1 `project-manager chat` Modes (Added 2025-10-11)
+
+**Overview**: `project-manager chat` supports two operational modes with automatic detection to prevent CLI nesting issues.
+
+**Mode Selection Logic**:
+
+The system automatically chooses the appropriate mode based on the environment:
+
+```python
+# Detection logic (coffee_maker/cli/roadmap_cli.py:275)
+inside_claude_cli = bool(
+    os.environ.get("CLAUDECODE") or
+    os.environ.get("CLAUDE_CODE_ENTRYPOINT")
+)
+
+if inside_claude_cli:
+    # Force API mode to prevent CLI nesting
+    use_claude_cli = False
+elif has_claude_cli:
+    # Use CLI mode (free with subscription)
+    use_claude_cli = True
+elif has_api_key:
+    # Fallback to API mode
+    use_claude_cli = False
+```
+
+**1. CLI Mode** (Default - Recommended)
+
+**When**: Running from regular terminal (not Claude Code)
+**Cost**: Free with Claude subscription
+**How**: Uses `claude` CLI executable
+
+```bash
+# From regular terminal
+cd /path/to/MonolithicCoffeeMakerAgent
+poetry run project-manager chat
+```
+
+**Advantages**:
+- ✅ Free (included with Claude subscription)
+- ✅ No API credits needed
+- ✅ Same quality as Claude API
+- ✅ Recommended for daily use
+
+**2. API Mode** (Requires Credits)
+
+**When**:
+- Running inside Claude Code (automatic detection)
+- ANTHROPIC_API_KEY is set and no CLI available
+- User explicitly configured API mode
+
+**Cost**: Uses Anthropic API credits
+**How**: Uses Anthropic Python SDK
+
+```bash
+# From Claude Code (automatic API mode)
+poetry run project-manager chat
+
+# Or set API key explicitly
+export ANTHROPIC_API_KEY='your-key-here'
+poetry run project-manager chat
+```
+
+**Advantages**:
+- ✅ Works inside Claude Code (prevents nesting)
+- ✅ Works when Claude CLI not installed
+- ⚠️ Requires API credits
+
+**3. CLI Nesting Prevention**
+
+**Problem**: Running `project-manager chat` inside Claude Code would cause CLI nesting (Claude CLI calling Claude CLI), which can lead to unexpected behavior.
+
+**Solution**: Automatic detection via environment variables:
+- `CLAUDECODE`: Set by Claude Code
+- `CLAUDE_CODE_ENTRYPOINT`: Alternative detection
+
+**Behavior**:
+```
+Running inside Claude Code:
+→ Detects nesting risk
+→ Forces API mode
+→ Shows clear message to user:
+  "ℹ️  Detected: Running inside Claude Code"
+  "🔄 Using Anthropic API to avoid CLI nesting"
+  "💡 TIP: CLI nesting is not recommended"
+```
+
+**User Options**:
+
+| Scenario | Recommendation | Command |
+|----------|---------------|---------|
+| Daily usage | CLI Mode (free) | Run from regular terminal |
+| Inside Claude Code (with API key) | API Mode (costs credits) | Run from Claude Code |
+| Inside Claude Code (no API key) | CLI Mode (free) | Run from regular terminal |
+| CI/CD pipeline | API Mode | Set ANTHROPIC_API_KEY |
+
+**Error Messages**:
+
+If running inside Claude Code without API key:
+```
+❌ ERROR: Running inside Claude Code without API key
+
+You're running project-manager chat from within Claude Code.
+To avoid CLI nesting, we need to use API mode.
+
+🔧 SOLUTION:
+  1. Get your API key from: https://console.anthropic.com/
+  2. Set the environment variable:
+     export ANTHROPIC_API_KEY='your-api-key-here'
+  3. Or add it to your .env file
+
+💡 ALTERNATIVE: Run from a regular terminal (not Claude Code)
+```
+
+**Documentation References**:
+- **QUICKSTART_PROJECT_MANAGER.md**: Troubleshooting section
+- **US-006**: CLI nesting detection feature
+- **ROADMAP.md**: Recent Bug Fixes (2025-10-11)
+
+---
 
 ### 9.2 Artifact Templates
 

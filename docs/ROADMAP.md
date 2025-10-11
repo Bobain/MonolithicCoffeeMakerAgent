@@ -9976,6 +9976,19 @@ pygments = "^2.17.0"         # Syntax highlighting
 - ✅ Sprint 7 demo receives positive feedback on UX quality
 - ✅ Daily usage is enjoyable, not just functional
 
+**CLI Nesting Detection** (Added 2025-10-11):
+- ✅ Detects when running inside Claude Code (CLAUDECODE/CLAUDE_CODE_ENTRYPOINT env vars)
+- ✅ Automatically switches to API mode to prevent CLI nesting (Claude CLI calling Claude CLI)
+- ✅ Displays clear user messages explaining the mode switch and options
+- ✅ Documented in QUICKSTART troubleshooting section
+
+**Usage Modes**:
+1. **CLI Mode** (Default - Free with subscription): When running from regular terminal
+2. **API Mode** (Requires credits): When running from Claude Code or if ANTHROPIC_API_KEY is set
+3. **Auto-detection**: System automatically chooses correct mode based on environment
+
+**Important Note**: When running `project-manager chat` from within Claude Code (this session), it will automatically use API mode to prevent nesting issues. For free CLI mode, run from a regular terminal.
+
 **Related Stories**:
 - Complements US-004 (Claude CLI integration for daemon)
 - Enhances US-005 (roadmap summary will have beautiful display)
