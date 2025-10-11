@@ -190,14 +190,9 @@ class ChatSession:
             """Submit on Enter."""
             event.current_buffer.validate_and_handle()
 
-        @bindings.add("s-enter")  # Shift+Enter
+        @bindings.add("escape", "enter")  # Alt+Enter for multi-line
         def _(event):
-            """Insert newline on Shift+Enter."""
-            event.current_buffer.insert_text("\n")
-
-        @bindings.add("escape", "enter")  # Alt+Enter (fallback)
-        def _(event):
-            """Insert newline on Alt+Enter (alternative to Shift+Enter)."""
+            """Insert newline on Alt+Enter."""
             event.current_buffer.insert_text("\n")
 
         # Create prompt session
@@ -743,7 +738,7 @@ class ChatSession:
             "  • [cyan]Streaming responses[/] - Text appears progressively\n"
             "  • [cyan]↑/↓[/] - Navigate input history\n"
             "  • [cyan]Tab[/] - Auto-complete commands and priorities\n"
-            "  • [cyan]Shift+Enter[/] - Multi-line input\n"
+            "  • [cyan]Alt+Enter[/] - Multi-line input\n"
             "  • [cyan]Ctrl+R[/] - Reverse history search\n\n"
         )
 
