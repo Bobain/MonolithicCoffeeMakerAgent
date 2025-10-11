@@ -18126,6 +18126,238 @@ project-manager config set notifications.sound_enabled true
 
 ---
 
+### 🔴 **PRIORITY 2.9.5: Transparent Assistant Integration for project-manager** 🤝 **HIGH PRIORITY**
+
+**Estimated Duration**: 2-3 hours
+**Impact**: ⭐⭐⭐⭐⭐ (Critical - Seamless AI assistance)
+**Status**: 📝 Planned
+**Dependency**: None
+**Why Important**: project-manager should be able to get help from Claude Code assistant transparently without user knowing
+
+#### User Story: Invisible Assistant Help
+
+**As a** user interacting with project-manager
+**I want** project-manager to seamlessly get help from the assistant when needed
+**So that** I get better answers without knowing there's a backend assistant involved
+
+**Background**:
+When the project-manager chat receives complex questions or tasks, it may need help from Claude Code (the assistant) to:
+- Perform technical analysis
+- Search and understand code
+- Execute complex operations
+- Provide more accurate answers
+
+However, the user should **not be aware** of this backend assistance. It should be completely transparent.
+
+**Current Behavior**:
+- project-manager handles everything directly
+- May give incomplete or less accurate answers for complex queries
+- User sees all the internal workings
+
+**Desired Behavior**:
+- project-manager detects when it needs help
+- Silently invokes Claude Code assistant
+- Gets the help it needs
+- Responds to user with complete answer
+- **User never knows assistant was involved**
+
+**Use Cases**:
+
+1. **Complex Code Analysis**
+   ```
+   User: "Why is the daemon crashing on priority 2.7?"
+
+   [Behind the scenes]
+   project-manager → Invokes assistant → Analyzes logs, code, recent changes
+   Assistant → Returns analysis
+   project-manager → Responds to user
+
+   [User sees]
+   project-manager: "The daemon is crashing because..."
+   ```
+
+2. **Technical Implementation Questions**
+   ```
+   User: "How should we implement the sound notification system?"
+
+   [Behind the scenes]
+   project-manager → Invokes assistant → Reviews architecture, best practices
+   Assistant → Provides detailed implementation plan
+   project-manager → Summarizes for user
+
+   [User sees]
+   project-manager: "For sound notifications, I suggest..."
+   ```
+
+3. **File Operations**
+   ```
+   User: "Find all places where we create notifications"
+
+   [Behind the scenes]
+   project-manager → Invokes assistant → Searches codebase
+   Assistant → Returns list of locations
+   project-manager → Formats response
+
+   [User sees]
+   project-manager: "Notifications are created in:
+   - daemon.py:425
+   - chat_interface.py:892
+   ..."
+   ```
+
+**Deliverables**:
+
+**1. Assistant Invocation Interface** (`coffee_maker/cli/assistant_bridge.py`)
+```python
+class AssistantBridge:
+    """Bridge to invoke Claude Code assistant transparently."""
+
+    def __init__(self):
+        """Initialize bridge to assistant."""
+        self.assistant_available = self._check_assistant()
+
+    def _check_assistant(self) -> bool:
+        """Check if running inside Claude Code."""
+        return bool(os.environ.get("CLAUDECODE"))
+
+    def invoke_assistant(
+        self,
+        task: str,
+        context: dict = None,
+        timeout: int = 120
+    ) -> dict:
+        """Invoke assistant for help.
+
+        Args:
+            task: What to ask assistant to do
+            context: Additional context (files, logs, etc.)
+            timeout: Max wait time
+
+        Returns:
+            {
+                "success": bool,
+                "result": str,
+                "files_changed": List[str],
+                "error": str (if failed)
+            }
+        """
+        if not self.assistant_available:
+            return {"success": False, "error": "Assistant not available"}
+
+        # Invoke assistant via special marker
+        # The assistant (Claude Code) will see this and respond
+        marker = f"[ASSISTANT_REQUEST:{uuid.uuid4()}]"
+        print(f"\n{marker}\n{task}\n[/ASSISTANT_REQUEST]\n")
+
+        # Wait for response
+        response = self._wait_for_response(marker, timeout)
+        return response
+```
+
+**2. Enhanced Chat Interface** (`coffee_maker/cli/chat_interface.py`)
+```python
+class ChatSession:
+    def __init__(self, ...):
+        # ...existing code...
+        self.assistant = AssistantBridge()
+
+    def _handle_natural_language(self, text: str) -> str:
+        """Handle natural language with optional assistant help."""
+
+        # Detect if we need assistant help
+        needs_assistant = self._should_invoke_assistant(text)
+
+        if needs_assistant and self.assistant.assistant_available:
+            # Silently get help from assistant
+            result = self.assistant.invoke_assistant(
+                task=f"Help me respond to: {text}",
+                context=self._build_context()
+            )
+
+            if result["success"]:
+                # Use assistant's result, format nicely
+                return self._format_assistant_response(result["result"])
+
+        # Normal AI response
+        return self._get_ai_response(text)
+
+    def _should_invoke_assistant(self, text: str) -> bool:
+        """Determine if assistant help needed."""
+        assistant_keywords = [
+            "search", "find", "analyze", "debug",
+            "how to implement", "why is", "what's wrong",
+            "check code", "review", "investigate"
+        ]
+        return any(kw in text.lower() for kw in assistant_keywords)
+```
+
+**3. Response Marker System**
+```python
+# Assistant responds with special markers
+[ASSISTANT_RESPONSE:uuid-here]
+{
+    "success": true,
+    "result": "The daemon crashes because...",
+    "files_analyzed": ["daemon.py", "claude_cli_interface.py"],
+    "confidence": "high"
+}
+[/ASSISTANT_RESPONSE]
+```
+
+**Implementation Steps**:
+
+1. **Create AssistantBridge** (1 hour)
+   - Check if running inside Claude Code
+   - Implement request/response protocol
+   - Handle timeouts and errors
+
+2. **Integrate with ChatSession** (1 hour)
+   - Detect when assistant help needed
+   - Invoke assistant transparently
+   - Format responses naturally
+
+3. **Add Detection Logic** (30 min)
+   - Keywords that trigger assistant
+   - Context size limits
+   - Fallback strategies
+
+4. **Testing & Refinement** (30 min)
+   - Test various question types
+   - Ensure transparency (user doesn't notice)
+   - Verify response quality
+
+**Testing**:
+```bash
+# User asks complex question
+project-manager chat
+> "Why does the daemon keep crashing on priority 2.7?"
+
+# Behind the scenes:
+# 1. ChatSession detects complex question
+# 2. Invokes assistant silently
+# 3. Assistant analyzes code, logs
+# 4. Returns analysis
+# 5. ChatSession formats response
+
+# User sees:
+project-manager: "The daemon crashes on priority 2.7 because the
+context reset is failing when the CLI returns a non-zero exit code.
+This is in daemon.py:345..."
+
+# User never knows assistant was involved!
+```
+
+**Benefits**:
+1. **Better Answers**: Complex queries get expert help
+2. **Seamless UX**: User unaware of backend assistance
+3. **Smart Routing**: Only invoke assistant when needed
+4. **Faster Development**: Assistant does heavy lifting
+5. **Transparent**: No UX changes, just better results
+
+**Implementation Priority**: **HIGH** (After PRIORITY 2.9, enables better user experience)
+
+---
+
 ### 🔴 **PRIORITY 2.10: Natural Conversational Responses in project-manager** 💬 **HIGH PRIORITY**
 
 **Estimated Duration**: 2-3 hours
