@@ -7,7 +7,7 @@ to prevent rate limit errors before they occur.
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -125,9 +125,11 @@ class ProactiveRateLimitScheduler(SchedulingStrategy):
         self.backoff_base = backoff_base
 
         # Track errors per model
-        self._error_history = {}  # {model_name: [(timestamp, error, retry_count), ...]}
-        self._last_failed_call = {}  # {model_name: timestamp}
-        self._final_attempt_made = {}  # {model_name: bool}
+        self._error_history: Dict[str, List[Tuple[float, Exception, int]]] = (
+            {}
+        )  # {model_name: [(timestamp, error, retry_count), ...]}
+        self._last_failed_call: Dict[str, float] = {}  # {model_name: timestamp}
+        self._final_attempt_made: Dict[str, bool] = {}  # {model_name: bool}
 
     def can_proceed(self, model_name: str, estimated_tokens: int) -> Tuple[bool, float]:
         """Check if we can safely proceed with a request.
