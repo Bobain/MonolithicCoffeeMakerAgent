@@ -80,6 +80,13 @@ def text_to_speech_pyttsx3(text: str, voice_id: Optional[str] = None, rate: int 
 
 
 if __name__ == "__main__":
+    # Import pyttsx3 for script usage
+    try:
+        import pyttsx3
+    except ImportError:
+        logger.error("pyttsx3 is not installed. Cannot run example script.")
+        exit(1)
+
     # Basic logging configuration for when the script is run directly.
     # This will print log messages of level INFO and above to the console.
     logging.basicConfig(
