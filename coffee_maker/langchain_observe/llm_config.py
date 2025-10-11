@@ -4,11 +4,13 @@ This module consolidates rate limit information from provider files
 and provides a single source of truth for model configurations.
 """
 
+from typing import Any, Dict, List, Optional, Tuple
+
 from coffee_maker.langchain_observe.rate_limiter import RateLimitConfig
 from coffee_maker.langchain_observe.llm_providers import gemini, openai as openai_provider
 
 
-def _transform_provider_info_to_config(provider_name: str, models_info: dict) -> dict:
+def _transform_provider_info_to_config(provider_name: str, models_info: Dict[str, Any]) -> Dict[str, Any]:
     """Transform provider MODELS_INFO format to MODEL_CONFIGS format.
 
     Args:
@@ -85,7 +87,7 @@ def _transform_provider_info_to_config(provider_name: str, models_info: dict) ->
     return configs
 
 
-def _infer_use_cases(model_name: str) -> list:
+def _infer_use_cases(model_name: str) -> List[str]:
     """Infer use cases based on model name.
 
     Args:
@@ -141,7 +143,7 @@ MODEL_CONFIGS = {
 }
 
 
-def get_rate_limits_for_tier(tier: str = "tier1") -> dict:
+def get_rate_limits_for_tier(tier: str = "tier1") -> Dict[str, RateLimitConfig]:
     """Get rate limit configurations for all models at a specific tier.
 
     Args:
@@ -176,7 +178,7 @@ def get_model_context_length(provider: str, model: str) -> int:
     return 4096  # Default fallback
 
 
-def get_fallback_models(use_case: str = None) -> list:
+def get_fallback_models(use_case: Optional[str] = None) -> List[Tuple[str, str]]:
     """Get a list of models suitable for fallback, ordered by preference.
 
     Args:
@@ -205,7 +207,7 @@ def get_fallback_models(use_case: str = None) -> list:
     return fallback_models
 
 
-def get_large_context_model() -> tuple:
+def get_large_context_model() -> Tuple[str, str]:
     """Get the model with the largest context window.
 
     Returns:
@@ -223,7 +225,7 @@ def get_large_context_model() -> tuple:
     return best_model if best_model else ("openai", "gpt-4o-mini")
 
 
-def get_large_context_models() -> list:
+def get_large_context_models() -> List[Tuple[str, str, int]]:
     """Get all models sorted by context length (largest first).
 
     Returns:
@@ -268,7 +270,7 @@ def get_model_context_length_from_name(full_model_name: str) -> int:
     return MODEL_CONFIGS[provider][model]["context_length"]
 
 
-def get_all_model_context_limits() -> dict:
+def get_all_model_context_limits() -> Dict[str, int]:
     """Get all model context limits as a flat dictionary.
 
     Returns:

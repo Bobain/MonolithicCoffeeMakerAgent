@@ -1,5 +1,6 @@
 # co-author : Gemini 2.5 Pro Preview
 import logging
+from typing import Optional
 
 # Set up a logger for this module.
 # In a larger application, the root logger would typically be configured elsewhere.
@@ -8,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def text_to_speech_pyttsx3(text, voice_id=None, rate=150, volume=1.0):
+def text_to_speech_pyttsx3(text: str, voice_id: Optional[str] = None, rate: int = 150, volume: float = 1.0) -> None:
     """
     Synthesizes text to speech using pyttsx3.
 
