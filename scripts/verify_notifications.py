@@ -182,7 +182,7 @@ Examples:
         print("   These priorities may require manual intervention.")
 
     # Summary by status
-    status_counts = {}
+    status_counts: Dict[str, int] = {}
     for notif in notifications:
         status = notif["status"]
         status_counts[status] = status_counts.get(status, 0) + 1
@@ -193,7 +193,7 @@ Examples:
         print(f"   {status}: {count}")
 
     # Summary by type
-    type_counts = {}
+    type_counts: Dict[str, int] = {}
     for notif in notifications:
         notif_type = notif["type"]
         type_counts[notif_type] = type_counts.get(notif_type, 0) + 1
