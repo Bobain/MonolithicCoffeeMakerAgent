@@ -252,41 +252,129 @@ class ChatSession:
         logger.debug(f"Status updated: {self.daemon_status_text}")
 
     def _cmd_daemon_status(self) -> str:
-        """Show detailed daemon status."""
-        import time
-        from datetime import timedelta
+        """Show detailed daemon status with progress bar and work information.
+
+        PRIORITY 2.11: Enhanced status reporting
+        - Shows what daemon is working on
+        - Progress bar for current priority
+        - Time elapsed on current work
+        - Iteration count
+        - Crash history
+        """
+        import json
+        from datetime import datetime
+        from pathlib import Path
 
         self._update_status_display()
-        status = self.process_manager.get_daemon_status()
 
-        if not status["running"]:
+        # Read daemon status file directly for detailed info
+        status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
+
+        if not status_file.exists():
+            return (
+                "❌ **Daemon Status: NOT FOUND**\n\n"
+                "The daemon status file doesn't exist.\n\n"
+                "The daemon may not be running or hasn't been started yet.\n\n"
+                "Use `/start` to launch the daemon."
+            )
+
+        try:
+            with open(status_file, "r") as f:
+                daemon_status = json.load(f)
+        except Exception as e:
+            return f"❌ **Error Reading Status**: {str(e)}"
+
+        if daemon_status["status"] != "running":
             return (
                 "❌ **Daemon Status: STOPPED**\n\n"
                 "The code_developer daemon is not currently running.\n\n"
-                "Use `/start` to launch it.\n\n"
-                "💡 **Note**: The daemon can take 12+ hours to respond to tasks.\n"
-                "   Like a human developer, he needs focus time and rest periods!"
+                "Use `/start` to launch it."
             )
 
-        # Calculate uptime
-        uptime_seconds = time.time() - status["uptime"]
-        uptime = str(timedelta(seconds=int(uptime_seconds)))
+        # Get process info
+        status = self.process_manager.get_daemon_status()
 
-        # Format current task
-        task = status["current_task"] or "None (Idle)"
+        # Parse timestamps
+        started_at = datetime.fromisoformat(daemon_status["started_at"])
+        uptime = datetime.now() - started_at
 
-        return (
-            f"🟢 **Daemon Status: RUNNING**\n\n"
-            f"- **PID**: {status['pid']}\n"
-            f"- **Status**: {status['status'].upper()}\n"
-            f"- **Current Task**: {task}\n"
-            f"- **Uptime**: {uptime}\n"
-            f"- **CPU**: {status['cpu_percent']:.1f}%\n"
-            f"- **Memory**: {status['memory_mb']:.1f} MB\n\n"
-            "💡 **Tip**: code_developer may take time to respond (12+ hours is normal).\n"
-            "   He needs focus time and rest, just like a human developer!\n\n"
-            "Use `/stop` to shut down the daemon gracefully."
-        )
+        # Build status message
+        lines = []
+        lines.append("🟢 **code_developer is running!**\n")
+
+        # Current work section
+        current_priority = daemon_status.get("current_priority")
+        if current_priority and current_priority.get("name"):
+            lines.append("**📋 Current Work:**")
+            lines.append(f"- **Priority**: {current_priority['name']}")
+            lines.append(f"- **Title**: {current_priority['title']}")
+
+            # Calculate time on current priority
+            if current_priority.get("started_at"):
+                priority_start = datetime.fromisoformat(current_priority["started_at"])
+                time_on_priority = datetime.now() - priority_start
+                hours = int(time_on_priority.total_seconds() / 3600)
+                minutes = int((time_on_priority.total_seconds() % 3600) / 60)
+
+                lines.append(f"- **Time Elapsed**: {hours}h {minutes}m")
+
+                # Progress bar based on time (assuming typical priority takes 4-8 hours)
+                # Show progress up to 8 hours, then just show it's ongoing
+                max_hours = 8
+                progress_pct = min(100, int((time_on_priority.total_seconds() / 3600 / max_hours) * 100))
+
+                # Create progress bar
+                bar_length = 20
+                filled = int(bar_length * progress_pct / 100)
+                bar = "█" * filled + "░" * (bar_length - filled)
+                lines.append(f"- **Progress**: [{bar}] {progress_pct}%")
+
+                if progress_pct >= 100:
+                    lines.append("  _(This is a complex task taking longer than usual)_")
+
+            # Iteration count
+            iteration = daemon_status.get("iteration", 0)
+            lines.append(f"- **Iterations**: {iteration}")
+
+        else:
+            lines.append("**Status**: Idle (waiting for work)")
+
+        lines.append("")
+
+        # Process health section
+        lines.append("**⚙️  Process Health:**")
+        lines.append(f"- **PID**: {daemon_status['pid']}")
+        lines.append(f"- **Uptime**: {str(uptime).split('.')[0]}")
+        lines.append(f"- **CPU**: {status['cpu_percent']:.1f}%")
+        lines.append(f"- **Memory**: {status['memory_mb']:.1f} MB")
+
+        # Crash history
+        crashes = daemon_status.get("crashes", {})
+        crash_count = crashes.get("count", 0)
+        if crash_count > 0:
+            max_crashes = crashes.get("max", 3)
+            lines.append(f"- **Crashes**: {crash_count}/{max_crashes} ⚠️")
+
+            history = crashes.get("history", [])
+            if history:
+                lines.append(f"  _Last crash: {history[-1]}_")
+        else:
+            lines.append(f"- **Crashes**: 0 ✓")
+
+        lines.append("")
+
+        # Context management
+        context = daemon_status.get("context", {})
+        if context:
+            iterations_since_compact = context.get("iterations_since_compact", 0)
+            compact_interval = context.get("compact_interval", 10)
+            lines.append("**🔄 Context Management:**")
+            lines.append(f"- **Next refresh**: {compact_interval - iterations_since_compact} iterations")
+
+        lines.append("")
+        lines.append("_Use `/stop` to shut down the daemon, or just let him work!_")
+
+        return "\n".join(lines)
 
     def _cmd_daemon_start(self) -> str:
         """Start the daemon."""
