@@ -12,7 +12,7 @@ import os
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 
 class DeveloperState(str, Enum):
@@ -148,7 +148,7 @@ class DeveloperStatus:
             details: Additional details (optional)
             auto_write: Whether to automatically write status file (default: True)
         """
-        activity = {
+        activity: Dict[str, Any] = {
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "type": activity_type.value,
             "description": description,

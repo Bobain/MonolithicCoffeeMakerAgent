@@ -48,7 +48,7 @@ class PackageTester:
 
     def find_test_directories(self, package_location: str) -> List[Path]:
         """Find test directories within a package"""
-        test_dirs = []
+        test_dirs: List[Path] = []
         package_path = Path(package_location)
 
         # Common test directory patterns
