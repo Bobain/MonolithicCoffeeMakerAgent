@@ -17936,6 +17936,196 @@ poetry run project-manager status
 
 ---
 
+### 🔴 **PRIORITY 2.9: Sound Notifications for project-manager** 🔔 **HIGH PRIORITY**
+
+**Estimated Duration**: 3-4 hours
+**Impact**: ⭐⭐⭐⭐ (High - Improves user workflow and responsiveness)
+**Status**: 📝 Planned
+**Dependency**: None
+**Why Important**: Allows users to focus on their work while being notified when project-manager needs their attention
+
+#### User Story: Sound Notifications for Attention
+
+**As a** user working on my projects
+**I want** project-manager to produce a sound on my laptop when it needs my attention
+**So that** I can focus on my work but know when approvals, user tests, or other inputs are needed as the project progresses
+
+**Background**:
+Currently, the project-manager and daemon may need user input (approvals, test feedback, decisions) but users don't know unless they actively check. This forces users to:
+- Constantly monitor the terminal/chat
+- Check notifications manually
+- Miss important requests that block progress
+
+A sound notification system would allow users to:
+- Work on other tasks without missing important requests
+- Respond quickly when the daemon needs input
+- Improve overall development workflow efficiency
+
+**Use Cases**:
+
+1. **Approval Requests**
+   - Daemon needs approval to implement a priority
+   - Sound plays when notification created
+   - User responds when convenient
+
+2. **User Testing Needed**
+   - Feature implemented, needs user testing
+   - Sound alerts user to test
+   - Faster feedback loop
+
+3. **Critical Issues**
+   - Daemon crashes or hits max retries
+   - Sound + critical notification
+   - User can intervene immediately
+
+4. **Milestone Completion**
+   - Priority completed successfully
+   - Sound confirms progress
+   - User can review/merge PR
+
+**Deliverables**:
+
+**1. Sound Notification System** (`coffee_maker/cli/notifications.py`)
+```python
+import os
+import platform
+
+def play_notification_sound(priority: str = "normal"):
+    """Play system notification sound.
+
+    Args:
+        priority: "normal", "high", "critical"
+    """
+    system = platform.system()
+
+    if system == "Darwin":  # macOS
+        if priority == "critical":
+            os.system('afplay /System/Library/Sounds/Sosumi.aiff')
+        elif priority == "high":
+            os.system('afplay /System/Library/Sounds/Glass.aiff')
+        else:
+            os.system('afplay /System/Library/Sounds/Pop.aiff')
+    elif system == "Linux":
+        os.system('paplay /usr/share/sounds/freedesktop/stereo/message.oga')
+    elif system == "Windows":
+        import winsound
+        if priority == "critical":
+            winsound.MessageBeep(winsound.MB_ICONHAND)
+        else:
+            winsound.MessageBeep(winsound.MB_ICONASTERISK)
+```
+
+**2. Enhanced NotificationDB** (`coffee_maker/cli/notifications.py`)
+```python
+def create_notification(
+    self,
+    type: str,
+    title: str,
+    message: str,
+    priority: str = NOTIF_PRIORITY_NORMAL,
+    play_sound: bool = True,  # NEW: Play sound by default
+    context: dict = None
+) -> int:
+    """Create notification with optional sound."""
+    notif_id = self._create_notification(...)
+
+    # Play sound if enabled
+    if play_sound:
+        sound_priority = "normal"
+        if priority == NOTIF_PRIORITY_CRITICAL:
+            sound_priority = "critical"
+        elif priority == NOTIF_PRIORITY_HIGH:
+            sound_priority = "high"
+
+        play_notification_sound(sound_priority)
+
+    return notif_id
+```
+
+**3. Configuration Options** (`~/.coffee_maker/config.yaml`)
+```yaml
+notifications:
+  sound_enabled: true
+  sound_volume: 0.5
+  sound_priority_threshold: "normal"  # Only play for normal+ priority
+  custom_sounds:
+    critical: "/path/to/critical.mp3"
+    high: "/path/to/high.mp3"
+    normal: "/path/to/normal.mp3"
+```
+
+**4. CLI Sound Control** (Add to `project-manager`)
+```bash
+# Enable/disable sounds
+project-manager config set notifications.sound_enabled true
+project-manager config set notifications.sound_enabled false
+
+# Set volume
+project-manager config set notifications.sound_volume 0.7
+
+# Set custom sounds
+project-manager config set notifications.custom_sounds.critical /path/to/sound.mp3
+```
+
+**Implementation Steps**:
+
+1. **Add sound playback function** (30 min)
+   - Cross-platform sound support (macOS, Linux, Windows)
+   - Multiple sound types for different priorities
+   - Fallback if sound unavailable
+
+2. **Integrate with NotificationDB** (45 min)
+   - Add `play_sound` parameter to `create_notification()`
+   - Play appropriate sound based on priority
+   - Handle errors gracefully (no sound = no crash)
+
+3. **Add configuration system** (1 hour)
+   - Create config file parser
+   - Allow users to enable/disable sounds
+   - Support custom sound files
+   - Volume control
+
+4. **Update all notification callers** (1 hour)
+   - Daemon approval requests → sound
+   - Crash notifications → critical sound
+   - Completion notifications → normal sound
+   - Test request notifications → high sound
+
+5. **Add CLI commands** (30 min)
+   - `project-manager config set/get` commands
+   - List available sounds
+   - Test sound playback
+
+**Testing**:
+```bash
+# Test different sound priorities
+python -c "from coffee_maker.cli.notifications import play_notification_sound; play_notification_sound('normal')"
+python -c "from coffee_maker.cli.notifications import play_notification_sound; play_notification_sound('high')"
+python -c "from coffee_maker.cli.notifications import play_notification_sound; play_notification_sound('critical')"
+
+# Test with daemon
+poetry run code-developer
+# Wait for approval notification - should hear sound
+
+# Disable sounds
+project-manager config set notifications.sound_enabled false
+# No sound on next notification
+
+# Re-enable
+project-manager config set notifications.sound_enabled true
+```
+
+**Benefits**:
+1. **Better User Experience**: No need to constantly check terminal
+2. **Faster Response Time**: Users notified immediately when needed
+3. **Improved Workflow**: Focus on work, respond when alerted
+4. **Configurable**: Users can customize or disable as needed
+5. **Cross-Platform**: Works on macOS, Linux, Windows
+
+**Implementation Priority**: **HIGH** (After PRIORITY 2.8, as requested by user)
+
+---
+
 ### 🔴 **PRIORITY 5: Streamlit Analytics Dashboard** ⚡ NEW
 
 **Estimated Duration**: 1-2 weeks
