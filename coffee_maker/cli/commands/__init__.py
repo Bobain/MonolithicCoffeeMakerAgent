@@ -20,13 +20,15 @@ Example:
     >>> response = handler.execute(["User Authentication"], editor)
 """
 
+from typing import Dict, Optional, Type
+
 from coffee_maker.cli.commands.base import BaseCommand
 
 # Command registry will be populated as commands are implemented
-COMMAND_REGISTRY = {}
+COMMAND_REGISTRY: Dict[str, BaseCommand] = {}
 
 
-def register_command(command_class):
+def register_command(command_class: Type[BaseCommand]) -> Type[BaseCommand]:
     """Register a command handler.
 
     Decorator to register command handlers in the global registry.
@@ -47,7 +49,7 @@ def register_command(command_class):
     return command_class
 
 
-def get_command_handler(command_name: str) -> BaseCommand:
+def get_command_handler(command_name: str) -> Optional[BaseCommand]:
     """Get command handler by name.
 
     Args:
@@ -64,7 +66,7 @@ def get_command_handler(command_name: str) -> BaseCommand:
     return COMMAND_REGISTRY.get(command_name)
 
 
-def list_commands():
+def list_commands() -> Dict[str, BaseCommand]:
     """List all registered commands.
 
     Returns:
