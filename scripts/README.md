@@ -66,6 +66,75 @@ Checks if agents are running and healthy.
 #   1 = Some agents down
 ```
 
+### `monitor_code_developer.sh` ⭐ NEW
+Continuously monitors code_developer daemon with live status updates.
+
+**Usage**:
+```bash
+# Monitor with 60-second updates (default)
+./scripts/monitor_code_developer.sh
+
+# Monitor with 30-second updates
+./scripts/monitor_code_developer.sh 30
+
+# Monitor with 5-second updates (fast refresh)
+./scripts/monitor_code_developer.sh 5
+```
+
+**Features**:
+- Live progress bar showing task completion
+- Current priority and task name
+- Elapsed time and ETA
+- Recent activity log
+- Auto-refresh at specified interval
+- Clean dashboard layout
+
+**Output Example**:
+```
+╔════════════════════════════════════════════════════════════════════╗
+║              code_developer Status Monitor                         ║
+║              Updated: 2025-10-12 16:15:30                         ║
+╚════════════════════════════════════════════════════════════════════╝
+
+╭───────────────────────── Developer Status Dashboard ─────────────────────────╮
+│                                                                              │
+│          State:  🟢 WORKING                                                  │
+│           Task:  PRIORITY 8: Multi-AI Provider Support                       │
+│       Progress:  ████████████░░░░░░░░░░░░ 40%                               │
+│           Step:  Writing tests                                               │
+│            ETA:  3m 15s                                                      │
+│        Elapsed:  2m 30s                                                      │
+│  Last Activity:  Progress: 40% - Writing tests (just now)                    │
+│                                                                              │
+│          Today:  Tasks: 0 | Commits: 0 | Tests: 0/0                          │
+│                                                                              │
+│     Daemon PID:  20536                                                       │
+│         Uptime:  45m 12s                                                     │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+────────────────────────────────────────────────────────────────────
+Next update in 60s... (Press Ctrl+C to stop)
+```
+
+**Use Cases**:
+- Keep eye on daemon progress during long implementations
+- Monitor daemon while working on other tasks
+- Spot when daemon is stuck or needs attention
+- Track completion times and velocity
+
+**Tips**:
+```bash
+# Run in split terminal pane
+tmux split-window -h './scripts/monitor_code_developer.sh 60'
+
+# Run in background with logs
+./scripts/monitor_code_developer.sh 60 >> monitor.log 2>&1 &
+
+# Stop monitoring
+# Press Ctrl+C in the monitor terminal
+```
+
 **Output**:
 ```
 === Agent Health Check ===

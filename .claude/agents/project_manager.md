@@ -153,6 +153,7 @@ prompt = load_prompt(PromptNames.AGENT_PROJECT_MANAGER, {
 ### Communication Tools
 - **Notifications**: Create/respond to notifications
 - **User Warnings**: Alert users about blockers, issues, or concerns (via `warn_user()`)
+- **Live Monitoring**: Auto-display code_developer status every minute (`scripts/monitor_code_developer.sh`)
 - **Chat Interface**: Interactive conversation
 - **Status Reports**: Generate summaries
 - **Calendar**: Show upcoming deliverables

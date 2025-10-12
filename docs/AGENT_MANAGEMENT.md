@@ -101,7 +101,7 @@ claude --message "What's the project status?"
 ### Daemon Status
 
 ```bash
-# Detailed daemon status
+# Detailed daemon status (one-time)
 poetry run project-manager developer-status
 
 # Output:
@@ -110,6 +110,12 @@ poetry run project-manager developer-status
 # │  Task:  PRIORITY 5: Analytics Dashboard                  │
 # │  Progress: ██████░░░░░░░░░░░░░░░░░░░░░░ 20%            │
 # ╰──────────────────────────────────────────────────────────╯
+
+# Live monitoring (auto-refresh every minute)
+./scripts/monitor_code_developer.sh
+
+# Custom interval (e.g., every 30 seconds)
+./scripts/monitor_code_developer.sh 30
 ```
 
 ### View Notifications
