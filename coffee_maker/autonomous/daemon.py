@@ -776,8 +776,12 @@ Until resolved, project_manager cannot see latest progress.
             # Try to recover
             try:
                 subprocess.run(["git", "checkout", current_branch], cwd=self.git.repo_path, check=True)
-            except:
-                pass
+            except subprocess.CalledProcessError as e:
+                logger.error(
+                    f"Failed to recover branch: {e}", extra={"branch": current_branch, "returncode": e.returncode}
+                )
+            except Exception as e:
+                logger.error(f"Unexpected error during branch recovery: {e}", exc_info=True)
 
             return False
 

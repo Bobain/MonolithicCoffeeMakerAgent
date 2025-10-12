@@ -188,8 +188,10 @@ class DeveloperStatusMonitor:
                         eta_str = f"~{eta_hours}h {eta_minutes}m"
                     else:
                         eta_str = f"~{eta_minutes}m"
-            except:
-                pass
+            except (ValueError, ZeroDivisionError) as e:
+                logger.debug(f"ETA calculation failed: {e}")
+            except Exception as e:
+                logger.warning(f"Unexpected error in ETA calculation: {e}", exc_info=True)
 
         # Create progress bar
         bar_length = 20

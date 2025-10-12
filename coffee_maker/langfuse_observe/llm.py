@@ -31,8 +31,10 @@ try:
     SUPPORTED_PROVIDERS.update(
         {"gemini": (ChatGoogleGenerativeAI, "GEMINI_API_KEY", "gemini-2.5-pro", {"max_tokens": 8192})}
     )
-except:
+except ImportError:
     logger.warning("langchain_google_genai not installed. will not use google")
+except Exception as e:
+    logger.error(f"Unexpected error loading langchain_google_genai: {e}", exc_info=True)
 
 try:
     from langchain_openai import ChatOpenAI
@@ -54,8 +56,10 @@ try:
     #         "input": "I love programming.",
     #     }
     # )
-except:
+except ImportError:
     logger.warning("langchain_openai not installed. will not use openai")
+except Exception as e:
+    logger.error(f"Unexpected error loading langchain_openai: {e}", exc_info=True)
 try:
     from langchain_anthropic import ChatAnthropic
 
@@ -76,8 +80,10 @@ try:
     #     }
     # )
 
-except:
+except ImportError:
     logger.warning("langchain_anthropic not installed. will not use anthropic")
+except Exception as e:
+    logger.error(f"Unexpected error loading langchain_anthropic: {e}", exc_info=True)
 
 
 default_provider = (
