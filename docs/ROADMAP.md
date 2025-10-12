@@ -168,7 +168,7 @@ Currently PM doesn't consistently identify what type of information users are pr
 
 ## 🚨 US-021 - Code Refactoring & Technical Debt Reduction (HIGHEST PRIORITY)
 
-**Status**: 🔄 **IN PROGRESS** - Phase 1 (~80%), Phase 2 Started
+**Status**: 🔄 **IN PROGRESS** - Phase 1 (~80%), Phase 0 Complete, Phase 2 Complete, Phase 2.4 Partially Complete
 
 **Progress Update** (2025-10-12):
 - ✅ Type hints: 100% coverage achieved (up from 68%)
@@ -223,7 +223,7 @@ Currently PM doesn't consistently identify what type of information users are pr
     - New daemon exceptions: DaemonCrashError, DaemonStateError
     - Unified RateLimitError consolidates duplicate definitions
     - Full hierarchy documented with usage examples
-  - Logging Utilities (coffee_maker/utils/logging_utils.py):
+  - Logging Utilities (coffee_maker/utils/logging.py):
     - Standardized logging helpers: get_logger, log_error, log_warning, log_with_context
     - Performance measurement: log_duration context manager
     - Message formatting: LogFormatter with emoji prefixes (✅❌⚠️🔄)
@@ -239,7 +239,18 @@ Currently PM doesn't consistently identify what type of information users are pr
     - Logging and monitoring guidelines
     - Three complete working examples
     - Quick reference table for all error types
-- 📝 Next: Phase 2 - Dependency injection, or Phase 3 - Testing
+- ✅ Phase 0: Naming Improvements - Removed redundant `_utils` suffixes (4 files renamed, all imports updated)
+- 🔄 Phase 2.4: Architecture Cleanup - langfuse_observe directory renamed (55 files updated); full restructuring deferred
+- ✅ Phase 0 Details: Naming Improvements (2025-10-12):
+  - Removed redundant `_utils` suffixes for better clarity
+  - Renames completed (all imports updated, tests passing):
+    - coffee_maker/langfuse_observe/retry_utils.py → retry.py
+    - coffee_maker/utils/run_deamon_process.py → run_daemon_process.py (typo fix)
+    - coffee_maker/utils/logging_utils.py → logging.py
+    - coffee_maker/utils/time_utils.py → time.py
+  - Safety verified: No stdlib conflicts with absolute imports
+  - Documentation: docs/NAMING_IMPROVEMENTS.md
+- 📝 Next: Phase 2.4 - Architecture cleanup, then Phase 3 - Testing
 
 **As a**: Development team
 **I want**: Systematic refactoring to improve code quality, maintainability, and reduce technical debt
@@ -294,7 +305,7 @@ Currently PM doesn't consistently identify what type of information users are pr
     - Rich error messages with context attributes
     - Full hierarchy documented with usage examples
   - [x] Consistent error messages and logging ✅ COMPLETE
-    - Created coffee_maker/utils/logging_utils.py
+    - Created coffee_maker/utils/logging.py
     - Standardized logging helpers: get_logger, log_error, log_warning, log_with_context
     - Performance measurement: log_duration context manager
     - Message formatting: LogFormatter with emoji prefixes (✅❌⚠️🔄)
@@ -318,6 +329,42 @@ Currently PM doesn't consistently identify what type of information users are pr
   - [ ] Extract interfaces for major components
   - [ ] Constructor injection instead of global state
   - [ ] Mock-friendly architecture
+
+**Phase 2.4: Architecture Cleanup - langfuse_observe Directory** 🔄 **PARTIALLY COMPLETE** (2025-10-12)
+- [x] Directory rename: ✅ **COMPLETE** (2025-10-12)
+  - [x] Renamed langchain_observe → langfuse_observe (e1e1625)
+  - [x] Updated 48 Python files with import statements
+  - [x] Updated 7 files with docstrings/comments
+  - [x] Total: 55 files updated, 38 files renamed
+  - [x] Verified zero lingering references to old name
+- [ ] Architecture restructuring: 📝 **DEFERRED** (5-6 days)
+  - Issue: Only 5 of 38 files (13%) in langfuse_observe/ actually use @observe decorator
+  - Analysis: docs/LANGCHAIN_OBSERVE_ARCHITECTURE_REVIEW.md
+  - Proposed structure:
+    ```
+    coffee_maker/
+    ├── langfuse_observe/          # Only files using @observe (5 files)
+    │   ├── agents.py
+    │   ├── cost_calculator.py
+    │   ├── retry.py
+    │   └── analytics/
+    ├── llm/                       # Core LLM abstractions (create new)
+    │   ├── llm.py
+    │   ├── rate_limiting/
+    │   ├── strategies/
+    │   └── providers/
+    └── utils/                     # General utilities (move here)
+        ├── http_pool.py
+        └── token_estimator.py
+    ```
+  - Tasks (deferred to future sprint):
+    - [ ] Create coffee_maker/llm/ directory structure
+    - [ ] Move 33 misplaced files to correct locations
+    - [ ] Consolidate duplicate modules (retry.py variants, provider duplicates)
+    - [ ] Merge langfuse_observe/exceptions.py into coffee_maker/exceptions.py
+    - [ ] Move utilities (http_pool, token_estimator) to coffee_maker/utils/
+    - [ ] Update all imports and verify tests pass
+  - Reason for deferral: High-impact, but can be done after Phase 3 completion
 
 **Phase 3: Testing & Documentation** (2-3 days)
 - [ ] Unit test coverage > 80%
