@@ -143,5 +143,8 @@ data/*.db
 data/*.sqlite
 data/*.sqlite3
 
+# Runtime status files (daemon state, should not be versioned)
+data/developer_status.json
+
 # User configuration files (use config.yaml.example as template)
 config.yaml
