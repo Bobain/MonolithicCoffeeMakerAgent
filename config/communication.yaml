@@ -1,0 +1,246 @@
+# Communication Configuration for code_developer
+# PRIORITY 9: Enhanced code_developer Communication & Daily Standup
+#
+# This file configures how the code_developer daemon communicates with you.
+# Copy to: ~/.config/coffee-maker/communication.yaml
+
+# Communication settings
+communication:
+  # Daily standup reports
+  daily_standup:
+    enabled: true
+    time: "09:00"  # 24-hour format (HH:MM)
+    timezone: "America/New_York"  # Your local timezone
+
+    # Days to generate reports
+    days:
+      - monday
+      - tuesday
+      - wednesday
+      - thursday
+      - friday
+
+    # Output channels
+    channels:
+      - terminal  # Display in terminal
+      - file      # Save to file
+      # Optional: slack, email
+
+    # Report format
+    format: "markdown"  # markdown | json | html
+
+    # What to include
+    sections:
+      - accomplishments
+      - metrics
+      - todays_plan
+      - blockers
+      - notes
+
+    # Detail level
+    verbosity: "normal"  # minimal | normal | verbose
+
+  # Weekly summary reports
+  weekly_summary:
+    enabled: true
+    day: "friday"  # Day of week
+    time: "17:00"  # End of day
+    channels:
+      - terminal
+      - file
+    include_velocity: true
+    compare_previous_weeks: 4  # Compare to last 4 weeks
+
+  # Sprint/milestone reviews
+  sprint_review:
+    enabled: true
+    frequency: "monthly"  # weekly | biweekly | monthly
+    day: "last_friday"    # last_friday | first_monday | etc.
+    include_retrospective: true
+
+  # Real-time updates
+  realtime_updates:
+    enabled: true
+    milestones: true   # Notify on major accomplishments
+    blockers: true     # Notify immediately when blocked
+    questions: true    # Ask for input when needed
+
+    # Progress notifications
+    progress_notifications: true
+    progress_threshold: 25  # Notify every 25% (25%, 50%, 75%, 100%)
+
+    # Quiet hours (no notifications)
+    quiet_hours:
+      enabled: true
+      start: "22:00"
+      end: "08:00"
+      timezone: "America/New_York"
+
+  # Report retention
+  retention:
+    daily_days: 90      # Keep 90 days of daily reports
+    weekly_days: 365    # Keep 1 year of weekly reports
+    sprint_days: -1     # -1 = keep forever
+
+    # Archive old reports
+    archive:
+      enabled: false
+      compress: true
+      archive_dir: "reports/archive/"
+
+  # Global settings
+  verbosity: "normal"  # minimal | normal | verbose
+  timezone: "America/New_York"
+
+# Notification channels
+channels:
+  # Terminal output
+  terminal:
+    enabled: true
+    use_colors: true
+    use_emojis: true
+    width: 80
+
+  # File output
+  file:
+    enabled: true
+    base_dir: "reports/"
+    daily_dir: "reports/daily/"
+    weekly_dir: "reports/weekly/"
+    sprint_dir: "reports/sprint/"
+
+    # File naming patterns
+    daily_pattern: "standup-{date}.md"
+    weekly_pattern: "summary-{year}-W{week}.md"
+    sprint_pattern: "review-{year}-{month}.md"
+
+  # Slack integration (optional)
+  slack:
+    enabled: false
+    webhook_url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+    channel: "#code-developer-updates"
+    username: "code_developer"
+    icon_emoji: ":robot_face:"
+
+    # Rate limiting
+    rate_limit:
+      max_per_hour: 5
+      max_per_day: 20
+
+  # Email integration (optional)
+  email:
+    enabled: false
+
+    # SMTP settings
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    smtp_tls: true
+    smtp_user: "your@email.com"
+    smtp_password: "${EMAIL_PASSWORD}"  # Use environment variable
+
+    # Email addresses
+    from_email: "code-developer@yourdomain.com"
+    from_name: "Code Developer AI"
+    to_emails:
+      - "team@yourdomain.com"
+
+    # Email formatting
+    format: "html"
+    include_attachments: true
+
+# Metrics collection
+metrics:
+  # Git metrics
+  git:
+    enabled: true
+    author_filter:
+      - "Claude"
+      - "code-developer"
+    exclude_merge_commits: true
+
+  # Test metrics
+  tests:
+    enabled: true
+    command: "pytest --cov"
+    coverage_threshold: 80
+
+  # Roadmap metrics
+  roadmap:
+    enabled: true
+    roadmap_file: "docs/ROADMAP.md"
+    velocity_tracking: true
+
+# Advanced settings
+advanced:
+  cache_metrics: true
+  cache_ttl_seconds: 300  # 5 minutes
+  parallel_processing: true
+  max_workers: 4
+
+# ==========================================
+# QUICK START EXAMPLES
+# ==========================================
+
+# Example 1: Minimal Configuration
+# ----------------------------------
+# communication:
+#   daily_standup:
+#     enabled: true
+#     time: "09:00"
+
+# Example 2: Slack Notifications
+# -------------------------------
+# channels:
+#   slack:
+#     enabled: true
+#     webhook_url: "https://hooks.slack.com/..."
+
+# Example 3: Quiet Hours
+# ----------------------
+# communication:
+#   realtime_updates:
+#     quiet_hours:
+#       enabled: true
+#       start: "22:00"
+#       end: "08:00"
+
+# Example 4: Minimal Verbosity
+# ----------------------------
+# communication:
+#   daily_standup:
+#     verbosity: "minimal"
+
+# ==========================================
+# CONFIGURATION COMMANDS
+# ==========================================
+
+# View configuration:
+#   poetry run project-manager dev config show
+
+# Set values:
+#   poetry run project-manager dev config set daily_standup.time "08:30"
+
+# Initialize default config:
+#   poetry run project-manager dev config init
+
+# Validate configuration:
+#   poetry run project-manager dev config validate
+
+# ==========================================
+# ENVIRONMENT VARIABLES
+# ==========================================
+
+# Override configuration with environment variables:
+#   export COFFEE_MAKER_DAILY_TIME="08:00"
+#   export COFFEE_MAKER_TIMEZONE="America/Los_Angeles"
+#   export COFFEE_MAKER_SLACK_WEBHOOK="https://..."
+
+# ==========================================
+# DOCUMENTATION
+# ==========================================
+
+# Complete guides:
+#   - docs/DAILY_STANDUP_GUIDE.md
+#   - docs/COMMUNICATION_CONFIG_GUIDE.md
+#   - docs/STANDUP_EXAMPLES.md
+#   - docs/PRIORITY_9_TECHNICAL_SPEC.md
