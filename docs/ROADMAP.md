@@ -216,6 +216,24 @@ Currently PM doesn't consistently identify what type of information users are pr
   - Fixed DATABASE_PATHS export from config package (6000a88)
   - Fixed missing json import in chat_interface.py (e6bd5f1)
 - ✅ Branch: `feature/us-021-refactoring-phase-1` → merged to `roadmap` (visibility complete)
+- ✅ Task 1.1: Fix Dangerous Error Handling Patterns (2025-10-12)
+  - Fixed 5 bare `except:` statements that silently swallowed all exceptions
+  - daemon.py:779 - Git checkout recovery now logs specific errors (subprocess.CalledProcessError)
+  - chat_interface.py:191 - ETA calculation catches ValueError, ZeroDivisionError specifically
+  - langfuse_observe/llm.py - Import errors now use ImportError instead of bare except (3 instances)
+  - All errors now logged with proper context and exception details
+  - Zero bare except: statements remaining in codebase
+- ✅ Task 1.2: ConfigManager Migration - Langfuse Keys (2025-10-12)
+  - Extended ConfigManager with Langfuse key management:
+    - get_langfuse_public_key(), get_langfuse_secret_key(), has_langfuse_keys()
+    - Updated get_all_api_keys() to include Langfuse keys
+  - Migrated Langfuse key access from os.getenv() to ConfigManager:
+    - analytics/config.py: Uses ConfigManager.get_langfuse_*_key(required=True)
+    - code_formatter/main.py: Langfuse client uses ConfigManager for keys
+    - llm.py: API key validation uses ConfigManager.has_*_api_key() methods
+  - All API key access now centralized in ConfigManager
+  - Consistent error handling with APIKeyMissingError
+  - Configuration caching reduces repeated environment variable access
 - ✅ Phase 2: Error Handling & Logging (2025-10-12)
   - Exception Hierarchy (coffee_maker/exceptions.py):
     - Created unified CoffeeMakerError base with 6 domain-specific bases
@@ -272,7 +290,7 @@ Currently PM doesn't consistently identify what type of information users are pr
 
 ### Definition of Done
 
-**Phase 1: Code Quality Foundations** (~80% Complete, 2-3 days)
+**Phase 1: Code Quality Foundations** ✅ **COMPLETE** (2025-10-12)
 - [x] All Python files have type hints (target: 100% coverage, up from 68%) ✅ COMPLETE
 - [x] Run mypy validation and fix critical errors (51 fixed, 232 remaining) ✅ COMPLETE
 - [x] Core modules have comprehensive docstrings ✅ SUBSTANTIALLY COMPLETE
@@ -283,10 +301,13 @@ Currently PM doesn't consistently identify what type of information users are pr
 - [x] Create reusable utilities: ✅ COMPLETE
   - [x] ConfigManager for API keys (eliminates 15+ duplicated blocks)
   - [x] File I/O utilities for JSON (eliminates 10+ duplicated patterns)
-- [x] Migrate existing code to use new utilities ✅ SUBSTANTIALLY COMPLETE
+- [x] Migrate existing code to use new utilities ✅ COMPLETE
   - [x] AI providers migrated to ConfigManager (claude, openai, gemini)
+  - [x] Langfuse keys migrated to ConfigManager (analytics, code_formatter, llm)
+  - [x] All API key access now centralized
+  - [x] Dangerous error handling patterns fixed (5 bare except: eliminated)
   - [x] Core utilities already using new patterns
-  - [x] Remaining migrations are minor/incremental (chat_interface.py json.load, etc.)
+  - [x] Remaining os.getenv() usage: Only for non-API-key configs (appropriate)
 - [ ] Break large files into logical modules: 📝 DEFERRED TO PHASE 2
   - [ ] `chat_interface.py` → max 500 lines (split into components)
   - [ ] `daemon.py` → max 600 lines (extract managers/strategies)
