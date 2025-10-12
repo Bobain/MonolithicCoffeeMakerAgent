@@ -4,7 +4,7 @@ This module provides reusable time calculation functions to reduce code
 duplication across analytics modules.
 
 Example:
-    >>> from coffee_maker.utils.time_utils import get_time_threshold, format_duration
+    >>> from coffee_maker.utils.time import get_time_threshold, format_duration
     >>>
     >>> # Get time threshold for "last 7 days"
     >>> from_time = get_time_threshold("day", count=7)

@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 
 from langfuse import observe
 
-from coffee_maker.utils.time_utils import get_timestamp_threshold
+from coffee_maker.utils.time import get_timestamp_threshold
 
 logger = logging.getLogger(__name__)
 

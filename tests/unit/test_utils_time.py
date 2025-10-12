@@ -1,8 +1,8 @@
-"""Unit tests for coffee_maker.utils.time_utils module."""
+"""Unit tests for coffee_maker.utils.time module."""
 
 from datetime import datetime, timedelta
 import pytest
-from coffee_maker.utils.time_utils import (
+from coffee_maker.utils.time import (
     get_time_threshold,
     get_time_range,
     format_duration,
