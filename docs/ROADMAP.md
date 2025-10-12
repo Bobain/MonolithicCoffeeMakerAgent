@@ -92,6 +92,9 @@ PRIORITY 2: Project Manager with UI ← Current focus
 ### PRIORITY 2.8: Daemon Status Reporting ✅ Complete
 ### PRIORITY 2.9: Sound Notifications ✅ Complete
 ### PRIORITY 3: code_developer ✅ Complete
+### PRIORITY 4: Developer Status Dashboard ✅ Complete
+### PRIORITY 4.1: Puppeteer MCP Integration ✅ Complete
+### PRIORITY 4.2: Centralized Prompt Management ✅ Complete
 ### PRIORITY 5: Streamlit Analytics Dashboard 📝 Planned
 ### PRIORITY 5.5: Streamlit Error Dashboard 📝 Planned
 ### PRIORITY 6: Streamlit Agent UI ✅ Complete
@@ -20946,3 +20949,250 @@ This roadmap is **flexible** and can be adjusted based on:
 ---
 
 **Ready to start? Which project do you want to begin with?** 🚀
+
+---
+
+## PRIORITY 4.1: Puppeteer MCP Integration ✅ Complete
+
+**Status**: ✅ Complete (2025-10-12)
+**Type**: Infrastructure Enhancement
+**Complexity**: Medium
+**Time Estimate**: 8-10 hours (Phase 1 complete)
+
+### Goal
+
+Enable Coffee Maker agents (code_developer, project_manager, assistant) to interact with web browsers through Puppeteer MCP server for visual testing, documentation, and output verification.
+
+### User Story
+
+> "I want the code_developer, project_manager, and assistant agents to see their output through a browser interface using the Puppeteer MCP server."
+
+### Completed Work
+
+**Phase 1: Setup & Configuration** ✅
+- Created technical specification: `docs/PRIORITY_4_1_TECHNICAL_SPEC.md`
+- Configured Claude Desktop with Puppeteer MCP server
+- Updated `~/Library/Application Support/Claude/config.json` with MCP configuration
+- Created prompt templates for web testing:
+  - `.claude/commands/test-web-app.md`
+  - `.claude/commands/capture-visual-docs.md`
+
+**Deliverables**:
+- ✅ Technical spec document
+- ✅ Claude Desktop MCP configuration
+- ✅ Prompt templates for browser automation
+- ✅ Architecture documentation
+
+### Future Work (Phase 2)
+
+**Python Client Implementation** (Optional):
+- Create `coffee_maker/mcp/puppeteer_client.py`
+- Implement programmatic browser automation for daemon
+- Add CLI commands: `coffee_maker browser test`, `coffee_maker browser visit`
+
+**Time Estimate**: 6-8 hours additional
+
+### Benefits
+
+1. **Visual Testing**: Agents can test web UIs and capture screenshots
+2. **Documentation**: Automated visual documentation with screenshots
+3. **Output Verification**: See rendered output of web applications
+4. **Browser Automation**: Navigate, click, fill forms programmatically
+
+### Technical Details
+
+**MCP Configuration**:
+```json
+{
+  "mcpServers": {
+    "puppeteer": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+      "env": {
+        "PUPPETEER_LAUNCH_OPTIONS": "{\"headless\": true}"
+      }
+    }
+  }
+}
+```
+
+**Usage in Claude Desktop**:
+- "Navigate to https://example.com and take a screenshot"
+- "Test the login page at http://localhost:3000"
+- "Capture visual documentation of the dashboard"
+
+### References
+
+- Technical Spec: `docs/PRIORITY_4_1_TECHNICAL_SPEC.md`
+- Puppeteer MCP: https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer
+- Commits: `8c65280`, `b0abcb0`
+
+---
+
+## PRIORITY 4.2: Centralized Prompt Management ✅ Complete
+
+**Status**: ✅ Complete (2025-10-12)
+**Type**: Infrastructure Enhancement
+**Complexity**: Medium
+**Time Estimate**: 6-8 hours (Phase 1 complete)
+
+### Goal
+
+Centralize all AI prompts in `.claude/commands/` directory for multi-AI provider support (Claude, Gemini, OpenAI) and prepare for Langfuse integration as source of truth.
+
+### User Stories
+
+> "As a code_developer or project_manager, I want all prompts stored in .claude/commands for easier migration to Gemini/OpenAI"
+
+> "As a user, I need all prompts stored in Langfuse as the source of truth, with .claude/commands as local cache for efficient observability"
+
+### Completed Work
+
+**Phase 1: Local Centralization** ✅
+
+1. **Created `.claude/commands/` directory** with 6 prompts:
+   - `create-technical-spec.md` - Technical spec generation
+   - `implement-documentation.md` - Documentation tasks
+   - `implement-feature.md` - Feature implementation
+   - `test-web-app.md` - Puppeteer web testing
+   - `capture-visual-docs.md` - Visual documentation
+   - `fix-github-issue.md` - GitHub issue resolution
+
+2. **Implemented PromptLoader utility**:
+   - File: `coffee_maker/autonomous/prompt_loader.py`
+   - Features:
+     - Load prompts from `.claude/commands/`
+     - Variable substitution (`$VAR_NAME` → value)
+     - Type-safe prompt names (PromptNames class)
+     - Error handling for missing prompts
+
+3. **Updated daemon code**:
+   - `daemon_spec_manager.py`: Uses `load_prompt()` for spec creation
+   - `daemon_implementation.py`: Uses `load_prompt()` for implementation
+   - All hardcoded prompts extracted to centralized location
+
+4. **Documentation**:
+   - Created `docs/PROMPT_MANAGEMENT_SYSTEM.md`
+   - Comprehensive architecture and usage guide
+   - Phase 2 (Langfuse) implementation plan
+
+**Deliverables**:
+- ✅ 6 centralized prompt templates
+- ✅ PromptLoader utility class
+- ✅ Daemon integration complete
+- ✅ Comprehensive documentation
+- ✅ Multi-AI provider ready
+
+### Future Work (Phase 2): Langfuse Integration
+
+**Goal**: Langfuse as source of truth, `.claude/commands/` as local cache
+
+**Components to Build**:
+1. `LangfusePromptSync` - Sync prompts from Langfuse to local cache
+2. Enhanced `PromptLoader` - Fetch from Langfuse first, fallback to local
+3. Observability tracking - Track all prompt executions in Langfuse
+4. CLI command: `coffee_maker prompts sync`
+
+**Benefits**:
+- Version control for prompts in Langfuse
+- A/B testing of prompt variations
+- Track success rates, costs, latency
+- Team collaboration on prompts
+- Production labels for stable prompts
+
+**Time Estimate**: 10-14 hours
+
+**Implementation Steps**:
+1. Upload prompts to Langfuse (1-2h)
+2. Implement LangfusePromptSync (3-4h)
+3. Enhance PromptLoader (2-3h)
+4. Observability integration (2-3h)
+5. Testing & validation (2-3h)
+
+### Benefits
+
+**Phase 1 (Complete)**:
+1. ✅ **Multi-AI Provider Support**: Works with Claude, Gemini, OpenAI
+2. ✅ **Maintainability**: Single source of truth (local)
+3. ✅ **Developer Experience**: Clear prompt organization
+4. ✅ **Version Control**: Prompts tracked in git
+
+**Phase 2 (Planned)**:
+5. 📝 **Observability**: All executions visible in Langfuse
+6. 📝 **Experimentation**: A/B test prompt variations
+7. 📝 **Collaboration**: Non-developers can edit prompts
+8. 📝 **Production Safety**: Gradual rollout, automatic rollback
+
+### Technical Details
+
+**Prompt Template Format**:
+```markdown
+# .claude/commands/implement-feature.md
+
+Read docs/ROADMAP.md and implement $PRIORITY_NAME: $PRIORITY_TITLE.
+
+Follow the roadmap guidelines and deliverables.
+
+Important:
+- Follow all coding standards
+- Add tests where appropriate
+- Document your changes
+
+Priority details:
+$PRIORITY_CONTENT
+
+Begin implementation now.
+```
+
+**Usage in Code**:
+```python
+from coffee_maker.autonomous.prompt_loader import load_prompt, PromptNames
+
+prompt = load_prompt(
+    PromptNames.IMPLEMENT_FEATURE,
+    {
+        "PRIORITY_NAME": "US-021",
+        "PRIORITY_TITLE": "Refactoring",
+        "PRIORITY_CONTENT": "Split daemon.py..."
+    }
+)
+```
+
+**Architecture (Phase 2)**:
+```
+Langfuse (Source of Truth)
+    ↓ sync
+.claude/commands/ (Local Cache)
+    ↓ load
+PromptLoader → Agents
+    ↓ track
+Langfuse (Observability)
+```
+
+### Migration Path
+
+**Before (Hardcoded)**:
+```python
+prompt = f"""Create a spec for {priority_name}..."""
+```
+
+**After Phase 1 (Centralized)**:
+```python
+prompt = load_prompt(PromptNames.CREATE_TECHNICAL_SPEC, {...})
+```
+
+**After Phase 2 (Langfuse)**:
+```python
+# Same API, but sources from Langfuse with local fallback
+prompt = load_prompt(PromptNames.CREATE_TECHNICAL_SPEC, {...})
+```
+
+### References
+
+- Documentation: `docs/PROMPT_MANAGEMENT_SYSTEM.md`
+- PromptLoader: `coffee_maker/autonomous/prompt_loader.py`
+- Prompts Directory: `.claude/commands/`
+- Commits: `8c65280`, `bd9b332`, `b0abcb0`
+- Related: PRIORITY 8 (Multi-AI Provider Support)
+
+---
