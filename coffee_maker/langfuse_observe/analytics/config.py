@@ -24,6 +24,8 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
+from coffee_maker.config.manager import ConfigManager
+
 load_dotenv()
 
 
@@ -103,11 +105,11 @@ class ExportConfig:
             >>> os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-xxx"
             >>> config = ExportConfig.from_env()
         """
-        public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
-        secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-
-        if not public_key or not secret_key:
-            raise ValueError("LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY must be set in environment")
+        try:
+            public_key = ConfigManager.get_langfuse_public_key(required=True)
+            secret_key = ConfigManager.get_langfuse_secret_key(required=True)
+        except Exception as e:
+            raise ValueError(f"Langfuse keys must be set in environment: {e}")
 
         return cls(
             langfuse_public_key=public_key,

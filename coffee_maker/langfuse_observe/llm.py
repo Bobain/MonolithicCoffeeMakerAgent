@@ -14,6 +14,7 @@ import langfuse
 from dotenv import load_dotenv
 from langchain_core.language_models import BaseChatModel
 
+from coffee_maker.config.manager import ConfigManager
 from coffee_maker.langfuse_observe.utils import get_callers_modules
 
 load_dotenv()
@@ -128,7 +129,16 @@ def get_llm(
     final_kwargs["model"] = model
 
     if provider in SUPPORTED_PROVIDERS.keys():
-        if not os.getenv(api_key):
+        # Check if API key is configured using ConfigManager
+        has_key = False
+        if provider == "openai":
+            has_key = ConfigManager.has_openai_api_key()
+        elif provider == "gemini":
+            has_key = ConfigManager.has_gemini_api_key()
+        elif provider == "anthropic":
+            has_key = ConfigManager.has_anthropic_api_key()
+
+        if not has_key:
             logger.warning(
                 f"ENVIRONMENT VARIABLE {api_key} not set, you asked {provider} with model {model} but it may not work"
             )

@@ -304,6 +304,77 @@ class ConfigManager:
         return ConfigManager.get_github_token(required=False) is not None
 
     @staticmethod
+    def get_langfuse_public_key(required: bool = True) -> Optional[str]:
+        """Get LANGFUSE_PUBLIC_KEY with consistent validation.
+
+        Args:
+            required: If True, raise APIKeyMissingError if not found
+
+        Returns:
+            Public key string if found, None if not required and not found
+
+        Raises:
+            APIKeyMissingError: If required=True and key not found
+
+        Example:
+            >>> from coffee_maker.config import ConfigManager
+            >>> public_key = ConfigManager.get_langfuse_public_key()
+            >>> # Use with Langfuse client
+            >>> import langfuse
+            >>> client = langfuse.Langfuse(public_key=public_key, secret_key=...)
+        """
+        value = ConfigManager._get_env_with_fallbacks("LANGFUSE_PUBLIC_KEY")
+
+        if not value and required:
+            raise APIKeyMissingError("LANGFUSE_PUBLIC_KEY")
+
+        return value
+
+    @staticmethod
+    def get_langfuse_secret_key(required: bool = True) -> Optional[str]:
+        """Get LANGFUSE_SECRET_KEY with consistent validation.
+
+        Args:
+            required: If True, raise APIKeyMissingError if not found
+
+        Returns:
+            Secret key string if found, None if not required and not found
+
+        Raises:
+            APIKeyMissingError: If required=True and key not found
+
+        Example:
+            >>> from coffee_maker.config import ConfigManager
+            >>> secret_key = ConfigManager.get_langfuse_secret_key()
+            >>> # Use with Langfuse client
+            >>> import langfuse
+            >>> client = langfuse.Langfuse(public_key=..., secret_key=secret_key)
+        """
+        value = ConfigManager._get_env_with_fallbacks("LANGFUSE_SECRET_KEY")
+
+        if not value and required:
+            raise APIKeyMissingError("LANGFUSE_SECRET_KEY")
+
+        return value
+
+    @staticmethod
+    def has_langfuse_keys() -> bool:
+        """Check if both Langfuse keys are set.
+
+        Returns:
+            True if both public and secret keys are set, False otherwise
+
+        Example:
+            >>> from coffee_maker.config import ConfigManager
+            >>> if ConfigManager.has_langfuse_keys():
+            ...     print("Langfuse observability available")
+        """
+        return (
+            ConfigManager.get_langfuse_public_key(required=False) is not None
+            and ConfigManager.get_langfuse_secret_key(required=False) is not None
+        )
+
+    @staticmethod
     def get_all_api_keys() -> Dict[str, Optional[str]]:
         """Get all configured API keys.
 
@@ -322,4 +393,6 @@ class ConfigManager:
             "OPENAI_API_KEY": ConfigManager.get_openai_api_key(required=False),
             "GEMINI_API_KEY": ConfigManager.get_gemini_api_key(required=False),
             "GITHUB_TOKEN": ConfigManager.get_github_token(required=False),
+            "LANGFUSE_PUBLIC_KEY": ConfigManager.get_langfuse_public_key(required=False),
+            "LANGFUSE_SECRET_KEY": ConfigManager.get_langfuse_secret_key(required=False),
         }
