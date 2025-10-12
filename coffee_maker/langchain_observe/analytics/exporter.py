@@ -34,7 +34,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from coffee_maker.langchain_observe.analytics.config import ExportConfig
 from coffee_maker.langchain_observe.analytics.models import Base, Generation, Span, Trace
-from coffee_maker.langchain_observe.retry_utils import RetryExhausted, with_retry
+from coffee_maker.langchain_observe.retry import RetryExhausted, with_retry
 
 logger = logging.getLogger(__name__)
 

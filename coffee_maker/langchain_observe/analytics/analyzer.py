@@ -38,7 +38,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
 from coffee_maker.langchain_observe.analytics.models import Generation, Trace
-from coffee_maker.langchain_observe.retry_utils import with_retry
+from coffee_maker.langchain_observe.retry import with_retry
 
 logger = logging.getLogger(__name__)
 

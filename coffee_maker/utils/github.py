@@ -43,7 +43,7 @@ from github import Auth, Github, GithubException
 from langfuse import observe
 
 from coffee_maker.config import ConfigManager
-from coffee_maker.langchain_observe.retry_utils import with_conditional_retry
+from coffee_maker.langchain_observe.retry import with_conditional_retry
 
 LOGGER = logging.getLogger(__name__)
 

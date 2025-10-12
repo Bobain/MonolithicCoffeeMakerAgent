@@ -61,7 +61,7 @@ async def main() -> None:
 
 if __name__ == "__main__":
     from coffee_maker.examples.llama_index.dummy_weather_mcp_server import main as run_dummy_weather_server, PORT
-    from coffee_maker.utils.run_deamon_process import run_daemon
+    from coffee_maker.utils.run_daemon_process import run_daemon
 
     run_daemon(run_dummy_weather_server, PORT)
     try:
