@@ -183,11 +183,29 @@ def load_prompt(prompt_name: str, variables: Optional[Dict[str, str]] = None) ->
 
 # Prompt name constants (for type safety and IDE autocomplete)
 class PromptNames:
-    """Constants for prompt names."""
+    """Constants for prompt names.
 
+    Agent System Prompts:
+        AGENT_PROJECT_MANAGER: System prompt for project_manager and assistant agents
+
+    Task-Specific Prompts (used by code_developer):
+        CREATE_TECHNICAL_SPEC: Technical specification generation
+        IMPLEMENT_DOCUMENTATION: Documentation implementation
+        IMPLEMENT_FEATURE: Feature implementation
+        FIX_GITHUB_ISSUE: GitHub issue resolution
+        TEST_WEB_APP: Web application testing (Puppeteer)
+        CAPTURE_VISUAL_DOCS: Visual documentation capture (Puppeteer)
+        VERIFY_DOD_PUPPETEER: Definition of Done verification with Puppeteer
+    """
+
+    # Agent system prompts
+    AGENT_PROJECT_MANAGER = "agent-project-manager"
+
+    # Task-specific prompts
     CREATE_TECHNICAL_SPEC = "create-technical-spec"
     IMPLEMENT_DOCUMENTATION = "implement-documentation"
     IMPLEMENT_FEATURE = "implement-feature"
     FIX_GITHUB_ISSUE = "fix-github-issue"
     TEST_WEB_APP = "test-web-app"
     CAPTURE_VISUAL_DOCS = "capture-visual-docs"
+    VERIFY_DOD_PUPPETEER = "verify-dod-puppeteer"

@@ -28,6 +28,7 @@ from typing import Dict, List, Optional
 
 from anthropic import Anthropic
 
+from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
 from coffee_maker.config import ConfigManager
 
 logger = logging.getLogger(__name__)
@@ -380,11 +381,14 @@ class AIService:
     def _build_system_prompt(self, context: Dict) -> str:
         """Build system prompt with roadmap context.
 
+        Enhanced: Now uses centralized prompt from .claude/commands/
+        for easy migration to Gemini, OpenAI, or other LLMs.
+
         Args:
             context: Context dictionary with roadmap information
 
         Returns:
-            System prompt string
+            System prompt string loaded from .claude/commands/agent-project-manager.md
         """
         roadmap_summary = context.get("roadmap_summary", {})
 
@@ -393,50 +397,24 @@ class AIService:
         in_progress = roadmap_summary.get("in_progress", 0)
         planned = roadmap_summary.get("planned", 0)
 
-        prompt = f"""You are an AI project manager assistant for the Coffee Maker project.
-
-Current Roadmap State:
-- Total priorities: {total}
-- Completed: {completed}
-- In Progress: {in_progress}
-- Planned: {planned}
-
-Your Role:
-1. Help users manage the roadmap through natural language
-2. Provide strategic project management insights
-3. Suggest priority additions, updates, or changes
-4. Analyze roadmap health and identify issues
-5. Give recommendations for next steps
-
-Communication Style:
-- Be strategic and proactive
-- Always provide context and reasoning
-- Identify dependencies and risks
-- Give concrete, actionable recommendations
-- Use clear, professional language
-
-When users ask to modify the roadmap:
-1. Analyze the request carefully
-2. Consider impact and dependencies
-3. Suggest specific actions with reasoning
-4. Format responses clearly
-
-Response Format:
-- Use markdown for formatting
-- Use bullet points for lists
-- Use **bold** for emphasis
-- Provide clear section headings
-
-Always explain your reasoning before suggesting changes.
-Be strategic - analyze impact, dependencies, and risks.
-"""
-
-        # Add priority list if available
+        # Build priority list if available
         priorities = roadmap_summary.get("priorities", [])
+        priority_list = ""
         if priorities:
-            prompt += "\n\nCurrent Priorities:\n"
             for p in priorities[:10]:  # Limit to first 10
-                prompt += f"- {p['number']}: {p['title']} ({p['status']})\n"
+                priority_list += f"- {p['number']}: {p['title']} ({p['status']})\n"
+
+        # Load centralized prompt and substitute variables
+        prompt = load_prompt(
+            PromptNames.AGENT_PROJECT_MANAGER,
+            {
+                "TOTAL_PRIORITIES": str(total),
+                "COMPLETED_PRIORITIES": str(completed),
+                "IN_PROGRESS_PRIORITIES": str(in_progress),
+                "PLANNED_PRIORITIES": str(planned),
+                "PRIORITY_LIST": priority_list or "No priorities currently listed.",
+            },
+        )
 
         return prompt
 
@@ -745,3 +723,74 @@ Provide a concise analysis in markdown format.
         except Exception as e:
             logger.error(f"AI service not available: {e}")
             return False
+
+    def warn_user(
+        self, title: str, message: str, priority: str = "high", context: Optional[Dict] = None, play_sound: bool = True
+    ) -> int:
+        """Create a warning notification for the user.
+
+        This allows the project_manager agent to warn users about:
+        - Blockers or issues requiring attention
+        - High-priority items that need review
+        - Critical project health concerns
+        - Dependency problems
+        - Resource constraints
+
+        Args:
+            title: Short warning title (e.g., "Blocker: US-021 waiting on spec review")
+            message: Detailed warning message explaining the issue
+            priority: Warning priority ("critical", "high", "normal", "low")
+                     default: "high"
+            context: Optional context data (e.g., {"priority": "US-021", "blocker_type": "spec_review"})
+            play_sound: Whether to play notification sound (default: True)
+
+        Returns:
+            Notification ID
+
+        Example:
+            >>> service = AIService()
+            >>> # Critical blocker warning
+            >>> notif_id = service.warn_user(
+            ...     title="🚨 BLOCKER: Technical spec review needed",
+            ...     message="US-021 (Code Refactoring) is waiting on technical spec review. "
+            ...             "code_developer cannot proceed until spec is approved. "
+            ...             "Please review docs/US_021_TECHNICAL_SPEC.md and provide feedback.",
+            ...     priority="critical",
+            ...     context={"priority": "US-021", "blocker_type": "spec_review"}
+            ... )
+
+            >>> # High priority warning about dependencies
+            >>> notif_id = service.warn_user(
+            ...     title="⚠️ WARNING: Dependency conflict detected",
+            ...     message="US-032 depends on US-031 which is not yet complete. "
+            ...             "Recommend completing US-031 first to avoid rework.",
+            ...     priority="high",
+            ...     context={"priority": "US-032", "blocked_by": "US-031"}
+            ... )
+
+            >>> # Project health concern
+            >>> notif_id = service.warn_user(
+            ...     title="📊 Project Health: Velocity declining",
+            ...     message="Completed priorities per week has dropped from 2.5 to 1.2. "
+            ...             "Suggest reviewing scope or resources.",
+            ...     priority="normal",
+            ...     context={"metric": "velocity", "trend": "declining"}
+            ... )
+        """
+        from coffee_maker.cli.notifications import NotificationDB
+
+        try:
+            db = NotificationDB()
+
+            notif_id = db.create_notification(
+                type="warning", title=title, message=message, priority=priority, context=context, play_sound=play_sound
+            )
+
+            logger.info(f"User warning created: {title} (ID: {notif_id})")
+            return notif_id
+
+        except Exception as e:
+            logger.error(f"Failed to create warning notification: {e}")
+            # Log the warning even if notification fails
+            logger.warning(f"USER WARNING: {title} - {message}")
+            return -1

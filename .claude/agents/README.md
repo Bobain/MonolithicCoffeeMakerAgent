@@ -1,0 +1,180 @@
+# Agent Definitions
+
+This directory contains agent definitions for the MonolithicCoffeeMakerAgent project.
+
+## Available Agents
+
+### 1. code-developer
+**Purpose**: Autonomous software developer that implements ROADMAP priorities
+
+**Use When**:
+- Implementing features from ROADMAP
+- Creating technical specifications
+- Autonomous code development
+- DoD verification with Puppeteer
+
+**Invoke**: `> Use the code-developer subagent to implement the next priority`
+
+---
+
+### 2. project-manager
+**Purpose**: AI project manager for strategic planning and ROADMAP management
+
+**Use When**:
+- Analyzing project health
+- Managing priorities
+- Verifying completed work
+- Checking GitHub PR/issue status
+- Strategic planning
+
+**Invoke**: `> Use the project-manager subagent to analyze the ROADMAP`
+
+---
+
+### 3. assistant
+**Purpose**: General-purpose AI assistant for support and questions
+
+**Use When**:
+- Answering code questions
+- Debugging problems
+- Explaining architecture
+- Demonstrating features
+- Looking up GitHub info
+
+**Invoke**: `> Use the assistant subagent to explain how the prompt system works`
+
+---
+
+## How to Use
+
+### Via Claude CLI
+
+**List available agents**:
+```bash
+claude --help  # or /agents command in interactive mode
+```
+
+**Explicit invocation**:
+```
+> Use the code-developer subagent to implement PRIORITY 5
+> Use the project-manager subagent to check if US-032 is complete
+> Use the assistant subagent to show me the dashboard with Puppeteer
+```
+
+**Automatic delegation**: Claude will automatically select the appropriate agent based on your request.
+
+### In Python Code (Future Integration)
+
+The agents defined here will later be integrated with the coded agents in the project:
+
+```python
+# Future: DevDaemon will use code-developer agent definition
+from coffee_maker.autonomous.daemon import DevDaemon
+
+daemon = DevDaemon()
+daemon.run()  # Uses .claude/agents/code-developer.md for context
+```
+
+---
+
+## Agent Capabilities
+
+All agents have access to:
+
+- **File Operations**: Read, Write, Edit
+- **Code Search**: Glob, Grep
+- **Bash Commands**: Run terminal commands
+- **Puppeteer MCP**: Browser automation for testing/verification
+- **GitHub CLI**: `gh` commands for issue/PR management
+
+Each agent has specific tools configured in their YAML frontmatter.
+
+---
+
+## Context Management
+
+### 📖 Critical Documents
+
+Each agent has been configured to read specific critical documents at startup. These documents provide essential context for the agent to work effectively.
+
+#### code-developer - Startup Documents
+
+**READ AT STARTUP (MANDATORY)**:
+1. 🔴 `docs/ROADMAP.md` - Task list (read FIRST)
+2. 🔴 `.claude/CLAUDE.md` - Project instructions (read SECOND)
+
+**READ AS NEEDED**:
+- `docs/PRIORITY_*_TECHNICAL_SPEC.md` - Technical specs for complex priorities
+- `.claude/commands/PROMPTS_INDEX.md` - Available prompts
+- `.claude/commands/implement-feature.md` - Implementation guide
+- `.claude/commands/verify-dod-puppeteer.md` - DoD verification guide
+
+#### project-manager - Startup Documents
+
+**READ AT STARTUP (MANDATORY)**:
+1. 🔴 `docs/ROADMAP.md` - Project status (read FIRST)
+2. 🔴 `.claude/CLAUDE.md` - Project context (read SECOND)
+
+**READ AS NEEDED**:
+- `docs/PRIORITY_*_TECHNICAL_SPEC.md` - Priority details
+- `.claude/commands/PROMPTS_INDEX.md` - System capabilities
+- `.claude/commands/verify-dod-puppeteer.md` - DoD verification
+
+#### assistant - Startup Documents
+
+**READ AT STARTUP (MANDATORY)**:
+1. 🔴 `.claude/CLAUDE.md` - Project overview (read FIRST)
+2. 🔴 `docs/ROADMAP.md` - Current work (read SECOND)
+
+**READ AS NEEDED**:
+- `.claude/commands/PROMPTS_INDEX.md` - Prompt documentation
+- Relevant code files (via Grep/Glob)
+- `docs/PRIORITY_*_TECHNICAL_SPEC.md` - Feature details
+- `README.md` - Project overview
+
+---
+
+## File Format
+
+Agent definitions use markdown with YAML frontmatter:
+
+```markdown
+---
+name: agent-name
+description: When to use this agent
+tools: tool1, tool2, tool3
+model: sonnet
+---
+
+Agent system prompt and instructions go here...
+```
+
+**Required fields**:
+- `name`: Unique identifier (lowercase, hyphen-separated)
+- `description`: Natural language description of purpose
+
+**Optional fields**:
+- `tools`: Specific tools the agent can use
+- `model`: Model to use (`sonnet`, `opus`, `haiku`, `inherit`)
+
+---
+
+## Version
+
+**Version**: 2.0 (US-032 - Puppeteer DoD + GitHub CLI)
+**Last Updated**: 2025-10-12
+
+All agents equipped with:
+- Puppeteer MCP for browser automation
+- GitHub CLI for issue/PR management
+- DoD verification capabilities
+- Comprehensive context files
+
+---
+
+## Related Documentation
+
+- **Prompts**: `.claude/commands/` - All agent prompts
+- **Prompt Index**: `.claude/commands/PROMPTS_INDEX.md` - Prompt documentation
+- **Project Instructions**: `.claude/CLAUDE.md` - How to work with this project
+- **ROADMAP**: `docs/ROADMAP.md` - Current priorities and status

@@ -23,6 +23,7 @@ from datetime import datetime
 
 from coffee_maker.autonomous.developer_status import ActivityType, DeveloperState
 from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
+from coffee_maker.autonomous.puppeteer_client import PuppeteerClient
 from coffee_maker.cli.notifications import (
     NOTIF_PRIORITY_HIGH,
     NOTIF_TYPE_INFO,
@@ -473,3 +474,50 @@ This PR was autonomously implemented by the DevDaemon following the ROADMAP.md s
 🤖 Autonomously implemented by DevDaemon
 """
         return body
+
+    def _verify_dod_with_puppeteer(self, priority: dict, app_url: str = None) -> bool:
+        """Verify Definition of Done using Puppeteer (optional step).
+
+        This method generates a DoD verification prompt that can be executed
+        by Claude CLI (which has Puppeteer MCP available).
+
+        Note: The implementation prompts (implement-feature.md, implement-documentation.md)
+        already instruct the agent to use Puppeteer for DoD verification during
+        implementation. This method provides an additional explicit verification step
+        if needed.
+
+        Args:
+            priority: Priority dictionary
+            app_url: Optional URL to verify (auto-detected if not provided)
+
+        Returns:
+            True if verification prompt generated successfully
+
+        Usage:
+            >>> # After implementation, optionally verify DoD explicitly
+            >>> if self._is_web_priority(priority):
+            ...     self._verify_dod_with_puppeteer(priority, "http://localhost:8501")
+
+        Implementation Note:
+            Currently, DoD verification happens automatically via the implementation
+            prompts that tell the agent to use Puppeteer. This method is available
+            for future explicit post-implementation verification if needed.
+        """
+        logger.info(f"Generating DoD verification prompt for {priority['name']}")
+
+        # Create Puppeteer client
+        puppeteer = PuppeteerClient(mode="cli")
+
+        # Generate DoD verification prompt
+        dod_prompt = puppeteer.generate_dod_verification_prompt(priority, app_url)
+
+        logger.debug(f"DoD verification prompt: {dod_prompt[:200]}...")
+
+        # Note: In the current implementation, the Claude agent already uses
+        # Puppeteer during implementation via the prompts. This method is
+        # available for future explicit verification steps.
+
+        # Could optionally execute this prompt via Claude CLI here
+        # result = self.claude.execute_prompt(dod_prompt)
+
+        return True
