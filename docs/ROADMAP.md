@@ -492,6 +492,180 @@ Currently PM doesn't consistently identify what type of information users are pr
 
 ---
 
+## 📝 PLANNED: US-023 - Clear, Intuitive Module Hierarchy
+
+**Status**: 📝 **PLANNED** - High Priority for Library Usability
+
+**As a**: Library user (developer consuming coffee_maker as a library)
+**I want**: A clear, meaningful, and natural directory/module hierarchy in the codebase
+**So that**: I can find reusable code at first sight and understand the codebase structure intuitively
+
+**Business Value**: ⭐⭐⭐⭐ (High - Critical for library adoption and developer experience)
+**Estimated Effort**: 3-4 days (Architecture restructuring + documentation)
+
+### Problem Statement
+
+Current issues with module hierarchy:
+1. **Misnamed Directory**: `langfuse_observe/` suggests observability, but contains core LLM abstractions, rate limiting, and utilities
+2. **Unclear Separation**: Only 13% (5 of 38 files) in `langfuse_observe/` actually use the `@observe` decorator
+3. **Scattered Utilities**: Token estimation, HTTP pooling mixed with observability code
+4. **No Clear Entry Points**: New users struggle to find where to start using the library
+5. **Duplicate Exceptions**: langfuse_observe/exceptions.py duplicates coffee_maker/exceptions.py
+
+### Current State Analysis
+
+**Problematic Structure**:
+```
+coffee_maker/
+├── langfuse_observe/          # Misleading name - not all about observability
+│   ├── llm.py                 # Core LLM factory (no @observe)
+│   ├── rate_limiting/         # Rate limit tracking (no @observe)
+│   ├── strategies/            # Scheduling strategies (no @observe)
+│   ├── http_pool.py           # HTTP utilities (no @observe)
+│   ├── token_estimator.py     # Token counting (no @observe)
+│   └── exceptions.py          # Duplicate of main exceptions
+└── utils/                     # Generic utilities
+    └── ...                    # Mixed concerns
+```
+
+**Analysis**: See `docs/LANGCHAIN_OBSERVE_ARCHITECTURE_REVIEW.md`
+
+### Proposed Solution
+
+**New Clear Structure**:
+```
+coffee_maker/
+├── llm/                       # 🆕 Core LLM abstractions
+│   ├── __init__.py            # Main exports: get_llm(), SmartLLM
+│   ├── factory.py             # LLM creation and configuration
+│   ├── builders.py            # Builder pattern (LLMBuilder, SmartLLM)
+│   ├── rate_limiting/         # Rate limit tracking
+│   │   ├── tracker.py
+│   │   └── scheduler.py
+│   ├── strategies/            # Fallback & scheduling strategies
+│   │   ├── fallback.py
+│   │   └── scheduling.py
+│   └── providers/             # Provider-specific wrappers
+│       ├── openai.py
+│       ├── anthropic.py
+│       └── gemini.py
+├── observability/             # 🆕 Pure observability (Langfuse)
+│   ├── __init__.py
+│   ├── agents.py              # @observe decorated agents
+│   ├── cost_calculator.py     # @observe decorated cost tracking
+│   ├── retry.py               # @observe decorated retry logic
+│   └── analytics/             # Analytics with tracing
+├── utils/                     # General utilities
+│   ├── http_pool.py           # Moved from langfuse_observe
+│   ├── token_estimator.py     # Moved from langfuse_observe
+│   ├── logging.py
+│   ├── retry.py (generic)
+│   └── ...
+└── exceptions.py              # Single source of truth (consolidate)
+```
+
+### Definition of Done
+
+**Phase 1: Planning & Documentation** (0.5 days)
+- [x] Architecture review complete (`docs/LANGCHAIN_OBSERVE_ARCHITECTURE_REVIEW.md`)
+- [ ] Create migration plan document (`docs/US-023_MIGRATION_PLAN.md`)
+- [ ] Document new module guidelines (`docs/MODULE_ORGANIZATION_GUIDE.md`)
+- [ ] Get user approval for structure
+
+**Phase 2: Core Restructuring** (2 days)
+- [ ] Create new `coffee_maker/llm/` directory
+- [ ] Move 33 misplaced files from `langfuse_observe/` to correct locations:
+  - LLM core → `llm/`
+  - Rate limiting → `llm/rate_limiting/`
+  - Strategies → `llm/strategies/`
+  - Utilities → `utils/`
+- [ ] Rename `langfuse_observe/` → `observability/`
+- [ ] Keep only `@observe`-decorated files in `observability/`
+- [ ] Consolidate exceptions:
+  - Merge `langfuse_observe/exceptions.py` into `coffee_maker/exceptions.py`
+  - Remove duplicates
+- [ ] Create clear `__init__.py` exports for each package
+
+**Phase 3: Update Imports & Tests** (1 day)
+- [ ] Update all import statements (estimated 100+ files)
+- [ ] Run full test suite to verify no breakage
+- [ ] Update documentation to reflect new structure
+- [ ] Create migration guide for external users
+
+**Phase 4: Documentation & Examples** (0.5 days)
+- [ ] Update README with clear usage examples
+- [ ] Document module hierarchy in `docs/ARCHITECTURE.md`
+- [ ] Add "Getting Started" guide showing module structure
+- [ ] Create visual diagram of module relationships
+
+### Key Principles
+
+1. **Purpose-Driven Organization**: Group by purpose, not by implementation detail
+2. **Clear Naming**: Directory names reflect content (`llm/` for LLM code, not `langfuse_observe/`)
+3. **Shallow Hierarchy**: Prefer flat over deep (max 2-3 levels)
+4. **Explicit Exports**: Clear `__init__.py` with `__all__` for each package
+5. **Single Responsibility**: Each module has one clear purpose
+6. **Discoverable**: New users can find what they need by directory name alone
+
+### Import Examples After Restructuring
+
+**Before** (Confusing):
+```python
+# Where do I find LLM creation?
+from coffee_maker.langfuse_observe.llm import get_llm  # Why langfuse?
+from coffee_maker.langfuse_observe.builder import SmartLLM  # Still langfuse?
+```
+
+**After** (Clear):
+```python
+# Obvious location for LLM code
+from coffee_maker.llm import get_llm, SmartLLM
+from coffee_maker.llm.builders import LLMBuilder
+
+# Observability is separate
+from coffee_maker.observability import track_cost, retry_with_backoff
+```
+
+### Success Metrics
+
+- [ ] All modules organized by purpose (not implementation)
+- [ ] Directory names match content (self-documenting)
+- [ ] Max 2-3 directory depth
+- [ ] Clear `__init__.py` exports for all packages
+- [ ] Zero import errors after restructuring
+- [ ] Documentation reflects new structure
+- [ ] New user can find LLM code in < 30 seconds
+- [ ] Import paths are intuitive and memorable
+
+### Related Work
+
+- ✅ Phase 0: Naming Improvements (completed - removed `_utils` suffixes)
+- ✅ Phase 2.4: Directory rename (completed - `langchain_observe` → `langfuse_observe`)
+- 📝 US-023: Full architecture restructuring (this user story)
+
+### Technical Specification
+
+Create detailed spec: `docs/US-023_TECHNICAL_SPEC.md`
+
+**Contents**:
+1. File-by-file move plan
+2. Import update checklist (all 100+ affected files)
+3. Test verification strategy
+4. Rollback procedure if issues found
+5. Breaking changes for external users (if any)
+
+### Priority Justification
+
+**High Priority** because:
+1. **Library Usability**: Essential for developers using coffee_maker as a library
+2. **Onboarding**: New contributors can't navigate current structure
+3. **Maintainability**: Clear structure reduces future technical debt
+4. **Professional**: Well-organized code signals quality project
+
+**Dependencies**: None (can start immediately after US-021 Phase 2.5)
+
+---
+
 ## ✅ RECENTLY COMPLETED: US-010 - Living Documentation & Tutorials
 
 **Project**: **📚 US-010 - Living Documentation & Tutorials**
