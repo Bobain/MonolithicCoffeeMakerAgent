@@ -16,12 +16,12 @@ Exception Hierarchy:
     │   └── AllProvidersFailedError (from ai_providers.fallback_strategy)
     ├── ResourceError
     │   ├── RateLimitError
-    │   ├── QuotaExceededError (from langchain_observe.exceptions)
+    │   ├── QuotaExceededError (from langfuse_observe.exceptions)
     │   ├── CostLimitExceededError (from ai_providers.fallback_strategy)
-    │   └── BudgetExceededError (from langchain_observe.exceptions)
+    │   └── BudgetExceededError (from langfuse_observe.exceptions)
     ├── ModelError
-    │   ├── ModelNotAvailableError (from langchain_observe.exceptions)
-    │   └── ContextLengthError (from langchain_observe.exceptions)
+    │   ├── ModelNotAvailableError (from langfuse_observe.exceptions)
+    │   └── ContextLengthError (from langfuse_observe.exceptions)
     ├── FileError
     │   └── FileOperationError (from utils.file_io)
     └── DaemonError
@@ -148,8 +148,8 @@ class ResourceError(CoffeeMakerError):
     """
 
 
-# Re-export resource-related exceptions from langchain_observe
-from coffee_maker.langchain_observe.exceptions import (  # noqa: E402
+# Re-export resource-related exceptions from langfuse_observe
+from coffee_maker.langfuse_observe.exceptions import (  # noqa: E402
     BudgetExceededError,
     QuotaExceededError,
     RateLimitExceededError,
@@ -202,7 +202,7 @@ class ModelError(CoffeeMakerError):
 
 
 # Re-export model exceptions
-from coffee_maker.langchain_observe.exceptions import (  # noqa: E402
+from coffee_maker.langfuse_observe.exceptions import (  # noqa: E402
     ContextLengthError,
     ModelNotAvailableError,
 )
@@ -322,7 +322,7 @@ __all__ = [
     "AllProvidersFailedError",
     # Resource exceptions
     "RateLimitError",
-    "RateLimitExceededError",  # langchain_observe version
+    "RateLimitExceededError",  # langfuse_observe version
     "FallbackRateLimitError",  # ai_providers version
     "QuotaExceededError",
     "CostLimitExceededError",

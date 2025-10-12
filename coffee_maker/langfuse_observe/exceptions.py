@@ -1,10 +1,10 @@
-"""Custom exceptions for langchain_observe module.
+"""Custom exceptions for langfuse_observe module.
 
-This module provides centralized exception definitions for the langchain_observe
+This module provides centralized exception definitions for the langfuse_observe
 package, ensuring single source of truth for error handling.
 
 Example:
-    >>> from coffee_maker.langchain_observe.exceptions import ContextLengthError
+    >>> from coffee_maker.langfuse_observe.exceptions import ContextLengthError
     >>>
     >>> raise ContextLengthError(
     ...     model="gpt-4o",

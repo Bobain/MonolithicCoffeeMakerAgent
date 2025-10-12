@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 
-from coffee_maker.langchain_observe.builder import LLMBuilder, SmartLLM
+from coffee_maker.langfuse_observe.builder import LLMBuilder, SmartLLM
 
 
 class MockScheduledLLM:
@@ -20,7 +20,7 @@ class TestLLMBuilder:
     def test_builder_basic_configuration(self):
         """Test basic builder configuration."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
             mock_create.return_value = "mocked_llm"
 
@@ -48,7 +48,7 @@ class TestLLMBuilder:
     def test_builder_with_multiple_fallbacks(self):
         """Test builder with multiple fallbacks."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
             mock_create.return_value = "mocked_llm"
 
@@ -66,7 +66,7 @@ class TestLLMBuilder:
     def test_builder_with_fallbacks_method(self):
         """Test builder with_fallbacks method (multiple at once)."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
             mock_create.return_value = "mocked_llm"
 
@@ -83,7 +83,7 @@ class TestLLMBuilder:
     def test_builder_with_cost_tracking(self):
         """Test builder with cost tracking enabled."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
             mock_create.return_value = "mocked_llm"
 
@@ -104,7 +104,7 @@ class TestLLMBuilder:
     def test_builder_with_max_wait(self):
         """Test builder with custom max wait time."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
             mock_create.return_value = "mocked_llm"
 
@@ -116,7 +116,7 @@ class TestLLMBuilder:
     def test_builder_with_context_fallback_disabled(self):
         """Test builder with context fallback disabled."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
             mock_create.return_value = "mocked_llm"
 
@@ -128,9 +128,9 @@ class TestLLMBuilder:
     def test_builder_with_smart_fallback(self):
         """Test builder with smart fallback strategy."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
-            with mock.patch("coffee_maker.langchain_observe.builder.create_fallback_strategy") as mock_strategy:
+            with mock.patch("coffee_maker.langfuse_observe.builder.create_fallback_strategy") as mock_strategy:
                 mock_create.return_value = "mocked_llm"
                 mock_strategy.return_value = "smart_strategy"
 
@@ -143,9 +143,9 @@ class TestLLMBuilder:
     def test_builder_with_cost_optimized_fallback(self):
         """Test builder with cost-optimized fallback strategy."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
-            with mock.patch("coffee_maker.langchain_observe.builder.create_fallback_strategy") as mock_strategy:
+            with mock.patch("coffee_maker.langfuse_observe.builder.create_fallback_strategy") as mock_strategy:
                 mock_create.return_value = "mocked_llm"
                 mock_strategy.return_value = "cost_strategy"
 
@@ -158,9 +158,9 @@ class TestLLMBuilder:
     def test_builder_with_sequential_fallback(self):
         """Test builder with sequential fallback strategy (default)."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
-            with mock.patch("coffee_maker.langchain_observe.builder.create_fallback_strategy") as mock_strategy:
+            with mock.patch("coffee_maker.langfuse_observe.builder.create_fallback_strategy") as mock_strategy:
                 mock_create.return_value = "mocked_llm"
                 mock_strategy.return_value = "sequential_strategy"
 
@@ -173,7 +173,7 @@ class TestLLMBuilder:
     def test_builder_with_custom_fallback_strategy(self):
         """Test builder with custom fallback strategy."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
             mock_create.return_value = "mocked_llm"
 
@@ -208,9 +208,9 @@ class TestSmartLLM:
     def test_for_tier_with_defaults(self):
         """Test SmartLLM.for_tier with defaults."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
-            with mock.patch("coffee_maker.langchain_observe.cost_calculator.CostCalculator"):
+            with mock.patch("coffee_maker.langfuse_observe.cost_calculator.CostCalculator"):
                 mock_create.return_value = "mocked_llm"
 
                 SmartLLM.for_tier("tier1")
@@ -221,9 +221,9 @@ class TestSmartLLM:
     def test_for_tier_with_custom_primary(self):
         """Test SmartLLM.for_tier with custom primary."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
-            with mock.patch("coffee_maker.langchain_observe.cost_calculator.CostCalculator"):
+            with mock.patch("coffee_maker.langfuse_observe.cost_calculator.CostCalculator"):
                 mock_create.return_value = "mocked_llm"
 
                 llm = SmartLLM.for_tier("tier1", primary=("openai", "gpt-4o"))
@@ -236,9 +236,9 @@ class TestSmartLLM:
     def test_for_tier_with_custom_fallbacks(self):
         """Test SmartLLM.for_tier with custom fallbacks."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
-            with mock.patch("coffee_maker.langchain_observe.cost_calculator.CostCalculator"):
+            with mock.patch("coffee_maker.langfuse_observe.cost_calculator.CostCalculator"):
                 mock_create.return_value = "mocked_llm"
 
                 custom_fallbacks = [("gemini", "gemini-2.5-pro")]
@@ -251,9 +251,9 @@ class TestSmartLLM:
     def test_for_tier_smart_defaults(self):
         """Test that SmartLLM.for_tier uses smart defaults."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
-            with mock.patch("coffee_maker.langchain_observe.cost_calculator.CostCalculator"):
+            with mock.patch("coffee_maker.langfuse_observe.cost_calculator.CostCalculator"):
                 mock_create.return_value = "mocked_llm"
 
                 SmartLLM.for_tier("tier1")
@@ -270,9 +270,9 @@ class TestSmartLLM:
     def test_fast_preset(self):
         """Test SmartLLM.fast() preset."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
-            with mock.patch("coffee_maker.langchain_observe.cost_calculator.CostCalculator"):
+            with mock.patch("coffee_maker.langfuse_observe.cost_calculator.CostCalculator"):
                 mock_create.return_value = "mocked_llm"
 
                 SmartLLM.fast("tier1")
@@ -285,9 +285,9 @@ class TestSmartLLM:
     def test_powerful_preset(self):
         """Test SmartLLM.powerful() preset."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
-            with mock.patch("coffee_maker.langchain_observe.cost_calculator.CostCalculator"):
+            with mock.patch("coffee_maker.langfuse_observe.cost_calculator.CostCalculator"):
                 mock_create.return_value = "mocked_llm"
 
                 SmartLLM.powerful("tier1")
@@ -307,9 +307,9 @@ class TestBuilderIntegration:
     def test_complete_workflow(self):
         """Test complete builder workflow."""
         with mock.patch(
-            "coffee_maker.langchain_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
+            "coffee_maker.langfuse_observe.auto_picker_llm_refactored.create_auto_picker_llm_refactored"
         ) as mock_create:
-            with mock.patch("coffee_maker.langchain_observe.cost_calculator.CostCalculator"):
+            with mock.patch("coffee_maker.langfuse_observe.cost_calculator.CostCalculator"):
                 mock_create.return_value = "mocked_llm"
 
                 # Build complex LLM config

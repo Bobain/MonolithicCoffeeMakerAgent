@@ -16,4 +16,3 @@ def get_callers_modules() -> List[str]:
         else:
             callers_modules.append(caller_frame_record.filename)
     return callers_modules
-

@@ -2,7 +2,7 @@
 
 import pytest
 
-from coffee_maker.langchain_observe.strategies.fallback import (
+from coffee_maker.langfuse_observe.strategies.fallback import (
     CostOptimizedFallback,
     SequentialFallback,
     SmartFallback,

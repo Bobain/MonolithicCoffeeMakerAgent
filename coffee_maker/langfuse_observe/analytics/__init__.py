@@ -14,8 +14,8 @@ Key Components:
 
 Example:
     Export Langfuse data to SQLite:
-    >>> from coffee_maker.langchain_observe.analytics import LangfuseExporter
-    >>> from coffee_maker.langchain_observe.analytics.config import ExportConfig
+    >>> from coffee_maker.langfuse_observe.analytics import LangfuseExporter
+    >>> from coffee_maker.langfuse_observe.analytics.config import ExportConfig
     >>>
     >>> config = ExportConfig.from_env()
     >>> exporter = LangfuseExporter(config)
@@ -24,7 +24,7 @@ Example:
     >>> print(f"Exported {stats['generations']} generations")
 
     Analyze LLM performance:
-    >>> from coffee_maker.langchain_observe.analytics import PerformanceAnalyzer
+    >>> from coffee_maker.langfuse_observe.analytics import PerformanceAnalyzer
     >>>
     >>> analyzer = PerformanceAnalyzer("llm_metrics.db")
     >>> perf = analyzer.get_llm_performance(days=7)
@@ -33,14 +33,14 @@ Example:
 See Also:
     - :class:`LangfuseExporter`: Main export functionality
     - :class:`PerformanceAnalyzer`: Performance analysis
-    - :mod:`coffee_maker.langchain_observe.analytics.models_sqlite`: Data models
+    - :mod:`coffee_maker.langfuse_observe.analytics.models_sqlite`: Data models
 """
 
 from typing import List
 
-from coffee_maker.langchain_observe.analytics.config import ExportConfig
-from coffee_maker.langchain_observe.analytics.exporter_sqlite import LangfuseExporter
-from coffee_maker.langchain_observe.analytics.analyzer_sqlite import PerformanceAnalyzer
+from coffee_maker.langfuse_observe.analytics.config import ExportConfig
+from coffee_maker.langfuse_observe.analytics.exporter_sqlite import LangfuseExporter
+from coffee_maker.langfuse_observe.analytics.analyzer_sqlite import PerformanceAnalyzer
 
 __all__: List[str] = [
     "LangfuseExporter",

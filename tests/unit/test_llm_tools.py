@@ -2,15 +2,15 @@
 
 import pytest
 
-from coffee_maker.langchain_observe.llm_config import get_rate_limits_for_tier
-from coffee_maker.langchain_observe.llm_tools import (
+from coffee_maker.langfuse_observe.llm_config import get_rate_limits_for_tier
+from coffee_maker.langfuse_observe.llm_tools import (
     MODEL_PURPOSES,
     create_llm_tool_wrapper,
     create_llm_tools,
     get_llm_tool_names,
     get_llm_tools_summary,
 )
-from coffee_maker.langchain_observe.rate_limiter import RateLimitTracker
+from coffee_maker.langfuse_observe.rate_limiter import RateLimitTracker
 
 
 class TestLLMTools:

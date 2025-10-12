@@ -5,8 +5,8 @@ from unittest import mock
 
 import pytest
 
-from coffee_maker.langchain_observe.global_rate_tracker import get_global_rate_tracker
-from coffee_maker.langchain_observe.strategies.scheduling import ProactiveRateLimitScheduler
+from coffee_maker.langfuse_observe.global_rate_tracker import get_global_rate_tracker
+from coffee_maker.langfuse_observe.strategies.scheduling import ProactiveRateLimitScheduler
 
 
 class TestProactiveRateLimitScheduler:

@@ -33,9 +33,9 @@ Manage context length limits:
 ## Example Usage
 
 ```python
-from coffee_maker.langchain_observe.strategies.fallback import SmartFallback
-from coffee_maker.langchain_observe.strategies.metrics import LocalMetrics
-from coffee_maker.langchain_observe.strategies.scheduling import ProactiveRateLimitScheduler
+from coffee_maker.langfuse_observe.strategies.fallback import SmartFallback
+from coffee_maker.langfuse_observe.strategies.metrics import LocalMetrics
+from coffee_maker.langfuse_observe.strategies.scheduling import ProactiveRateLimitScheduler
 
 # Create strategies
 fallback = SmartFallback(fallback_models=["openai/gpt-4o-mini"])
@@ -53,28 +53,28 @@ llm = AutoPickerLLMRefactored(
 ```
 """
 
-from coffee_maker.langchain_observe.strategies.retry import (
+from coffee_maker.langfuse_observe.strategies.retry import (
     RetryStrategy,
     ExponentialBackoffRetry,
 )
-from coffee_maker.langchain_observe.strategies.scheduling import (
+from coffee_maker.langfuse_observe.strategies.scheduling import (
     SchedulingStrategy,
     ProactiveRateLimitScheduler,
 )
-from coffee_maker.langchain_observe.strategies.fallback import (
+from coffee_maker.langfuse_observe.strategies.fallback import (
     FallbackStrategy,
     SequentialFallback,
     SmartFallback,
     CostOptimizedFallback,
 )
-from coffee_maker.langchain_observe.strategies.metrics import (
+from coffee_maker.langfuse_observe.strategies.metrics import (
     MetricsStrategy,
     LocalMetrics,
     PrometheusMetrics,
     NoOpMetrics,
     create_metrics_strategy,
 )
-from coffee_maker.langchain_observe.strategies.context import (
+from coffee_maker.langfuse_observe.strategies.context import (
     ContextStrategy,
     LargeContextFallbackStrategy,
     NoContextCheckStrategy,

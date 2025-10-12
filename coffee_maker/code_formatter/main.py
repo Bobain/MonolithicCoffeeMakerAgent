@@ -323,7 +323,7 @@ if __name__ == "__main__":
             print(f"✗ {error}")
 
     # Get LLM with streaming enabled - use AutoPickerLLMRefactored for rate limiting and fallback
-    from coffee_maker.langchain_observe.create_auto_picker import create_auto_picker_for_react_agent
+    from coffee_maker.langfuse_observe.create_auto_picker import create_auto_picker_for_react_agent
 
     auto_picker_llm = create_auto_picker_for_react_agent(tier="tier1", streaming=True)
     react_agent, tools, llm_instance = create_react_formatter_agent(
@@ -350,7 +350,7 @@ if __name__ == "__main__":
     logger.info(f"\nAgent completed. Response: {response}")
 
     # Print AutoPickerLLMRefactored statistics
-    from coffee_maker.langchain_observe.auto_picker_llm_refactored import AutoPickerLLMRefactored
+    from coffee_maker.langfuse_observe.auto_picker_llm_refactored import AutoPickerLLMRefactored
 
     if isinstance(llm_instance, AutoPickerLLMRefactored):
         stats = llm_instance.get_stats()

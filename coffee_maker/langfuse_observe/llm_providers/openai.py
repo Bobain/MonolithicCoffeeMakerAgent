@@ -5,7 +5,7 @@ from typing import Callable, Type
 import openai
 from langchain_openai import llms
 
-from coffee_maker.langchain_observe.retry import RetryExhausted, with_retry
+from coffee_maker.langfuse_observe.retry import RetryExhausted, with_retry
 
 PROVIDER_NAME = "openai"
 Llm = llms.OpenAI

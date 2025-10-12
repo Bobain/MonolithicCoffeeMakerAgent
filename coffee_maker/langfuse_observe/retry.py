@@ -4,7 +4,7 @@ This module provides a retry decorator that can be applied to any function,
 with automatic logging to both Python logger and Langfuse for full observability.
 
 Example:
-    >>> from coffee_maker.langchain_observe.retry import with_retry
+    >>> from coffee_maker.langfuse_observe.retry import with_retry
     >>>
     >>> @with_retry(max_attempts=3, backoff_base=2.0)
     >>> def flaky_api_call():

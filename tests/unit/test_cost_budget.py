@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from coffee_maker.langchain_observe.cost_budget import (
+from coffee_maker.langfuse_observe.cost_budget import (
     BudgetConfig,
     BudgetExceededError,
     BudgetPeriod,

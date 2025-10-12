@@ -8,9 +8,9 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from coffee_maker.langchain_observe.analytics.analyzer import PerformanceAnalyzer
-from coffee_maker.langchain_observe.analytics.config import ExportConfig
-from coffee_maker.langchain_observe.analytics.models import Base, Generation, Trace
+from coffee_maker.langfuse_observe.analytics.analyzer import PerformanceAnalyzer
+from coffee_maker.langfuse_observe.analytics.config import ExportConfig
+from coffee_maker.langfuse_observe.analytics.models import Base, Generation, Trace
 
 
 @pytest.fixture

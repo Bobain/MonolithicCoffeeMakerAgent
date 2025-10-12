@@ -6,8 +6,8 @@ Langfuse and stores them in a local SQLite database using native sqlite3
 
 Example:
     One-time export:
-    >>> from coffee_maker.langchain_observe.analytics.exporter_sqlite import LangfuseExporter
-    >>> from coffee_maker.langchain_observe.analytics.config import ExportConfig
+    >>> from coffee_maker.langfuse_observe.analytics.exporter_sqlite import LangfuseExporter
+    >>> from coffee_maker.langfuse_observe.analytics.config import ExportConfig
     >>>
     >>> config = ExportConfig.from_env()
     >>> exporter = LangfuseExporter(config)
@@ -23,8 +23,8 @@ from typing import Dict, List, Optional
 
 from langfuse import Langfuse
 
-from coffee_maker.langchain_observe.analytics.config import ExportConfig
-from coffee_maker.langchain_observe.analytics.models_sqlite import (
+from coffee_maker.langfuse_observe.analytics.config import ExportConfig
+from coffee_maker.langfuse_observe.analytics.models_sqlite import (
     Generation,
     Span,
     Trace,
@@ -33,7 +33,7 @@ from coffee_maker.langchain_observe.analytics.models_sqlite import (
     insert_span,
     insert_trace,
 )
-from coffee_maker.langchain_observe.retry import with_retry
+from coffee_maker.langfuse_observe.retry import with_retry
 
 logger = logging.getLogger(__name__)
 

@@ -8,15 +8,15 @@ from langchain_core.language_models import BaseLLM
 from langchain_core.outputs import Generation, LLMResult
 from pydantic import ConfigDict
 
-from coffee_maker.langchain_observe.langfuse_logger import LangfuseLogger
-from coffee_maker.langchain_observe.response_parser import (
+from coffee_maker.langfuse_observe.langfuse_logger import LangfuseLogger
+from coffee_maker.langfuse_observe.response_parser import (
     extract_token_usage,
     is_quota_exceeded_error,
     is_rate_limit_error,
 )
-from coffee_maker.langchain_observe.strategies.context import ContextStrategy, create_context_strategy
-from coffee_maker.langchain_observe.strategies.fallback import FallbackStrategy, SequentialFallback
-from coffee_maker.langchain_observe.strategies.metrics import MetricsStrategy, NoOpMetrics
+from coffee_maker.langfuse_observe.strategies.context import ContextStrategy, create_context_strategy
+from coffee_maker.langfuse_observe.strategies.fallback import FallbackStrategy, SequentialFallback
+from coffee_maker.langfuse_observe.strategies.metrics import MetricsStrategy, NoOpMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +208,7 @@ class AutoPickerLLMRefactored(BaseLLM):
 
                         # Log context fallback to Langfuse
                         if self._langfuse_logger:
-                            from coffee_maker.langchain_observe.llm_config import (
+                            from coffee_maker.langfuse_observe.llm_config import (
                                 get_model_context_length_from_name,
                             )
 
@@ -223,7 +223,7 @@ class AutoPickerLLMRefactored(BaseLLM):
                         return result
 
             # No suitable model found - raise error
-            from coffee_maker.langchain_observe.llm_config import get_all_model_context_limits
+            from coffee_maker.langfuse_observe.llm_config import get_all_model_context_limits
 
             all_limits = get_all_model_context_limits()
             max_available = max(all_limits.values(), default=max_context)
@@ -437,7 +437,7 @@ def create_auto_picker_llm_refactored(
         Configured AutoPickerLLMRefactored instance
 
     Example:
-        >>> from coffee_maker.langchain_observe.cost_calculator import CostCalculator
+        >>> from coffee_maker.langfuse_observe.cost_calculator import CostCalculator
         >>> import langfuse
         >>>
         >>> cost_calc = CostCalculator()
@@ -456,7 +456,7 @@ def create_auto_picker_llm_refactored(
         ... )
         >>> response = auto_picker.invoke({"input": "Hello"})
     """
-    from coffee_maker.langchain_observe.llm import get_scheduled_llm
+    from coffee_maker.langfuse_observe.llm import get_scheduled_llm
 
     # Create primary scheduled LLM
     primary_llm = get_scheduled_llm(

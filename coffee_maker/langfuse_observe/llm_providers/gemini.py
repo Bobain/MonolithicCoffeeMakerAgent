@@ -10,7 +10,7 @@ The module supports automatic rate limit handling with fallback to alternative
 models when quotas are exceeded.
 
 Example:
-    >>> from coffee_maker.langchain_observe.llm_providers.gemini import MODELS_LIST
+    >>> from coffee_maker.langfuse_observe.llm_providers.gemini import MODELS_LIST
     >>> best_chat_model = MODELS_LIST["chat"]["best_models"][0]
     >>> print(best_chat_model)  # gemini-2.5-pro
 """

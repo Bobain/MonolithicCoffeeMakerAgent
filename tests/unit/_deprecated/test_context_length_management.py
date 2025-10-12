@@ -3,12 +3,12 @@
 import unittest
 from unittest.mock import MagicMock
 
-from coffee_maker.langchain_observe.auto_picker_llm import AutoPickerLLM
-from coffee_maker.langchain_observe.llm_config import (
+from coffee_maker.langfuse_observe.auto_picker_llm import AutoPickerLLM
+from coffee_maker.langfuse_observe.llm_config import (
     get_large_context_models,
     get_model_context_length_from_name,
 )
-from coffee_maker.langchain_observe.rate_limiter import RateLimitConfig, RateLimitTracker
+from coffee_maker.langfuse_observe.rate_limiter import RateLimitConfig, RateLimitTracker
 
 
 class TestContextLengthHelpers(unittest.TestCase):

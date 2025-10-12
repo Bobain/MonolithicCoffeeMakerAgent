@@ -9,11 +9,11 @@ from typing import Any, Dict, List
 
 from langchain_core.tools import Tool
 
-from coffee_maker.langchain_observe.auto_picker_llm_refactored import (
+from coffee_maker.langfuse_observe.auto_picker_llm_refactored import (
     AutoPickerLLMRefactored,
     create_auto_picker_llm_refactored,
 )
-from coffee_maker.langchain_observe.rate_limiter import RateLimitTracker
+from coffee_maker.langfuse_observe.rate_limiter import RateLimitTracker
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ def get_model_characteristics(
     Returns:
         Formatted string with model characteristics
     """
-    from coffee_maker.langchain_observe.llm_config import MODEL_CONFIGS, get_model_context_length_from_name
+    from coffee_maker.langfuse_observe.llm_config import MODEL_CONFIGS, get_model_context_length_from_name
 
     primary_full_name = f"{provider_name}/{primary_model}"
     fallback_full_name = f"{provider_name}/{fallback_model}"
@@ -250,7 +250,7 @@ def create_llm_tools(tier: str = "tier1") -> List[Tool]:
         List of LangChain Tool instances
     """
     # Use global rate tracker to ensure rate limits are shared across all LLM instances
-    from coffee_maker.langchain_observe.global_rate_tracker import get_global_rate_tracker
+    from coffee_maker.langfuse_observe.global_rate_tracker import get_global_rate_tracker
 
     rate_tracker = get_global_rate_tracker(tier)
 
@@ -352,8 +352,8 @@ def check_llm_availability(tier: str = "tier1") -> str:
     Returns:
         Formatted string with availability information for all models
     """
-    from coffee_maker.langchain_observe.global_rate_tracker import get_global_rate_tracker
-    from coffee_maker.langchain_observe.llm_config import MODEL_CONFIGS, get_model_context_length_from_name
+    from coffee_maker.langfuse_observe.global_rate_tracker import get_global_rate_tracker
+    from coffee_maker.langfuse_observe.llm_config import MODEL_CONFIGS, get_model_context_length_from_name
 
     rate_tracker = get_global_rate_tracker(tier)
 

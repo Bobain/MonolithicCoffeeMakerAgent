@@ -4,7 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 
-from coffee_maker.langchain_observe.token_estimator import estimate_tokens
+from coffee_maker.langfuse_observe.token_estimator import estimate_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ def create_context_strategy(
 
     if model_limits is None:
         try:
-            from coffee_maker.langchain_observe.llm_config import get_all_model_context_limits
+            from coffee_maker.langfuse_observe.llm_config import get_all_model_context_limits
 
             model_limits = get_all_model_context_limits()
         except ImportError:

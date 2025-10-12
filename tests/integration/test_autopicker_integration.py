@@ -13,12 +13,12 @@ import time
 import pytest
 from langchain_openai import ChatOpenAI
 
-from coffee_maker.langchain_observe.auto_picker_llm_refactored import (
+from coffee_maker.langfuse_observe.auto_picker_llm_refactored import (
     AutoPickerLLMRefactored,
 )
-from coffee_maker.langchain_observe.scheduled_llm import ScheduledLLM
-from coffee_maker.langchain_observe.strategies.fallback import SequentialFallback
-from coffee_maker.langchain_observe.strategies.metrics import LocalMetrics
+from coffee_maker.langfuse_observe.scheduled_llm import ScheduledLLM
+from coffee_maker.langfuse_observe.strategies.fallback import SequentialFallback
+from coffee_maker.langfuse_observe.strategies.metrics import LocalMetrics
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration

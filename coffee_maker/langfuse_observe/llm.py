@@ -14,7 +14,7 @@ import langfuse
 from dotenv import load_dotenv
 from langchain_core.language_models import BaseChatModel
 
-from coffee_maker.langchain_observe.utils import get_callers_modules
+from coffee_maker.langfuse_observe.utils import get_callers_modules
 
 load_dotenv()
 
@@ -170,9 +170,9 @@ def get_scheduled_llm(
         >>> llm = get_scheduled_llm(provider="openai", model="gpt-4o-mini", tier="tier1")
         >>> response = llm.invoke("Hello")  # Automatically scheduled
     """
-    from coffee_maker.langchain_observe.global_rate_tracker import get_global_rate_tracker
-    from coffee_maker.langchain_observe.scheduled_llm import ScheduledLLM, ScheduledChatModel
-    from coffee_maker.langchain_observe.strategies.scheduling import ProactiveRateLimitScheduler
+    from coffee_maker.langfuse_observe.global_rate_tracker import get_global_rate_tracker
+    from coffee_maker.langfuse_observe.scheduled_llm import ScheduledLLM, ScheduledChatModel
+    from coffee_maker.langfuse_observe.strategies.scheduling import ProactiveRateLimitScheduler
     from langchain_core.language_models import BaseChatModel
 
     # Get base LLM first

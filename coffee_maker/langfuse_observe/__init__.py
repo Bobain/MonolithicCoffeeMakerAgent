@@ -12,7 +12,7 @@ This module provides a comprehensive framework for managing LLM interactions wit
 ## Quick Start
 
 ```python
-from coffee_maker.langchain_observe import create_auto_picker_llm_refactored
+from coffee_maker.langfuse_observe import create_auto_picker_llm_refactored
 
 # Create LLM with fallback support
 llm = create_auto_picker_llm_refactored(
@@ -51,9 +51,9 @@ response = llm.invoke("Your prompt here")
 ## Advanced Usage
 
 ```python
-from coffee_maker.langchain_observe.strategies.metrics import LocalMetrics
-from coffee_maker.langchain_observe.cost_budget import create_budget_enforcer
-from coffee_maker.langchain_observe.http_pool import get_http_client
+from coffee_maker.langfuse_observe.strategies.metrics import LocalMetrics
+from coffee_maker.langfuse_observe.cost_budget import create_budget_enforcer
+from coffee_maker.langfuse_observe.http_pool import get_http_client
 
 # Setup metrics and budgets
 metrics = LocalMetrics()
@@ -80,18 +80,18 @@ Full API documentation available at: https://bobain.github.io/MonolithicCoffeeMa
 
 from typing import List
 
-from coffee_maker.langchain_observe.auto_picker_llm_refactored import (
+from coffee_maker.langfuse_observe.auto_picker_llm_refactored import (
     AutoPickerLLMRefactored,
     create_auto_picker_llm_refactored,
 )
-from coffee_maker.langchain_observe.builder import LLMBuilder, SmartLLM
-from coffee_maker.langchain_observe.scheduled_llm import ScheduledLLM
-from coffee_maker.langchain_observe.cost_calculator import CostCalculator
-from coffee_maker.langchain_observe.cost_budget import (
+from coffee_maker.langfuse_observe.builder import LLMBuilder, SmartLLM
+from coffee_maker.langfuse_observe.scheduled_llm import ScheduledLLM
+from coffee_maker.langfuse_observe.cost_calculator import CostCalculator
+from coffee_maker.langfuse_observe.cost_budget import (
     CostBudgetEnforcer,
     create_budget_enforcer,
 )
-from coffee_maker.langchain_observe.http_pool import (
+from coffee_maker.langfuse_observe.http_pool import (
     get_http_client,
     get_async_http_client,
 )

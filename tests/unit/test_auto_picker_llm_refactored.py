@@ -11,7 +11,7 @@ from unittest import mock
 
 import pytest
 
-from coffee_maker.langchain_observe.auto_picker_llm_refactored import (
+from coffee_maker.langfuse_observe.auto_picker_llm_refactored import (
     AutoPickerLLMRefactored,
     create_auto_picker_llm_refactored,
 )
@@ -277,7 +277,7 @@ class TestCreateAutoPickerLLMRefactored:
 
     def test_create_with_defaults(self):
         """Test creating AutoPickerLLMRefactored with default parameters."""
-        with mock.patch("coffee_maker.langchain_observe.llm.get_scheduled_llm") as mock_get_scheduled:
+        with mock.patch("coffee_maker.langfuse_observe.llm.get_scheduled_llm") as mock_get_scheduled:
             # Mock get_scheduled_llm to return mock instances
             mock_get_scheduled.side_effect = lambda **kwargs: MockScheduledLLM(
                 f"{kwargs['provider']}/{kwargs['model']}"
@@ -301,7 +301,7 @@ class TestCreateAutoPickerLLMRefactored:
 
     def test_create_with_multiple_fallbacks(self):
         """Test creating with multiple fallbacks."""
-        with mock.patch("coffee_maker.langchain_observe.llm.get_scheduled_llm") as mock_get_scheduled:
+        with mock.patch("coffee_maker.langfuse_observe.llm.get_scheduled_llm") as mock_get_scheduled:
             mock_get_scheduled.side_effect = lambda **kwargs: MockScheduledLLM(
                 f"{kwargs['provider']}/{kwargs['model']}"
             )
@@ -324,7 +324,7 @@ class TestCreateAutoPickerLLMRefactored:
         """Test creating with cost calculator."""
         mock_cost_calc = MockCostCalculator()
 
-        with mock.patch("coffee_maker.langchain_observe.llm.get_scheduled_llm") as mock_get_scheduled:
+        with mock.patch("coffee_maker.langfuse_observe.llm.get_scheduled_llm") as mock_get_scheduled:
             mock_get_scheduled.side_effect = lambda **kwargs: MockScheduledLLM(
                 f"{kwargs['provider']}/{kwargs['model']}"
             )

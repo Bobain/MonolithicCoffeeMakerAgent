@@ -5,7 +5,7 @@ from the exported Langfuse data stored in the local SQLite database.
 
 Example:
     Analyze LLM performance:
-    >>> from coffee_maker.langchain_observe.analytics.analyzer_sqlite import PerformanceAnalyzer
+    >>> from coffee_maker.langfuse_observe.analytics.analyzer_sqlite import PerformanceAnalyzer
     >>>
     >>> analyzer = PerformanceAnalyzer("llm_metrics.db")
     >>> perf = analyzer.get_llm_performance(days=7, model="openai/gpt-4o")
@@ -18,7 +18,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-from coffee_maker.langchain_observe.retry import with_retry
+from coffee_maker.langfuse_observe.retry import with_retry
 
 logger = logging.getLogger(__name__)
 

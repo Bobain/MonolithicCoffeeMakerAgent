@@ -3,9 +3,9 @@
 import unittest
 from unittest.mock import MagicMock, Mock
 
-from coffee_maker.langchain_observe.auto_picker_llm import AutoPickerLLM
-from coffee_maker.langchain_observe.cost_calculator import CostCalculator
-from coffee_maker.langchain_observe.rate_limiter import RateLimitConfig, RateLimitTracker
+from coffee_maker.langfuse_observe.auto_picker_llm import AutoPickerLLM
+from coffee_maker.langfuse_observe.cost_calculator import CostCalculator
+from coffee_maker.langfuse_observe.rate_limiter import RateLimitConfig, RateLimitTracker
 
 
 class TestCostTracking(unittest.TestCase):

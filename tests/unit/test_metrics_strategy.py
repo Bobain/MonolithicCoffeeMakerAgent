@@ -2,7 +2,7 @@
 
 import pytest
 
-from coffee_maker.langchain_observe.strategies.metrics import (
+from coffee_maker.langfuse_observe.strategies.metrics import (
     LocalMetrics,
     NoOpMetrics,
     PrometheusMetrics,
