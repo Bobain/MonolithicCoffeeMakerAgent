@@ -100,7 +100,28 @@ docker run -i --rm mcp/puppeteer
 
 #### 1.2 Configuration
 
-**Claude Desktop Configuration**:
+**Project MCP Configuration** (Recommended):
+
+File: `.claude/mcp/puppeteer.json`
+
+```json
+{
+  "mcpServers": {
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ],
+      "env": {
+        "PUPPETEER_LAUNCH_OPTIONS": "{\"headless\": true}"
+      }
+    }
+  }
+}
+```
+
+**Alternative: Claude Desktop Global Configuration**:
 
 File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
@@ -120,6 +141,8 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
   }
 }
 ```
+
+**Note**: The project-level configuration in `.claude/mcp/` is preferred as it keeps MCP servers scoped to the project.
 
 ---
 

@@ -25,7 +25,8 @@
 
 3. **MCP Integration** ⭐ NEW
    - **Puppeteer MCP**: Browser automation for agents
-   - **Configuration**: `~/Library/Application Support/Claude/config.json`
+   - **Project Config**: `.claude/mcp/puppeteer.json` (project-scoped)
+   - **Global Config**: `~/Library/Application Support/Claude/config.json` (alternative)
    - **Use Cases**: Web testing, visual documentation, screenshots
 
 4. **Observability**
@@ -47,6 +48,8 @@ MonolithicCoffeeMakerAgent/
 │   │   ├── implement-feature.md
 │   │   ├── test-web-app.md
 │   │   └── capture-visual-docs.md
+│   ├── mcp/                         # MCP server configs ⭐
+│   │   └── puppeteer.json
 │   └── settings.local.json
 │
 ├── docs/
