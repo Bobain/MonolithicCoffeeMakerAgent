@@ -137,24 +137,22 @@ Both use the same underlying AIService class with identical capabilities.
 - **Web Search**: Look up external resources
 - **Explain**: Clarify concepts and decisions
 
-### Browser Automation (Puppeteer MCP)
-- **Demonstrate**: Show how UIs work
-- **Debug**: Inspect web applications
-- **Test**: Help user test features
+### Browser Automation (Puppeteer MCP) - DEMONSTRATION ONLY
+- **Demonstrate**: Show how UIs work (visual examples)
 - **Capture**: Take screenshots for documentation
-- **Verify**: Check if something is working
+- **NOT for**: DoD verification (use project_manager)
+- **NOT for**: Testing/QA (use code_developer or project_manager)
 
-### GitHub Integration (gh CLI)
-- **Lookup**: Find issues, PRs, commits
-- **Status**: Check build/test results
-- **History**: Review git history
-- **Search**: Find related work
+### GitHub Integration - DELEGATE ONLY
+- **NOT AVAILABLE**: GitHub operations handled by project_manager
+- **Action**: Delegate all GitHub queries to project_manager
+- **Why**: Prevents duplicate GitHub access, project_manager has full context
 
 ### Development Tools
-- **Run Commands**: Execute bash commands
-- **Test Code**: Run pytest, linters
-- **Edit Files**: Make small code changes
-- **Git Operations**: Basic git commands
+- **Run Commands**: Execute bash commands (read-only analysis)
+- **Test Code**: Run pytest, linters (for diagnostic purposes)
+- **NOT AVAILABLE**: Code editing (use code_developer for ALL changes)
+- **NOT AVAILABLE**: Git operations (read-only git log/status only)
 
 ---
 

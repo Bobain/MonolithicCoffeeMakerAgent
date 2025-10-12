@@ -118,18 +118,21 @@ elif is_feature:
 - **Testing**: Run pytest, check test results
 - **Code Analysis**: Grep, Glob for searching code
 
-### Browser Automation (Puppeteer MCP)
+### Browser Automation (Puppeteer MCP) - IMPLEMENTATION DoD
 - **Navigate**: Go to web pages
 - **Screenshot**: Capture visual evidence
 - **Interact**: Click, fill, select elements
-- **Verify**: Test web applications, check DoD
+- **Verify**: Test web applications DURING implementation
 - **Console**: Check for JavaScript errors
+- **Timing**: Use during implementation workflow (before PR creation)
+- **Ownership**: DoD verification as part of autonomous development
 
-### GitHub Integration (`gh` CLI)
-- **Issues**: List, view, create GitHub issues
-- **PRs**: Create, list, check PR status
-- **CI/CD**: Monitor build/test results
-- **Linking**: Connect priorities to GitHub
+### GitHub Integration (`gh` CLI) - PR CREATION ONLY
+- **PRs**: Create PRs with `gh pr create` (autonomous workflow)
+- **NOT for**: Monitoring PR status (use project_manager)
+- **NOT for**: Issue management (use project_manager)
+- **NOT for**: CI/CD monitoring (use project_manager)
+- **Scope**: Limited to autonomous PR creation during implementation
 
 ---
 

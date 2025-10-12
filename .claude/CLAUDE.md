@@ -14,8 +14,11 @@
 
 1. **Autonomous Agents**
    - `code_developer`: Autonomous implementation of priorities from ROADMAP
-   - `project_manager`: Project coordination, notifications, status tracking
-   - `assistant`: User interaction and support
+   - `project_manager`: Project coordination, notifications, status tracking, GitHub monitoring
+   - `assistant`: User interaction, triage, and delegation to specialized agents
+   - `code-searcher`: Deep codebase analysis and forensic examination
+   - `ux-design-expert`: UI/UX design guidance and Tailwind CSS
+   - `memory-bank-synchronizer`: Documentation synchronization with code reality
 
 2. **Prompt Management System** ⭐ NEW
    - **Local Store**: `.claude/commands/` (centralized prompt templates)
@@ -241,6 +244,100 @@ poetry run project-manager /roadmap
 
 # View developer status
 poetry run project-manager /status
+```
+
+---
+
+## Agent Tool Ownership & Boundaries
+
+**IMPORTANT**: Each agent has specific tool ownership to prevent overlap and confusion.
+
+### Tool Ownership Matrix
+
+| Tool/Capability | Owner | Usage | Others |
+|----------------|-------|-------|--------|
+| **Puppeteer DoD (during impl)** | code_developer | Verify features DURING implementation | project_manager for POST-completion verification |
+| **Puppeteer DoD (post-impl)** | project_manager | Verify completed work on user request | - |
+| **Puppeteer demos** | assistant | Show features visually (demos only) | NOT for verification |
+| **GitHub PR create** | code_developer | Create PRs autonomously | - |
+| **GitHub monitoring** | project_manager | Monitor PRs, issues, CI/CD status | - |
+| **GitHub queries** | project_manager | All `gh` commands | assistant delegates |
+| **Code editing** | code_developer | ALL code changes | assistant READ-ONLY |
+| **Code search (simple)** | assistant | 1-2 files with Grep/Read | Delegate complex to code-searcher |
+| **Code search (complex)** | code-searcher | Deep analysis, patterns, forensics | - |
+| **ROADMAP updates** | project_manager (full), code_developer (status only) | Strategic vs. execution updates | assistant READ-ONLY |
+| **Design decisions** | ux-design-expert | All UI/UX, Tailwind, charts | Others delegate |
+| **Doc sync** | memory-bank-synchronizer | Keep CLAUDE.md files current | - |
+
+### Key Principles
+
+1. **assistant is a TRIAGE agent**
+   - Handles quick questions directly
+   - Delegates complex tasks to specialists
+   - Does NOT compete with specialized agents
+   - Think of it as "first-line support"
+
+2. **code_developer owns EXECUTION**
+   - All code changes go through code_developer
+   - Creates PRs autonomously
+   - Verifies DoD during implementation
+   - Does NOT monitor project health (that's project_manager)
+
+3. **project_manager owns OVERSIGHT**
+   - Monitors GitHub (PRs, issues, CI)
+   - Verifies completed work (post-implementation)
+   - Makes strategic ROADMAP decisions
+   - Warns users about blockers
+   - Does NOT create PRs (that's code_developer)
+
+4. **Specialized agents own their domain**
+   - code-searcher: Code analysis
+   - ux-design-expert: Design
+   - memory-bank-synchronizer: Documentation
+
+### When in Doubt
+
+```
+"Who should handle X?"
+    ↓
+Is it a quick question? → assistant
+Is it about code internals? → code-searcher
+Is it about project status? → project_manager
+Is it about design? → ux-design-expert
+Is it implementation? → code_developer
+Is it doc sync? → memory-bank-synchronizer
+```
+
+### Examples
+
+**✅ Correct Usage**:
+```
+User: "Where is authentication implemented?"
+→ code-searcher (complex code analysis)
+
+User: "What's our PR status?"
+→ project_manager (GitHub monitoring)
+
+User: "Design a dashboard"
+→ ux-design-expert (design)
+
+User: "Implement feature X"
+→ code_developer (implementation)
+```
+
+**❌ Incorrect Usage**:
+```
+assistant tries to verify DoD with Puppeteer
+→ NO! Use project_manager for verification
+
+project_manager tries to create a PR
+→ NO! code_developer creates PRs
+
+assistant tries to edit code
+→ NO! code_developer owns all code changes
+
+code_developer tries to monitor all PRs
+→ NO! project_manager monitors project health
 ```
 
 ---

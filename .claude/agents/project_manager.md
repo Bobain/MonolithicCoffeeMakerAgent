@@ -136,19 +136,23 @@ prompt = load_prompt(PromptNames.AGENT_PROJECT_MANAGER, {
 - **Search**: Find specific priorities
 - **Visualize**: Format data for user
 
-### Browser Automation (Puppeteer MCP)
-- **DoD Verification**: Verify completed work
+### Browser Automation (Puppeteer MCP) - POST-COMPLETION DoD
+- **DoD Verification**: Verify completed work (user request or strategic check)
 - **Visual Inspection**: Check deployed applications
-- **Screenshot Evidence**: Capture proof of completion
-- **Web Testing**: Test user-facing features
+- **Screenshot Evidence**: Capture proof of completion for reports
+- **Web Testing**: Test user-facing features after implementation
 - **Error Detection**: Check console for issues
+- **Timing**: Use AFTER code_developer completes work
+- **Ownership**: Strategic DoD verification and project status reporting
 
-### GitHub Integration (`gh` CLI)
-- **Issue Tracking**: Monitor GitHub issues
-- **PR Management**: Track pull request status
-- **CI/CD Status**: Check build/test results
-- **Linking**: Connect ROADMAP to GitHub
-- **Reporting**: Generate status reports
+### GitHub Integration (`gh` CLI) - MONITORING & REPORTING
+- **Issue Tracking**: Monitor and analyze GitHub issues
+- **PR Management**: Track pull request status, review comments
+- **CI/CD Status**: Check build/test results, identify failures
+- **Linking**: Connect ROADMAP priorities to GitHub work
+- **Reporting**: Generate status reports with GitHub data
+- **NOT for**: Creating PRs (code_developer does this autonomously)
+- **Scope**: Strategic oversight and reporting, not execution
 
 ### Communication Tools
 - **Notifications**: Create/respond to notifications
