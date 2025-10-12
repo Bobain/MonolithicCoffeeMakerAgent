@@ -8,7 +8,7 @@ This module provides utilities for standardized logging with:
 - Performance measurement
 
 Usage:
-    >>> from coffee_maker.utils.logging_utils import get_logger, log_error
+    >>> from coffee_maker.utils.logging import get_logger, log_error
     >>> logger = get_logger(__name__)
     >>> logger.info("Starting process", extra={"priority": "US-021"})
     >>>
