@@ -12,9 +12,15 @@ Usage:
         pass
 
 Part of US-021 Phase 1 - Option D: Split Large Files
+
+Enhanced with centralized prompt loading:
+- Prompts stored in .claude/commands/ for multi-AI provider support
+- Easy migration to Gemini, OpenAI, or other LLMs
 """
 
 import logging
+
+from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -125,12 +131,15 @@ class SpecManagerMixin:
 
         BUG-002 FIX: Use safe dictionary access to prevent KeyError crashes.
 
+        Enhanced: Now uses centralized prompt from .claude/commands/
+        for easy migration to Gemini, OpenAI, or other LLMs.
+
         Args:
             priority: Priority dictionary
             spec_filename: Name of spec file to create
 
         Returns:
-            Prompt string
+            Prompt string loaded from .claude/commands/create-technical-spec.md
         """
         # BUG-002: Safe dictionary access with defaults
         priority_name = priority.get("name", "Unknown Priority")
@@ -147,34 +156,12 @@ class SpecManagerMixin:
             if len(priority_content) > 2000:
                 priority_context += "..."
 
-        return f"""Create a detailed technical specification for implementing {priority_name}.
-
-Read the user story from docs/ROADMAP.md and create a comprehensive technical spec.
-
-**Your Task:**
-1. Read docs/ROADMAP.md to understand {priority_name}
-2. Create docs/{spec_filename} with detailed technical specification
-3. Include:
-   - Prerequisites & Dependencies
-   - Architecture Overview
-   - Component Specifications
-   - Data Flow Diagrams (in text/mermaid format)
-   - Implementation Plan (step-by-step with time estimates)
-   - Testing Strategy
-   - Security Considerations
-   - Performance Requirements
-   - Risk Analysis
-   - Success Criteria
-
-**Important:**
-- Be VERY specific and detailed
-- Include file paths, class names, method signatures
-- Provide code examples
-- Break down into concrete tasks
-- Estimate time for each task
-- Make it actionable for implementation
-
-**User Story Context:**
-{priority_context}
-
-Create the spec now in docs/{spec_filename}."""
+        # Load prompt from centralized location (.claude/commands/)
+        return load_prompt(
+            PromptNames.CREATE_TECHNICAL_SPEC,
+            {
+                "PRIORITY_NAME": priority_name,
+                "SPEC_FILENAME": spec_filename,
+                "PRIORITY_CONTEXT": priority_context,
+            },
+        )

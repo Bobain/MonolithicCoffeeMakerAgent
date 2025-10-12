@@ -11,6 +11,10 @@ Usage:
         pass
 
 Part of US-021 Phase 1 - Option D: Split Large Files
+
+Enhanced with centralized prompt loading:
+- Prompts stored in .claude/commands/ for multi-AI provider support
+- Easy migration to Gemini, OpenAI, or other LLMs
 """
 
 import logging
@@ -18,6 +22,7 @@ import time
 from datetime import datetime
 
 from coffee_maker.autonomous.developer_status import ActivityType, DeveloperState
+from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
 from coffee_maker.cli.notifications import (
     NOTIF_PRIORITY_HIGH,
     NOTIF_TYPE_INFO,
@@ -364,64 +369,54 @@ Status: Requires human decision
     def _build_documentation_prompt(self, priority: dict) -> str:
         """Build explicit documentation creation prompt.
 
+        Enhanced: Now uses centralized prompt from .claude/commands/
+        for easy migration to Gemini, OpenAI, or other LLMs.
+
         Args:
             priority: Priority dictionary
 
         Returns:
-            Prompt string optimized for documentation tasks
+            Prompt string optimized for documentation tasks from
+            .claude/commands/implement-documentation.md
         """
-        return f"""Read docs/ROADMAP.md and implement {priority['name']}: {priority['title']}.
+        priority_content = priority.get("content", "")[:1500]
+        if len(priority.get("content", "")) > 1500:
+            priority_content += "..."
 
-⚠️  THIS IS A DOCUMENTATION PRIORITY - You MUST CREATE FILES ⚠️
-
-The ROADMAP lists specific deliverable files under "Deliverables" section.
-Your task is to:
-1. Identify all deliverable files mentioned in ROADMAP for this priority
-2. CREATE each file with actual content (not placeholders)
-3. Use real examples from the existing codebase
-4. Test any commands/examples before documenting them
-
-Instructions:
-- CREATE all files listed in the Deliverables section
-- Fill with real, specific content based on existing codebase
-- Include actual commands, file paths, and examples
-- Be concrete, not generic or abstract
-- Test examples to ensure accuracy
-
-After creating files:
-- Update ROADMAP.md status to "✅ Complete"
-- List all files created
-- Commit your changes
-
-Priority details:
-{priority['content'][:1500]}...
-
-Begin implementation now - CREATE THE FILES."""
+        return load_prompt(
+            PromptNames.IMPLEMENT_DOCUMENTATION,
+            {
+                "PRIORITY_NAME": priority["name"],
+                "PRIORITY_TITLE": priority["title"],
+                "PRIORITY_CONTENT": priority_content,
+            },
+        )
 
     def _build_feature_prompt(self, priority: dict) -> str:
         """Build standard feature implementation prompt.
 
+        Enhanced: Now uses centralized prompt from .claude/commands/
+        for easy migration to Gemini, OpenAI, or other LLMs.
+
         Args:
             priority: Priority dictionary
 
         Returns:
-            Prompt string for feature implementation
+            Prompt string for feature implementation from
+            .claude/commands/implement-feature.md
         """
-        return f"""Read docs/ROADMAP.md and implement {priority['name']}: {priority['title']}.
+        priority_content = priority.get("content", "")[:1000]
+        if len(priority.get("content", "")) > 1000:
+            priority_content += "..."
 
-Follow the roadmap guidelines and deliverables. Update docs/ROADMAP.md with your progress.
-
-Important:
-- Follow all coding standards
-- Add tests where appropriate
-- Document your changes
-- Update ROADMAP.md status to "🔄 In Progress" first, then "✅ Complete" when done
-- Commit frequently with clear messages
-
-Priority details:
-{priority['content'][:1000]}...
-
-Begin implementation now."""
+        return load_prompt(
+            PromptNames.IMPLEMENT_FEATURE,
+            {
+                "PRIORITY_NAME": priority["name"],
+                "PRIORITY_TITLE": priority["title"],
+                "PRIORITY_CONTENT": priority_content,
+            },
+        )
 
     def _build_commit_message(self, priority: dict) -> str:
         """Build commit message for implementation.
