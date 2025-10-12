@@ -1,0 +1,27 @@
+{
+  "project": {
+    "name": "MonolithicCoffeeMakerAgent",
+    "description": "Autonomous AI software development system"
+  },
+  "agents": {
+    "auto_load": [
+      "project_manager",
+      "code_developer"
+    ],
+    "default_agent": "project_manager"
+  },
+  "hooks": {
+    "on_start": [
+      "scripts/agent_health_check.sh"
+    ]
+  },
+  "notifications": {
+    "sound_enabled": true,
+    "priority_mapping": {
+      "critical": "critical",
+      "high": "high",
+      "normal": "normal",
+      "low": "normal"
+    }
+  }
+}
