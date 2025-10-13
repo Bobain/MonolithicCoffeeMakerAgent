@@ -425,6 +425,158 @@ def cmd_developer_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_metrics(args: argparse.Namespace) -> int:
+    """Show detailed estimation metrics and velocity tracking.
+
+    US-015: Estimation Metrics & Velocity Tracking
+
+    Displays comprehensive metrics including:
+    - All completed user stories with estimated vs actual time
+    - Overall estimation accuracy statistics
+    - Velocity over time
+    - Category and complexity breakdown
+
+    Args:
+        args: Parsed command-line arguments with optional filters
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager metrics
+        $ project-manager metrics --category feature
+        $ project-manager metrics --last 10
+    """
+    from coffee_maker.cli.metrics import MetricsDB
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    db = MetricsDB()
+
+    try:
+        # Get filters from args
+        last_n = args.last if hasattr(args, "last") else None
+        category = args.category if hasattr(args, "category") else None
+
+        # Get accuracy data
+        accuracy_data = db.get_estimation_accuracy(last_n=last_n, category=category)
+
+        if accuracy_data["stories_analyzed"] == 0:
+            console.print("[yellow]⚠️  No completed stories found in metrics database[/yellow]")
+            console.print()
+            console.print("Start tracking stories with:")
+            console.print("  from coffee_maker.cli.metrics import MetricsDB")
+            console.print("  db = MetricsDB()")
+            console.print('  db.start_story("US-XXX", "Title", 3.0, 5.0, "medium", "feature")')
+            console.print("  # ... work happens ...")
+            console.print('  db.complete_story("US-XXX")')
+            return 1
+
+        # Header
+        console.print()
+        console.print("=" * 80)
+        console.print("📊 Estimation Metrics & Velocity Tracking (US-015)")
+        console.print("=" * 80)
+        console.print()
+
+        # Overall statistics
+        overall_accuracy = accuracy_data["overall_accuracy_pct"]
+        total_stories = accuracy_data["stories_analyzed"]
+        within_20pct = accuracy_data["within_20pct_count"]
+        within_20pct_rate = accuracy_data["within_20pct_rate"]
+
+        # Color code overall accuracy
+        if overall_accuracy >= 85:
+            acc_color = "green"
+        elif overall_accuracy >= 70:
+            acc_color = "yellow"
+        else:
+            acc_color = "red"
+
+        console.print(f"[bold]Overall Statistics[/bold]")
+        console.print(f"  Stories Analyzed: {total_stories}")
+        console.print(f"  Average Accuracy: [{acc_color}]{overall_accuracy:.1f}%[/{acc_color}]")
+        console.print(f"  Within ±20%: {within_20pct}/{total_stories} ({within_20pct_rate * 100:.0f}%)")
+        console.print()
+
+        # Velocity metrics
+        velocity = db.get_current_velocity(period_days=7)
+        if velocity["stories_completed"] > 0:
+            console.print(f"[bold]Velocity (Last 7 Days)[/bold]")
+            console.print(f"  Stories Completed: {velocity['stories_completed']}")
+            console.print(f"  Average Days/Story: {velocity['avg_days_per_story']:.2f}")
+            console.print(f"  Total Days: {velocity['total_days_actual']:.2f}")
+            if velocity["story_points_completed"] > 0:
+                console.print(f"  Story Points: {velocity['story_points_completed']}")
+            console.print()
+
+        # Detailed story table
+        console.print(f"[bold]Detailed Story Metrics[/bold]")
+        console.print()
+
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Story ID", style="cyan")
+        table.add_column("Title", style="white")
+        table.add_column("Estimated", justify="right")
+        table.add_column("Actual", justify="right")
+        table.add_column("Error", justify="right")
+        table.add_column("Accuracy", justify="right")
+        table.add_column("Category", style="dim")
+
+        for story in accuracy_data["stories"]:
+            story_id = story["story_id"]
+            title = story["story_title"][:40] + "..." if len(story["story_title"]) > 40 else story["story_title"]
+            est_min = story["estimated_min_days"] or 0
+            est_max = story["estimated_max_days"] or 0
+            actual = story["actual_days"]
+            accuracy = story["estimation_accuracy_pct"]
+            category = story["category"] or "N/A"
+
+            # Format estimated range
+            if est_max > est_min:
+                estimated_str = f"{est_min:.1f}-{est_max:.1f}d"
+            else:
+                estimated_str = f"{est_min:.1f}d"
+
+            # Calculate error
+            est_avg = (est_min + est_max) / 2 if est_max else est_min
+            error = actual - est_avg if est_avg else 0
+            error_str = f"{error:+.1f}d"
+
+            # Color code accuracy
+            if accuracy and accuracy >= 80:
+                acc_style = "green"
+            elif accuracy and accuracy >= 60:
+                acc_style = "yellow"
+            else:
+                acc_style = "red"
+
+            accuracy_str = f"{accuracy:.0f}%" if accuracy else "N/A"
+
+            table.add_row(
+                story_id,
+                title,
+                estimated_str,
+                f"{actual:.2f}d",
+                error_str,
+                f"[{acc_style}]{accuracy_str}[/{acc_style}]",
+                category,
+            )
+
+        console.print(table)
+        console.print()
+
+        return 0
+
+    except Exception as e:
+        console.print(f"[red]❌ Error displaying metrics: {e}[/red]")
+        import traceback
+
+        traceback.print_exc()
+        return 1
+
+
 def cmd_notifications(args: argparse.Namespace) -> int:
     """List pending notifications from daemon.
 
@@ -895,6 +1047,11 @@ Use 'project-manager chat' for the best experience!
     dev_status_parser.add_argument("--watch", action="store_true", help="Continuous watch mode")
     dev_status_parser.add_argument("--interval", type=int, default=5, help="Update interval in seconds (default: 5)")
 
+    # Metrics command (US-015)
+    metrics_parser = subparsers.add_parser("metrics", help="Show detailed estimation metrics and velocity (US-015)")
+    metrics_parser.add_argument("--last", type=int, help="Show only last N stories")
+    metrics_parser.add_argument("--category", type=str, help="Filter by category (feature, bug, refactor, docs)")
+
     # Notifications command
     subparsers.add_parser("notifications", help="List pending notifications")
 
@@ -939,6 +1096,7 @@ Use 'project-manager chat' for the best experience!
         "view": cmd_view,
         "status": cmd_status,
         "developer-status": cmd_developer_status,  # PRIORITY 4
+        "metrics": cmd_metrics,  # US-015
         "notifications": cmd_notifications,
         "respond": cmd_respond,
         "sync": cmd_sync,
