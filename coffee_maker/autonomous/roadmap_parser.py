@@ -53,8 +53,28 @@ class RoadmapParser:
         if not self.roadmap_path.exists():
             raise FileNotFoundError(f"ROADMAP not found: {roadmap_path}")
 
+        # Cache for parsed priorities to avoid repeated parsing
+        self._priorities_cache: Optional[List[Dict]] = None
+        self._cache_mtime: Optional[float] = None
+
         self.content = self.roadmap_path.read_text()
         logger.info(f"Loaded roadmap from {roadmap_path}")
+
+    def reload(self) -> None:
+        """Reload roadmap content from disk and invalidate cache.
+
+        Use this when the roadmap file has been updated externally.
+
+        Example:
+            >>> parser = RoadmapParser("docs/ROADMAP.md")
+            >>> # ... file modified externally ...
+            >>> parser.reload()
+            >>> priorities = parser.get_priorities()  # Gets fresh data
+        """
+        self.content = self.roadmap_path.read_text()
+        self._priorities_cache = None
+        self._cache_mtime = None
+        logger.debug("Roadmap content reloaded and cache invalidated")
 
     def get_priorities(self) -> List[Dict]:
         """Get all priorities from roadmap.
@@ -74,6 +94,13 @@ class RoadmapParser:
             >>> len(priorities)
             7
         """
+        # Check if cache is valid (file hasn't changed)
+        current_mtime = self.roadmap_path.stat().st_mtime
+        if self._priorities_cache is not None and self._cache_mtime == current_mtime:
+            logger.debug("Using cached priorities")
+            return self._priorities_cache
+
+        # Cache miss or invalidated - parse from content
         priorities = []
 
         # Pattern to match priority headers
@@ -106,6 +133,11 @@ class RoadmapParser:
                 )
 
         logger.info(f"Found {len(priorities)} priorities")
+
+        # Update cache
+        self._priorities_cache = priorities
+        self._cache_mtime = current_mtime
+
         return priorities
 
     def _extract_status(self, lines: List[str], start_line: int) -> str:

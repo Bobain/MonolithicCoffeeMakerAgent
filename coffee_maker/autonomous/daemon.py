@@ -172,8 +172,8 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
 from coffee_maker.autonomous.daemon_git_ops import GitOpsMixin
 from coffee_maker.autonomous.daemon_implementation import ImplementationMixin
 from coffee_maker.autonomous.daemon_spec_manager import SpecManagerMixin
@@ -189,6 +189,10 @@ from coffee_maker.autonomous.task_metrics import TaskMetricsDB
 from coffee_maker.cli.notifications import (
     NotificationDB,
 )
+
+# Lazy imports for expensive modules (only loaded when needed)
+if TYPE_CHECKING:
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -267,13 +271,17 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         self.parser = RoadmapParser(str(self.roadmap_path))
         self.git = GitManager()
 
-        # Choose between CLI and API based on flag
+        # Choose between CLI and API based on flag (lazy import)
         if use_claude_cli:
+            # Lazy import: only load when using CLI mode
             from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
 
             self.claude = ClaudeCLIInterface(claude_path=claude_cli_path, model=model)
             logger.info("✅ Using Claude CLI mode (subscription)")
         else:
+            # Lazy import: only load when using API mode
+            from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
+
             self.claude = ClaudeAPI(model=model)
             logger.info("✅ Using Claude API mode (requires credits)")
 
