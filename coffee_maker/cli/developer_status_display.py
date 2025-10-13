@@ -4,6 +4,7 @@ This module provides formatted display of developer status from the daemon.
 Used by project-manager developer-status command.
 
 PRIORITY 4: Developer Status Dashboard
+US-015: Estimation Metrics & Velocity Tracking
 """
 
 import time
@@ -17,6 +18,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from coffee_maker.cli.metrics import MetricsDB
 from coffee_maker.utils.file_io import read_json_file
 
 
@@ -42,6 +44,7 @@ class DeveloperStatusDisplay:
             status_file = Path("data/developer_status.json")
         self.status_file = status_file
         self.console = Console()
+        self.metrics_db = MetricsDB()  # US-015: Initialize metrics database
 
     def show(self) -> bool:
         """Show current developer status once.
@@ -122,32 +125,38 @@ class DeveloperStatusDisplay:
         state_emoji = self._get_state_emoji(state)
         content.add_row("State:", f"{state_emoji} {state.upper()}")
 
-        # Current task
+        # Current task (handle both string and dict formats)
         current_task = status.get("current_task")
         if current_task:
-            task_name = current_task.get("name", "Unknown")
-            content.add_row("Task:", task_name)
+            # Handle string format (simple task name)
+            if isinstance(current_task, str):
+                content.add_row("Task:", current_task)
+            # Handle dict format (with progress, step, ETA)
+            elif isinstance(current_task, dict):
+                task_name = current_task.get("name", "Unknown")
+                content.add_row("Task:", task_name)
 
-            # Progress bar
-            progress = current_task.get("progress", 0)
-            content.add_row("Progress:", self._format_progress_bar(progress))
+                # Progress bar
+                progress = current_task.get("progress", 0)
+                if progress > 0:
+                    content.add_row("Progress:", self._format_progress_bar(progress))
 
-            # Current step
-            current_step = current_task.get("current_step", "")
-            if current_step:
-                content.add_row("Step:", current_step)
+                # Current step
+                current_step = current_task.get("current_step", "")
+                if current_step:
+                    content.add_row("Step:", current_step)
 
-            # ETA
-            eta_seconds = current_task.get("eta_seconds", 0)
-            if eta_seconds > 0:
-                eta_formatted = self._format_duration(eta_seconds)
-                content.add_row("ETA:", eta_formatted)
+                # ETA
+                eta_seconds = current_task.get("eta_seconds", 0)
+                if eta_seconds > 0:
+                    eta_formatted = self._format_duration(eta_seconds)
+                    content.add_row("ETA:", eta_formatted)
 
-            # Task started
-            started_at = current_task.get("started_at")
-            if started_at:
-                elapsed = self._format_elapsed(started_at)
-                content.add_row("Elapsed:", elapsed)
+                # Task started
+                started_at = current_task.get("started_at")
+                if started_at:
+                    elapsed = self._format_elapsed(started_at)
+                    content.add_row("Elapsed:", elapsed)
 
         # Last activity
         last_activity = status.get("last_activity")
@@ -184,6 +193,73 @@ class DeveloperStatusDisplay:
                 f"Commits: {metrics.get('total_commits_today', 0)} | "
                 f"Tests: {metrics.get('tests_passed_today', 0)}/{metrics.get('tests_failed_today', 0)}",
             )
+
+        # US-015: Velocity & Estimation Accuracy Metrics
+        try:
+            # Get velocity for last 7 days
+            velocity = self.metrics_db.get_current_velocity(period_days=7)
+            # Get accuracy for last 5 stories
+            accuracy_data = self.metrics_db.get_estimation_accuracy(last_n=5)
+
+            if velocity["stories_completed"] > 0 or accuracy_data["stories_analyzed"] > 0:
+                content.add_row("")  # Spacer
+                content.add_row("[bold]📊 Estimation Metrics (US-015)[/bold]", "")
+
+                # Velocity
+                if velocity["stories_completed"] > 0:
+                    stories_per_week = velocity["stories_completed"]
+                    avg_days = velocity["avg_days_per_story"]
+                    content.add_row(
+                        "Velocity (7d):",
+                        f"{stories_per_week} stories/week | avg {avg_days:.1f} days/story",
+                    )
+
+                # Estimation Accuracy
+                if accuracy_data["stories_analyzed"] > 0:
+                    overall_accuracy = accuracy_data["overall_accuracy_pct"]
+                    within_20pct = accuracy_data["within_20pct_count"]
+                    total = accuracy_data["stories_analyzed"]
+
+                    # Color code accuracy
+                    if overall_accuracy >= 85:
+                        accuracy_color = "green"
+                    elif overall_accuracy >= 70:
+                        accuracy_color = "yellow"
+                    else:
+                        accuracy_color = "red"
+
+                    content.add_row(
+                        "Accuracy (5 recent):",
+                        f"[{accuracy_color}]{overall_accuracy:.1f}%[/{accuracy_color}] "
+                        f"({within_20pct}/{total} within ±20%)",
+                    )
+
+                    # Show last 3 stories with accuracy
+                    recent_stories = accuracy_data["stories"][:3]
+                    if recent_stories:
+                        content.add_row("Recent stories:", "")
+                        for story in recent_stories:
+                            story_id = story["story_id"]
+                            accuracy = story["estimation_accuracy_pct"]
+                            actual = story["actual_days"]
+
+                            # Color code individual accuracy
+                            if accuracy and accuracy >= 80:
+                                acc_color = "green"
+                            elif accuracy and accuracy >= 60:
+                                acc_color = "yellow"
+                            else:
+                                acc_color = "red"
+
+                            accuracy_str = f"{accuracy:.0f}%" if accuracy else "N/A"
+                            content.add_row(
+                                f"  {story_id}:",
+                                f"[{acc_color}]{accuracy_str}[/{acc_color}] ({actual:.1f} days)",
+                            )
+
+        except Exception:
+            # Silently skip metrics if database is not available
+            pass
 
         # Daemon info
         daemon_info = status.get("daemon_info", {})
