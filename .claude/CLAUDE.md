@@ -288,12 +288,15 @@ poetry run project-manager /status
 
 ### Key Principles
 
-1. **assistant is a TRIAGE agent**
-   - Handles quick questions directly
-   - Delegates complex tasks to specialists
+1. **assistant is a DOCUMENTATION EXPERT + INTELLIGENT DISPATCHER**
+   - **Documentation Expert**: Has profound knowledge of ALL project docs (ROADMAP, specs, CLAUDE.md)
+   - **Intelligent Dispatcher**: Routes requests to appropriate specialized agents
+   - Handles quick questions directly using deep documentation knowledge
+   - Delegates complex tasks to specialists based on clear decision framework
    - Does NOT compete with specialized agents
-   - Think of it as "first-line support"
-   - **NEVER modifies code or docs** - Always delegates to appropriate agent
+   - Think of it as "librarian + traffic controller"
+   - **NEVER modifies code or docs** - Always READ-ONLY, delegates to appropriate agent
+   - **Keeps ROADMAP in great detail in mind** at all times
 
 2. **code_developer owns EXECUTION**
    - **ONLY agent that writes/modifies code**
