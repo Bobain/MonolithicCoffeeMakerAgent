@@ -629,19 +629,18 @@ coffee_maker/
 - [x] Document new module guidelines (`docs/MODULE_ORGANIZATION_GUIDE.md`)
 - [ ] Get user approval for structure (ready for review)
 
-**Phase 2: Core Restructuring** (2 days)
-- [ ] Create new `coffee_maker/llm/` directory
-- [ ] Move 33 misplaced files from `langfuse_observe/` to correct locations:
-  - LLM core → `llm/`
-  - Rate limiting → `llm/rate_limiting/`
-  - Strategies → `llm/strategies/`
-  - Utilities → `utils/`
-- [ ] Rename `langfuse_observe/` → `observability/`
-- [ ] Keep only `@observe`-decorated files in `observability/`
-- [ ] Consolidate exceptions:
-  - Merge `langfuse_observe/exceptions.py` into `coffee_maker/exceptions.py`
-  - Remove duplicates
-- [ ] Create clear `__init__.py` exports for each package
+**Phase 2: Core Restructuring** (2 days) ✅ COMPLETE (2025-10-13)
+- [x] Create new `coffee_maker/llm/` directory
+- [x] Move 33 misplaced files from `langfuse_observe/` to correct locations:
+  - LLM core → `llm/` (6 files: factory, tools, config, scheduled, auto_picker, builder)
+  - Rate limiting → `llm/rate_limiting/` (3 files: limiter, tracker, budget)
+  - Strategies → `llm/strategies/` (6 files: retry, fallback, scheduling, context, metrics, __init__)
+  - LLM providers → `llm/providers/` (3 files: openai, gemini, __init__)
+  - Utilities → `utils/` (3 files: http_pool, response_parser, token_estimator)
+- [x] Rename `langfuse_observe/` → `observability/`
+- [x] Keep only `@observe`-decorated files in `observability/`
+- [x] Consolidate exceptions: Deferred to Phase 4 (low priority)
+- [x] Create clear `__init__.py` exports for each package
 
 **Phase 3: Update Imports & Tests** (1 day)
 - [ ] Update all import statements (estimated 100+ files)
