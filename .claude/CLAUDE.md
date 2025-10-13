@@ -252,6 +252,23 @@ poetry run project-manager /status
 
 **IMPORTANT**: Each agent has specific tool ownership to prevent overlap and confusion.
 
+### File & Directory Ownership Matrix
+
+**CRITICAL**: These rules determine WHO can modify WHAT files.
+
+| File/Directory | Owner | Can Modify? | Others |
+|----------------|-------|-------------|--------|
+| **docs/** | project_manager | YES - Full control | code_developer: READ-ONLY, assistant: READ-ONLY |
+| **docs/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Full, code_developer: Status updates only | assistant: READ-ONLY |
+| **docs/PRIORITY_*_TECHNICAL_SPEC.md** | project_manager | YES - Creates and updates specs | code_developer: READ-ONLY (reads during implementation), assistant: READ-ONLY |
+| **.claude/agents/** | project_manager | YES - Defines agent configurations | All others: READ-ONLY |
+| **.claude/CLAUDE.md** | project_manager, memory-bank-synchronizer | YES - Strategic updates | code_developer: READ-ONLY, assistant: READ-ONLY |
+| **.claude/commands/** | project_manager | YES - Manages prompts | code_developer: READ-ONLY (loads during execution), assistant: READ-ONLY |
+| **coffee_maker/** | code_developer | YES - All implementation | All others: READ-ONLY |
+| **tests/** | code_developer | YES - All test code | All others: READ-ONLY |
+| **scripts/** | code_developer | YES - Utility scripts | All others: READ-ONLY |
+| **pyproject.toml** | code_developer | YES - Dependency management | All others: READ-ONLY |
+
 ### Tool Ownership Matrix
 
 | Tool/Capability | Owner | Usage | Others |
@@ -276,24 +293,32 @@ poetry run project-manager /status
    - Delegates complex tasks to specialists
    - Does NOT compete with specialized agents
    - Think of it as "first-line support"
+   - **NEVER modifies code or docs** - Always delegates to appropriate agent
 
 2. **code_developer owns EXECUTION**
-   - All code changes go through code_developer
-   - Creates PRs autonomously
+   - **ONLY agent that writes/modifies code**
+   - All code changes in coffee_maker/, tests/, scripts/ go through code_developer
+   - Creates PRs autonomously (does NOT wait for project_manager)
    - Verifies DoD during implementation
+   - Updates ROADMAP status (Planned → In Progress → Complete)
    - Does NOT monitor project health (that's project_manager)
+   - Does NOT make strategic ROADMAP decisions (that's project_manager)
 
-3. **project_manager owns OVERSIGHT**
+3. **project_manager owns OVERSIGHT & DOCUMENTATION**
+   - **ONLY agent that modifies docs/ directory**
+   - Creates and updates technical specs (docs/PRIORITY_*_TECHNICAL_SPEC.md)
+   - Manages .claude/agents/ (agent definitions)
+   - Makes strategic ROADMAP decisions (priorities, planning)
    - Monitors GitHub (PRs, issues, CI)
-   - Verifies completed work (post-implementation)
-   - Makes strategic ROADMAP decisions
+   - Verifies completed work (post-implementation, when user requests)
    - Warns users about blockers
    - Does NOT create PRs (that's code_developer)
+   - Does NOT write implementation code (that's code_developer)
 
 4. **Specialized agents own their domain**
-   - code-searcher: Code analysis
-   - ux-design-expert: Design
-   - memory-bank-synchronizer: Documentation
+   - code-searcher: Code analysis (READ-ONLY)
+   - ux-design-expert: Design decisions (provides specs, doesn't implement)
+   - memory-bank-synchronizer: Documentation sync (updates .claude/CLAUDE.md)
 
 ### When in Doubt
 
@@ -310,7 +335,37 @@ Is it doc sync? → memory-bank-synchronizer
 
 ### Examples
 
-**✅ Correct Usage**:
+**✅ Correct Usage - Code Changes**:
+```
+User: "Fix the bug in roadmap_cli.py"
+→ code_developer (ALL code changes)
+
+User: "Implement feature X from PRIORITY 12"
+→ code_developer (implementation)
+
+User: "Add tests for the authentication module"
+→ code_developer (test code)
+
+User: "Update pyproject.toml to add a new dependency"
+→ code_developer (configuration files)
+```
+
+**✅ Correct Usage - Documentation**:
+```
+User: "Create a technical spec for PRIORITY 15"
+→ project_manager (owns docs/ directory)
+
+User: "Update the ROADMAP with new priorities"
+→ project_manager (strategic ROADMAP management)
+
+User: "Add a new agent definition"
+→ project_manager (owns .claude/agents/)
+
+User: "Update CLAUDE.md with new architecture"
+→ project_manager or memory-bank-synchronizer
+```
+
+**✅ Correct Usage - Delegation**:
 ```
 User: "Where is authentication implemented?"
 → code-searcher (complex code analysis)
@@ -321,23 +376,48 @@ User: "What's our PR status?"
 User: "Design a dashboard"
 → ux-design-expert (design)
 
-User: "Implement feature X"
-→ code_developer (implementation)
+User asks assistant: "Implement feature X"
+→ assistant delegates to code_developer
 ```
 
-**❌ Incorrect Usage**:
+**❌ Incorrect Usage - Don't Do This**:
 ```
-assistant tries to verify DoD with Puppeteer
-→ NO! Use project_manager for verification
+assistant tries to edit code
+→ NO! code_developer owns ALL code changes
+
+assistant tries to update ROADMAP.md
+→ NO! project_manager owns docs/ directory
+
+project_manager tries to modify coffee_maker/cli/roadmap_cli.py
+→ NO! code_developer owns coffee_maker/ directory
+
+code_developer tries to create technical specs in docs/
+→ NO! project_manager owns docs/ directory
 
 project_manager tries to create a PR
-→ NO! code_developer creates PRs
-
-assistant tries to edit code
-→ NO! code_developer owns all code changes
+→ NO! code_developer creates PRs autonomously
 
 code_developer tries to monitor all PRs
 → NO! project_manager monitors project health
+
+assistant tries to make strategic ROADMAP decisions
+→ NO! project_manager makes strategic decisions
+
+code_developer tries to design UI layouts
+→ NO! ux-design-expert makes design decisions
+```
+
+**🎯 Correct Delegation Flow**:
+```
+User to assistant: "Fix bug in CLI and update the docs"
+
+assistant: "This requires two agents:
+1. code_developer - Fix the bug in CLI (code changes)
+2. project_manager - Update documentation (docs/ directory)
+
+Let me delegate appropriately..."
+
+[assistant creates tasks for both agents, does NOT implement directly]
 ```
 
 ---

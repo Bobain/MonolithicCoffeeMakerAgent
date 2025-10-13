@@ -265,6 +265,8 @@ The `code_developer` daemon is the heart of the autonomous development system.
 
 ### Agent Hierarchy and Ownership
 
+**CRITICAL**: Each agent has EXCLUSIVE ownership of specific files/directories to prevent conflicts.
+
 ```
 ┌───────────────────────────────────────────────────────────────┐
 │                      Agent Ecosystem                           │
@@ -276,7 +278,8 @@ The `code_developer` daemon is the heart of the autonomous development system.
 │  │  • First-line user support                              │  │
 │  │  • Quick questions and simple debugging                 │  │
 │  │  • Delegates complex tasks to specialists              │  │
-│  │  • READ-ONLY access to code and ROADMAP                │  │
+│  │  • READ-ONLY access to ALL files                       │  │
+│  │  • NEVER modifies code or docs                         │  │
 │  │                                                           │  │
 │  │  Delegates to:                                           │  │
 │  │    ↓                ↓               ↓                    │  │
@@ -287,15 +290,25 @@ The `code_developer` daemon is the heart of the autonomous development system.
 │  │             │  │manager      │  │                 │       │
 │  │EXECUTION    │  │OVERSIGHT    │  │ANALYSIS         │       │
 │  │             │  │             │  │                 │       │
-│  │• All code   │  │• GitHub     │  │• Deep code      │       │
-│  │  changes    │  │  monitoring │  │  analysis       │       │
-│  │• Create PRs │  │• Verify DoD │  │• Pattern        │       │
-│  │• Verify DoD │  │  (post-impl)│  │  detection      │       │
-│  │  during     │  │• Strategic  │  │• Security       │       │
-│  │  implement. │  │  ROADMAP    │  │  analysis       │       │
-│  │• Puppeteer  │  │  updates    │  │• Forensics      │       │
-│  │  during     │  │• Warn on    │  │                 │       │
-│  │  implement. │  │  blockers   │  │                 │       │
+│  │OWNS:        │  │OWNS:        │  │OWNS:            │       │
+│  │• coffee_    │  │• docs/      │  │• READ-ONLY      │       │
+│  │  maker/     │  │• .claude/   │  │                 │       │
+│  │• tests/     │  │  agents/    │  │DOES:            │       │
+│  │• scripts/   │  │• .claude/   │  │• Deep code      │       │
+│  │• pyproject. │  │  commands/  │  │  analysis       │       │
+│  │  toml       │  │             │  │• Pattern        │       │
+│  │             │  │DOES:        │  │  detection      │       │
+│  │DOES:        │  │• GitHub     │  │• Security       │       │
+│  │• All code   │  │  monitoring │  │  analysis       │       │
+│  │  changes    │  │• Verify DoD │  │• Forensics      │       │
+│  │• Create PRs │  │  (post-impl)│  │                 │       │
+│  │• Verify DoD │  │• Strategic  │  │                 │       │
+│  │  during     │  │  ROADMAP    │  │                 │       │
+│  │  implement. │  │• Tech specs │  │                 │       │
+│  │• Puppeteer  │  │• Agent      │  │                 │       │
+│  │  during     │  │  configs    │  │                 │       │
+│  │  implement. │  │• Warn on    │  │                 │       │
+│  │             │  │  blockers   │  │                 │       │
 │  └─────────────┘  └─────────────┘  └─────────────────┘       │
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐  │
@@ -304,14 +317,66 @@ The `code_developer` daemon is the heart of the autonomous development system.
 │  │              │  │              │  │                    │  │
 │  │DESIGN        │  │DOCUMENTATION │  │                    │  │
 │  │              │  │              │  │                    │  │
-│  │• All UI/UX   │  │• Keep        │  │• Domain-specific   │  │
-│  │  decisions   │  │  CLAUDE.md   │  │  tasks             │  │
-│  │• Tailwind CSS│  │  files       │  │                    │  │
-│  │• Highcharts  │  │  current     │  │                    │  │
-│  │• Design      │  │• Sync docs   │  │                    │  │
-│  │  systems     │  │  with code   │  │                    │  │
+│  │OWNS:         │  │OWNS:         │  │OWNS:               │  │
+│  │• (provides   │  │• .claude/    │  │• Domain-specific   │  │
+│  │   specs only)│  │  CLAUDE.md   │  │  files             │  │
+│  │              │  │  (shared)    │  │                    │  │
+│  │DOES:         │  │              │  │DOES:               │  │
+│  │• All UI/UX   │  │DOES:         │  │• Domain-specific   │  │
+│  │  decisions   │  │• Keep        │  │  tasks             │  │
+│  │• Tailwind CSS│  │  CLAUDE.md   │  │                    │  │
+│  │• Highcharts  │  │  files       │  │                    │  │
+│  │• Design      │  │  current     │  │                    │  │
+│  │  systems     │  │• Sync docs   │  │                    │  │
+│  │              │  │  with code   │  │                    │  │
 │  └──────────────┘  └──────────────┘  └────────────────────┘  │
 └───────────────────────────────────────────────────────────────┘
+```
+
+### File Ownership Matrix
+
+**CRITICAL**: These rules prevent conflicts and ensure clear responsibility.
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                     File/Directory Ownership                        │
+├──────────────────────┬──────────────┬──────────────────────────────┤
+│ File/Directory       │ Owner        │ Can Modify?                  │
+├──────────────────────┼──────────────┼──────────────────────────────┤
+│ coffee_maker/        │ code_        │ YES - All implementation     │
+│                      │ developer    │ (others READ-ONLY)           │
+├──────────────────────┼──────────────┼──────────────────────────────┤
+│ tests/               │ code_        │ YES - All test code          │
+│                      │ developer    │ (others READ-ONLY)           │
+├──────────────────────┼──────────────┼──────────────────────────────┤
+│ scripts/             │ code_        │ YES - Utility scripts        │
+│                      │ developer    │ (others READ-ONLY)           │
+├──────────────────────┼──────────────┼──────────────────────────────┤
+│ pyproject.toml       │ code_        │ YES - Dependency mgmt        │
+│                      │ developer    │ (others READ-ONLY)           │
+├──────────────────────┼──────────────┼──────────────────────────────┤
+│ docs/                │ project_     │ YES - Full control           │
+│                      │ manager      │ (others READ-ONLY)           │
+├──────────────────────┼──────────────┼──────────────────────────────┤
+│ docs/ROADMAP.md      │ project_     │ project_manager: Full        │
+│                      │ manager,     │ code_developer: Status only  │
+│                      │ code_        │ (others READ-ONLY)           │
+│                      │ developer    │                              │
+├──────────────────────┼──────────────┼──────────────────────────────┤
+│ docs/PRIORITY_*.md   │ project_     │ YES - Creates/updates specs  │
+│                      │ manager      │ (others READ-ONLY)           │
+├──────────────────────┼──────────────┼──────────────────────────────┤
+│ .claude/agents/      │ project_     │ YES - Agent configs          │
+│                      │ manager      │ (others READ-ONLY)           │
+├──────────────────────┼──────────────┼──────────────────────────────┤
+│ .claude/commands/    │ project_     │ YES - Prompt management      │
+│                      │ manager      │ (others READ-ONLY)           │
+├──────────────────────┼──────────────┼──────────────────────────────┤
+│ .claude/CLAUDE.md    │ project_     │ YES - Strategic updates      │
+│                      │ manager,     │ (code_developer READ-ONLY)   │
+│                      │ memory-bank- │                              │
+│                      │ synchronizer │                              │
+└──────────────────────┴──────────────┴──────────────────────────────┘
 ```
 
 ### Tool Ownership Matrix
@@ -364,6 +429,28 @@ The `code_developer` daemon is the heart of the autonomous development system.
 │                      │ synchronizer │                              │
 └──────────────────────┴──────────────┴──────────────────────────────┘
 ```
+
+### Agent Boundary Enforcement
+
+**Key Rules to Prevent Conflicts**:
+
+1. **code_developer NEVER modifies docs/** - Delegates to project_manager
+2. **project_manager NEVER modifies coffee_maker/** - Delegates to code_developer
+3. **assistant NEVER modifies ANY files** - Always delegates to appropriate agent
+4. **code_developer creates PRs** - project_manager does NOT create PRs
+5. **project_manager monitors GitHub** - code_developer focuses on implementation
+
+**Delegation Flow**:
+```
+User → assistant (triage) → specialized agent (execute)
+```
+
+**Anti-Patterns (DO NOT DO)**:
+- assistant editing code directly
+- project_manager implementing features
+- code_developer creating technical specs in docs/
+- Multiple agents modifying the same file
+- Agents competing for the same task
 
 ---
 
