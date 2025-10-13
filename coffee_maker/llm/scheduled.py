@@ -12,7 +12,7 @@ from langchain_core.language_models import BaseLLM, BaseChatModel
 from langchain_core.outputs import LLMResult
 from pydantic import ConfigDict
 
-from coffee_maker.langfuse_observe.strategies.scheduling import SchedulingStrategy
+from coffee_maker.llm.strategies.scheduling import SchedulingStrategy
 
 logger = logging.getLogger(__name__)
 

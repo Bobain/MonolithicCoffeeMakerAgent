@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 
-from coffee_maker.langfuse_observe.builder import LLMBuilder, SmartLLM
+from coffee_maker.llm.builder import LLMBuilder, SmartLLM
 
 
 class MockScheduledLLM:

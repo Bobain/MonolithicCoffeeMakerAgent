@@ -24,14 +24,14 @@ SQLite only (via stdlib sqlite3 module).
 
 Example:
     Create tables:
-    >>> from coffee_maker.langfuse_observe.analytics.models_sqlite import init_database
+    >>> from coffee_maker.observability.analytics.models_sqlite import init_database
     >>>
     >>> conn = init_database("llm_metrics.db")
     >>> conn.close()
 
     Query recent generations:
     >>> import sqlite3
-    >>> from coffee_maker.langfuse_observe.analytics.models_sqlite import Gener
+    >>> from coffee_maker.observability.analytics.models_sqlite import Gener
 
 ation
     >>>

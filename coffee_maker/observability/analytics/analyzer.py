@@ -9,7 +9,7 @@ from the exported Langfuse data stored in the local database.
 
 Example:
     Analyze LLM performance:
-    >>> from coffee_maker.langfuse_observe.analytics import PerformanceAnalyzer
+    >>> from coffee_maker.observability.analytics import PerformanceAnalyzer
     >>>
     >>> analyzer = PerformanceAnalyzer("sqlite:///llm_metrics.db")
     >>> perf = analyzer.get_llm_performance(days=7, model="openai/gpt-4o")
@@ -37,8 +37,8 @@ from sqlalchemy import create_engine, func
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
-from coffee_maker.langfuse_observe.analytics.models import Generation, Trace
-from coffee_maker.langfuse_observe.retry import with_retry
+from coffee_maker.observability.analytics.models import Generation, Trace
+from coffee_maker.observability.retry import with_retry
 
 logger = logging.getLogger(__name__)
 

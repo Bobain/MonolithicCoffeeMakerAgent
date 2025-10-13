@@ -5,7 +5,7 @@ from unittest import mock
 
 import pytest
 
-from coffee_maker.langfuse_observe.rate_limiter import RateLimitConfig, RateLimitTracker
+from coffee_maker.llm.rate_limiting.limiter import RateLimitConfig, RateLimitTracker
 
 
 class TestRateLimitConfig:

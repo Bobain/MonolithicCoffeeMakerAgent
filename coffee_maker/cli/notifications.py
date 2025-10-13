@@ -53,7 +53,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from coffee_maker.config import DATABASE_PATHS
-from coffee_maker.langfuse_observe.retry import with_retry
+from coffee_maker.observability.retry import with_retry
 
 logger = logging.getLogger(__name__)
 

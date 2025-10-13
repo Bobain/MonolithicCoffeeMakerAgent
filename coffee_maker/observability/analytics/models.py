@@ -43,14 +43,14 @@ Supports both SQLite (default) and PostgreSQL backends.
 Example:
     Create tables in SQLite:
     >>> from sqlalchemy import create_engine
-    >>> from coffee_maker.langfuse_observe.analytics.models import Base
+    >>> from coffee_maker.observability.analytics.models import Base
     >>>
     >>> engine = create_engine("sqlite:///llm_metrics.db")
     >>> Base.metadata.create_all(engine)
 
     Query recent generations:
     >>> from sqlalchemy.orm import Session
-    >>> from coffee_maker.langfuse_observe.analytics.models import Generation
+    >>> from coffee_maker.observability.analytics.models import Generation
     >>>
     >>> with Session(engine) as session:
     ...     recent = session.query(Generation).order_by(Generation.created_at.desc()).limit(10).all()

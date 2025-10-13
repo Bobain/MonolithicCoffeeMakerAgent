@@ -3,9 +3,9 @@
 import logging
 from typing import List, Optional, Tuple
 
-from coffee_maker.langfuse_observe.auto_picker_llm_refactored import AutoPickerLLMRefactored
-from coffee_maker.langfuse_observe.strategies.context import ContextStrategy
-from coffee_maker.langfuse_observe.strategies.fallback import FallbackStrategy, create_fallback_strategy
+from coffee_maker.llm.auto_picker import AutoPickerLLMRefactored
+from coffee_maker.llm.strategies.context import ContextStrategy
+from coffee_maker.llm.strategies.fallback import FallbackStrategy, create_fallback_strategy
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +52,8 @@ class LLMBuilder:
         """Enable cost tracking."""
         if cost_calculator is None:
             try:
-                from coffee_maker.langfuse_observe.cost_calculator import CostCalculator
-                from coffee_maker.langfuse_observe.llm_config import MODEL_CONFIGS
+                from coffee_maker.observability.cost_calculator import CostCalculator
+                from coffee_maker.llm.config import MODEL_CONFIGS
 
                 # Build pricing info from MODEL_CONFIGS
                 pricing_info = {}
@@ -115,7 +115,7 @@ class LLMBuilder:
             raise ValueError("Primary model not set. Call with_primary() first.")
 
         # Import here to avoid circular dependencies
-        from coffee_maker.langfuse_observe.auto_picker_llm_refactored import create_auto_picker_llm_refactored
+        from coffee_maker.llm.auto_picker import create_auto_picker_llm_refactored
 
         # Create fallback strategy if not custom
         if self._fallback_strategy is None:
@@ -153,7 +153,7 @@ class LLMBuilder:
             Dict mapping model names to configs
         """
         try:
-            from coffee_maker.langfuse_observe.llm_config import MODEL_CONFIGS
+            from coffee_maker.llm.config import MODEL_CONFIGS
 
             configs = {}
             # Add primary
@@ -179,7 +179,7 @@ class LLMBuilder:
             Dict mapping model names to costs per 1K tokens
         """
         try:
-            from coffee_maker.langfuse_observe.llm_config import MODEL_CONFIGS
+            from coffee_maker.llm.config import MODEL_CONFIGS
 
             costs = {}
             # Calculate average cost per 1K tokens (input + output) / 2

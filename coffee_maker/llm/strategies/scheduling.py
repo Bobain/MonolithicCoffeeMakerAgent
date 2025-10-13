@@ -114,7 +114,7 @@ class ProactiveRateLimitScheduler(SchedulingStrategy):
             max_retries: Maximum retry attempts after errors (default: 3)
             backoff_base: Exponential backoff multiplier (default: 2.0)
         """
-        from coffee_maker.langfuse_observe.rate_limiter import RateLimitTracker
+        from coffee_maker.llm.rate_limiting.limiter import RateLimitTracker
 
         if not isinstance(rate_tracker, RateLimitTracker):
             raise TypeError(f"rate_tracker must be RateLimitTracker, got {type(rate_tracker)}")

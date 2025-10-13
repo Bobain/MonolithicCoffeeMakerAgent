@@ -5,7 +5,7 @@ from unittest import mock
 
 import pytest
 
-from coffee_maker.langfuse_observe.strategies.retry import ExponentialBackoffRetry
+from coffee_maker.llm.strategies.retry import ExponentialBackoffRetry
 
 
 class TestExponentialBackoffRetry:

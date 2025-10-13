@@ -3,8 +3,8 @@
 import logging
 from typing import Optional
 
-from coffee_maker.langfuse_observe.llm_config import get_rate_limits_for_tier
-from coffee_maker.langfuse_observe.rate_limiter import RateLimitTracker
+from coffee_maker.llm.config import get_rate_limits_for_tier
+from coffee_maker.llm.rate_limiting.limiter import RateLimitTracker
 
 logger = logging.getLogger(__name__)
 

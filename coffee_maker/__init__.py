@@ -86,7 +86,7 @@ print(f"Cost: ${cost:.4f}")
 Built-in observability and monitoring:
 
 ```python
-from coffee_maker.langfuse_observe import LangfuseObserver
+from coffee_maker.observability import LangfuseObserver
 
 observer = LangfuseObserver(
     project_name="my-project",
@@ -198,7 +198,7 @@ llm = ScheduledLLM(
 
 ```python
 from coffee_maker.auto_picker_llm_refactored import AutoPickerLLM
-from coffee_maker.langfuse_observe import trace
+from coffee_maker.observability import trace
 
 @trace(name="story-generator")
 def generate_story(prompt):

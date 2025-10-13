@@ -64,13 +64,13 @@ Supports both SQLite (default, with WAL mode) and PostgreSQL backends.
 Example:
     Create all tables:
     >>> from sqlalchemy import create_engine
-    >>> from coffee_maker.langfuse_observe.analytics.db_schema import Base
+    >>> from coffee_maker.observability.analytics.db_schema import Base
     >>>
     >>> engine = create_engine("sqlite:///llm_warehouse.db")
     >>> Base.metadata.create_all(engine)
 
     Enable WAL mode for SQLite (multi-process safe):
-    >>> from coffee_maker.langfuse_observe.analytics.db_schema import enable_sqlite_wal
+    >>> from coffee_maker.observability.analytics.db_schema import enable_sqlite_wal
     >>> enable_sqlite_wal(engine)
 
     Setup with PostgreSQL:

@@ -12,7 +12,7 @@ from langfuse import observe
 from pydantic import ConfigDict
 
 from coffee_maker.config import ConfigManager
-from coffee_maker.langfuse_observe.llm import get_llm
+from coffee_maker.llm.factory import get_llm
 
 logger = logging.getLogger(__name__)
 

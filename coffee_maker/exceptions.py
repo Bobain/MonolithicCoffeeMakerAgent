@@ -149,7 +149,7 @@ class ResourceError(CoffeeMakerError):
 
 
 # Re-export resource-related exceptions from langfuse_observe
-from coffee_maker.langfuse_observe.exceptions import (  # noqa: E402
+from coffee_maker.observability.exceptions import (  # noqa: E402
     BudgetExceededError,
     QuotaExceededError,
     RateLimitExceededError,
@@ -202,7 +202,7 @@ class ModelError(CoffeeMakerError):
 
 
 # Re-export model exceptions
-from coffee_maker.langfuse_observe.exceptions import (  # noqa: E402
+from coffee_maker.observability.exceptions import (  # noqa: E402
     ContextLengthError,
     ModelNotAvailableError,
 )

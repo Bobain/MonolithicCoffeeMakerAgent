@@ -6,8 +6,8 @@ and provides a single source of truth for model configurations.
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from coffee_maker.langfuse_observe.rate_limiter import RateLimitConfig
-from coffee_maker.langfuse_observe.llm_providers import gemini, openai as openai_provider
+from coffee_maker.llm.rate_limiting.limiter import RateLimitConfig
+from coffee_maker.llm.providers import gemini, openai as openai_provider
 
 
 def _transform_provider_info_to_config(provider_name: str, models_info: Dict[str, Any]) -> Dict[str, Any]:

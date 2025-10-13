@@ -10,8 +10,8 @@ offline analysis, reporting, and visualization.
 
 Example:
     One-time export:
-    >>> from coffee_maker.langfuse_observe.analytics import LangfuseExporter
-    >>> from coffee_maker.langfuse_observe.analytics.config import ExportConfig
+    >>> from coffee_maker.observability.analytics import LangfuseExporter
+    >>> from coffee_maker.observability.analytics.config import ExportConfig
     >>>
     >>> config = ExportConfig.from_env()
     >>> exporter = LangfuseExporter(config)
@@ -32,9 +32,9 @@ from langfuse import Langfuse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from coffee_maker.langfuse_observe.analytics.config import ExportConfig
-from coffee_maker.langfuse_observe.analytics.models import Base, Generation, Span, Trace
-from coffee_maker.langfuse_observe.retry import RetryExhausted, with_retry
+from coffee_maker.observability.analytics.config import ExportConfig
+from coffee_maker.observability.analytics.models import Base, Generation, Span, Trace
+from coffee_maker.observability.retry import RetryExhausted, with_retry
 
 logger = logging.getLogger(__name__)
 

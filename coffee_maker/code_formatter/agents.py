@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 from langfuse import Langfuse
 
-from coffee_maker.langfuse_observe.agents import configure_llm
+from coffee_maker.observability.agents import configure_llm
 
 load_dotenv()
 
@@ -100,7 +100,7 @@ def create_react_formatter_agent(
     # agent = ReAct agent with less complex and tools to use
     from langchain.agents import create_react_agent
 
-    from coffee_maker.langfuse_observe.tools import (
+    from coffee_maker.observability.tools import (
         get_pr_modified_files,
         get_pr_file_content,
         post_suggestion_in_pr_review,
@@ -108,11 +108,11 @@ def create_react_formatter_agent(
     )
 
     # Wrap in AutoPickerLLMRefactored if requested
-    from coffee_maker.langfuse_observe.auto_picker_llm_refactored import AutoPickerLLMRefactored
+    from coffee_maker.llm.auto_picker import AutoPickerLLMRefactored
 
     if use_auto_picker and not isinstance(llm, AutoPickerLLMRefactored):
         logger.info("Wrapping LLM in AutoPickerLLMRefactored for rate limiting and fallback")
-        from coffee_maker.langfuse_observe.create_auto_picker import create_auto_picker_for_react_agent
+        # DEPRECATED: from coffee_maker.langfuse_observe.create_auto_picker import create_auto_picker_for_react_agent
 
         llm = create_auto_picker_for_react_agent(tier=tier, streaming=True)
 
@@ -121,7 +121,7 @@ def create_react_formatter_agent(
 
     # Add LLM tools if requested
     if include_llm_tools:
-        from coffee_maker.langfuse_observe.llm_tools import create_llm_tools
+        from coffee_maker.llm.tools import create_llm_tools
 
         llm_tools = create_llm_tools(tier=tier)
         tools = tools + list(llm_tools)

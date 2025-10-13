@@ -4,8 +4,8 @@ from unittest import mock
 
 import pytest
 
-from coffee_maker.langfuse_observe.auto_picker_llm import AutoPickerLLM
-from coffee_maker.langfuse_observe.rate_limiter import RateLimitConfig, RateLimitTracker
+# DEPRECATED: from coffee_maker.langfuse_observe.auto_picker_llm import AutoPickerLLM
+from coffee_maker.llm.rate_limiting.limiter import RateLimitConfig, RateLimitTracker
 
 
 class MockLLM:

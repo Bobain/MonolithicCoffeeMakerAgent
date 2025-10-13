@@ -2,12 +2,12 @@
 
 import pytest
 
-from coffee_maker.langfuse_observe.strategies.context import (
+from coffee_maker.llm.strategies.context import (
     LargeContextFallbackStrategy,
     NoContextCheckStrategy,
     create_context_strategy,
 )
-from coffee_maker.langfuse_observe.token_estimator import estimate_tokens
+from coffee_maker.utils.token_estimator import estimate_tokens
 
 
 class TestLargeContextFallbackStrategy:

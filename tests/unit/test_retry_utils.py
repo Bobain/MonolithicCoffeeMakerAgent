@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from coffee_maker.langfuse_observe.retry import (
+from coffee_maker.observability.retry import (
     RetryConfig,
     RetryExhausted,
     with_conditional_retry,

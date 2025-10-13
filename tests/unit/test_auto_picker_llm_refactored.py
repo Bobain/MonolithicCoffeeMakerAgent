@@ -11,7 +11,7 @@ from unittest import mock
 
 import pytest
 
-from coffee_maker.langfuse_observe.auto_picker_llm_refactored import (
+from coffee_maker.llm.auto_picker import (
     AutoPickerLLMRefactored,
     create_auto_picker_llm_refactored,
 )
