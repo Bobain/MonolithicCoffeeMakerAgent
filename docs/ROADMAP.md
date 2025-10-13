@@ -109,70 +109,55 @@ PRIORITY 2: Project Manager with UI ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
-**Next Priority**: 🚨 **US-021 - Code Refactoring & Technical Debt Reduction** (HIGHEST PRIORITY - User Requested)
+**Next Priority**: 🚨 **US-023 - Clear, Intuitive Module Hierarchy** (HIGHEST PRIORITY - Continuation of US-021)
 
-**Current Focus**: Systematic refactoring to improve code quality, maintainability, and reduce technical debt across the entire codebase. This is the foundation for all future development.
+**Current Focus**: Restructure the module hierarchy to make the codebase more intuitive and library-friendly. This completes the architecture cleanup deferred from US-021 Phase 2.4.
 
-**Status**: 📝 **READY TO IMPLEMENT** (Spec approved 2025-10-10)
+**Status**: 📝 **READY TO IMPLEMENT** (Architecture review complete)
 
-**Goal**: Build intelligent classification system that automatically detects whether user input is a feature request, methodology change, or both, and routes information to the correct documents
+**Goal**: Rename langfuse_observe/ to observability/, create new llm/ package, and move 33 misplaced files to logical locations based on their actual purpose
 
 **Why This Is Critical**:
-Currently PM doesn't consistently identify what type of information users are providing:
-- Feature requests may be documented as methodology changes (or vice versa)
-- Information gets lost or placed in wrong documents
-- No clear process for handling hybrid requests (both feature + methodology)
-- PM doesn't ask clarifying questions when ambiguous
+The current module structure is confusing for developers:
+- `langfuse_observe/` contains mostly non-observability code (87% of files don't use @observe)
+- Core LLM abstractions are buried in observability directory
+- Duplicate exception definitions
+- No clear entry points for library users
+- Makes the codebase harder to understand and maintain
 
-**User Story**:
-> "As a project manager, I need to be able to interpret the user's context: what part of what he is saying are user stories, and what parts concerns the collaboration methodologies, or both. I can ask him to make sure I understood as I need to get sure which documents should be updated (roadmap, collaboration methodology, etc)"
+**Implementation Plan** (3-4 days):
 
-**Implementation Plan** (3-5 days):
+**Phase 1: Planning & Documentation** (0.5 days)
+- [x] Architecture review complete (docs/LANGCHAIN_OBSERVE_ARCHITECTURE_REVIEW.md)
+- [ ] Create migration plan document (docs/US-023_MIGRATION_PLAN.md)
+- [ ] Document new module guidelines (docs/MODULE_ORGANIZATION_GUIDE.md)
+- [ ] Get user approval for structure
 
-**Phase 1: Core Classification Engine** (Day 1 - 6 hours)
-- [ ] Create `RequestClassifier` class with keyword matching
-- [ ] Implement pattern detection (imperative vs prescriptive mood)
-- [ ] Build confidence scoring algorithm
-- [ ] Write comprehensive unit tests (>90% coverage)
-- [ ] Test 20+ classification scenarios
+**Phase 2: Core Restructuring** (2 days)
+- [ ] Create new coffee_maker/llm/ directory
+- [ ] Move 33 misplaced files from langfuse_observe/ to correct locations
+- [ ] Rename langfuse_observe/ → observability/
+- [ ] Keep only @observe-decorated files in observability/
+- [ ] Consolidate exceptions into single coffee_maker/exceptions.py
+- [ ] Create clear __init__.py exports for each package
 
-**Phase 2: AI Service Integration** (Day 2 - 4 hours)
-- [ ] Integrate classifier into `ai_service.py`
-- [ ] Add clarification prompt generation (A/B/C format)
-- [ ] Implement routing logic based on classification
-- [ ] Add explicit document update statements
-- [ ] Write integration tests
+**Phase 3: Update Imports & Tests** (1 day)
+- [ ] Update all import statements (estimated 100+ files)
+- [ ] Run full test suite to verify no breakage
+- [ ] Update documentation to reflect new structure
+- [ ] Create migration guide for external users
 
-**Phase 3: Document Routing** (Day 3 - 6 hours)
-- [ ] Create `DocumentRouter` class
-- [ ] Implement ROADMAP.md update logic
-- [ ] Implement COLLABORATION_METHODOLOGY.md update logic
-- [ ] Add format validation
-- [ ] Handle hybrid requests (update both docs)
-
-**Phase 4: Testing & Documentation** (Day 4-5 - 8 hours)
-- [ ] End-to-end testing with real documents
-- [ ] Test all edge cases
-- [ ] Update documentation (4 docs)
-- [ ] User validation with 10+ test inputs
-- [ ] Mark US-014 complete
-
-**Success Criteria** (19 acceptance criteria from US-014):
-
-**Detection & Classification**:
-- [ ] PM analyzes user input to detect type: feature, methodology, or both
-- [ ] PM uses contextual clues (keywords, phrasing, intent) to classify
-- [ ] PM correctly identifies ambiguous requests requiring clarification
-
-**Clarifying Questions**:
-- [ ] When ambiguous, PM asks: "Is this a feature to build, or a process change?"
-- [ ] PM presents options clearly (A/B/C format)
-- [ ] PM explains why question matters (which docs get updated)
-- [ ] User can respond naturally, PM interprets the response
+**Success Criteria**:
+- [ ] Clear module hierarchy that reflects actual purpose
+- [ ] All observability code in observability/ directory
+- [ ] All LLM abstractions in llm/ directory
+- [ ] No duplicate exception definitions
+- [ ] All tests passing
+- [ ] Documentation updated
 
 ## 🚨 US-021 - Code Refactoring & Technical Debt Reduction (HIGHEST PRIORITY)
 
-**Status**: 🔄 **IN PROGRESS** - Phase 0-2 Complete, Phase 3 Started (2025-10-12)
+**Status**: ✅ **COMPLETE** - All Phases (0-4) Complete (2025-10-13)
 
 **Progress Update** (2025-10-12):
 - ✅ Type hints: 100% coverage achieved (up from 68%)
