@@ -17,6 +17,7 @@ from coffee_maker.autonomous.ace.models import (
     Playbook,
     PlaybookBullet,
 )
+from coffee_maker.autonomous.ace.reflector import ACEReflector
 
 __all__ = [
     "ExecutionTrace",
@@ -27,4 +28,5 @@ __all__ = [
     "Playbook",
     "PlaybookBullet",
     "ConsolidatedInsight",
+    "ACEReflector",
 ]
