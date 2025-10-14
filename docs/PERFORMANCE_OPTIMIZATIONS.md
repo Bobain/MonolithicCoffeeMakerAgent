@@ -30,7 +30,7 @@ Speedup:     783x faster
 
 **Usage**:
 ```python
-parser = RoadmapParser("docs/ROADMAP.md")
+parser = RoadmapParser("docs/roadmap/ROADMAP.md")
 
 # First call - parses file
 priorities = parser.get_priorities()  # ~8ms
@@ -235,7 +235,7 @@ import time
 
 def test_parser_performance():
     """Ensure parser caching provides speedup."""
-    parser = RoadmapParser("docs/ROADMAP.md")
+    parser = RoadmapParser("docs/roadmap/ROADMAP.md")
 
     # First call
     start = time.time()

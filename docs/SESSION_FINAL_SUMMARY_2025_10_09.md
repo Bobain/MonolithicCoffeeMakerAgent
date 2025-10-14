@@ -50,7 +50,7 @@
 README.md                                         | 104 lines modified
 docs/ADR_001_DATABASE_SYNC_STRATEGY.md            | 431 lines (new)
 docs/PRIORITY_1.5_DATABASE_SYNC_DESIGN.md         |  64 lines updated
-docs/ROADMAP.md                                   |  68 lines updated
+docs/roadmap/ROADMAP.md                                   |  68 lines updated
 docs/SESSION_SUMMARY_2025_10_09_ROADMAP_UPDATE.md | 232 lines (new)
 run_dev_daemon.py                                 | 178 lines simplified
 ```

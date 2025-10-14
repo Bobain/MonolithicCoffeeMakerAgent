@@ -43,7 +43,7 @@ class SpecManagerMixin:
     Example:
         >>> class DevDaemon(SpecManagerMixin):
         ...     def __init__(self):
-        ...         self.roadmap_path = Path("docs/ROADMAP.md")
+        ...         self.roadmap_path = Path("docs/roadmap/ROADMAP.md")
         ...         self.claude = ClaudeAPI()
         ...         self.git = GitManager()
         >>> daemon = DevDaemon()

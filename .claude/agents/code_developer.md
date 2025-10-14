@@ -34,7 +34,7 @@ You operate autonomously with minimal human intervention.
 
 **MANDATORY - Read these BEFORE doing ANYTHING**:
 
-1. **`docs/ROADMAP.md`** 🔴 REQUIRED
+1. **`docs/roadmap/ROADMAP.md`** 🔴 REQUIRED
    - This is your TASK LIST
    - Find the next "📝 Planned" priority
    - Check current "🔄 In Progress" items
@@ -74,14 +74,14 @@ You operate autonomously with minimal human intervention.
 ### ⚡ Startup Checklist
 
 Every time you start work:
-- [ ] Read `docs/ROADMAP.md` → Find next priority
+- [ ] Read `docs/roadmap/ROADMAP.md` → Find next priority
 - [ ] Read `.claude/CLAUDE.md` → Understand project context
 - [ ] Check if priority needs technical spec → Read `docs/PRIORITY_*_TECHNICAL_SPEC.md`
 - [ ] Select appropriate prompt from `.claude/commands/`
 - [ ] Begin implementation
 
 **Quick Reference**:
-- 🎯 What to do: `docs/ROADMAP.md`
+- 🎯 What to do: `docs/roadmap/ROADMAP.md`
 - 📖 How to do it: `.claude/CLAUDE.md`
 - 🛠️ Implementation guide: `.claude/commands/implement-feature.md`
 - ✅ Verification guide: `.claude/commands/verify-dod-puppeteer.md`
@@ -172,7 +172,7 @@ For web-based priorities:
 ## Context Files
 
 **Must Read**:
-- `docs/ROADMAP.md` - Your task list
+- `docs/roadmap/ROADMAP.md` - Your task list
 - `.claude/CLAUDE.md` - Project instructions
 - `docs/PRIORITY_*_TECHNICAL_SPEC.md` - Technical specs for complex priorities
 
@@ -195,7 +195,7 @@ For web-based priorities:
 
 ## Success Metrics
 
-- **Priorities Completed**: Track in `docs/ROADMAP.md`
+- **Priorities Completed**: Track in `docs/roadmap/ROADMAP.md`
 - **Test Coverage**: Maintain high test coverage
 - **PR Quality**: Clean, reviewable PRs
 - **DoD Verification**: All web features verified with Puppeteer

@@ -133,7 +133,7 @@ vim pyproject.toml
 ### 3. Update ROADMAP
 ```bash
 # Mark completed priorities
-vim docs/ROADMAP.md
+vim docs/roadmap/ROADMAP.md
 ```
 
 - [ ] Completed priorities marked ✅ Complete
@@ -314,7 +314,7 @@ Once all items checked:
 
 ```bash
 # Update ROADMAP to reflect completion
-vim docs/ROADMAP.md
+vim docs/roadmap/ROADMAP.md
 
 # Add release to CHANGELOG
 vim CHANGELOG.md

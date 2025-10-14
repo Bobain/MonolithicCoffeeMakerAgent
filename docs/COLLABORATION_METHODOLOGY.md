@@ -614,7 +614,7 @@ This causes:
   "agent": "project_manager",
   "pid": 12345,
   "start_time": "2025-10-11T10:30:00Z",
-  "files": ["docs/ROADMAP.md"],
+  "files": ["docs/roadmap/ROADMAP.md"],
   "lock_type": "write"
 }
 ```
@@ -709,7 +709,7 @@ When conflicts are unavoidable, provide clear steps:
 ```
 ⚠️ MERGE CONFLICT DETECTED
 
-File: docs/ROADMAP.md
+File: docs/roadmap/ROADMAP.md
 Conflict: Both you and code_developer edited US-022
 
 Your version:
@@ -2157,7 +2157,7 @@ notif_service.create_notification(
 
 ### 4.3 Communication via Shared Artifacts
 
-**Primary Artifact**: `docs/ROADMAP.md`
+**Primary Artifact**: `docs/roadmap/ROADMAP.md`
 
 **When to Use**:
 - Documenting priorities and their status
@@ -2291,7 +2291,7 @@ notif_service.create_notification(
 - ✅ **Before** moving to next topic
 
 **Where to Document**:
-- **Primary**: `docs/ROADMAP.md` (single source of truth)
+- **Primary**: `docs/roadmap/ROADMAP.md` (single source of truth)
 - **Secondary**: Technical specs, ADRs (for detailed design decisions)
 
 **Example**:
@@ -2566,7 +2566,7 @@ PM: "Done! Added after the process management feature in the roadmap."
 
 **Implementation Status**:
 - 📝 **Planned** (US-012, US-013)
-- See `docs/ROADMAP.md` for complete specification
+- See `docs/roadmap/ROADMAP.md` for complete specification
 - Estimated: 12-17 hours total implementation time
 
 ---
@@ -2784,7 +2784,7 @@ Without synchronization, the daemon works with **stale roadmap data** and may:
 1. git fetch origin roadmap
 2. git merge origin/roadmap       # Get latest FIRST!
 3. Modify ROADMAP.md locally
-4. git add docs/ROADMAP.md
+4. git add docs/roadmap/ROADMAP.md
 5. git commit -m "docs: update roadmap"
 6. git push origin HEAD:roadmap   # Push and merge to roadmap branch
 ```
@@ -2903,7 +2903,7 @@ daemon:
 
 **Implementation Status**:
 - 📝 **PLANNED** (US-022 created 2025-10-11)
-- See `docs/ROADMAP.md` for complete specification
+- See `docs/roadmap/ROADMAP.md` for complete specification
 - Estimated: 4 hours total implementation time
 
 **User Story Reference**: US-022
@@ -3168,7 +3168,7 @@ PM: [Next time user checks in]
 
 **Implementation Status**:
 - 📝 **PLANNED** (PRIORITY 2.11 created 2025-10-11)
-- See `docs/ROADMAP.md` for complete specification
+- See `docs/roadmap/ROADMAP.md` for complete specification
 - High priority for implementation
 
 **User Story Reference**: PRIORITY 2.11
@@ -3481,7 +3481,7 @@ PM documents decision and informs developer
 
 | Tool | Purpose | Owner | Update Frequency |
 |------|---------|-------|------------------|
-| `docs/ROADMAP.md` | Single source of truth for priorities | PM | Real-time (every decision) |
+| `docs/roadmap/ROADMAP.md` | Single source of truth for priorities | PM | Real-time (every decision) |
 | `project-manager chat` | Interactive communication (User ↔ PM) | PM | During chat session |
 | `data/notifications.db` | Async communication (PM ↔ Developer) | Developer | Continuous (polling) |
 | Technical Specs (`docs/US-XXX_TECHNICAL_SPEC.md`) | Detailed implementation plans | PM | Before implementation |
@@ -3692,12 +3692,12 @@ To avoid CLI nesting, we need to use API mode.
 
 #### Problem
 
-GitHub has a dedicated `roadmap` branch that must always reflect the current state of `docs/ROADMAP.md` and `docs/COLLABORATION_METHODOLOGY.md`. Team members (project_manager, code_developer, assistant) need to update this branch frequently, but manual PR process creates overhead.
+GitHub has a dedicated `roadmap` branch that must always reflect the current state of `docs/roadmap/ROADMAP.md` and `docs/COLLABORATION_METHODOLOGY.md`. Team members (project_manager, code_developer, assistant) need to update this branch frequently, but manual PR process creates overhead.
 
 #### When To Use This Process
 
 ✅ **ALWAYS use this automated merge process when updating**:
-- `docs/ROADMAP.md` - Single source of truth for priorities
+- `docs/roadmap/ROADMAP.md` - Single source of truth for priorities
 - `docs/COLLABORATION_METHODOLOGY.md` - Team processes and methodology
 - `docs/*.md` - Any documentation files
 - Changes made by project_manager agent
@@ -3749,7 +3749,7 @@ poetry add PyGithub
 ```bash
 # After making roadmap changes on a feature branch:
 git checkout -b feature/roadmap-update-$(date +%Y%m%d-%H%M%S)
-git add docs/ROADMAP.md docs/COLLABORATION_METHODOLOGY.md
+git add docs/roadmap/ROADMAP.md docs/COLLABORATION_METHODOLOGY.md
 git commit -m "docs: Update roadmap with latest priorities"
 git push -u origin HEAD
 
@@ -3838,7 +3838,7 @@ def save_and_update_main(self):
 
     # Commit and push
     subprocess.run(["git", "checkout", "-b", branch])
-    subprocess.run(["git", "add", "docs/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"])
+    subprocess.run(["git", "add", "docs/roadmap/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"])
     subprocess.run(["git", "commit", "-m", "docs: Update roadmap"])
     subprocess.run(["git", "push", "-u", "origin", branch])
 
@@ -3911,7 +3911,7 @@ def sync_roadmap_from_github(self):
         # Update local roadmap file from remote branch
         # (without checking out the branch)
         subprocess.run(
-            ["git", "show", "origin/roadmap:docs/ROADMAP.md"],
+            ["git", "show", "origin/roadmap:docs/roadmap/ROADMAP.md"],
             stdout=open(self.roadmap_path, 'w'),
             check=True
         )
@@ -3930,7 +3930,7 @@ def update_roadmap_status(self, priority_name: str, new_status: str):
     # Use automated script to update roadmap branch
     branch = f"roadmap-{priority_name.lower().replace(' ', '-')}-{new_status}"
     subprocess.run(["git", "checkout", "-b", branch])
-    subprocess.run(["git", "add", "docs/ROADMAP.md"])
+    subprocess.run(["git", "add", "docs/roadmap/ROADMAP.md"])
     subprocess.run(["git", "commit", "-m", f"docs: Mark {priority_name} as {new_status}"])
     subprocess.run(["git", "push", "-u", "origin", branch])
 
@@ -3966,7 +3966,7 @@ def help_update_roadmap(user_changes: str):
     branch = f"roadmap-user-update-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 
     subprocess.run(["git", "checkout", "-b", branch])
-    subprocess.run(["git", "add", "docs/ROADMAP.md"])
+    subprocess.run(["git", "add", "docs/roadmap/ROADMAP.md"])
     subprocess.run(["git", "commit", "-m", "docs: User-requested roadmap update"])
     subprocess.run(["git", "push", "-u", "origin", branch])
     subprocess.run(["python", "scripts/merge_roadmap_pr.py", branch, "--base", "roadmap"])
@@ -4023,11 +4023,11 @@ From github.com:Bobain/MonolithicCoffeeMakerAgent
  * branch            main       -> FETCH_HEAD
 Updating abc1234..def5678
 Fast-forward
- docs/ROADMAP.md | 5 +++--
+ docs/roadmap/ROADMAP.md | 5 +++--
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 # 3. View updated roadmap
-$ cat docs/ROADMAP.md
+$ cat docs/roadmap/ROADMAP.md
 # Shows US-020 marked as ✅ Complete
 
 # 4. Continue working on main

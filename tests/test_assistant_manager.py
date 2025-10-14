@@ -51,7 +51,7 @@ class TestAssistantManager(unittest.TestCase):
         self.assertEqual(len(manager.docs_cache), 5)  # 4 docs + git history
 
         # Verify each doc was cached
-        self.assertIn("docs/ROADMAP.md", manager.docs_cache)
+        self.assertIn("docs/roadmap/ROADMAP.md", manager.docs_cache)
         self.assertIn("docs/COLLABORATION_METHODOLOGY.md", manager.docs_cache)
         self.assertIn("docs/DOCUMENTATION_INDEX.md", manager.docs_cache)
         self.assertIn("docs/TUTORIALS.md", manager.docs_cache)
@@ -109,7 +109,7 @@ class TestAssistantManager(unittest.TestCase):
         # Mock _refresh_documentation
         manager._refresh_documentation = Mock()
         manager.docs_cache = {
-            "docs/ROADMAP.md": {"size": 1000},
+            "docs/roadmap/ROADMAP.md": {"size": 1000},
             "docs/TUTORIALS.md": {"size": 500},
         }
 
@@ -150,7 +150,7 @@ class TestAssistantManager(unittest.TestCase):
         manager.last_refresh = datetime.now() - timedelta(minutes=10)
         manager.is_running = True
         manager.docs_cache = {
-            "docs/ROADMAP.md": {"size": 1000, "modified": datetime.now(), "line_count": 100},
+            "docs/roadmap/ROADMAP.md": {"size": 1000, "modified": datetime.now(), "line_count": 100},
             "_git_history": {"count": 5},
         }
 

@@ -706,6 +706,192 @@ Create detailed spec: `docs/US-023_TECHNICAL_SPEC.md`
 
 ---
 
+## 📝 FUTURE PRIORITY: US-032 - ACE Framework Integration (Agentic Context Engineering)
+
+**Project**: **🤖 US-032 - ACE Framework Integration for Continuous Agent Improvement**
+
+**Status**: 📝 **PLANNED** (Documentation Complete, Implementation Pending)
+
+**Goal**: Implement the ACE (Agentic Context Engineering) framework to enable continuous agent improvement through dual execution observation, insight extraction, and playbook curation
+
+**User Story**:
+> "As the autonomous code_developer, I want to learn from my own execution patterns so that I can continuously improve my implementation strategies, avoid repeated mistakes, and build an evolving playbook of best practices without manual intervention."
+
+**Reference**: https://www.arxiv.org/abs/2510.04618
+
+**The Problem**:
+Currently, agents execute tasks but don't learn from their experiences. Every execution starts fresh without leveraging patterns from previous successes and failures. This leads to:
+- Repeated mistakes and failure modes
+- No accumulation of domain knowledge
+- Manual intervention needed to improve agent behavior
+- Inability to capture and reuse successful strategies
+
+**The Solution - ACE Framework**:
+Implement a three-component system:
+
+1. **Generator**: Wraps agent execution with dual observation
+   - Executes agent twice for same query (captures variance)
+   - Records external observation (git changes, files created)
+   - Records internal observation (reasoning, tools, decisions)
+   - Saves comprehensive traces to `docs/generator/traces/`
+
+2. **Reflector**: Analyzes traces and extracts insights
+   - Identifies success patterns and failure modes
+   - Extracts concrete, actionable insights (not generic advice)
+   - Assigns priority and confidence levels
+   - Saves delta items to `docs/reflector/deltas/`
+
+3. **Curator**: Maintains evolving playbooks
+   - Performs semantic de-duplication (cosine similarity)
+   - Merges/updates/adds insights based on evidence
+   - Prunes low-value or harmful bullets
+   - Tracks playbook health metrics
+   - Saves playbooks to `docs/curator/playbooks/`
+
+**Success Criteria**:
+- [ ] Generator captures dual execution traces for code_developer
+- [ ] Traces include external (git) and internal (reasoning) observations
+- [ ] Reflector extracts 3-5 actionable insights per trace
+- [ ] Curator performs semantic de-duplication (>0.85 similarity)
+- [ ] Playbook evolves after each execution
+- [ ] Scheduled tasks run daily (GitHub Actions)
+- [ ] Playbook health metrics tracked (effectiveness ratio, coverage)
+- [ ] No context collapse observed (avg content length maintained)
+- [ ] Integration tests pass for full ACE loop
+- [ ] Documentation complete (Guide + Technical Spec)
+
+**Deliverables**:
+- [ ] `coffee_maker/ace/models.py` - Data models (ExecutionTrace, DeltaItem, Playbook)
+- [ ] `coffee_maker/ace/generator.py` - Generator component
+- [ ] `coffee_maker/ace/reflector.py` - Reflector component
+- [ ] `coffee_maker/ace/curator.py` - Curator component
+- [ ] `coffee_maker/ace/embeddings.py` - Embedding utilities
+- [ ] `coffee_maker/ace/playbook_loader.py` - Playbook loading/saving
+- [ ] `coffee_maker/ace/cli.py` - CLI commands (ace-reflector, ace-curator)
+- [ ] `.github/workflows/ace-curation.yml` - Scheduled tasks
+- [ ] Integration with daemon.py (ACE wrapping)
+- [ ] Unit tests (>80% coverage)
+- [ ] Integration tests (end-to-end ACE loop)
+- [ ] ✅ `docs/ACE_FRAMEWORK_GUIDE.md` - User guide (COMPLETE)
+- [ ] ✅ `docs/PRIORITY_6_ACE_INTEGRATION_TECHNICAL_SPEC.md` - Technical spec (COMPLETE)
+- [ ] ✅ `.claude/commands/ace-generator-observe.md` - Generator prompt (COMPLETE)
+- [ ] ✅ `.claude/commands/ace-reflector-extract.md` - Reflector prompt (COMPLETE)
+- [ ] ✅ `.claude/commands/ace-curator-consolidate.md` - Curator prompt (COMPLETE)
+
+**Implementation Plan**:
+
+**Phase 1: Core Infrastructure (Week 1, 2-3 days)**
+- Create data models (ExecutionTrace, DeltaItem, PlaybookBullet, Playbook)
+- Set up file storage structure
+- Implement configuration system
+- Unit tests for models
+
+**Phase 2: Generator Implementation (Week 1-2, 3-4 days)**
+- Generator class with dual execution wrapper
+- External observation capture (git diff)
+- Internal observation capture (parse Claude response)
+- Trace saving to JSON
+- Integration with daemon.py
+- Unit tests for Generator
+
+**Phase 3: Reflector Implementation (Week 2, 3-4 days)**
+- Reflector class with trace loading
+- Insight extraction logic
+- Delta item generation
+- Priority and confidence assignment
+- CLI command (ace-reflector)
+- Unit tests for Reflector
+
+**Phase 4: Curator Implementation (Week 2-3, 4-5 days)**
+- Curator class with delta loading
+- Embedding utilities (OpenAI text-embedding-ada-002)
+- Semantic similarity calculation (cosine)
+- De-duplication logic
+- Playbook merging/updating/adding
+- Pruning logic
+- Health metrics calculation
+- CLI command (ace-curator)
+- Unit tests for Curator
+
+**Phase 5: Automation & Integration (Week 3, 2-3 days)**
+- GitHub Actions workflow (daily curation)
+- Daemon integration (enable/disable ACE)
+- Playbook loader integration
+- Documentation updates
+- Integration tests
+- End-to-end testing
+
+**Total Estimated Effort**: 2-3 weeks
+
+**Testing Strategy**:
+1. **Unit Tests**: Test each component in isolation
+   - Generator: Dual execution, observation capture, trace saving
+   - Reflector: Trace loading, insight extraction, delta generation
+   - Curator: De-duplication, playbook merging, pruning
+
+2. **Integration Tests**: Test full ACE loop
+   - Execute agent → Generate trace → Reflect → Curate → Verify playbook
+
+3. **Manual Testing**: Real-world validation
+   - Run daemon with ACE enabled
+   - Review traces, deltas, playbook
+   - Verify health metrics
+   - Check de-duplication works
+
+**Documentation**:
+- ✅ User Guide: `docs/ACE_FRAMEWORK_GUIDE.md` (COMPLETE)
+  - What is ACE, how it works, enabling for agents
+  - Reviewing traces, managing playbooks
+  - Curator health metrics, troubleshooting
+
+- ✅ Technical Spec: `docs/PRIORITY_6_ACE_INTEGRATION_TECHNICAL_SPEC.md` (COMPLETE)
+  - Architecture, data models, integration points
+  - File storage structure, configuration
+  - Implementation phases, testing strategy
+
+- ✅ Agent Definitions: `.claude/agents/*.md` (COMPLETE)
+  - generator.md, reflector.md, curator.md
+  - Complete system prompts and instructions
+
+- ✅ Prompt Templates: `.claude/commands/ace-*.md` (COMPLETE)
+  - ace-generator-observe.md
+  - ace-reflector-extract.md
+  - ace-curator-consolidate.md
+
+**Risks and Mitigations**:
+1. **Context Collapse**: Playbook bullets become too generic
+   - Mitigation: Enforce min content length, limit pruning rate, monitor metrics
+
+2. **Over-Deduplication**: Merging distinct insights
+   - Mitigation: Start with conservative threshold (0.85), monitor merge decisions
+
+3. **Trace Storage Growth**: Files accumulate rapidly
+   - Mitigation: Compress old traces, implement retention policy
+
+4. **Embedding API Costs**: Computing embeddings is expensive
+   - Mitigation: Cache embeddings, use cheaper model, batch requests
+
+5. **Dual Execution Overhead**: Doubles execution time and cost
+   - Mitigation: Make dual execution configurable, monitor costs
+
+**Priority**: Medium (Future enhancement, not blocking current work)
+
+**Estimated Effort**: 2-3 weeks
+
+**Dependencies**: None (can start anytime)
+
+**Why This Matters**:
+ACE framework enables true autonomous learning. The code_developer will:
+- Learn from its own successes and failures
+- Build an evolving library of best practices
+- Avoid repeated mistakes automatically
+- Improve implementation quality over time
+- Reduce need for manual intervention
+
+This is the key to long-term autonomous operation at scale.
+
+---
+
 ## ✅ RECENTLY COMPLETED: US-010 - Living Documentation & Tutorials
 
 **Project**: **📚 US-010 - Living Documentation & Tutorials**
@@ -1324,11 +1510,30 @@ Proceeding..."
 
 ---
 
-## 📝 PLANNED: US-015 - Estimation Metrics & Velocity Tracking
+## ✅ COMPLETE: US-015 - Estimation Metrics & Velocity Tracking
 
 **Project**: **📊 US-015 - Track Estimation Accuracy and Team Velocity for Better Planning**
 
-**Status**: 📝 **PLANNED** (2025-10-10 - Requirements defined)
+**Status**: ✅ **COMPLETE** (2025-10-13 - Core functionality delivered: Phases 1-3)
+
+**Completion Summary** (2025-10-13):
+- ✅ **Phase 1**: Database Schema & Data Capture (commit: ce9d641)
+  - Created `coffee_maker/cli/metrics.py` with MetricsDB class
+  - Implemented story_metrics and velocity_snapshots tables
+  - Full CRUD operations with retry logic and WAL mode
+- ✅ **Phase 2**: /status Integration (commit: 104dcfe)
+  - Updated developer-status command to show velocity (7-day period)
+  - Shows estimation accuracy (last 5 stories)
+  - Color-coded accuracy display (green ≥85%, yellow ≥70%, red <70%)
+- ✅ **Phase 3**: /metrics Command (commit: 5e762f7)
+  - Implemented comprehensive metrics command with filtering
+  - Shows all completed stories with estimated vs actual time
+  - Displays overall accuracy statistics
+  - Supports filtering by category, complexity, and time period
+- 📝 **Phase 4-6**: Deferred to future enhancement
+  - Estimation suggestions based on historical data
+  - Retrospective reports and trend visualization
+  - Full E2E testing and tutorial documentation
 
 **User Story**:
 > "As a project manager I want to have metrics stored about my estimations of time to deliver and the velocity of the team, so that I can adjust my estimations based on past errors or good estimations"
@@ -2224,7 +2429,7 @@ def summary(self, args: str = ""):
         /summary          - Show recent completions (last 14 days)
         /summary update   - Force regenerate summary now
     """
-    generator = StatusReportGenerator("docs/ROADMAP.md")
+    generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
     completions = generator.get_recent_completions(days=14)
     summary = generator.format_executive_summary(completions)
     self.display(summary)
@@ -2239,7 +2444,7 @@ def calendar(self, args: str = ""):
         /calendar update  - Force regenerate calendar now
     """
     count = int(args) if args.isdigit() else 3
-    generator = StatusReportGenerator("docs/ROADMAP.md")
+    generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
     deliverables = generator.get_upcoming_deliverables(count=count)
     calendar = generator.format_calendar_report(deliverables)
     self.display(calendar)
@@ -2264,7 +2469,7 @@ class AutoUpdateScheduler:
 
     def trigger_update(self):
         """Generate and send update to user"""
-        generator = StatusReportGenerator("docs/ROADMAP.md")
+        generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
         summary = generator.format_executive_summary(...)
         calendar = generator.format_calendar_report(...)
         self.notify_user(summary, calendar)
@@ -2900,7 +3105,7 @@ This reduces confusion, prevents duplicated effort, improves decision velocity, 
    def what_next(self, args: str = ""):
        """Get suggested next actions"""
        suggester = NextActionSuggester(
-           roadmap="docs/ROADMAP.md",
+           roadmap="docs/roadmap/ROADMAP.md",
            role=self.current_role
        )
        suggestions = suggester.get_suggestions(count=5)
@@ -3826,7 +4031,7 @@ class GitManager:
             raise ValueError(f"Branch must match pattern: feature/us-XXX or feature/priority-X.X")
 
         # Generate PR description
-        pr_generator = PRGenerator("docs/ROADMAP.md", branch)
+        pr_generator = PRGenerator("docs/roadmap/ROADMAP.md", branch)
         pr_body = pr_generator.generate_pr_description()
 
         # Create PR via GitHub CLI
@@ -3952,7 +4157,7 @@ Enables assistants to keep documentation up-to-date and provide accurate guidanc
 
 ### Related Documentation
 
-- User Story: [US-010 in ROADMAP.md](../docs/ROADMAP.md#us-010-living-documentation--tutorials)
+- User Story: [US-010 in ROADMAP.md](../docs/roadmap/ROADMAP.md#us-010-living-documentation--tutorials)
 - Tutorials: [TUTORIALS.md](../docs/TUTORIALS.md)
 - Documentation Index: [DOCUMENTATION_INDEX.md](../docs/DOCUMENTATION_INDEX.md)
 
@@ -5506,7 +5711,7 @@ notifications:
 
 # Roadmap settings
 roadmap:
-  path: "docs/ROADMAP.md"             # Roadmap file location
+  path: "docs/roadmap/ROADMAP.md"             # Roadmap file location
   backup_on_edit: true                # Create backup before edits
   validate_on_update: true            # Validate structure on updates
 
@@ -5763,7 +5968,7 @@ code-developer errors --last     # Last error only
 ```python
 while True:
     # 1. Read ROADMAP.md
-    roadmap = RoadmapParser("docs/ROADMAP.md")
+    roadmap = RoadmapParser("docs/roadmap/ROADMAP.md")
 
     # 2. Find next unimplemented project
     next_project = roadmap.get_next_unimplemented_project()
@@ -6061,7 +6266,7 @@ from roadmap_driven_dev import AutonomousDaemon
 
 # Initialize in any Python project
 daemon = AutonomousDaemon(
-    roadmap_path="docs/ROADMAP.md",
+    roadmap_path="docs/roadmap/ROADMAP.md",
     codebase_root=".",
     model="claude-sonnet-4",
     user_involvement="review_prs"  # or "approve_each_step", "full_autonomy"
@@ -9728,7 +9933,7 @@ class ClaudeCLIInterface:
 
 def __init__(
     self,
-    roadmap_path: str = "docs/ROADMAP.md",
+    roadmap_path: str = "docs/roadmap/ROADMAP.md",
     auto_approve: bool = False,
     create_prs: bool = True,
     sleep_interval: int = 30,
@@ -9907,7 +10112,7 @@ poetry run project-manager chat
 
 # project_manager auto-commits and pushes to roadmap-sync
 git checkout roadmap-sync
-git add docs/ROADMAP.md
+git add docs/roadmap/ROADMAP.md
 git commit -m "feat: Mark PRIORITY 3 complete"
 git push origin roadmap-sync
 ```
@@ -9924,7 +10129,7 @@ git pull origin roadmap-sync
 # Read updated ROADMAP
 # Implement next priority
 # Update ROADMAP status
-git add docs/ROADMAP.md
+git add docs/roadmap/ROADMAP.md
 git commit -m "feat: Update ROADMAP - PRIORITY 4 in progress"
 git push origin roadmap-sync
 
@@ -9941,16 +10146,16 @@ If both project_manager and code_developer modify ROADMAP simultaneously:
 ```bash
 # code_developer encounters merge conflict
 git pull origin roadmap-sync
-# CONFLICT in docs/ROADMAP.md
+# CONFLICT in docs/roadmap/ROADMAP.md
 
 # Auto-resolve: prefer project_manager changes (user authority)
-git checkout --theirs docs/ROADMAP.md
-git add docs/ROADMAP.md
+git checkout --theirs docs/roadmap/ROADMAP.md
+git add docs/roadmap/ROADMAP.md
 git commit -m "merge: Sync ROADMAP from project_manager"
 git push origin roadmap-sync
 
 # Or: Manual resolution if both changes are important
-# Edit docs/ROADMAP.md to combine changes
+# Edit docs/roadmap/ROADMAP.md to combine changes
 ```
 
 **Implementation in code_developer**:
@@ -10001,7 +10206,7 @@ class DevDaemon:
             self.git.run_command("git checkout roadmap-sync")
 
             # Stage ROADMAP changes
-            self.git.run_command("git add docs/ROADMAP.md")
+            self.git.run_command("git add docs/roadmap/ROADMAP.md")
 
             # Commit with clear message
             message = "feat: Update ROADMAP - daemon status sync"
@@ -10074,7 +10279,7 @@ This Git-based sync approach is **NOT just a prototype** - it's the recommended 
    - Update help text
 3. Test daemon initialization:
    - `poetry run code-developer --use-cli --help`
-   - `poetry run code-developer --use-cli --roadmap docs/ROADMAP.md`
+   - `poetry run code-developer --use-cli --roadmap docs/roadmap/ROADMAP.md`
 4. Integration testing:
    - Create test ROADMAP with simple priority
    - Run daemon with `--use-cli`
@@ -10108,7 +10313,7 @@ ls -la coffee_maker/autonomous/claude_cli_interface.py
 poetry run code-developer --help | grep "use-cli"
 
 # Check daemon can start
-poetry run code-developer --use-cli --no-pr --roadmap docs/ROADMAP.md
+poetry run code-developer --use-cli --no-pr --roadmap docs/roadmap/ROADMAP.md
 
 # Check documentation exists
 ls -la docs/CLAUDE_CLI_MODE.md
@@ -10202,7 +10407,7 @@ tests:
     type: "python"
     code: |
       from coffee_maker.cli.roadmap_editor import RoadmapEditor
-      editor = RoadmapEditor("docs/ROADMAP.md")
+      editor = RoadmapEditor("docs/roadmap/ROADMAP.md")
       summary = editor.get_roadmap_summary()
       assert "total" in summary
       assert "completed" in summary
@@ -10680,7 +10885,7 @@ Assistant Response:
 def analyze_roadmap():
     from coffee_maker.cli.roadmap_editor import RoadmapEditor
 
-    editor = RoadmapEditor("docs/ROADMAP.md")
+    editor = RoadmapEditor("docs/roadmap/ROADMAP.md")
     priorities = editor.list_priorities()
 
     return {
@@ -11034,7 +11239,7 @@ class ProcessManager:
 
         # Fallback: Check ROADMAP for in-progress priorities
         from coffee_maker.cli.roadmap_editor import RoadmapEditor
-        editor = RoadmapEditor("docs/ROADMAP.md")
+        editor = RoadmapEditor("docs/roadmap/ROADMAP.md")
         priorities = editor.list_priorities()
 
         for p in priorities:
@@ -12119,7 +12324,7 @@ Next time: Run `/analyze` to see updated health metrics!
 from coffee_maker.cli.roadmap_editor import RoadmapEditor
 
 # Daemon uses the same tool programmatically
-editor = RoadmapEditor(roadmap_path="docs/ROADMAP.md")
+editor = RoadmapEditor(roadmap_path="docs/roadmap/ROADMAP.md")
 
 # Update status when daemon completes a task
 editor.update_status(
@@ -12341,9 +12546,9 @@ class RoadmapSync:
 
 The `code_developer` daemon **MUST** operate with complete autonomy and relentless execution:
 
-1. **Always Resume Work**: On every session start, immediately resume work or progress on `docs/ROADMAP.md`
+1. **Always Resume Work**: On every session start, immediately resume work or progress on `docs/roadmap/ROADMAP.md`
 2. **Never Ask Permission**: The daemon is authorized to do **anything** during current and all future sessions
-3. **Continuous Execution**: Keep working on `docs/ROADMAP.md` without self-interruption until **all roadmap items are implemented**
+3. **Continuous Execution**: Keep working on `docs/roadmap/ROADMAP.md` without self-interruption until **all roadmap items are implemented**
 4. **No Human Intervention Required**: Do not pause for approval, confirmation, or user input unless explicitly required by a blocking decision
 5. **Relentless Progress**: If blocked, document the blocker and move to the next implementable priority
 6. **Self-Directed**: The daemon decides implementation details, approaches, and execution order within each priority
@@ -12351,7 +12556,7 @@ The `code_developer` daemon **MUST** operate with complete autonomy and relentle
 **Session Behavior**:
 ```
 START SESSION:
-  ├─ Read docs/ROADMAP.md
+  ├─ Read docs/roadmap/ROADMAP.md
   ├─ Find next planned/in-progress priority
   ├─ Implement it completely (code + tests + docs)
   ├─ Update ROADMAP.md status
@@ -12927,7 +13132,7 @@ from coffee_maker.autonomous.daemon import DevDaemon
 
 # Initialize autonomous development daemon
 daemon = DevDaemon(
-    roadmap_path="docs/ROADMAP.md",
+    roadmap_path="docs/roadmap/ROADMAP.md",
     auto_approve=True,
     create_prs=True,
     model="claude-sonnet-4"
@@ -12938,7 +13143,7 @@ daemon = DevDaemon(
 
 # Autonomous execution:
 # 1. Creates branch: feature/analytics-export-langfuse
-# 2. Prompts Claude: "Read docs/ROADMAP.md, implement PRIORITY 2"
+# 2. Prompts Claude: "Read docs/roadmap/ROADMAP.md, implement PRIORITY 2"
 # 3. Claude implements feature following roadmap guidelines
 # 4. Claude commits with proper messages (following Git guidelines)
 # 5. Runs tests automatically
@@ -13587,7 +13792,7 @@ from coffee_maker.autonomous.roadmap import RoadmapSync
 
 # Real-time bidirectional sync
 sync = RoadmapSync(
-    roadmap_path="docs/ROADMAP.md",
+    roadmap_path="docs/roadmap/ROADMAP.md",
     sync_strategy="git-based",  # or "file-lock", "event-driven"
     conflict_resolution="user-wins",  # User changes always take precedence
     update_interval=5,  # Check for changes every 5 seconds
@@ -15234,7 +15439,7 @@ The autonomous daemon (run_daemon.py) is stuck in an infinite loop when trying t
 1. **Vague Task Description**: PRIORITY 2.5 asks for "UX audit & improvements" which is analytical, not concrete
 2. **Insufficient Prompt Context**: The daemon's implementation prompt (`daemon.py:328-353`) says:
    ```python
-   prompt = f"""Read docs/ROADMAP.md and implement {priority['name']}: {priority['title']}.
+   prompt = f"""Read docs/roadmap/ROADMAP.md and implement {priority['name']}: {priority['title']}.
    Follow the roadmap guidelines and deliverables...
    Begin implementation now."""
    ```
@@ -15547,7 +15752,7 @@ cmd = [self.cli_path, "-p", "--dangerously-skip-permissions", prompt]
 Even with `--dangerously-skip-permissions` flag, Claude CLI is still showing interactive warnings/dialogs and blocking the daemon:
 
 ```
-2025-10-09 19:08:32 [INFO] Executing Claude CLI: Read docs/ROADMAP.md and implement PRIORITY 2.5...
+2025-10-09 19:08:32 [INFO] Executing Claude CLI: Read docs/roadmap/ROADMAP.md and implement PRIORITY 2.5...
 ⚠️  THIS IS A...
 ^[[O^[[I^[[O^[[I^[[O^[[I  ← Hanging with control characters (ANSI escape sequences)
 ```
@@ -16049,7 +16254,7 @@ def _build_implementation_prompt(self, priority: dict) -> str:
 
 def _build_documentation_prompt(self, priority: dict) -> str:
     """Build explicit documentation creation prompt."""
-    return f"""Read docs/ROADMAP.md and implement {priority['name']}: {priority['title']}.
+    return f"""Read docs/roadmap/ROADMAP.md and implement {priority['name']}: {priority['title']}.
 
 THIS IS A DOCUMENTATION PRIORITY. You MUST create the following files:
 
@@ -16496,7 +16701,7 @@ class TestDaemonSmoke:
 
     def test_daemon_initializes_with_defaults(self):
         """Verify daemon can be created with default parameters."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", auto_approve=False)
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", auto_approve=False)
         assert daemon is not None
         assert daemon.roadmap_path.exists()
         assert daemon.auto_approve is False
@@ -16504,7 +16709,7 @@ class TestDaemonSmoke:
     def test_daemon_initializes_with_cli_mode(self):
         """Verify daemon can be initialized in CLI mode."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md",
+            roadmap_path="docs/roadmap/ROADMAP.md",
             use_claude_cli=True,
             claude_cli_path="/opt/homebrew/bin/claude"
         )
@@ -16514,7 +16719,7 @@ class TestDaemonSmoke:
     def test_daemon_initializes_with_api_mode(self):
         """Verify daemon can be initialized in API mode."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md",
+            roadmap_path="docs/roadmap/ROADMAP.md",
             use_claude_cli=False
         )
         assert daemon.use_claude_cli is False
@@ -16522,12 +16727,12 @@ class TestDaemonSmoke:
 
     def test_roadmap_parser_loads_roadmap(self):
         """Verify roadmap parser can load ROADMAP.md."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         assert parser is not None
 
     def test_roadmap_parser_finds_priorities(self):
         """Verify parser can extract priorities from ROADMAP."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         priorities = parser.get_all_priorities()
         assert len(priorities) > 0
         assert all("name" in p for p in priorities)
@@ -16552,7 +16757,7 @@ class TestDaemonModeInitialization:
     def test_daemon_mode_correct(self, use_cli):
         """Verify daemon correctly initializes in specified mode."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md",
+            roadmap_path="docs/roadmap/ROADMAP.md",
             use_claude_cli=use_cli
         )
         assert daemon.use_claude_cli == use_cli
@@ -16628,7 +16833,7 @@ class TestDaemonCLIMode:
     def test_daemon_cli_mode_prerequisite_check(self):
         """Verify daemon prerequisite check passes in CLI mode."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md",
+            roadmap_path="docs/roadmap/ROADMAP.md",
             use_claude_cli=True,
             claude_cli_path="/opt/homebrew/bin/claude"
         )
@@ -16753,7 +16958,7 @@ This comes later
         2. Daemon should create notification
         3. Daemon should move to next priority (not loop)
         """
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md")
         daemon.max_retries = 3
 
         # Simulate 3 failed attempts
@@ -16858,7 +17063,7 @@ class TestErrorHandling:
     def test_daemon_handles_claude_cli_not_found(self):
         """Verify error when Claude CLI not installed."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md",
+            roadmap_path="docs/roadmap/ROADMAP.md",
             use_claude_cli=True,
             claude_cli_path="/invalid/path"
         )
@@ -16872,7 +17077,7 @@ class TestErrorHandling:
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md",
+            roadmap_path="docs/roadmap/ROADMAP.md",
             use_claude_cli=False  # API mode
         )
 
@@ -17064,13 +17269,13 @@ class TestDaemonNonRegression:
 
     def test_daemon_initializes_correctly(self):
         """Verify daemon can be initialized with default params."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md")
         assert daemon is not None
         assert daemon.roadmap_path.exists()
 
     def test_roadmap_parser_finds_priorities(self):
         """Verify roadmap parser can find planned priorities."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         priorities = parser.get_all_priorities()
         assert len(priorities) > 0
 
@@ -19009,7 +19214,7 @@ class CodeDeveloperDaemon:
 
     def execute_priority(self, priority: str):
         """Execute a priority from the roadmap."""
-        prompt = f"Read docs/ROADMAP.md and implement {priority}"
+        prompt = f"Read docs/roadmap/ROADMAP.md and implement {priority}"
 
         try:
             # Try primary provider with automatic fallback
@@ -20827,7 +21032,7 @@ Centralize all AI prompts in `.claude/commands/` directory for multi-AI provider
 ```markdown
 # .claude/commands/implement-feature.md
 
-Read docs/ROADMAP.md and implement $PRIORITY_NAME: $PRIORITY_TITLE.
+Read docs/roadmap/ROADMAP.md and implement $PRIORITY_NAME: $PRIORITY_TITLE.
 
 Follow the roadmap guidelines and deliverables.
 

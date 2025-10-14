@@ -40,7 +40,7 @@ project-manager view [PRIORITY]
 **Behavior**:
 - Without argument: Shows first 100 lines of ROADMAP.md
 - With argument: Shows complete section for that priority
-- Reads from `docs/ROADMAP.md` by default (configurable via `ROADMAP_PATH`)
+- Reads from `docs/roadmap/ROADMAP.md` by default (configurable via `ROADMAP_PATH`)
 
 **Output Format**:
 ```
@@ -418,7 +418,7 @@ export ANTHROPIC_API_KEY='sk-ant-...'
 **config.py** (`coffee_maker/config.py`):
 ```python
 # Default roadmap path
-ROADMAP_PATH = Path("docs/ROADMAP.md")
+ROADMAP_PATH = Path("docs/roadmap/ROADMAP.md")
 
 # Database location
 DB_PATH = Path("data/notifications.db")
@@ -665,7 +665,7 @@ rm data/notifications.db-wal
 
 ### ROADMAP Not Found
 
-**Problem**: `❌ ROADMAP not found: docs/ROADMAP.md`
+**Problem**: `❌ ROADMAP not found: docs/roadmap/ROADMAP.md`
 
 **Solutions**:
 ```bash
@@ -676,7 +676,7 @@ pwd
 cd /path/to/MonolithicCoffeeMakerAgent
 
 # 3. Verify file exists
-ls docs/ROADMAP.md
+ls docs/roadmap/ROADMAP.md
 
 # 4. Set custom path (future)
 export ROADMAP_PATH=/custom/path/ROADMAP.md

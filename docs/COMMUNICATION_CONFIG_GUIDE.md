@@ -191,7 +191,7 @@ metrics:
 
   roadmap:
     enabled: true
-    roadmap_file: "docs/ROADMAP.md"
+    roadmap_file: "docs/roadmap/ROADMAP.md"
     velocity_tracking: true
 
 # Advanced settings

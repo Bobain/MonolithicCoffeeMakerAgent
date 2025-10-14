@@ -121,7 +121,7 @@ ac9c8e0 docs: Add ADR 001 - Database Synchronization Strategy
 ```
 docs/ADR_001_DATABASE_SYNC_STRATEGY.md         | 431 +++++++++++++++++
 docs/PRIORITY_1.5_DATABASE_SYNC_DESIGN.md     |  64 +/-
-docs/ROADMAP.md                               | 100 +/-
+docs/roadmap/ROADMAP.md                               | 100 +/-
 docs/SESSION_SUMMARY_2025_10_09_ROADMAP_UPDATE.md | (this file)
 ```
 

@@ -181,7 +181,7 @@ class CodeDeveloperDaemon:
         self.claude_cli = ClaudeCLIInterface(model="claude-sonnet-4-5-20250929")
 
     def execute_priority(self, priority: str):
-        prompt = f"Implement {priority} from docs/ROADMAP.md"
+        prompt = f"Implement {priority} from docs/roadmap/ROADMAP.md"
         result = self.claude_cli.execute_with_context(
             prompt=prompt,
             working_dir=self.working_dir
@@ -203,7 +203,7 @@ class CodeDeveloperDaemon:
         self.fallback_strategy = FallbackStrategy()
 
     def execute_priority(self, priority: str):
-        prompt = f"Implement {priority} from docs/ROADMAP.md"
+        prompt = f"Implement {priority} from docs/roadmap/ROADMAP.md"
 
         # Use fallback strategy for automatic retries
         result = self.fallback_strategy.execute_with_fallback(
@@ -359,7 +359,7 @@ class CodeDeveloperDaemon:
     def execute_priority(self, priority: str):
         """Execute priority with automatic fallback."""
         result = self.provider.execute_with_fallback(
-            prompt=f"Read docs/ROADMAP.md and implement {priority}",
+            prompt=f"Read docs/roadmap/ROADMAP.md and implement {priority}",
             working_dir=self.working_dir,
             check_cost=True  # Enable cost checking
         )

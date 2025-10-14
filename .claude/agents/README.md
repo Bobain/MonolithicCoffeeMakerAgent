@@ -45,6 +45,71 @@ This directory contains agent definitions for the MonolithicCoffeeMakerAgent pro
 
 ---
 
+### Meta-Agents (ACE Framework)
+
+**Reference**: https://www.arxiv.org/abs/2510.04618
+
+#### 4. generator
+**Purpose**: Orchestrates dual execution of target agents and captures detailed execution traces for ACE framework
+
+**Use When**:
+- Wrapping agent execution with observation
+- Capturing execution traces for analysis
+- Comparing dual execution results
+- Enabling continuous agent improvement
+
+**Invoke**: `> Use the generator subagent to observe code-developer execution`
+
+**Capabilities**:
+- Executes target agent twice (independent runs)
+- Captures external observation (git changes, files)
+- Captures internal observation (reasoning, tools, decisions)
+- Performs comparative analysis
+- Saves traces to `docs/generator/traces/`
+
+---
+
+#### 5. reflector
+**Purpose**: Analyzes execution traces and extracts actionable insights for agent improvement
+
+**Use When**:
+- Analyzing agent execution patterns
+- Identifying success patterns and failure modes
+- Extracting concrete, actionable insights
+- Generating delta items for curator
+
+**Invoke**: `> Use the reflector subagent to analyze recent traces`
+
+**Capabilities**:
+- Loads execution traces from storage
+- Identifies what worked and what failed
+- Extracts domain-specific insights
+- Assigns priority and confidence levels
+- Saves deltas to `docs/reflector/deltas/`
+
+---
+
+#### 6. curator
+**Purpose**: Maintains evolving agent playbooks with semantic de-duplication and pruning
+
+**Use When**:
+- Consolidating insights into playbooks
+- De-duplicating semantically similar insights
+- Pruning low-value or harmful bullets
+- Tracking playbook health metrics
+
+**Invoke**: `> Use the curator subagent to consolidate new insights`
+
+**Capabilities**:
+- Loads deltas from reflector
+- Performs semantic de-duplication (cosine similarity)
+- Merges/updates/adds insights deterministically
+- Prunes low-value bullets
+- Tracks effectiveness ratio and coverage
+- Saves playbooks to `docs/curator/playbooks/`
+
+---
+
 ## How to Use
 
 ### Via Claude CLI
@@ -100,7 +165,7 @@ Each agent has been configured to read specific critical documents at startup. T
 #### code-developer - Startup Documents
 
 **READ AT STARTUP (MANDATORY)**:
-1. 🔴 `docs/ROADMAP.md` - Task list (read FIRST)
+1. 🔴 `docs/roadmap/ROADMAP.md` - Task list (read FIRST)
 2. 🔴 `.claude/CLAUDE.md` - Project instructions (read SECOND)
 
 **READ AS NEEDED**:
@@ -112,7 +177,7 @@ Each agent has been configured to read specific critical documents at startup. T
 #### project-manager - Startup Documents
 
 **READ AT STARTUP (MANDATORY)**:
-1. 🔴 `docs/ROADMAP.md` - Project status (read FIRST)
+1. 🔴 `docs/roadmap/ROADMAP.md` - Project status (read FIRST)
 2. 🔴 `.claude/CLAUDE.md` - Project context (read SECOND)
 
 **READ AS NEEDED**:
@@ -124,7 +189,7 @@ Each agent has been configured to read specific critical documents at startup. T
 
 **READ AT STARTUP (MANDATORY)**:
 1. 🔴 `.claude/CLAUDE.md` - Project overview (read FIRST)
-2. 🔴 `docs/ROADMAP.md` - Current work (read SECOND)
+2. 🔴 `docs/roadmap/ROADMAP.md` - Current work (read SECOND)
 
 **READ AS NEEDED**:
 - `.claude/commands/PROMPTS_INDEX.md` - Prompt documentation
@@ -177,4 +242,4 @@ All agents equipped with:
 - **Prompts**: `.claude/commands/` - All agent prompts
 - **Prompt Index**: `.claude/commands/PROMPTS_INDEX.md` - Prompt documentation
 - **Project Instructions**: `.claude/CLAUDE.md` - How to work with this project
-- **ROADMAP**: `docs/ROADMAP.md` - Current priorities and status
+- **ROADMAP**: `docs/roadmap/ROADMAP.md` - Current priorities and status

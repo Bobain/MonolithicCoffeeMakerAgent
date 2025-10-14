@@ -328,7 +328,7 @@ which project-manager
 cd /path/to/MonolithicCoffeeMakerAgent
 
 # Verify ROADMAP.md exists
-ls docs/ROADMAP.md
+ls docs/roadmap/ROADMAP.md
 ```
 
 **Problem: "ANTHROPIC_API_KEY not set" (daemon)**
@@ -384,7 +384,7 @@ Now that you have the basics:
    - [Slack Setup Guide](SLACK_SETUP_GUIDE.md) - Get notifications in Slack
 
 2. **🎯 Customize Your Roadmap**
-   - Edit `docs/ROADMAP.md` to add your priorities
+   - Edit `docs/roadmap/ROADMAP.md` to add your priorities
    - Follow the format in existing priorities
    - Be specific about deliverables to help the daemon
 
@@ -422,7 +422,7 @@ project-manager view --help           # Command-specific help
 
 - **Documentation**: See `docs/` folder for detailed guides
 - **Issues**: https://github.com/Bobain/MonolithicCoffeeMakerAgent/issues
-- **Roadmap**: Check `docs/ROADMAP.md` for planned features
+- **Roadmap**: Check `docs/roadmap/ROADMAP.md` for planned features
 
 ---
 

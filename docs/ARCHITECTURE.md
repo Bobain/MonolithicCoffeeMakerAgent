@@ -333,6 +333,61 @@ The `code_developer` daemon is the heart of the autonomous development system.
 └───────────────────────────────────────────────────────────────┘
 ```
 
+### ACE Framework Architecture
+
+The ACE (Agentic Context Engineering) framework enables continuous agent improvement:
+
+**Reference**: https://www.arxiv.org/abs/2510.04618
+
+#### Components
+
+1. **Generator**: Wraps agent execution, captures dual observation traces
+   - Executes agent twice for same query (independent runs)
+   - Captures external observation (git changes, files created/modified)
+   - Captures internal observation (reasoning steps, tools called, decisions made)
+   - Performs comparative analysis between executions
+   - Saves traces to `docs/generator/traces/YYYY-MM-DD/*.json`
+
+2. **Reflector**: Analyzes traces, extracts actionable insights (deltas)
+   - Loads execution traces from last N hours
+   - Identifies success patterns and failure modes
+   - Extracts concrete, specific insights (not generic advice)
+   - Assigns priority (1-5) and confidence (0.0-1.0) levels
+   - Saves deltas to `docs/reflector/deltas/YYYY-MM-DD/*.json`
+
+3. **Curator**: Maintains playbooks with semantic de-duplication
+   - Loads new deltas from Reflector
+   - Computes semantic embeddings for de-duplication
+   - Performs algorithmic merge/update/add based on similarity
+   - Prunes low-value or harmful bullets
+   - Tracks playbook health metrics
+   - Saves playbooks to `docs/curator/playbooks/*.json`
+
+#### Data Flow
+
+```
+Agent Execution → Generator (dual capture) → Reflector (analyze) → Curator (consolidate) → Playbook → Generator (inform next execution)
+```
+
+#### Storage
+
+- **Traces**: `docs/generator/traces/YYYY-MM-DD/*.json`
+- **Deltas**: `docs/reflector/deltas/YYYY-MM-DD/*.json`
+- **Playbooks**: `docs/curator/playbooks/*.json`
+- **Reports**: `docs/curator/reports/YYYY-MM-DD/*.json`
+
+#### Integration
+
+- Generator wraps `code_developer` execution in daemon
+- Scheduled tasks (GitHub Actions) run Reflector and Curator daily
+- Playbook loaded as context for next execution
+- Continuous improvement loop
+
+For complete details, see:
+- User Guide: `docs/ACE_FRAMEWORK_GUIDE.md`
+- Technical Spec: `docs/PRIORITY_6_ACE_INTEGRATION_TECHNICAL_SPEC.md`
+- Agent Definitions: `.claude/agents/generator.md`, `reflector.md`, `curator.md`
+
 ### File Ownership Matrix
 
 **CRITICAL**: These rules prevent conflicts and ensure clear responsibility.
@@ -358,7 +413,7 @@ The `code_developer` daemon is the heart of the autonomous development system.
 │ docs/                │ project_     │ YES - Full control           │
 │                      │ manager      │ (others READ-ONLY)           │
 ├──────────────────────┼──────────────┼──────────────────────────────┤
-│ docs/ROADMAP.md      │ project_     │ project_manager: Full        │
+│ docs/roadmap/ROADMAP.md      │ project_     │ project_manager: Full        │
 │                      │ manager,     │ code_developer: Status only  │
 │                      │ code_        │ (others READ-ONLY)           │
 │                      │ developer    │                              │

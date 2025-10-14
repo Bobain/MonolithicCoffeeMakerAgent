@@ -194,7 +194,7 @@ def validate_single_roadmap() -> None:
         raise RuntimeError(
             f"ERROR: Unauthorized roadmap files detected!\n\n"
             f"Only these files are allowed:\n"
-            f"  - docs/ROADMAP.md (source of truth)\n"
+            f"  - docs/roadmap/ROADMAP.md (source of truth)\n"
             f"  - docs/ROADMAP_OVERVIEW.md (summary documentation)\n\n"
             f"Found unauthorized roadmap files:\n{files_list}\n\n"
             f"Please delete these files and use only the official files.\n"

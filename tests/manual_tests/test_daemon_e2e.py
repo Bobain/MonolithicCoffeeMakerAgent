@@ -211,7 +211,7 @@ class TestDaemonE2EFull:
     def test_daemon_initialization(self):
         """Test daemon can be initialized with default settings."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md",
+            roadmap_path="docs/roadmap/ROADMAP.md",
             auto_approve=False,  # Don't auto-approve in tests
             create_prs=False,  # Don't create PRs in tests
             sleep_interval=1,  # Short sleep for tests

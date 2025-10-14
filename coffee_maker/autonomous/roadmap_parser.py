@@ -9,7 +9,7 @@ This module provides simple regex/markdown parsing to extract:
 Example:
     >>> from coffee_maker.autonomous.roadmap_parser import RoadmapParser
     >>>
-    >>> parser = RoadmapParser("docs/ROADMAP.md")
+    >>> parser = RoadmapParser("docs/roadmap/ROADMAP.md")
     >>> priorities = parser.get_priorities()
     >>> for p in priorities:
     ...     print(f"{p['name']}: {p['status']}")
@@ -36,7 +36,7 @@ class RoadmapParser:
         content: Raw markdown content
 
     Example:
-        >>> parser = RoadmapParser("docs/ROADMAP.md")
+        >>> parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         >>> next_task = parser.get_next_planned_priority()
         >>> if next_task:
         ...     print(f"Next: {next_task['name']}")
@@ -66,7 +66,7 @@ class RoadmapParser:
         Use this when the roadmap file has been updated externally.
 
         Example:
-            >>> parser = RoadmapParser("docs/ROADMAP.md")
+            >>> parser = RoadmapParser("docs/roadmap/ROADMAP.md")
             >>> # ... file modified externally ...
             >>> parser.reload()
             >>> priorities = parser.get_priorities()  # Gets fresh data
@@ -89,7 +89,7 @@ class RoadmapParser:
                 - content: Full section content
 
         Example:
-            >>> parser = RoadmapParser("docs/ROADMAP.md")
+            >>> parser = RoadmapParser("docs/roadmap/ROADMAP.md")
             >>> priorities = parser.get_priorities()
             >>> len(priorities)
             7
@@ -196,7 +196,7 @@ class RoadmapParser:
             Priority dict or None if no planned priorities
 
         Example:
-            >>> parser = RoadmapParser("docs/ROADMAP.md")
+            >>> parser = RoadmapParser("docs/roadmap/ROADMAP.md")
             >>> next_task = parser.get_next_planned_priority()
             >>> if next_task:
             ...     print(f"Implement: {next_task['title']}")
@@ -219,7 +219,7 @@ class RoadmapParser:
             List of priority dictionaries
 
         Example:
-            >>> parser = RoadmapParser("docs/ROADMAP.md")
+            >>> parser = RoadmapParser("docs/roadmap/ROADMAP.md")
             >>> in_progress = parser.get_in_progress_priorities()
             >>> for p in in_progress:
             ...     print(f"Working on: {p['title']}")
@@ -241,7 +241,7 @@ class RoadmapParser:
             List of deliverable descriptions
 
         Example:
-            >>> parser = RoadmapParser("docs/ROADMAP.md")
+            >>> parser = RoadmapParser("docs/roadmap/ROADMAP.md")
             >>> deliverables = parser.extract_deliverables("PRIORITY 2")
             >>> for d in deliverables:
             ...     print(f"- {d}")
@@ -288,7 +288,7 @@ class RoadmapParser:
             True if complete, False otherwise
 
         Example:
-            >>> parser = RoadmapParser("docs/ROADMAP.md")
+            >>> parser = RoadmapParser("docs/roadmap/ROADMAP.md")
             >>> if parser.is_priority_complete("PRIORITY 1"):
             ...     print("PRIORITY 1 is done!")
         """

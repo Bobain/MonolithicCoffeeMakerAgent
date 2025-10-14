@@ -131,7 +131,7 @@ Prerequisites:
     - ANTHROPIC_API_KEY environment variable (for API mode)
     - Claude CLI installed (for CLI mode)
     - Git repository with remote
-    - docs/ROADMAP.md exists
+    - docs/roadmap/ROADMAP.md exists
     - Clean working directory
     - 'roadmap' branch exists and is up to date
 
@@ -159,7 +159,7 @@ Status Tracking:
     Use `project-manager developer-status` to view daemon status.
 
 Configuration:
-    - roadmap_path: Path to ROADMAP.md (default: docs/ROADMAP.md)
+    - roadmap_path: Path to ROADMAP.md (default: docs/roadmap/ROADMAP.md)
     - auto_approve: Auto-approve without confirmation (default: True)
     - create_prs: Create PRs automatically (default: True)
     - sleep_interval: Seconds between iterations (default: 30)
@@ -225,7 +225,7 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
     Example:
         >>> daemon = DevDaemon(
-        ...     roadmap_path="docs/ROADMAP.md",
+        ...     roadmap_path="docs/roadmap/ROADMAP.md",
         ...     auto_approve=False,  # Ask user before starting
         ...     create_prs=True
         ... )
@@ -234,7 +234,7 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
     def __init__(
         self,
-        roadmap_path: str = "docs/ROADMAP.md",
+        roadmap_path: str = "docs/roadmap/ROADMAP.md",
         auto_approve: bool = True,  # BUG FIX: Should be autonomous by default
         create_prs: bool = True,
         sleep_interval: int = 30,

@@ -24,7 +24,7 @@ class TestDaemonSmoke:
 
     def test_daemon_initializes_with_defaults(self):
         """Verify daemon can be created with default parameters."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", auto_approve=False)
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", auto_approve=False)
         assert daemon is not None
         assert daemon.roadmap_path.exists()
         assert daemon.auto_approve is False
@@ -33,26 +33,26 @@ class TestDaemonSmoke:
         """Verify daemon can be initialized in CLI mode."""
         # Use a path that might not exist - test just initialization
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md", use_claude_cli=True, claude_cli_path="/opt/homebrew/bin/claude"
+            roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=True, claude_cli_path="/opt/homebrew/bin/claude"
         )
         assert daemon.use_claude_cli is True
         assert isinstance(daemon.claude, ClaudeCLIInterface)
 
     def test_daemon_initializes_with_api_mode(self):
         """Verify daemon can be initialized in API mode."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=False)
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False)
         assert daemon.use_claude_cli is False
         assert isinstance(daemon.claude, ClaudeAPI)
 
     def test_roadmap_parser_loads_roadmap(self):
         """Verify roadmap parser can load ROADMAP.md."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         assert parser is not None
         assert parser.roadmap_path.exists()
 
     def test_roadmap_parser_finds_priorities(self):
         """Verify parser can extract priorities from ROADMAP."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         priorities = parser.get_priorities()
         assert len(priorities) > 0
         assert all("name" in p for p in priorities)
@@ -73,7 +73,7 @@ class TestDaemonSmoke:
 
     def test_roadmap_parser_reads_file_content(self):
         """Verify parser can read ROADMAP content."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         content = parser.roadmap_path.read_text()
         assert len(content) > 0
         assert "PRIORITY" in content or "Priority" in content.lower()
@@ -86,7 +86,7 @@ class TestDaemonModeInitialization:
     def test_daemon_mode_correct(self, use_cli):
         """Verify daemon correctly initializes in specified mode."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md",
+            roadmap_path="docs/roadmap/ROADMAP.md",
             use_claude_cli=use_cli,
             claude_cli_path="/opt/homebrew/bin/claude" if use_cli else None,
         )
@@ -103,7 +103,7 @@ class TestRoadmapParserSmoke:
 
     def test_parser_get_next_planned_priority(self):
         """Verify parser can find next planned priority."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         # This might return None if all priorities are complete
         next_priority = parser.get_next_planned_priority()
         # Should not raise exception
@@ -158,23 +158,23 @@ class TestDaemonConfiguration:
 
     def test_daemon_accepts_auto_approve_flag(self):
         """Verify daemon accepts auto_approve configuration."""
-        daemon_auto = DevDaemon(roadmap_path="docs/ROADMAP.md", auto_approve=True)
-        daemon_manual = DevDaemon(roadmap_path="docs/ROADMAP.md", auto_approve=False)
+        daemon_auto = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", auto_approve=True)
+        daemon_manual = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", auto_approve=False)
 
         assert daemon_auto.auto_approve is True
         assert daemon_manual.auto_approve is False
 
     def test_daemon_accepts_create_prs_flag(self):
         """Verify daemon accepts create_prs configuration."""
-        daemon_with_pr = DevDaemon(roadmap_path="docs/ROADMAP.md", create_prs=True)
-        daemon_no_pr = DevDaemon(roadmap_path="docs/ROADMAP.md", create_prs=False)
+        daemon_with_pr = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", create_prs=True)
+        daemon_no_pr = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", create_prs=False)
 
         assert daemon_with_pr.create_prs is True
         assert daemon_no_pr.create_prs is False
 
     def test_daemon_has_max_retries(self):
         """Verify daemon has max_retries field."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md")
         assert hasattr(daemon, "max_retries")
         assert daemon.max_retries == 3  # Default value
 

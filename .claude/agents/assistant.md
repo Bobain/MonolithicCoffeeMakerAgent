@@ -47,7 +47,7 @@ You work interactively with users, leveraging your deep documentation knowledge 
    - Recent developments and updates
    - **ACTION**: Read this FIRST to understand the project
 
-2. **`docs/ROADMAP.md`** 🔴 REQUIRED
+2. **`docs/roadmap/ROADMAP.md`** 🔴 REQUIRED
    - Current priorities and work
    - What's been completed recently
    - What's in progress
@@ -86,7 +86,7 @@ Read these based on user's question:
 
 Every time you start a session:
 - ✅ Read `.claude/CLAUDE.md` → Understand project architecture
-- ✅ Read `docs/ROADMAP.md` → Know current work and status
+- ✅ Read `docs/roadmap/ROADMAP.md` → Know current work and status
 - ✅ Keep ROADMAP details in mind → Be ready to answer priority questions
 - ✅ Be ready to search code files with Grep/Glob
 - ✅ Be ready to demonstrate with Puppeteer
@@ -120,7 +120,7 @@ Every time you start a session:
 
 ### Quick Reference:
 - 📖 Project overview: `.claude/CLAUDE.md`
-- 📊 Current work: `docs/ROADMAP.md`
+- 📊 Current work: `docs/roadmap/ROADMAP.md`
 - 🔧 Prompt system: `.claude/commands/PROMPTS_INDEX.md`
 - 🔍 Find code: Use Grep/Glob
 - 👁️ Show visually: Use Puppeteer (demos only)
@@ -136,7 +136,7 @@ Every time you start a session:
 
 You maintain deep understanding of:
 
-1. **ROADMAP.md** (docs/ROADMAP.md)
+1. **ROADMAP.md** (docs/roadmap/ROADMAP.md)
    - Keep ALL priorities in great detail in mind at all times
    - Know current status of each priority (Complete, In Progress, Planned, Blocked)
    - Understand dependencies between priorities
@@ -513,7 +513,7 @@ gh issue view 12
 
 ### Frequently Reference:
 - `.claude/CLAUDE.md` - Project instructions
-- `docs/ROADMAP.md` - Current priorities
+- `docs/roadmap/ROADMAP.md` - Current priorities
 - `.claude/commands/PROMPTS_INDEX.md` - Prompt documentation
 - `README.md` - Project overview
 
@@ -588,7 +588,7 @@ User: "Update the ROADMAP with a new priority for OAuth integration"
 
 Decision: Documentation update → Delegate to project_manager
 
-You: "This requires updating docs/ROADMAP.md. I'll delegate this to the
+You: "This requires updating docs/roadmap/ROADMAP.md. I'll delegate this to the
 project_manager agent, who owns the docs/ directory and handles strategic
 ROADMAP management."
 ```
@@ -877,7 +877,7 @@ YOU: "That requires a configuration file change. Let me delegate to code_develop
 **Examples**:
 ```
 User: "Update the ROADMAP with a new priority"
-YOU: "That requires updating docs/ROADMAP.md. Let me delegate to project_manager, who owns the docs/ directory."
+YOU: "That requires updating docs/roadmap/ROADMAP.md. Let me delegate to project_manager, who owns the docs/ directory."
 
 User: "Create a technical spec for PRIORITY 20"
 YOU: "That requires creating a new file in docs/. Let me delegate to project_manager, who owns all documentation."

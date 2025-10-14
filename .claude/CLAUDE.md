@@ -37,6 +37,12 @@
    - Developer status dashboard
    - Real-time progress monitoring
 
+5. **ACE Framework** (Agentic Context Engineering)
+   - `generator`: Dual execution observation, trace capture
+   - `reflector`: Insight extraction from traces
+   - `curator`: Playbook maintenance, semantic de-duplication
+   - **Reference**: https://www.arxiv.org/abs/2510.04618
+
 ---
 
 ## Project Structure
@@ -56,7 +62,9 @@ MonolithicCoffeeMakerAgent/
 │   └── settings.local.json
 │
 ├── docs/
-│   ├── ROADMAP.md                   # Master task list
+│   ├── roadmap/                     # Project planning ⭐
+│   │   ├── ROADMAP.md               # Master task list
+│   │   └── TEAM_COLLABORATION.md    # Agent interaction guide
 │   ├── PROMPT_MANAGEMENT_SYSTEM.md  # Prompt system docs ⭐
 │   ├── PRIORITY_4_1_TECHNICAL_SPEC.md # Puppeteer MCP ⭐
 │   └── PRIORITY_*_TECHNICAL_SPEC.md # Feature specs
@@ -124,7 +132,7 @@ prompt = load_prompt(PromptNames.CREATE_TECHNICAL_SPEC, {
 
 ```bash
 # 1. Check ROADMAP
-cat docs/ROADMAP.md
+cat docs/roadmap/ROADMAP.md
 
 # 2. Create technical spec (if needed)
 # Daemon uses: .claude/commands/create-technical-spec.md
@@ -259,7 +267,7 @@ poetry run project-manager /status
 | File/Directory | Owner | Can Modify? | Others |
 |----------------|-------|-------------|--------|
 | **docs/** | project_manager | YES - Full control | code_developer: READ-ONLY, assistant: READ-ONLY |
-| **docs/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Full, code_developer: Status updates only | assistant: READ-ONLY |
+| **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Full, code_developer: Status updates only | assistant: READ-ONLY |
 | **docs/PRIORITY_*_TECHNICAL_SPEC.md** | project_manager | YES - Creates and updates specs | code_developer: READ-ONLY (reads during implementation), assistant: READ-ONLY |
 | **.claude/agents/** | project_manager | YES - Defines agent configurations | All others: READ-ONLY |
 | **.claude/CLAUDE.md** | project_manager, memory-bank-synchronizer | YES - Strategic updates | code_developer: READ-ONLY, assistant: READ-ONLY |
@@ -282,9 +290,13 @@ poetry run project-manager /status
 | **Code editing** | code_developer | ALL code changes | assistant READ-ONLY |
 | **Code search (simple)** | assistant | 1-2 files with Grep/Read | Delegate complex to code-searcher |
 | **Code search (complex)** | code-searcher | Deep analysis, patterns, forensics | - |
+| **Code analysis docs** | project_manager | Creates docs/[analysis]_[date].md | code-searcher prepares findings, assistant delegates |
 | **ROADMAP updates** | project_manager (full), code_developer (status only) | Strategic vs. execution updates | assistant READ-ONLY |
 | **Design decisions** | ux-design-expert | All UI/UX, Tailwind, charts | Others delegate |
 | **Doc sync** | memory-bank-synchronizer | Keep CLAUDE.md files current | - |
+| **ACE observation** | generator | Capture all agent executions | Others: Observed by generator |
+| **ACE reflection** | reflector | Extract insights from traces | - |
+| **ACE curation** | curator | Maintain evolving playbooks | - |
 
 ### Key Principles
 
@@ -319,9 +331,16 @@ poetry run project-manager /status
    - Does NOT write implementation code (that's code_developer)
 
 4. **Specialized agents own their domain**
-   - code-searcher: Code analysis (READ-ONLY)
-   - ux-design-expert: Design decisions (provides specs, doesn't implement)
-   - memory-bank-synchronizer: Documentation sync (updates .claude/CLAUDE.md)
+   - **code-searcher**: Deep codebase analysis (READ-ONLY)
+     - Has PROFOUND KNOWLEDGE of entire codebase structure, dependencies, patterns
+     - Performs security audits, dependency tracing, code reuse identification
+     - Identifies refactoring opportunities, architectural analysis
+     - **Documentation Process**: Prepares findings → Presents to assistant → assistant delegates to project_manager → project_manager writes docs
+     - **NEVER writes docs directly** - Always delegates via assistant to project_manager
+     - **Document Format**: docs/[analysis_type]_analysis_[date].md (e.g., docs/security_audit_2025-10-13.md)
+     - See .claude/agents/code-searcher.md for complete documentation workflow
+   - **ux-design-expert**: Design decisions (provides specs, doesn't implement)
+   - **memory-bank-synchronizer**: Documentation sync (updates .claude/CLAUDE.md)
 
 ### When in Doubt
 
@@ -428,7 +447,7 @@ Let me delegate appropriately..."
 ## Special Instructions for Claude
 
 ### When Implementing Features
-1. **Always check ROADMAP** first: `docs/ROADMAP.md`
+1. **Always check ROADMAP** first: `docs/roadmap/ROADMAP.md`
 2. **Look for technical specs**: `docs/PRIORITY_*_TECHNICAL_SPEC.md`
 3. **Use centralized prompts**: Load from `.claude/commands/`
 4. **Update status**: Use DeveloperStatus class for progress tracking
@@ -512,7 +531,7 @@ Langfuse (execution metrics)
 → Use Claude Desktop with MCP configured (already done), or implement Python client (future)
 
 ### "Where's the ROADMAP?"
-→ `docs/ROADMAP.md`
+→ `docs/roadmap/ROADMAP.md`
 
 ### "How do I check daemon status?"
 → `poetry run project-manager developer-status`

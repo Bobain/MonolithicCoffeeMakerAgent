@@ -33,7 +33,7 @@ class TestErrorHandling:
     def test_daemon_handles_claude_cli_not_found(self):
         """Verify error when Claude CLI not installed."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md", use_claude_cli=True, claude_cli_path="/invalid/path/to/claude"
+            roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=True, claude_cli_path="/invalid/path/to/claude"
         )
 
         # Should fail prerequisite check
@@ -44,7 +44,7 @@ class TestErrorHandling:
         # Remove API key from environment
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=False)  # API mode
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False)  # API mode
 
         # Should fail prerequisite check
         assert not daemon._check_prerequisites()
@@ -126,14 +126,16 @@ class TestConfigurationErrors:
     def test_daemon_rejects_invalid_max_retries(self):
         """Verify daemon validates max_retries parameter."""
         # Negative max_retries should be handled
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", max_retries=-1)
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", max_retries=-1)
         # Should either reject or use default
         assert daemon.max_retries >= 0
 
     def test_daemon_handles_invalid_model_name(self):
         """Verify daemon handles invalid model names."""
         # Invalid model name - should be stored but caught later
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=True, model="invalid-model-name-12345")
+        daemon = DevDaemon(
+            roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=True, model="invalid-model-name-12345"
+        )
         # Initialization should succeed (validation happens at runtime)
         assert daemon.claude.model == "invalid-model-name-12345"
 

@@ -33,7 +33,7 @@
 ### Read-Only Access
 
 1. **Strategic Documentation**
-   - `docs/ROADMAP.md` - Task list (read for priorities, only update status)
+   - `docs/roadmap/ROADMAP.md` - Task list (read for priorities, only update status)
    - `docs/PRIORITY_*_TECHNICAL_SPEC.md` - Implementation guides
    - `.claude/CLAUDE.md` - Project instructions
    - `.claude/commands/` - Centralized prompts
@@ -106,7 +106,7 @@
 
 ```bash
 # Check ROADMAP
-cat docs/ROADMAP.md | head -200
+cat docs/roadmap/ROADMAP.md | head -200
 
 # Check developer status
 cat data/developer_status.json

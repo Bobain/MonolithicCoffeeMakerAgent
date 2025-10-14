@@ -67,7 +67,7 @@ class AssistantManager:
 
         # Documentation paths to refresh
         self.doc_paths = [
-            "docs/ROADMAP.md",
+            "docs/roadmap/ROADMAP.md",
             "docs/COLLABORATION_METHODOLOGY.md",
             "docs/DOCUMENTATION_INDEX.md",
             "docs/TUTORIALS.md",

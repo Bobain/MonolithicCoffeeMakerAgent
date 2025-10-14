@@ -94,7 +94,7 @@ class TestDaemonCLIMode:
     def test_daemon_cli_mode_initialization(self):
         """Verify daemon can be initialized in CLI mode."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md", use_claude_cli=True, claude_cli_path="/opt/homebrew/bin/claude"
+            roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=True, claude_cli_path="/opt/homebrew/bin/claude"
         )
         assert daemon.use_claude_cli is True
         assert isinstance(daemon.claude, ClaudeCLIInterface)
@@ -102,7 +102,7 @@ class TestDaemonCLIMode:
     def test_daemon_cli_mode_prerequisite_check(self):
         """Verify daemon prerequisite check in CLI mode."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md", use_claude_cli=True, claude_cli_path="/opt/homebrew/bin/claude"
+            roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=True, claude_cli_path="/opt/homebrew/bin/claude"
         )
 
         # This will return False if Claude CLI is not installed
@@ -112,7 +112,7 @@ class TestDaemonCLIMode:
 
     def test_daemon_cli_mode_with_invalid_path_fails(self):
         """Verify daemon fails gracefully with invalid CLI path."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=True, claude_cli_path="/invalid/path")
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=True, claude_cli_path="/invalid/path")
 
         # Prerequisite check should fail
         assert not daemon._check_prerequisites()
@@ -155,7 +155,7 @@ Create a simple test file.
     def test_daemon_cli_mode_model_configuration(self):
         """Verify daemon CLI mode accepts model configuration."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md",
+            roadmap_path="docs/roadmap/ROADMAP.md",
             use_claude_cli=True,
             claude_cli_path="/opt/homebrew/bin/claude",
             model="sonnet",
@@ -166,7 +166,7 @@ Create a simple test file.
     def test_daemon_cli_mode_uses_correct_default_model(self):
         """Verify daemon uses 'sonnet' as default model."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md", use_claude_cli=True, claude_cli_path="/opt/homebrew/bin/claude"
+            roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=True, claude_cli_path="/opt/homebrew/bin/claude"
         )
 
         # Default should be 'sonnet', not 'claude-sonnet-4'
@@ -194,7 +194,9 @@ class TestClaudeCLIErrorHandling:
 
     def test_daemon_handles_cli_unavailable(self):
         """Verify daemon handles unavailable Claude CLI gracefully."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=True, claude_cli_path="/nonexistent/claude")
+        daemon = DevDaemon(
+            roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=True, claude_cli_path="/nonexistent/claude"
+        )
 
         # Should fail prerequisite check, not crash
         assert not daemon._check_prerequisites()

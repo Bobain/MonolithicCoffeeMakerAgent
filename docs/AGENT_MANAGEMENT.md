@@ -201,7 +201,7 @@ File: `coffee_maker/autonomous/daemon.py`
 
 ```python
 daemon = DevDaemon(
-    roadmap_path="docs/ROADMAP.md",
+    roadmap_path="docs/roadmap/ROADMAP.md",
     auto_approve=True,          # Autonomous mode
     create_prs=True,            # Auto-create PRs
     sleep_interval=30,          # Seconds between checks
@@ -369,7 +369,7 @@ jobs:
 - **Agent Definitions**: `.claude/agents/*.md`
 - **Prompt System**: `.claude/commands/PROMPTS_INDEX.md`
 - **Project Instructions**: `.claude/CLAUDE.md`
-- **ROADMAP**: `docs/ROADMAP.md`
+- **ROADMAP**: `docs/roadmap/ROADMAP.md`
 
 ---
 

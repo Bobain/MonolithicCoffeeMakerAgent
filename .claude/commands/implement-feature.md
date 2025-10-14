@@ -1,6 +1,6 @@
-Read docs/ROADMAP.md and implement $PRIORITY_NAME: $PRIORITY_TITLE.
+Read docs/roadmap/ROADMAP.md and implement $PRIORITY_NAME: $PRIORITY_TITLE.
 
-Follow the roadmap guidelines and deliverables. Update docs/ROADMAP.md with your progress.
+Follow the roadmap guidelines and deliverables. Update docs/roadmap/ROADMAP.md with your progress.
 
 ## Implementation Steps
 

@@ -146,7 +146,7 @@ jobs:
         run: |
           poetry run python -c "
           from coffee_maker.autonomous.daemon import DevDaemon
-          daemon = DevDaemon(roadmap_path='docs/ROADMAP.md', auto_approve=True)
+          daemon = DevDaemon(roadmap_path='docs/roadmap/ROADMAP.md', auto_approve=True)
           print('✅ Daemon initialized successfully')
           "
 
@@ -154,7 +154,7 @@ jobs:
         run: |
           poetry run python -c "
           from coffee_maker.autonomous.roadmap_parser import RoadmapParser
-          parser = RoadmapParser('docs/ROADMAP.md')
+          parser = RoadmapParser('docs/roadmap/ROADMAP.md')
           priorities = parser.get_all_priorities()
           print(f'✅ Found {len(priorities)} priorities in ROADMAP')
           "

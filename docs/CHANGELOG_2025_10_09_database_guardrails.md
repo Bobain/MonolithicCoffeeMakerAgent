@@ -36,7 +36,7 @@ This update establishes the **database synchronization strategy** and **Project 
 ```yaml
 # docker-compose.yml
 volumes:
-  - ./docs/ROADMAP.md:/project/docs/ROADMAP.md:rw  # Same file!
+  - ./docs/roadmap/ROADMAP.md:/project/docs/roadmap/ROADMAP.md:rw  # Same file!
 ```
 
 **Conflict Resolution**:
@@ -158,12 +158,12 @@ ROADMAP_LOCK = "/tmp/roadmap.lock"
 
 def edit_roadmap_safely(edit_function):
     with FileLock(ROADMAP_LOCK, timeout=10):
-        current = Path("./docs/ROADMAP.md").read_text()
+        current = Path("./docs/roadmap/ROADMAP.md").read_text()
         new_content = edit_function(current)
-        Path("./docs/ROADMAP.md").write_text(new_content)
+        Path("./docs/roadmap/ROADMAP.md").write_text(new_content)
 
         # Optional: Git commit
-        subprocess.run(["git", "add", "docs/ROADMAP.md"])
+        subprocess.run(["git", "add", "docs/roadmap/ROADMAP.md"])
         subprocess.run(["git", "commit", "-m", "Update ROADMAP"])
 ```
 
@@ -249,7 +249,7 @@ def edit_roadmap_safely(edit_function):
 User Environment            Daemon Environment
 ───────────────             ──────────────────
 ./data/                ═══  /project/data/     (shared volume)
-./docs/ROADMAP.md      ═══  /project/docs/ROADMAP.md (shared volume)
+./docs/roadmap/ROADMAP.md      ═══  /project/docs/roadmap/ROADMAP.md (shared volume)
 ```
 
 ### Future (Team/Production)
@@ -272,7 +272,7 @@ postgresql://localhost:5432/coffee_maker
 
 1. **PRIORITY 1.5 Design**: `docs/PRIORITY_1.5_DATABASE_SYNC_DESIGN.md`
 2. **Project Manager MVP**: `docs/PROJECT_MANAGER_MVP_DESIGN.md`
-3. **Roadmap**: `docs/ROADMAP.md` (updated with PRIORITY 1.5 and recurring practices)
+3. **Roadmap**: `docs/roadmap/ROADMAP.md` (updated with PRIORITY 1.5 and recurring practices)
 4. **Sprint 1 Summary**: `docs/sprint1_improvements_summary.md` (refactoring examples)
 
 ---

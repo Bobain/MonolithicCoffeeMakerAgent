@@ -1185,7 +1185,7 @@ Iteration 7:  Input: 1000 tokens → Output: 2000 tokens → Context: 8000 token
 **Task 6.1: Update documentation** (30 min)
 - Create `docs/CRASH_RECOVERY_GUIDE.md`
 - Update `README.md` with crash recovery features
-- Update `docs/ROADMAP.md` status
+- Update `docs/roadmap/ROADMAP.md` status
 - Add inline code comments
 
 ### Total Time Estimate: **6.5 hours**
@@ -1300,7 +1300,7 @@ class TestDevDaemonCrashRecovery:
              patch('coffee_maker.autonomous.daemon.NotificationDB'):
 
             daemon = DevDaemon(
-                roadmap_path="docs/ROADMAP.md",
+                roadmap_path="docs/roadmap/ROADMAP.md",
                 auto_approve=True,
                 use_claude_cli=True,
                 max_crashes=3,
@@ -1444,7 +1444,7 @@ class TestCrashRecoveryIntegration:
             }
 
             daemon = DevDaemon(
-                roadmap_path="docs/ROADMAP.md",
+                roadmap_path="docs/roadmap/ROADMAP.md",
                 auto_approve=True,
                 use_claude_cli=True,
                 max_crashes=3,
@@ -1848,7 +1848,7 @@ With compact (10 iterations, compact every 5):
 
 DevDaemon(
     # Existing parameters
-    roadmap_path="docs/ROADMAP.md",
+    roadmap_path="docs/roadmap/ROADMAP.md",
     auto_approve=True,
     create_prs=True,
     sleep_interval=30,

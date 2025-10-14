@@ -1391,7 +1391,7 @@ poetry run project-manager developer-status  # Check current status
 **Learn More:**
 - Technical Spec: `docs/PRIORITY_9_TECHNICAL_SPEC.md`
 - Implementation: `coffee_maker/autonomous/developer_status.py`
-- Roadmap: `docs/ROADMAP.md` (PRIORITY 9 section)
+- Roadmap: `docs/roadmap/ROADMAP.md` (PRIORITY 9 section)
 
 ---
 

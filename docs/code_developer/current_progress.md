@@ -15,7 +15,7 @@ Modified files:
 - .claude/agents/README.md (65+ lines added)
 - .claude/agents/code-searcher.md (222+ lines added)
 - data/developer_status.json (status updates)
-- docs/ROADMAP.md (209+ lines added)
+- docs/roadmap/ROADMAP.md (209+ lines added)
 - docs/ARCHITECTURE.md (55+ lines added)
 
 Untracked files:

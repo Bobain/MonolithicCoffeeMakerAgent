@@ -1967,7 +1967,7 @@ from coffee_maker.ai_providers.cost_tracker import CostTracker
 # In __init__:
 def __init__(
     self,
-    roadmap_path: str = "docs/ROADMAP.md",
+    roadmap_path: str = "docs/roadmap/ROADMAP.md",
     auto_approve: bool = True,
     create_prs: bool = True,
     sleep_interval: int = 30,
@@ -2025,7 +2025,7 @@ except AllProvidersFailedError as e:
 # daemon.py - Updated __init__ signature
 def __init__(
     self,
-    roadmap_path: str = "docs/ROADMAP.md",
+    roadmap_path: str = "docs/roadmap/ROADMAP.md",
     auto_approve: bool = True,
     create_prs: bool = True,
     sleep_interval: int = 30,

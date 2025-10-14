@@ -65,14 +65,14 @@ class TestDaemonAPIMode:
     def test_daemon_api_mode_initialization(self):
         """Verify daemon can be initialized in API mode."""
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test-key"}):
-            daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=False)
+            daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False)
             assert daemon.use_claude_cli is False
             assert isinstance(daemon.claude, ClaudeAPI)
 
     def test_daemon_api_mode_prerequisite_check(self):
         """Verify daemon prerequisite check in API mode."""
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test-key"}):
-            daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=False)
+            daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False)
 
             # Prerequisite check should verify API key exists
             result = daemon._check_prerequisites()
@@ -81,7 +81,7 @@ class TestDaemonAPIMode:
     def test_daemon_api_mode_fails_without_key(self):
         """Verify daemon fails gracefully without API key."""
         with patch.dict(os.environ, {}, clear=True):
-            daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=False)
+            daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False)
 
             # Should fail prerequisite check
             result = daemon._check_prerequisites()
@@ -90,7 +90,9 @@ class TestDaemonAPIMode:
     def test_daemon_api_mode_model_configuration(self):
         """Verify daemon API mode accepts model configuration."""
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test-key"}):
-            daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=False, model="claude-sonnet-4-5-20250929")
+            daemon = DevDaemon(
+                roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False, model="claude-sonnet-4-5-20250929"
+            )
 
             assert daemon.claude.model == "claude-sonnet-4-5-20250929"
 
@@ -112,7 +114,7 @@ class TestClaudeAPIErrorHandling:
     def test_daemon_handles_api_unavailable(self):
         """Verify daemon handles unavailable API gracefully."""
         with patch.dict(os.environ, {}, clear=True):
-            daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=False)
+            daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False)
 
             # Should fail prerequisite check, not crash
             assert not daemon._check_prerequisites()
@@ -208,19 +210,19 @@ class TestModeSwitching:
     def test_can_create_both_modes_sequentially(self):
         """Verify can create daemon in both modes sequentially."""
         # CLI mode
-        daemon_cli = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=True)
+        daemon_cli = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=True)
         assert isinstance(daemon_cli.claude, ClaudeCLIInterface)
 
         # API mode
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test-key"}):
-            daemon_api = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=False)
+            daemon_api = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False)
             assert isinstance(daemon_api.claude, ClaudeAPI)
 
     def test_modes_are_independent(self):
         """Verify different daemon instances don't interfere."""
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test-key"}):
-            daemon1 = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=True)
-            daemon2 = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=False)
+            daemon1 = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=True)
+            daemon2 = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False)
 
             assert daemon1.use_claude_cli is True
             assert daemon2.use_claude_cli is False

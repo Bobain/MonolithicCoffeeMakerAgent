@@ -396,7 +396,7 @@ class CodeDeveloperDaemon:
 
     def execute_priority(self, priority: str):
         """Execute a priority from ROADMAP."""
-        prompt = f"Read docs/ROADMAP.md and implement {priority}"
+        prompt = f"Read docs/roadmap/ROADMAP.md and implement {priority}"
 
         try:
             result = self.fallback_strategy.execute_with_fallback(

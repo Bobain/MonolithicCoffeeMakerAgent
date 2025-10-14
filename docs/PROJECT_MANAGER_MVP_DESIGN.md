@@ -52,7 +52,7 @@ services:
 
       # CRITICAL: Share ROADMAP.md file (read-write for both)
       # There is ONLY ONE ROADMAP.md - no separate copies!
-      - ./docs/ROADMAP.md:/project/docs/ROADMAP.md:rw
+      - ./docs/roadmap/ROADMAP.md:/project/docs/roadmap/ROADMAP.md:rw
 
       # CRITICAL: Share entire project directory (for git operations)
       - .:/project/code:rw
@@ -64,7 +64,7 @@ services:
       - LANGFUSE_EXPORT_DB=/project/data/langfuse_export.db
 
       # Roadmap path (SAME FILE for user and daemon)
-      - ROADMAP_PATH=/project/docs/ROADMAP.md
+      - ROADMAP_PATH=/project/docs/roadmap/ROADMAP.md
 
     # Prevent daemon from corrupting files
     read_only: false  # Need write access to databases and ROADMAP.md
@@ -84,7 +84,7 @@ services:
 ❌ **WRONG**: Create separate copies
 ```
 User's Environment:                Daemon's Environment:
-./docs/ROADMAP.md           ≠≠≠    /daemon/docs/ROADMAP.md
+./docs/roadmap/ROADMAP.md           ≠≠≠    /daemon/docs/roadmap/ROADMAP.md
                             ^
                       CONFLICT! Two files!
 ```
@@ -92,7 +92,7 @@ User's Environment:                Daemon's Environment:
 ✅ **CORRECT**: Share single file via Docker volume
 ```
 User's Environment:                Daemon's Environment:
-./docs/ROADMAP.md           ===    /project/docs/ROADMAP.md
+./docs/roadmap/ROADMAP.md           ===    /project/docs/roadmap/ROADMAP.md
                             ^
                       SAME FILE via volume mount!
 ```
@@ -113,16 +113,16 @@ def edit_roadmap_safely(edit_function):
     """Edit ROADMAP.md with file lock to prevent conflicts."""
     with FileLock(ROADMAP_LOCK, timeout=10):
         # Read current state
-        current = Path("./docs/ROADMAP.md").read_text()
+        current = Path("./docs/roadmap/ROADMAP.md").read_text()
 
         # Apply edit
         new_content = edit_function(current)
 
         # Write back
-        Path("./docs/ROADMAP.md").write_text(new_content)
+        Path("./docs/roadmap/ROADMAP.md").write_text(new_content)
 
         # Git commit (optional but recommended)
-        subprocess.run(["git", "add", "docs/ROADMAP.md"])
+        subprocess.run(["git", "add", "docs/roadmap/ROADMAP.md"])
         subprocess.run(["git", "commit", "-m", f"Update ROADMAP.md: {edit_function.__name__}"])
 ```
 
@@ -136,7 +136,7 @@ except Timeout:
     # Create branch, edit, merge
     subprocess.run(["git", "checkout", "-b", "daemon-update"])
     edit_roadmap()
-    subprocess.run(["git", "add", "docs/ROADMAP.md"])
+    subprocess.run(["git", "add", "docs/roadmap/ROADMAP.md"])
     subprocess.run(["git", "commit", "-m", "Daemon update"])
     subprocess.run(["git", "checkout", "main"])
     subprocess.run(["git", "merge", "daemon-update"])
@@ -756,7 +756,7 @@ MVP is successful if:
 - **PRIORITY 1.5 Design**: `docs/PRIORITY_1.5_DATABASE_SYNC_DESIGN.md`
 - **Retry Patterns**: `docs/retry_patterns.md` (if exists)
 - **Sprint 1 Summary**: `docs/sprint1_improvements_summary.md`
-- **ROADMAP**: `docs/ROADMAP.md` (Recurring Best Practices section)
+- **ROADMAP**: `docs/roadmap/ROADMAP.md` (Recurring Best Practices section)
 
 ---
 

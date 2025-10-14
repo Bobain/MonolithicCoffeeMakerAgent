@@ -7,7 +7,7 @@
 ## Essential File Paths
 
 ### Must Read on Every Startup
-1. **`/Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/docs/ROADMAP.md`**
+1. **`/Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/docs/roadmap/ROADMAP.md`**
    - My task list (first 200 lines show priorities)
    - Find next "📝 Planned" priority
 
@@ -34,7 +34,7 @@
 
 ### Startup Checklist
 ```
-[ ] Read docs/ROADMAP.md (first 200 lines)
+[ ] Read docs/roadmap/ROADMAP.md (first 200 lines)
 [ ] Read docs/code_developer/current_progress.md
 [ ] Check git status and current branch
 [ ] Identify next priority or continue current work
@@ -130,7 +130,7 @@ EOF
 
 ### Status Tracking
 - `data/developer_status.json` - Daemon status (auto-updated)
-- `docs/ROADMAP.md` - Status field only (read-mostly)
+- `docs/roadmap/ROADMAP.md` - Status field only (read-mostly)
 
 ---
 
@@ -225,7 +225,7 @@ api_key = config.get_anthropic_api_key(required=True)
 
 ```bash
 # Find planned priorities
-grep "📝 Planned" docs/ROADMAP.md | head -10
+grep "📝 Planned" docs/roadmap/ROADMAP.md | head -10
 
 # Check current status
 cat data/developer_status.json

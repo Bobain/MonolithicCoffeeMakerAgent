@@ -46,7 +46,7 @@ class PromptLoader:
         ...     "PRIORITY_TITLE": "Refactoring"
         ... })
         >>> print(prompt)
-        "Read docs/ROADMAP.md and implement US-021: Refactoring..."
+        "Read docs/roadmap/ROADMAP.md and implement US-021: Refactoring..."
     """
 
     def __init__(self, prompts_dir: Optional[Path] = None):
@@ -196,6 +196,11 @@ class PromptNames:
         TEST_WEB_APP: Web application testing (Puppeteer)
         CAPTURE_VISUAL_DOCS: Visual documentation capture (Puppeteer)
         VERIFY_DOD_PUPPETEER: Definition of Done verification with Puppeteer
+
+    ACE Framework Prompts:
+        ACE_GENERATOR_OBSERVE: Generator dual execution observation
+        ACE_REFLECTOR_EXTRACT: Reflector insight extraction
+        ACE_CURATOR_CONSOLIDATE: Curator playbook consolidation
     """
 
     # Agent system prompts
@@ -209,3 +214,8 @@ class PromptNames:
     TEST_WEB_APP = "test-web-app"
     CAPTURE_VISUAL_DOCS = "capture-visual-docs"
     VERIFY_DOD_PUPPETEER = "verify-dod-puppeteer"
+
+    # ACE Framework prompts
+    ACE_GENERATOR_OBSERVE = "ace-generator-observe"
+    ACE_REFLECTOR_EXTRACT = "ace-reflector-extract"
+    ACE_CURATOR_CONSOLIDATE = "ace-curator-consolidate"
