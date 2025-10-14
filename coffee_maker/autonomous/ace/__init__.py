@@ -7,6 +7,8 @@ reflection, and playbook curation.
 Reference: https://www.arxiv.org/abs/2510.04618
 """
 
+from coffee_maker.autonomous.ace.curator import ACECurator
+from coffee_maker.autonomous.ace.embeddings import compute_similarity, get_embedding
 from coffee_maker.autonomous.ace.models import (
     ConsolidatedInsight,
     DeltaItem,
@@ -17,6 +19,7 @@ from coffee_maker.autonomous.ace.models import (
     Playbook,
     PlaybookBullet,
 )
+from coffee_maker.autonomous.ace.playbook_loader import PlaybookLoader
 from coffee_maker.autonomous.ace.reflector import ACEReflector
 
 __all__ = [
@@ -29,4 +32,8 @@ __all__ = [
     "PlaybookBullet",
     "ConsolidatedInsight",
     "ACEReflector",
+    "ACECurator",
+    "PlaybookLoader",
+    "get_embedding",
+    "compute_similarity",
 ]
