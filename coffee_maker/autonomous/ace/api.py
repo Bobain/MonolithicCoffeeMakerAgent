@@ -372,3 +372,197 @@ class ACEApi:
         if not trace.executions:
             return False
         return all(e.result_status == "success" for e in trace.executions)
+
+    # Playbook curation methods
+
+    def get_playbook_bullets(
+        self,
+        agent_name: str,
+        category: Optional[str] = None,
+        status: Optional[str] = None,
+        min_effectiveness: Optional[float] = None,
+        max_effectiveness: Optional[float] = None,
+        search_query: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Get playbook bullets with optional filtering.
+
+        Args:
+            agent_name: Agent name
+            category: Filter by category
+            status: Filter by status (active, pending, archived)
+            min_effectiveness: Minimum effectiveness score
+            max_effectiveness: Maximum effectiveness score
+            search_query: Text search in bullet content
+
+        Returns:
+            List of bullet dictionaries
+        """
+        try:
+            loader = PlaybookLoader(agent_name, self.config)
+            playbook = loader.load()
+            bullets = playbook.bullets
+
+            # Apply filters
+            if category:
+                bullets = [b for b in bullets if b.category == category]
+
+            if status:
+                bullets = [b for b in bullets if b.status == status]
+
+            if min_effectiveness is not None:
+                bullets = [b for b in bullets if b.effectiveness >= min_effectiveness]
+
+            if max_effectiveness is not None:
+                bullets = [b for b in bullets if b.effectiveness <= max_effectiveness]
+
+            if search_query:
+                query_lower = search_query.lower()
+                bullets = [b for b in bullets if query_lower in b.content.lower()]
+
+            return [b.to_dict() for b in bullets]
+        except Exception as e:
+            logger.error(f"Failed to get playbook bullets: {e}")
+            return []
+
+    def approve_bullet(self, agent_name: str, bullet_id: str) -> bool:
+        """Approve a playbook bullet.
+
+        Args:
+            agent_name: Agent name
+            bullet_id: Bullet ID to approve
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            loader = PlaybookLoader(agent_name, self.config)
+            playbook = loader.load()
+
+            # Find and update bullet
+            for bullet in playbook.bullets:
+                if bullet.bullet_id == bullet_id:
+                    bullet.status = "active"
+                    bullet.metadata["approved_at"] = datetime.now().isoformat()
+                    logger.info(f"Approved bullet {bullet_id} for {agent_name}")
+
+                    # Save updated playbook
+                    return loader.save(playbook)
+
+            logger.warning(f"Bullet not found: {bullet_id}")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to approve bullet: {e}")
+            return False
+
+    def reject_bullet(self, agent_name: str, bullet_id: str) -> bool:
+        """Reject and archive a playbook bullet.
+
+        Args:
+            agent_name: Agent name
+            bullet_id: Bullet ID to reject
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            loader = PlaybookLoader(agent_name, self.config)
+            playbook = loader.load()
+
+            # Find and update bullet
+            for bullet in playbook.bullets:
+                if bullet.bullet_id == bullet_id:
+                    bullet.status = "archived"
+                    bullet.metadata["rejected_at"] = datetime.now().isoformat()
+                    logger.info(f"Rejected bullet {bullet_id} for {agent_name}")
+
+                    # Update playbook stats
+                    playbook.total_bullets = len([b for b in playbook.bullets if b.status == "active"])
+                    active_bullets = [b for b in playbook.bullets if b.status == "active"]
+                    if active_bullets:
+                        playbook.avg_effectiveness = sum(b.effectiveness for b in active_bullets) / len(active_bullets)
+
+                    # Save updated playbook
+                    return loader.save(playbook)
+
+            logger.warning(f"Bullet not found: {bullet_id}")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to reject bullet: {e}")
+            return False
+
+    def bulk_approve_bullets(self, agent_name: str, bullet_ids: List[str]) -> Dict[str, int]:
+        """Approve multiple bullets at once.
+
+        Args:
+            agent_name: Agent name
+            bullet_ids: List of bullet IDs to approve
+
+        Returns:
+            Dictionary with success and failure counts
+        """
+        success_count = 0
+        failure_count = 0
+
+        for bullet_id in bullet_ids:
+            if self.approve_bullet(agent_name, bullet_id):
+                success_count += 1
+            else:
+                failure_count += 1
+
+        return {"success": success_count, "failure": failure_count}
+
+    def bulk_reject_bullets(self, agent_name: str, bullet_ids: List[str]) -> Dict[str, int]:
+        """Reject multiple bullets at once.
+
+        Args:
+            agent_name: Agent name
+            bullet_ids: List of bullet IDs to reject
+
+        Returns:
+            Dictionary with success and failure counts
+        """
+        success_count = 0
+        failure_count = 0
+
+        for bullet_id in bullet_ids:
+            if self.reject_bullet(agent_name, bullet_id):
+                success_count += 1
+            else:
+                failure_count += 1
+
+        return {"success": success_count, "failure": failure_count}
+
+    def get_curation_queue(self, agent_name: str) -> List[Dict[str, Any]]:
+        """Get pending bullets awaiting curation.
+
+        Args:
+            agent_name: Agent name
+
+        Returns:
+            List of pending bullet dictionaries
+        """
+        try:
+            bullets = self.get_playbook_bullets(agent_name, status="pending")
+            logger.info(f"Retrieved {len(bullets)} pending bullets for {agent_name}")
+            return bullets
+        except Exception as e:
+            logger.error(f"Failed to get curation queue: {e}")
+            return []
+
+    def get_playbook_categories(self, agent_name: str) -> List[str]:
+        """Get all unique categories in playbook.
+
+        Args:
+            agent_name: Agent name
+
+        Returns:
+            List of category names
+        """
+        try:
+            loader = PlaybookLoader(agent_name, self.config)
+            playbook = loader.load()
+            categories = sorted(set(b.category for b in playbook.bullets))
+            return categories
+        except Exception as e:
+            logger.error(f"Failed to get categories: {e}")
+            return []

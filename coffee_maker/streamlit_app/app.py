@@ -17,10 +17,10 @@ st.info(
 Welcome to the ACE Framework management interface!
 
 Use the sidebar to navigate between:
-- 📝 **Configuration**: Enable/disable ACE per agent, adjust parameters
-- 📊 **Monitor**: Real-time trace visualization
-- 📚 **Playbooks**: Interactive playbook management
-- 📈 **Analytics**: Performance insights
+- 📝 **Configuration**: Enable/disable ACE per agent, adjust parameters (Phase 1)
+- 📊 **Monitor**: Real-time trace visualization (Phase 2) ✅
+- 📚 **Playbooks**: Interactive playbook management (Phase 3) ✅
+- 📈 **Analytics**: Performance insights (Phase 4)
 """
 )
 
@@ -73,10 +73,10 @@ st.markdown(
     """
 ### Getting Started
 
-1. **Configure Agents**: Go to the Configuration page to enable/disable ACE per agent
-2. **Monitor Activity**: Check the Monitor page to see real-time trace generation
-3. **Review Playbooks**: Visit the Playbooks page to inspect and curate agent learning
-4. **Analyze Performance**: Use the Analytics page for performance insights
+1. **Monitor Activity**: Check the Monitor page to see real-time trace generation ✅
+2. **Review Playbooks**: Visit the Playbooks page to inspect and curate agent learning ✅
+3. **Configure Agents**: (Coming soon) Enable/disable ACE per agent
+4. **Analyze Performance**: (Coming soon) Performance insights and trends
 
 ### About ACE
 
