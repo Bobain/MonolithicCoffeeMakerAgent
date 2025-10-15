@@ -45,6 +45,8 @@ class DocumentOwnershipGuard:
         "docs/generator/": {"generator"},
         "docs/reflector/": {"reflector"},
         "docs/curator/": {"curator"},
+        # architect owns architectural documentation (MUST come before docs/)
+        "docs/architecture/": {"architect"},
         # project_manager owns strategic documentation (general docs/)
         "docs/roadmap/": {"project_manager"},  # STRATEGIC planning
         "docs/": {"project_manager"},  # General docs (after ACE exceptions)

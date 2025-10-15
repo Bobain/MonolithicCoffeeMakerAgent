@@ -94,6 +94,18 @@ class TestDocumentOwnershipGuard:
         assert DocumentOwnershipGuard.can_write("curator", "docs/curator/playbooks/agent_playbook.json")
         assert DocumentOwnershipGuard.can_write("curator", "docs/curator/effectiveness_report.json")
 
+    def test_architect_can_write_architecture_docs(self):
+        """Architect can write to docs/architecture/ directory."""
+        assert DocumentOwnershipGuard.can_write("architect", "docs/architecture/specs/feature_spec.md")
+        assert DocumentOwnershipGuard.can_write("architect", "docs/architecture/decisions/ADR-001-test.md")
+        assert DocumentOwnershipGuard.can_write("architect", "docs/architecture/guidelines/guidelines.md")
+
+    def test_architect_cannot_write_other_dirs(self):
+        """Architect CANNOT write to other directories."""
+        assert not DocumentOwnershipGuard.can_write("architect", "coffee_maker/cli/test.py")
+        assert not DocumentOwnershipGuard.can_write("architect", "docs/ROADMAP.md")
+        assert not DocumentOwnershipGuard.can_write("architect", "docs/generator/trace.json")
+
     def test_ownership_violation_raises_error(self):
         """Attempting to write without ownership raises PermissionError."""
         with pytest.raises(PermissionError, match="OWNERSHIP VIOLATION"):
