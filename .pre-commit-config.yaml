@@ -23,7 +23,13 @@ repos:
   - id: check-added-large-files
   - id: no-commit-to-branch
     args:
-    - --branch
-    - main
-    - --branch
-    - master
+    - --pattern
+    - ^(?!roadmap$).*  # Only allow commits to roadmap branch (regex: anything except "roadmap")
+- repo: local
+  hooks:
+  - id: check-document-ownership
+    name: Validate Document Ownership Rules
+    entry: python -c "from coffee_maker.autonomous.document_ownership import DocumentOwnershipGuard; import sys; sys.exit(0 if DocumentOwnershipGuard.validate_no_overlaps() else 1)"
+    language: system
+    pass_filenames: false
+    always_run: true
