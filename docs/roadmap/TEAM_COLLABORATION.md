@@ -4,60 +4,112 @@ Visual guide to agent interactions, ownership, and workflows in the MonolithicCo
 
 ## Table of Contents
 - [Agent Overview](#agent-overview)
+- [Architecture: user_listener → Backend Agents](#architecture-user_listener--backend-agents)
 - [Request Flow Diagrams](#request-flow-diagrams)
 - [Ownership Matrix](#ownership-matrix)
 - [Decision Tree: Which Agent?](#decision-tree-which-agent)
 - [Common Workflows](#common-workflows)
 - [Examples](#examples)
+- [Version History](#version-history)
 
 ---
 
 ## Agent Overview
 
-The MonolithicCoffeeMakerAgent system consists of specialized AI agents, each with distinct responsibilities:
+The MonolithicCoffeeMakerAgent system consists of 8 active specialized AI agents:
+
+1. **user_listener** (PRIMARY UI)
+2. **architect** (architectural design)
+3. **code_developer** (implementation)
+4. **code-sanitizer** (code quality)
+5. **project_manager** (strategic oversight)
+6. **assistant** (documentation expert & dispatcher)
+7. **code-searcher** (deep analysis)
+8. **ux-design-expert** (design)
+
+Plus ACE Framework components:
+- **generator** (trace capture)
+- **reflector** (insight extraction)
+- **curator** (playbook curation)
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │                  MonolithicCoffeeMakerAgent                    │
 └────────────────────────────────────────────────────────────────┘
                               │
-            ┌─────────────────┼─────────────────┐
-            │                 │                 │
-    ┌───────▼───────┐  ┌──────▼──────┐  ┌──────▼──────┐
-    │   assistant   │  │code_developer│ │project_mgr  │
-    │ (Dispatcher)  │  │ (Execution)  │  │(Oversight)  │
-    └───────┬───────┘  └──────────────┘  └──────┬──────┘
-            │                                     │
-    ┌───────┴────────────────────────────────────┴──────┐
-    │                                                    │
-┌───▼────────┐  ┌──────────────┐  ┌──────────────┐  ┌──▼───────┐
-│code-       │  │ux-design-    │  │memory-bank-  │  │ACE       │
-│searcher    │  │expert        │  │synchronizer  │  │Framework │
-│(Analysis)  │  │(Design)      │  │(Doc Sync)    │  │(Learning)│
-└────────────┘  └──────────────┘  └──────────────┘  └──────────┘
+                              ▼
+                    ┌─────────────────┐
+                    │  user_listener  │ ◄── PRIMARY UI (ONLY agent with UI)
+                    └────────┬────────┘
+                             │
+            ┌────────────────┼────────────────┐
+            │                │                │
+    ┌───────▼───────┐  ┌─────▼─────┐  ┌──────▼──────┐
+    │   assistant   │  │ architect │  │code_developer│
+    │ (Dispatcher)  │  │ (Design)  │  │ (Execution)  │
+    └───────┬───────┘  └─────┬─────┘  └──────┬───────┘
+            │                │                │
+    ┌───────┴────────────────┴────────────────┴──────┐
+    │                                                 │
+┌───▼────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│code-       │  │ux-design-    │  │project_mgr   │  │code-         │
+│searcher    │  │expert        │  │(Oversight)   │  │sanitizer     │
+│(Analysis)  │  │(Design)      │  │              │  │(Quality)     │
+└────────────┘  └──────────────┘  └──────┬───────┘  └──────────────┘
+                                          │
+                                  ┌───────▼───────┐
+                                  │ACE Framework  │
+                                  │(Learning)     │
+                                  └───────────────┘
 ```
 
-### Core Agents
+### PRIMARY USER INTERFACE
+
+**user_listener** - PRIMARY USER INTERFACE ⭐
+- Role: ONLY agent with UI - interprets user intent and delegates to team
+- Scope: User interaction, chat interface, CLI
+- Authority: Routes all user requests to appropriate backend agents
+- Important: ALL other agents are backend-only (NO UI)
+- Motto: "Your single point of contact"
+
+### Backend Agents (NO UI)
 
 **assistant** - Documentation Expert + Intelligent Dispatcher
 - Role: Routes requests to appropriate agents
 - Knowledge: Deep understanding of ALL project documentation
 - Approach: Handles quick questions, delegates complex tasks
+- Access: READ-ONLY on all files
 - Motto: "Librarian + Traffic Controller"
+
+**architect** - Architectural Design & Dependencies
+- Role: System architecture, technical specifications, dependency management
+- Scope: docs/architecture/, pyproject.toml, poetry.lock
+- Authority: Creates ADRs, manages dependencies (requires user approval), provides implementation guidelines
+- Workflow: Works BEFORE code_developer (pre-implementation design)
+- Motto: "Design first, implement second"
 
 **code_developer** - Autonomous Implementation
 - Role: Executes all code changes
-- Scope: coffee_maker/, tests/, scripts/, pyproject.toml
+- Scope: coffee_maker/, tests/, scripts/, .claude/
 - Authority: Creates PRs autonomously, updates ROADMAP status
+- Workflow: Implements AFTER architect designs
 - Motto: "I write the code, not the docs"
+
+**code-sanitizer** - Code Quality Monitoring
+- Role: Analyze code quality, detect refactoring opportunities
+- Scope: docs/refacto/, .gemini.styleguide.md
+- Trigger: Wakes automatically when code_developer commits
+- Authority: Generates refactoring recommendations for project_manager
+- Access: READ-ONLY on coffee_maker/ (analyzes but doesn't modify)
+- Motto: "Monitor quality, recommend improvements"
 
 **project_manager** - Strategic Oversight
 - Role: Project coordination and documentation
-- Scope: docs/, .claude/agents/, .claude/commands/
+- Scope: docs/*.md, docs/roadmap/, docs/templates/, docs/code-searcher/, .claude/agents/, .claude/commands/
 - Authority: Strategic ROADMAP decisions, technical specs, GitHub monitoring
 - Motto: "Plan, coordinate, verify"
 
-### Specialized Agents
+### Specialized Backend Agents
 
 **code-searcher** - Deep Codebase Analysis
 - Role: Security audits, dependency tracing, pattern analysis
@@ -70,16 +122,48 @@ The MonolithicCoffeeMakerAgent system consists of specialized AI agents, each wi
 - Output: Design specifications (does not implement)
 - Motto: "Form follows function"
 
-**memory-bank-synchronizer** - Documentation Sync
-- Role: Keep CLAUDE.md files current with code reality
-- Scope: .claude/CLAUDE.md updates
-- Motto: "Docs reflect reality"
-
 **ACE Framework** - Continuous Learning
-- generator: Captures execution traces
-- reflector: Extracts insights
-- curator: Maintains evolving playbooks
+- generator: Captures execution traces → docs/generator/
+- reflector: Extracts insights → docs/reflector/
+- curator: Maintains evolving playbooks → docs/curator/
 - Motto: "Learn, adapt, improve"
+
+---
+
+## Architecture: user_listener → Backend Agents
+
+**CRITICAL UNDERSTANDING**:
+
+```
+┌─────────────────────────────────────────────┐
+│         USER INTERACTION LAYER              │
+│                                             │
+│         ┌─────────────────┐                 │
+│         │  user_listener  │ ◄── ONLY UI    │
+│         └────────┬────────┘                 │
+└──────────────────┼──────────────────────────┘
+                   │
+    ┌──────────────┼──────────────┐
+    │              │              │
+    ▼              ▼              ▼
+┌──────────┐  ┌──────────┐  ┌──────────┐
+│          │  │          │  │          │
+│ Backend  │  │ Backend  │  │ Backend  │
+│ Agents   │  │ Agents   │  │ Agents   │
+│ (NO UI)  │  │ (NO UI)  │  │ (NO UI)  │
+│          │  │          │  │          │
+└──────────┘  └──────────┘  └──────────┘
+  assistant    architect    code-sanitizer
+  project_mgr  code_dev     code-searcher
+  ux-design    generator    reflector
+               curator
+```
+
+**Key Points**:
+- user_listener is the ONLY agent with UI
+- ALL other agents are backend-only
+- User never interacts directly with backend agents
+- All requests flow through user_listener
 
 ---
 
@@ -91,6 +175,11 @@ The MonolithicCoffeeMakerAgent system consists of specialized AI agents, each wi
 User Request
      │
      ▼
+┌─────────────┐
+│user_listener│ ◄── PRIMARY USER INTERFACE (ONLY agent with UI)
+└──────┬──────┘
+       │
+       ▼
 ┌─────────────┐
 │  assistant  │ ◄── Has profound knowledge of:
 └──────┬──────┘     • docs/roadmap/ROADMAP.md
@@ -110,12 +199,71 @@ User Request
             └───────────────┘  └─────────────┘  └─────────────┘
 ```
 
+### Architecture Design Flow
+
+```
+User: "Design authentication system"
+     │
+     ▼
+┌─────────────┐
+│user_listener│ ◄── PRIMARY USER INTERFACE (ONLY agent with UI)
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  architect  │ ◄── Pre-implementation design
+└──────┬──────┘
+       │
+       ├──► Analyze requirements
+       ├──► Design architecture
+       ├──► Create technical spec (docs/architecture/specs/)
+       ├──► Document decisions (ADRs in docs/architecture/decisions/)
+       ├──► Provide guidelines (docs/architecture/guidelines/)
+       │
+       ▼
+┌──────────────┐
+│code_developer│ ◄── Reads spec and implements
+└──────────────┘
+```
+
+### Code Quality Monitoring Flow
+
+```
+code_developer commits code
+     │
+     ▼
+┌──────────────┐
+│code-sanitizer│ ◄── Wakes automatically
+└──────┬───────┘
+       │
+       ├──► Analyze complexity (radon)
+       ├──► Check style (flake8)
+       ├──► Detect duplication
+       ├──► Generate recommendations
+       │
+       ▼
+Write report to docs/refacto/refactoring_analysis_YYYY-MM-DD.md
+       │
+       ▼
+┌──────────────┐
+│project_mgr   │ ◄── Reads report
+└──────┬───────┘
+       │
+       ▼
+Decision: Next priority = REFACTOR or IMPLEMENT?
+```
+
 ### Code Change Request Flow
 
 ```
 User: "Fix bug in roadmap_cli.py"
      │
      ▼
+┌─────────────┐
+│user_listener│ ◄── PRIMARY USER INTERFACE (ONLY agent with UI)
+└──────┬──────┘
+       │
+       ▼
 ┌─────────────┐
 │  assistant  │  READ ONLY - Never modifies code
 └──────┬──────┘
@@ -143,6 +291,11 @@ User: "Create technical spec for PRIORITY 15"
      │
      ▼
 ┌─────────────┐
+│user_listener│ ◄── PRIMARY USER INTERFACE (ONLY agent with UI)
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
 │  assistant  │  READ ONLY - Never modifies docs
 └──────┬──────┘
        │
@@ -150,7 +303,7 @@ User: "Create technical spec for PRIORITY 15"
        │
        ▼
 ┌──────────────┐
-│project_mgr   │ ◄── ONLY agent that modifies docs/ directory
+│project_mgr   │ ◄── ONLY agent that modifies docs/*.md
 └──────┬───────┘
        │
        ├──► Read ROADMAP (docs/roadmap/ROADMAP.md)
@@ -166,6 +319,11 @@ User: "Create technical spec for PRIORITY 15"
 User: "Find all places where authentication is implemented"
      │
      ▼
+┌─────────────┐
+│user_listener│ ◄── PRIMARY USER INTERFACE (ONLY agent with UI)
+└──────┬──────┘
+       │
+       ▼
 ┌─────────────┐
 │  assistant  │  Can handle 1-2 file searches
 └──────┬──────┘
@@ -207,6 +365,11 @@ User: "Is the analytics dashboard complete?"
      │
      ▼
 ┌─────────────┐
+│user_listener│ ◄── PRIMARY USER INTERFACE (ONLY agent with UI)
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
 │  assistant  │
 └──────┬──────┘
        │
@@ -238,6 +401,11 @@ User: "What's the status of our PRs?"
      │
      ▼
 ┌─────────────┐
+│user_listener│ ◄── PRIMARY USER INTERFACE (ONLY agent with UI)
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
 │  assistant  │
 └──────┬──────┘
        │
@@ -261,28 +429,51 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
 
 ## Ownership Matrix
 
-### File and Directory Ownership
+### File and Directory Ownership (NO OVERLAPS)
+
+**CRITICAL RULE**: NO agent can own a parent directory when subdirectories have different owners.
 
 | Path | Owner | Permissions | Others |
 |------|-------|-------------|--------|
-| **docs/** | project_manager | Full control | READ-ONLY |
+| **docs/*.md** | project_manager | Top-level files ONLY | READ-ONLY |
 | **docs/roadmap/** | project_manager | Full control | READ-ONLY |
-| **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Full, code_developer: Status only | READ-ONLY |
-| **docs/PRIORITY_*_TECHNICAL_SPEC.md** | project_manager | Creates/updates specs | READ-ONLY |
-| **.claude/CLAUDE.md** | project_manager, memory-bank-synchronizer | Strategic updates | READ-ONLY |
-| **.claude/agents/** | project_manager | Agent definitions | READ-ONLY |
-| **.claude/commands/** | project_manager | Prompt management | READ-ONLY (load only) |
+| **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | PM: Strategic, CD: Status only | READ-ONLY |
+| **docs/architecture/** | architect | Technical specs, ADRs, guidelines | READ-ONLY |
+| **docs/refacto/** | code-sanitizer | Refactoring recommendations | READ-ONLY (PM uses for decisions) |
+| **docs/generator/** | generator | Execution traces | READ-ONLY |
+| **docs/reflector/** | reflector | Delta items (insights) | READ-ONLY |
+| **docs/curator/** | curator | Playbooks | READ-ONLY |
+| **docs/templates/** | project_manager | Documentation templates | READ-ONLY |
+| **docs/code-searcher/** | project_manager | Code analysis docs | code-searcher prepares (READ-ONLY) |
+| **pyproject.toml** | architect | Dependency management (user approval required) | READ-ONLY |
+| **poetry.lock** | architect | Dependency lock | READ-ONLY |
+| **.gemini.styleguide.md** | code-sanitizer | Code quality guidelines | READ-ONLY |
+| **.claude/** | code_developer | Technical configurations | READ-ONLY |
 | **coffee_maker/** | code_developer | All implementation | READ-ONLY |
 | **tests/** | code_developer | All test code | READ-ONLY |
 | **scripts/** | code_developer | Utility scripts | READ-ONLY |
-| **pyproject.toml** | code_developer | Dependencies | READ-ONLY |
+| **.pre-commit-config.yaml** | code_developer | Pre-commit hooks | READ-ONLY |
+| **data/user_interpret/** | user_interpret | Operational data | READ-ONLY |
+
+**Why NO overlaps?**
+- Enables parallel agent operations without conflicts
+- Each directory has EXACTLY one owner
+- Runtime validation enforces this rule (system crashes if violated)
+- Tests verify NO overlaps exist (34 ownership tests)
 
 ### Tool Ownership
 
 | Tool/Capability | Owner | Usage | Others |
 |----------------|-------|-------|--------|
+| **User Interface (ALL)** | user_listener | ONLY agent with UI | All others: Backend only |
 | **Code Editing** | code_developer | ALL code changes | None |
-| **Doc Editing** | project_manager | ALL docs/ changes | None |
+| **Doc Editing (docs/*.md, docs/roadmap/, docs/templates/)** | project_manager | Strategic docs | None |
+| **Architecture Specs** | architect | Creates technical specifications before implementation | code_developer reads and implements |
+| **ADRs** | architect | Documents architectural decisions | READ-ONLY |
+| **Dependency Management** | architect | ONLY agent that runs `poetry add` (user approval required) | code_developer CANNOT modify |
+| **Code Quality Analysis** | code-sanitizer | Analyzes complexity, duplication, style | Generates reports for project_manager |
+| **Refactoring Recommendations** | code-sanitizer | Prioritized refactoring suggestions | project_manager uses for decisions |
+| **Style Enforcement** | code-sanitizer | Enforces .gemini.styleguide.md | code_developer follows guidelines |
 | **Puppeteer DoD (during impl)** | code_developer | Verify DURING implementation | - |
 | **Puppeteer DoD (post-impl)** | project_manager | Verify AFTER completion | - |
 | **Puppeteer Demos** | assistant | Show features visually | Not for verification |
@@ -293,7 +484,6 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
 | **ROADMAP Updates (strategy)** | project_manager | Priorities, planning | - |
 | **ROADMAP Updates (status)** | code_developer | Status tracking | - |
 | **Design Decisions** | ux-design-expert | UI/UX, Tailwind | - |
-| **Doc Sync** | memory-bank-synchronizer | CLAUDE.md updates | - |
 | **ACE Observation** | generator | Capture traces | - |
 | **ACE Reflection** | reflector | Extract insights | - |
 | **ACE Curation** | curator | Maintain playbooks | - |
@@ -307,76 +497,65 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
                     │ User Request  │
                     └───────┬───────┘
                             │
-            ┌───────────────┴───────────────┐
-            │                               │
-        Quick                           Complex
-        question?                       task?
-            │                               │
-            ▼                               │
-    ┌───────────────┐                      │
-    │   assistant   │                      │
-    │ (answers now) │                      │
-    └───────────────┘                      │
-                                            │
-                    ┌───────────────────────┘
-                    │
-        ┌───────────┴────────────┐
-        │ What type of request?  │
-        └───────────┬────────────┘
-                    │
-    ┌───────────────┼───────────────┐
-    │               │               │
-    │               │               │
-    ▼               ▼               ▼
-┌────────┐    ┌──────────┐    ┌──────────┐
-│  Code  │    │   Docs   │    │ Analysis │
-│changes?│    │ changes? │    │  search? │
-└───┬────┘    └────┬─────┘    └────┬─────┘
-    │              │               │
-    ▼              ▼               ▼
-┌────────┐    ┌──────────┐    ┌──────────┐
-│  code_ │    │project_  │    │1-2 files?│
-│develop │    │  mgr     │    └────┬─────┘
-└────────┘    └──────────┘         │
-                              ┌────┴────┐
-                              │         │
-                             Yes       No
-                              │         │
-                              ▼         ▼
-                        ┌──────────┐ ┌──────────┐
-                        │assistant │ │  code-   │
-                        │(Grep/    │ │ searcher │
-                        │ Read)    │ │          │
-                        └──────────┘ └──────────┘
-
-    ┌───────────────┬───────────────┬───────────────┐
-    │               │               │               │
-    ▼               ▼               ▼               ▼
-┌────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
-│ Design │    │  GitHub  │    │   DoD    │    │Doc sync? │
-│decision?│    │ query?   │    │  verify? │    │          │
-└───┬────┘    └────┬─────┘    └────┬─────┘    └────┬─────┘
-    │              │               │               │
-    ▼              ▼               ▼               ▼
-┌────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
-│ ux-    │    │project_  │    │During:   │    │memory-   │
-│design- │    │  mgr     │    │code_dev  │    │  bank-   │
-│expert  │    │(gh CLI)  │    │After:    │    │sync      │
-└────────┘    └──────────┘    │proj_mgr  │    └──────────┘
-                               └──────────┘
+                            ▼
+                    ┌───────────────┐
+                    │ user_listener │ ◄── PRIMARY UI (ONLY agent with UI)
+                    └───────┬───────┘
+                            │
+                    ┌───────┴───────┐
+                    │               │
+                Quick              Complex
+                question?          task?
+                    │               │
+                    ▼               │
+            ┌───────────────┐      │
+            │   assistant   │      │
+            │ (answers now) │      │
+            └───────────────┘      │
+                                    │
+        ┌───────────────────────────┘
+        │
+    What type?
+        │
+    ┌───┼───┼───┼───┼───┼───┐
+    │   │   │   │   │   │   │
+    v   v   v   v   v   v   v
+  Code Docs Arch Quality Design GitHub ACE
+    │   │   │   │   │   │   │
+    v   v   v   v   v   v   v
+  code_ proj arch code- ux-  proj gen/
+  dev   mgr  itect sanit design mgr ref/
+                        izer  expert     cur
 ```
 
 ### Quick Reference
 
+**User interaction?** → user_listener
+- ONLY agent with UI
+- All user requests start here
+- Routes to backend agents
+
 **Code changes?** → code_developer
-- Anything in coffee_maker/, tests/, scripts/
+- Anything in coffee_maker/, tests/, scripts/, .claude/
 - Bug fixes, feature implementation
-- Test writing, dependency updates
+- Test writing
 
 **Documentation?** → project_manager
-- Anything in docs/ directory
+- Anything in docs/*.md, docs/roadmap/, docs/templates/
 - Technical specs, ROADMAP updates
 - Agent definitions, prompt management
+
+**Architectural design?** → architect
+- System architecture, technical specs
+- ADRs (Architectural Decision Records)
+- Dependency management (user approval required)
+- Works BEFORE code_developer
+
+**Code quality?** → code-sanitizer
+- Complexity analysis
+- Refactoring recommendations
+- Style enforcement
+- Wakes when code_developer commits
 
 **Simple search?** → assistant
 - Finding 1-2 files
@@ -400,31 +579,117 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
 - During implementation → code_developer
 - Post-completion → project_manager
 
-**Doc sync?** → memory-bank-synchronizer
-- Keep CLAUDE.md current
+**ACE Framework?**
+- Trace capture → generator
+- Insight extraction → reflector
+- Playbook curation → curator
 
 ---
 
 ## Common Workflows
 
-### Workflow 1: Implement New Feature
+### Workflow 1: Architect → code_developer
+
+```
+1. User: "Add authentication system"
+        │
+        ▼
+2. user_listener → architect:
+   "Design authentication architecture"
+        │
+        ▼
+3. architect:
+   ├─► Analyze requirements
+   ├─► Design architecture
+   ├─► Create docs/architecture/specs/authentication_spec.md
+   ├─► Create ADR: docs/architecture/decisions/ADR-005-jwt-vs-session.md
+   ├─► Check dependencies needed
+   │
+   ├─► Need PyJWT? Ask user approval via user_listener
+   │   User approves ✅
+   ├─► Run: poetry add pyjwt
+   ├─► Document decision in ADR
+   │
+   └─► Write implementation guidelines
+        │
+        ▼
+4. architect → code_developer:
+   "Implement authentication per spec"
+        │
+        ▼
+5. code_developer:
+   ├─► Read docs/architecture/specs/authentication_spec.md
+   ├─► Read docs/architecture/guidelines/
+   ├─► Implement in coffee_maker/auth/
+   ├─► Write tests
+   ├─► Commit and PR
+        │
+        ▼
+6. architect reviews implementation (optional)
+```
+
+### Workflow 2: Code Quality Monitoring
+
+```
+1. code_developer commits code
+        │
+        ▼
+2. code-sanitizer wakes up automatically:
+   ├─► Analyze complexity (radon)
+   ├─► Check style (flake8)
+   ├─► Detect duplication
+   ├─► Compare against .gemini.styleguide.md
+        │
+        ▼
+3. code-sanitizer generates report:
+   docs/refacto/refactoring_analysis_2025-10-15.md
+
+   Contains:
+   - High priority: 2 items (complexity > 15)
+   - Medium priority: 3 items
+   - Low priority: 5 items
+        │
+        ▼
+4. project_manager reads report:
+   ├─► Reviews high-priority items
+   ├─► Assesses impact on velocity
+   ├─► Checks ROADMAP priorities
+        │
+        ▼
+5. project_manager decides:
+
+   Option A: Many high-priority issues
+   → Create ROADMAP priority: "REFACTOR: Reduce complexity"
+   → code_developer refactors next sprint
+
+   Option B: Few issues, features more important
+   → Acknowledge recommendations
+   → Add to backlog
+   → Continue with features
+```
+
+### Workflow 3: Implement New Feature
 
 ```
 1. User: "Implement PRIORITY 12: Email Notifications"
         │
         ▼
-2. assistant analyzes:
+2. user_listener → assistant:
+   [Routes request to backend]
+        │
+        ▼
+3. assistant analyzes:
    - Reads docs/roadmap/ROADMAP.md
    - Checks PRIORITY 12 details
    - Sees technical spec exists: docs/PRIORITY_12_TECHNICAL_SPEC.md
    - Determines: Code implementation task
         │
         ▼
-3. assistant delegates to code_developer:
+4. assistant delegates to code_developer:
    "Please implement PRIORITY 12 per the technical spec"
         │
         ▼
-4. code_developer:
+5. code_developer:
    ├─► Read docs/PRIORITY_12_TECHNICAL_SPEC.md
    ├─► Update ROADMAP: Planned → In Progress
    ├─► Implement in coffee_maker/notifications/email.py
@@ -436,23 +701,27 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
    └─► Create PR autonomously
         │
         ▼
-5. code_developer reports: "PRIORITY 12 complete, PR #42 created"
+6. code_developer reports: "PRIORITY 12 complete, PR #42 created"
 ```
 
-### Workflow 2: Create Technical Spec
+### Workflow 4: Create Technical Spec
 
 ```
 1. User: "Create spec for PRIORITY 15: Dashboard Redesign"
         │
         ▼
-2. assistant:
+2. user_listener → assistant:
+   [Routes request to backend]
+        │
+        ▼
+3. assistant:
    - Reads docs/roadmap/ROADMAP.md
    - Checks PRIORITY 15 details
    - Determines: Documentation task
    - May need design input
         │
         ▼
-3. assistant checks if design input needed:
+4. assistant checks if design input needed:
    "Should I involve ux-design-expert for design recommendations?"
         │
         ├─► If Yes:
@@ -460,12 +729,12 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
         │   └─► Get design specs
         │
         ▼
-4. assistant delegates to project_manager:
+5. assistant delegates to project_manager:
    "Create technical spec for PRIORITY 15"
    [Includes design specs if applicable]
         │
         ▼
-5. project_manager:
+6. project_manager:
    ├─► Read docs/roadmap/ROADMAP.md PRIORITY 15
    ├─► Incorporate design specs (if provided)
    ├─► Create docs/PRIORITY_15_TECHNICAL_SPEC.md
@@ -473,61 +742,69 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
    └─► Git commit
         │
         ▼
-6. project_manager reports: "Spec created at docs/PRIORITY_15_TECHNICAL_SPEC.md"
+7. project_manager reports: "Spec created at docs/PRIORITY_15_TECHNICAL_SPEC.md"
 ```
 
-### Workflow 3: Investigate Bug
+### Workflow 5: Investigate Bug
 
 ```
 1. User: "Why is the CLI crashing on startup?"
         │
         ▼
-2. assistant:
+2. user_listener → assistant:
+   [Routes request to backend]
+        │
+        ▼
+3. assistant:
    - Simple investigation? Try quick analysis
    - Complex? Delegate to code-searcher
         │
         ▼
-3. code-searcher (for complex issues):
+4. code-searcher (for complex issues):
    ├─► Grep for crash patterns
    ├─► Trace CLI initialization
    ├─► Check recent commits
    ├─► Identify root cause
    │
    ▼
-4. code-searcher presents findings to assistant:
+5. code-searcher presents findings to assistant:
    "Found: Circular import in coffee_maker/cli/__init__.py"
         │
         ▼
-5. assistant delegates fix to code_developer:
+6. assistant delegates fix to code_developer:
    "Fix circular import issue found by code-searcher"
         │
         ▼
-6. code_developer:
+7. code_developer:
    ├─► Fix circular import
    ├─► Add test to prevent regression
    ├─► Run tests
    └─► Commit and create PR
 ```
 
-### Workflow 4: Check Project Status
+### Workflow 6: Check Project Status
 
 ```
 1. User: "How's the project going?"
         │
         ▼
-2. assistant:
+2. user_listener → assistant:
+   [Routes request to backend]
+        │
+        ▼
+3. assistant:
    - Quick overview? Handle directly
    - Detailed analysis? Delegate to project_manager
         │
         ▼
-3. project_manager (detailed analysis):
+4. project_manager (detailed analysis):
    ├─► Read docs/roadmap/ROADMAP.md
    ├─► Check GitHub: gh pr list, gh issue list
    ├─► Check CI status: gh pr checks
    ├─► Analyze velocity, blockers
    │
    ▼
-4. project_manager generates report:
+5. project_manager generates report:
 
    ## Project Status
 
@@ -561,6 +838,9 @@ User: "Add logging to the daemon and document it"
 
 ✅ CORRECT:
 
+user_listener → assistant:
+[Routes to backend]
+
 assistant:
 "This task requires TWO agents:
 1. code_developer - Add logging (code changes)
@@ -584,6 +864,12 @@ assistant tries to modify code directly
 
 assistant tries to update docs directly
 → NO! project_manager owns docs/ directory
+
+code_developer tries to add dependencies
+→ NO! architect manages dependencies (with user approval)
+
+project_manager tries to modify coffee_maker/
+→ NO! code_developer owns coffee_maker/ directory
 ```
 
 ### Example 3: Quick Question (assistant Handles)
@@ -592,6 +878,9 @@ assistant tries to update docs directly
 User: "What's the current priority?"
 
 ✅ CORRECT:
+
+user_listener → assistant:
+[Routes to backend]
 
 assistant:
 [Reads docs/roadmap/ROADMAP.md]
@@ -609,6 +898,9 @@ Expected completion: 2 days"
 User: "Find all database queries in the codebase"
 
 ✅ CORRECT:
+
+user_listener → assistant:
+[Routes to backend]
 
 assistant:
 "This requires deep codebase analysis.
@@ -630,6 +922,9 @@ User: "Are our PRs ready to merge?"
 
 ✅ CORRECT:
 
+user_listener → assistant:
+[Routes to backend]
+
 assistant:
 "Checking GitHub status via project_manager..."
 
@@ -642,11 +937,72 @@ PR #43: Blocked ❌ (failing tests)
 PR #44: In review 🔄 (waiting on approval)"
 ```
 
+### Example 6: Architectural Design (Delegate)
+
+```
+User: "Design a microservices architecture"
+
+✅ CORRECT:
+
+user_listener → assistant:
+[Routes to backend]
+
+assistant:
+"Delegating to architect for system design..."
+
+architect:
+├─► Analyze requirements
+├─► Research patterns
+├─► Create docs/architecture/specs/microservices_design.md
+├─► Create ADR: docs/architecture/decisions/ADR-006-monolith-to-microservices.md
+└─► Document guidelines
+
+architect:
+"Architecture designed. See docs/architecture/ for details."
+```
+
+### Example 7: Code Quality Check (Automatic)
+
+```
+code_developer commits code to feature/us-015-metrics-tracking
+
+✅ AUTOMATIC:
+
+code-sanitizer wakes up:
+├─► Analyzes coffee_maker/metrics/
+├─► Detects: 2 functions with complexity > 15
+├─► Generates: docs/refacto/refactoring_analysis_2025-10-15.md
+
+project_manager reads report:
+"High-priority refactoring items detected.
+Should we address before continuing?"
+
+[Decision: Continue with features, add refactoring to backlog]
+```
+
 ---
 
 ## Key Principles
 
-### 1. assistant is Documentation Expert + Dispatcher
+### 1. user_listener is PRIMARY UI
+
+```
+┌──────────────────────────────────┐
+│         user_listener            │
+│                                  │
+│  ONLY AGENT WITH UI              │
+│  • Chat interface                │
+│  • CLI interaction               │
+│  • All user requests             │
+│                                  │
+│  RESPONSIBILITIES:               │
+│  • Interpret user intent         │
+│  • Route to backend agents       │
+│  • No backend logic              │
+└──────────────────────────────────┘
+```
+
+### 2. assistant is Documentation Expert + Dispatcher
 
 ```
 ┌──────────────────────────────────┐
@@ -666,7 +1022,30 @@ PR #44: In review 🔄 (waiting on approval)"
 └──────────────────────────────────┘
 ```
 
-### 2. code_developer Owns Execution
+### 3. architect Designs First
+
+```
+┌──────────────────────────────────┐
+│         architect                │
+│                                  │
+│  OWNS:                           │
+│  • docs/architecture/            │
+│  • pyproject.toml                │
+│  • poetry.lock                   │
+│                                  │
+│  RESPONSIBILITIES:               │
+│  • System architecture           │
+│  • Technical specifications      │
+│  • ADRs                          │
+│  • Dependency management         │
+│  • Works BEFORE code_developer   │
+│                                  │
+│  REQUIRES:                       │
+│  • User approval for deps        │
+└──────────────────────────────────┘
+```
+
+### 4. code_developer Implements Second
 
 ```
 ┌──────────────────────────────────┐
@@ -676,7 +1055,7 @@ PR #44: In review 🔄 (waiting on approval)"
 │  • coffee_maker/                 │
 │  • tests/                        │
 │  • scripts/                      │
-│  • pyproject.toml                │
+│  • .claude/                      │
 │                                  │
 │  RESPONSIBILITIES:               │
 │  • ALL code changes              │
@@ -684,22 +1063,49 @@ PR #44: In review 🔄 (waiting on approval)"
 │  • Create PRs autonomously       │
 │  • Update ROADMAP status         │
 │  • DoD verification (during)     │
+│  • Works AFTER architect         │
 │                                  │
 │  DOES NOT:                       │
 │  • Create technical specs        │
 │  • Monitor project health        │
 │  • Make strategic decisions      │
+│  • Manage dependencies           │
 └──────────────────────────────────┘
 ```
 
-### 3. project_manager Owns Oversight
+### 5. code-sanitizer Monitors Quality
+
+```
+┌──────────────────────────────────┐
+│       code-sanitizer             │
+│                                  │
+│  OWNS:                           │
+│  • docs/refacto/                 │
+│  • .gemini.styleguide.md         │
+│                                  │
+│  RESPONSIBILITIES:               │
+│  • Analyze complexity            │
+│  • Detect duplication            │
+│  • Check style                   │
+│  • Generate recommendations      │
+│  • Wakes AFTER code_developer    │
+│                                  │
+│  ACCESS:                         │
+│  • READ-ONLY on coffee_maker/    │
+│  • Analyzes but doesn't modify   │
+└──────────────────────────────────┘
+```
+
+### 6. project_manager Oversees Strategy
 
 ```
 ┌──────────────────────────────────┐
 │       project_manager            │
 │                                  │
 │  OWNS:                           │
-│  • docs/                         │
+│  • docs/*.md                     │
+│  • docs/roadmap/                 │
+│  • docs/templates/               │
 │  • .claude/agents/               │
 │  • .claude/commands/             │
 │                                  │
@@ -713,17 +1119,18 @@ PR #44: In review 🔄 (waiting on approval)"
 │  DOES NOT:                       │
 │  • Write implementation code     │
 │  • Create PRs                    │
+│  • Manage dependencies           │
 └──────────────────────────────────┘
 ```
 
-### 4. Specialized Agents Have Clear Domains
+### 7. Specialized Agents Have Clear Domains
 
 ```
-code-searcher:          ux-design-expert:       memory-bank-sync:
-READ-ONLY analysis      Design specifications   Doc synchronization
+code-searcher:          ux-design-expert:       ACE Framework:
+READ-ONLY analysis      Design specifications   Continuous learning
 │                       │                       │
-└─► Findings to         └─► Specs to            └─► Updates to
-    assistant               implementer             CLAUDE.md
+└─► Findings to         └─► Specs to            └─► Traces/Insights
+    assistant               implementer             to system
 ```
 
 ---
@@ -738,8 +1145,24 @@ READ-ONLY analysis      Design specifications   Doc synchronization
 
 ---
 
-## Version
+## Version History
+
+**v3.0 (2025-10-15)** - Major architectural update
+- Added architect agent (architectural design & dependencies)
+- Added code-sanitizer agent (code quality monitoring)
+- Added user_listener as PRIMARY UI
+- Removed memory-bank-synchronizer (obsolete - tag-based workflow)
+- Fixed ownership overlaps (NO overlaps enforced)
+- Updated all workflows and decision trees
+- pyproject.toml now owned by architect (not code_developer)
+
+**v2.0 (2025-10-14)** - Documentation reorganization
+
+**v1.0 (Original)** - Initial team collaboration guide
+
+---
 
 **Created**: 2025-10-14
+**Last Updated**: 2025-10-15
 **Part of**: Documentation reorganization initiative
 **Maintained by**: project_manager
