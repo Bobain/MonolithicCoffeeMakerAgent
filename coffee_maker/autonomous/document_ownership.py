@@ -21,7 +21,7 @@ Example:
 """
 
 from pathlib import Path
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, List
 import logging
 from functools import wraps
 
@@ -39,26 +39,47 @@ class DocumentOwnershipGuard:
     """
 
     # Define ownership rules (SINGLE SOURCE OF TRUTH)
-    # IMPORTANT: More specific patterns are checked first (longest match wins)
+    # CRITICAL: NO OVERLAPS ALLOWED
+    # An agent CANNOT own a parent directory if another agent owns a subdirectory
+    # Each directory has EXACTLY ONE owner (enforced at runtime)
     OWNERSHIP_RULES: Dict[str, Set[str]] = {
-        # ACE components own their specific subdirectories (MUST come before docs/)
+        # ACE Framework directories (most specific first for longest-match)
         "docs/generator/": {"generator"},
         "docs/reflector/": {"reflector"},
         "docs/curator/": {"curator"},
-        # architect owns architectural documentation (MUST come before docs/)
+
+        # Agent-specific docs directories
         "docs/architecture/": {"architect"},
-        # project_manager owns strategic documentation (general docs/)
-        "docs/roadmap/": {"project_manager"},  # STRATEGIC planning
-        "docs/": {"project_manager"},  # General docs (after ACE exceptions)
-        # code_developer owns technical configuration (including .claude/)
-        ".claude/": {"code_developer"},  # Technical configs (agents, prompts, MCP)
+        "docs/roadmap/": {"project_manager"},
+        "docs/code-searcher/": {"project_manager"},  # project_manager writes code-searcher reports
+        "docs/templates/": {"project_manager"},
+        "docs/tutorials/": {"project_manager"},
+        "docs/user_interpret/": {"project_manager"},  # Meta-documentation about user_interpret
+
+        # NO "docs/" entry - would create overlaps!
+        # Each subdirectory must be explicitly owned
+
+        # architect owns dependency management (NOT code_developer)
+        "pyproject.toml": {"architect"},
+        "poetry.lock": {"architect"},
+
         # code_developer owns implementation
         "coffee_maker/": {"code_developer"},
         "tests/": {"code_developer"},
         "scripts/": {"code_developer"},
-        "pyproject.toml": {"code_developer"},
-        # user_interpret owns conversation logs (moved from docs/)
+        ".claude/": {"code_developer"},
+        ".pre-commit-config.yaml": {"code_developer"},
+
+        # operational data (not docs)
         "data/user_interpret/": {"user_interpret"},
+    }
+
+    # SPECIAL: Shared write with clear field boundaries
+    SHARED_WRITE_RULES: Dict[str, Dict[str, Set[str]]] = {
+        "docs/roadmap/ROADMAP.md": {
+            "strategic_updates": {"project_manager"},  # Add/remove priorities, descriptions
+            "status_updates": {"code_developer"},      # Status fields only (Planned → In Progress → Complete)
+        }
     }
 
     @classmethod
@@ -110,6 +131,8 @@ class DocumentOwnershipGuard:
     def assert_can_write(cls, agent_name: str, file_path: str):
         """Assert agent can write to file (raises exception if not).
 
+        CRITICAL: This enforces the NO OVERLAPS rule at runtime.
+
         Args:
             agent_name: Name of agent attempting write
             file_path: Path to file
@@ -123,8 +146,19 @@ class DocumentOwnershipGuard:
             >>> DocumentOwnershipGuard.assert_can_write("assistant", "coffee_maker/test.py")
             PermissionError: OWNERSHIP VIOLATION: assistant cannot write to coffee_maker/test.py
         """
-        if not cls.can_write(agent_name, file_path):
-            owners = cls.get_owners(file_path)
+        owners = cls.get_owners(file_path)
+
+        if agent_name not in owners:
+            # Check if this is the special shared ROADMAP.md
+            if file_path.endswith("docs/roadmap/ROADMAP.md"):
+                # Allow project_manager and code_developer with field restrictions
+                if agent_name in ["project_manager", "code_developer"]:
+                    # WARN: Agent must respect field boundaries
+                    logger.warning(
+                        f"{agent_name} can write to ROADMAP.md but ONLY their designated fields"
+                    )
+                    return
+
             raise PermissionError(
                 f"❌ OWNERSHIP VIOLATION: {agent_name} cannot write to {file_path}\n"
                 f"   Owned by: {', '.join(owners) if owners else 'UNKNOWN'}\n"
@@ -165,52 +199,42 @@ class DocumentOwnershipGuard:
         return owners
 
     @classmethod
-    def validate_no_overlaps(cls) -> bool:
-        """Validate no problematic overlaps in ownership rules.
+    def validate_no_overlaps(cls) -> List[str]:
+        """Validate that no directory has overlapping ownership.
 
-        Overlaps are allowed as long as they follow the longest-match principle:
-        - More specific paths (longer) take precedence over general paths
-        - Example: docs/generator/ can override docs/ ownership
-
-        This check ensures there are no AMBIGUOUS overlaps (same length with
-        different owners).
+        CRITICAL: NO OVERLAPS ALLOWED
+        - An agent CANNOT own a parent directory if another agent owns a subdirectory
+        - This enables parallel operations without conflicts
 
         Returns:
-            True if no problematic overlaps, False if ambiguous overlaps found
+            List of overlap violations (empty if no overlaps)
 
         Example:
-            >>> DocumentOwnershipGuard.validate_no_overlaps()
-            True
+            >>> violations = DocumentOwnershipGuard.validate_no_overlaps()
+            >>> assert len(violations) == 0, "Overlaps detected!"
         """
-        patterns = list(cls.OWNERSHIP_RULES.keys())
+        violations = []
+        paths = sorted(cls.OWNERSHIP_RULES.keys())
 
-        for i, pattern1 in enumerate(patterns):
-            for pattern2 in patterns[i + 1 :]:
-                if cls._patterns_overlap(pattern1, pattern2):
-                    owners1 = cls.OWNERSHIP_RULES[pattern1]
-                    owners2 = cls.OWNERSHIP_RULES[pattern2]
+        for i, path1 in enumerate(paths):
+            for path2 in paths[i + 1:]:
+                # Check if path1 is parent of path2 or vice versa
+                if path2.startswith(path1) or path1.startswith(path2):
+                    owners1 = cls.OWNERSHIP_RULES[path1]
+                    owners2 = cls.OWNERSHIP_RULES[path2]
 
-                    # Only flag if SAME LENGTH (ambiguous) with different owners
-                    # Different lengths are okay (longest match wins)
-                    if len(pattern1) == len(pattern2) and owners1 != owners2:
-                        logger.error(
-                            f"❌ AMBIGUOUS OVERLAP DETECTED:\n"
-                            f"   {pattern1} owned by {owners1}\n"
-                            f"   {pattern2} owned by {owners2}\n"
-                            f"   Same length patterns with different owners create ambiguity!"
-                        )
-                        return False
-                    elif owners1 != owners2:
-                        # Different lengths: okay, but log for visibility
-                        logger.debug(
-                            f"ℹ️ Hierarchical overlap (OK):\n"
-                            f"   {pattern1} owned by {owners1}\n"
-                            f"   {pattern2} owned by {owners2}\n"
-                            f"   Longest match wins (no ambiguity)"
+                    # If different owners, this is an overlap violation
+                    if owners1 != owners2:
+                        violations.append(
+                            f"OVERLAP: {path1} (owned by {owners1}) and {path2} (owned by {owners2})"
                         )
 
-        logger.debug("✅ No ambiguous overlaps detected in ownership rules")
-        return True
+        if violations:
+            logger.error(f"❌ {len(violations)} ownership overlaps detected")
+        else:
+            logger.debug("✅ No overlaps detected in ownership rules")
+
+        return violations
 
     @classmethod
     def _matches_pattern(cls, path: Path, pattern: str) -> bool:
@@ -335,3 +359,24 @@ def requires_ownership(agent_name: str):
         return wrapper
 
     return decorator
+
+
+# Module-level startup validation
+def _validate_ownership_on_import():
+    """Validate ownership rules on module import (startup check).
+
+    CRITICAL: Catches overlaps at startup, before any operations run.
+    """
+    guard = DocumentOwnershipGuard()
+    violations = guard.validate_no_overlaps()
+
+    if violations:
+        error_msg = "CRITICAL: Ownership overlaps detected:\n" + "\n".join(violations)
+        logger.error(error_msg)
+        raise RuntimeError(error_msg)
+
+    logger.info("✅ Ownership validation passed: NO overlaps detected")
+
+
+# Run validation on import (catches configuration errors early)
+_validate_ownership_on_import()

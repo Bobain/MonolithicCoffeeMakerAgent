@@ -27,10 +27,18 @@ class Architect(ACEAgent):
     - Create detailed technical specifications
     - Document architectural decisions (ADRs)
     - Provide implementation guidelines
-    - Interact with user through user_listener
+    - Manage dependencies (pyproject.toml, poetry.lock)
+    - Request user approval for important decisions
 
-    Owned Directory:
+    Owned Directories/Files:
     - docs/architecture/ (all architectural documentation)
+    - pyproject.toml (dependency management)
+    - poetry.lock (dependency lock file)
+
+    Key Behaviors:
+    - PROACTIVE: Asks user for approval on important decisions
+    - OWNERSHIP: Only agent that can modify pyproject.toml
+    - DESIGN: All code-design decisions go through architect
 
     ACE Integration:
     - Automatic via ACEAgent base class
@@ -243,3 +251,123 @@ Accepted
     def _get_current_date(self) -> str:
         """Get current date in ISO format."""
         return datetime.now().strftime("%Y-%m-%d")
+
+    def add_dependency(self, package_name: str, user_approved: bool = False) -> Dict[str, Any]:
+        """Add dependency to pyproject.toml (requires user approval).
+
+        IMPORTANT: Only architect can modify pyproject.toml (dependency management).
+        This method requires explicit user approval before making changes.
+
+        Args:
+            package_name: Package to add (e.g., "requests", "fastapi[all]")
+            user_approved: Whether user has approved this dependency
+
+        Returns:
+            Result with approval status
+        """
+        if not user_approved:
+            self._report_concern(
+                f"Dependency '{package_name}' requires user approval before adding"
+            )
+            return {
+                "status": "pending_approval",
+                "package": package_name,
+                "message": "architect needs user approval to add dependency",
+                "action_required": f"User must approve adding '{package_name}' before architect can proceed"
+            }
+
+        # User approved - proceed with adding dependency
+        import subprocess
+        result = subprocess.run(
+            ["poetry", "add", package_name],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            logger.info(f"✅ Added dependency: {package_name}")
+            return {
+                "status": "success",
+                "package": package_name,
+                "message": f"Successfully added {package_name}"
+            }
+        else:
+            self._report_difficulty(
+                f"Failed to add dependency '{package_name}': {result.stderr}",
+                severity="high"
+            )
+            return {
+                "status": "error",
+                "package": package_name,
+                "message": result.stderr
+            }
+
+    def remove_dependency(self, package_name: str, user_approved: bool = False) -> Dict[str, Any]:
+        """Remove dependency from pyproject.toml (requires user approval).
+
+        Args:
+            package_name: Package to remove
+            user_approved: Whether user has approved this removal
+
+        Returns:
+            Result with approval status
+        """
+        if not user_approved:
+            self._report_concern(
+                f"Removing dependency '{package_name}' requires user approval"
+            )
+            return {
+                "status": "pending_approval",
+                "package": package_name,
+                "message": "architect needs user approval to remove dependency",
+                "action_required": f"User must approve removing '{package_name}' before architect can proceed"
+            }
+
+        # User approved - proceed with removing dependency
+        import subprocess
+        result = subprocess.run(
+            ["poetry", "remove", package_name],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            logger.info(f"✅ Removed dependency: {package_name}")
+            return {
+                "status": "success",
+                "package": package_name,
+                "message": f"Successfully removed {package_name}"
+            }
+        else:
+            self._report_difficulty(
+                f"Failed to remove dependency '{package_name}': {result.stderr}",
+                severity="high"
+            )
+            return {
+                "status": "error",
+                "package": package_name,
+                "message": result.stderr
+            }
+
+    def request_user_approval(self, decision: str, context: str) -> Dict[str, Any]:
+        """Request user approval for architectural decision.
+
+        Use this for important decisions like:
+        - Adding/removing dependencies
+        - Major architectural changes
+        - Breaking changes to interfaces
+
+        Args:
+            decision: What architect wants to do
+            context: Why this decision is needed
+
+        Returns:
+            Request for user_listener to present to user
+        """
+        return {
+            "type": "approval_request",
+            "decision": decision,
+            "context": context,
+            "requested_by": "architect",
+            "message": f"architect requests approval: {decision}"
+        }

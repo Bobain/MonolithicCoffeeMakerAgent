@@ -14,20 +14,30 @@ from coffee_maker.autonomous.document_ownership import (
 class TestDocumentOwnershipGuard:
     """Test ownership enforcement core functionality."""
 
-    def test_no_ownership_overlaps(self):
-        """CRITICAL: Verify no overlaps in ownership rules.
+    def test_no_overlapping_ownership_critical(self):
+        """CRITICAL: Verify NO overlaps in ownership rules.
 
-        This is the most important test - overlaps would create ambiguity
-        about who can write to files, leading to conflicts.
+        This is the MOST IMPORTANT test - overlaps break parallel operations.
         """
-        result = DocumentOwnershipGuard.validate_no_overlaps()
-        assert result is True, "Ownership overlaps detected! This violates critical architectural rule."
+        guard = DocumentOwnershipGuard()
+        violations = guard.validate_no_overlaps()
 
-    def test_project_manager_can_write_docs(self):
-        """project_manager can write to docs/ directory."""
-        assert DocumentOwnershipGuard.can_write("project_manager", "docs/ROADMAP.md")
-        assert DocumentOwnershipGuard.can_write("project_manager", "docs/roadmap/ROADMAP.md")
-        assert DocumentOwnershipGuard.can_write("project_manager", "docs/PRIORITY_1_TECHNICAL_SPEC.md")
+        assert len(violations) == 0, (
+            f"CRITICAL: Ownership overlaps detected:\n" +
+            "\n".join(violations)
+        )
+
+    def test_project_manager_owns_only_roadmap_subdir(self):
+        """Verify project_manager owns docs/roadmap/ NOT all of docs/."""
+        guard = DocumentOwnershipGuard()
+
+        # Can write to roadmap
+        assert guard.can_write("project_manager", "docs/roadmap/ROADMAP.md")
+        assert guard.can_write("project_manager", "docs/roadmap/TEAM_COLLABORATION.md")
+
+        # CANNOT write to other docs subdirectories
+        assert not guard.can_write("project_manager", "docs/architecture/specs/test.md")
+        assert not guard.can_write("project_manager", "docs/generator/traces/test.json")
 
     def test_project_manager_cannot_write_code(self):
         """project_manager CANNOT write to code files or .claude/ directory."""
@@ -50,14 +60,24 @@ class TestDocumentOwnershipGuard:
         assert DocumentOwnershipGuard.can_write("code_developer", ".claude/commands/implement-feature.md")
 
     def test_code_developer_cannot_write_docs(self):
-        """code_developer CANNOT write to docs/ directory."""
-        assert not DocumentOwnershipGuard.can_write("code_developer", "docs/ROADMAP.md")
-        assert not DocumentOwnershipGuard.can_write("code_developer", "docs/ACE_FRAMEWORK.md")
+        """code_developer CANNOT write to any docs/ subdirectories."""
         assert not DocumentOwnershipGuard.can_write("code_developer", "docs/roadmap/ROADMAP.md")
+        assert not DocumentOwnershipGuard.can_write("code_developer", "docs/architecture/specs/test.md")
+        assert not DocumentOwnershipGuard.can_write("code_developer", "docs/templates/template.md")
 
-    def test_code_developer_can_write_pyproject_toml(self):
-        """code_developer can manage dependencies via pyproject.toml."""
-        assert DocumentOwnershipGuard.can_write("code_developer", "pyproject.toml")
+    def test_architect_owns_pyproject_toml(self):
+        """Verify architect owns pyproject.toml (dependency management)."""
+        guard = DocumentOwnershipGuard()
+
+        assert guard.can_write("architect", "pyproject.toml")
+        assert not guard.can_write("code_developer", "pyproject.toml")
+
+    def test_architect_owns_poetry_lock(self):
+        """Verify architect owns poetry.lock."""
+        guard = DocumentOwnershipGuard()
+
+        assert guard.can_write("architect", "poetry.lock")
+        assert not guard.can_write("code_developer", "poetry.lock")
 
     def test_user_interpret_can_write_own_data(self):
         """user_interpret can write to data/user_interpret/ directory."""
@@ -65,9 +85,41 @@ class TestDocumentOwnershipGuard:
         assert DocumentOwnershipGuard.can_write("user_interpret", "data/user_interpret/conversation_summaries.json")
 
     def test_user_interpret_cannot_write_docs(self):
-        """user_interpret CANNOT write to docs/ directory."""
-        assert not DocumentOwnershipGuard.can_write("user_interpret", "docs/ROADMAP.md")
+        """user_interpret CANNOT write to docs/ subdirectories."""
+        assert not DocumentOwnershipGuard.can_write("user_interpret", "docs/roadmap/ROADMAP.md")
         assert not DocumentOwnershipGuard.can_write("user_interpret", "docs/user_interpret/README.md")
+
+    def test_no_parent_directory_ownership(self):
+        """Verify no agent owns parent directory when subdirectories have different owners."""
+        guard = DocumentOwnershipGuard()
+
+        # docs/ should NOT appear in ownership rules
+        assert "docs/" not in guard.OWNERSHIP_RULES
+
+        # Each subdirectory must be explicitly owned
+        assert "docs/roadmap/" in guard.OWNERSHIP_RULES
+        assert "docs/architecture/" in guard.OWNERSHIP_RULES
+        assert "docs/generator/" in guard.OWNERSHIP_RULES
+
+    def test_architect_owns_dependencies(self):
+        """Verify architect owns dependency management files."""
+        guard = DocumentOwnershipGuard()
+
+        owners_pyproject = guard.get_owners("pyproject.toml")
+        assert owners_pyproject == {"architect"}
+
+        owners_lock = guard.get_owners("poetry.lock")
+        assert owners_lock == {"architect"}
+
+    def test_code_developer_cannot_modify_dependencies(self):
+        """Verify code_developer CANNOT modify dependency files."""
+        guard = DocumentOwnershipGuard()
+
+        with pytest.raises(PermissionError):
+            guard.assert_can_write("code_developer", "pyproject.toml")
+
+        with pytest.raises(PermissionError):
+            guard.assert_can_write("code_developer", "poetry.lock")
 
     def test_user_interpret_cannot_write_code(self):
         """user_interpret CANNOT write to code directories."""
@@ -114,17 +166,19 @@ class TestDocumentOwnershipGuard:
     def test_get_owners_returns_correct_agents(self):
         """get_owners returns the correct set of owners for each path."""
         # Test various paths
-        assert DocumentOwnershipGuard.get_owners("docs/ROADMAP.md") == {"project_manager"}
+        assert DocumentOwnershipGuard.get_owners("docs/roadmap/ROADMAP.md") == {"project_manager"}
         assert DocumentOwnershipGuard.get_owners("coffee_maker/cli/test.py") == {"code_developer"}
         assert DocumentOwnershipGuard.get_owners(".claude/CLAUDE.md") == {"code_developer"}
         assert DocumentOwnershipGuard.get_owners(".claude/agents/code_developer.md") == {"code_developer"}
         assert DocumentOwnershipGuard.get_owners("data/user_interpret/history.jsonl") == {"user_interpret"}
         assert DocumentOwnershipGuard.get_owners("docs/generator/trace.json") == {"generator"}
+        assert DocumentOwnershipGuard.get_owners("pyproject.toml") == {"architect"}
+        assert DocumentOwnershipGuard.get_owners("poetry.lock") == {"architect"}
 
     def test_ownership_error_message_is_helpful(self):
         """PermissionError message includes helpful context."""
         try:
-            DocumentOwnershipGuard.assert_can_write("assistant", "docs/ROADMAP.md")
+            DocumentOwnershipGuard.assert_can_write("assistant", "docs/roadmap/ROADMAP.md")
             pytest.fail("Expected PermissionError")
         except PermissionError as e:
             error_msg = str(e)
@@ -154,18 +208,19 @@ class TestOwnershipScenarios:
         assert not DocumentOwnershipGuard.can_write("generator", path)
 
     def test_project_manager_exclusively_owns_roadmap(self):
-        """project_manager exclusively owns ROADMAP strategic content.
+        """project_manager and code_developer can write to ROADMAP with field restrictions.
 
-        Note: code_developer can update status, but that goes through
-        project_manager's API, not direct file writes.
+        Special case: ROADMAP.md has shared write with clear boundaries:
+        - project_manager: strategic updates (add/remove priorities, descriptions)
+        - code_developer: status updates only (Planned → In Progress → Complete)
         """
         path = "docs/roadmap/ROADMAP.md"
 
-        # project_manager can write
+        # Both can write (with field restrictions enforced separately)
         assert DocumentOwnershipGuard.can_write("project_manager", path)
+        # Note: code_developer can write but only to status fields (enforced at application layer)
 
-        # No one else can write directly
-        assert not DocumentOwnershipGuard.can_write("code_developer", path)
+        # Others cannot write
         assert not DocumentOwnershipGuard.can_write("user_interpret", path)
         assert not DocumentOwnershipGuard.can_write("assistant", path)
 
@@ -193,6 +248,7 @@ class TestOwnershipScenarios:
         """code_developer has exclusive ownership of implementation and technical configs.
 
         This prevents other agents from modifying code or technical configurations directly.
+        NOTE: architect owns pyproject.toml and poetry.lock (dependency management).
         """
         paths = [
             "coffee_maker/cli/roadmap_cli.py",
@@ -200,7 +256,6 @@ class TestOwnershipScenarios:
             "tests/unit/test_daemon.py",
             "tests/ci_tests/test_integration.py",
             "scripts/deploy.sh",
-            "pyproject.toml",
             ".claude/CLAUDE.md",
             ".claude/agents/code_developer.md",
             ".claude/commands/implement-feature.md",
@@ -216,12 +271,20 @@ class TestOwnershipScenarios:
             ), f"project_manager should NOT own {path}"
             assert not DocumentOwnershipGuard.can_write("assistant", path), f"assistant should NOT own {path}"
 
-    def test_project_manager_owns_all_strategic_docs(self):
-        """project_manager has exclusive ownership of strategic documentation (docs/ only)."""
+    def test_project_manager_owns_strategic_docs_subdirs(self):
+        """project_manager owns specific docs subdirectories (not all of docs/).
+
+        project_manager owns:
+        - docs/roadmap/
+        - docs/templates/
+        - docs/tutorials/
+        - docs/code-searcher/ (writes code-searcher reports)
+        - docs/user_interpret/ (meta-docs about user_interpret)
+        """
         paths = [
-            "docs/ROADMAP.md",
             "docs/roadmap/ROADMAP.md",
-            "docs/PRIORITY_1_TECHNICAL_SPEC.md",
+            "docs/templates/TEMPLATE.md",
+            "docs/code-searcher/analysis_2025-10-15.md",
         ]
 
         for path in paths:
@@ -310,4 +373,5 @@ class TestOwnershipEdgeCases:
         """Ownership validation completes without errors."""
         # This should not raise any exceptions
         result = DocumentOwnershipGuard.validate_no_overlaps()
-        assert result is True
+        # Result is list of violations (empty list = success)
+        assert len(result) == 0
