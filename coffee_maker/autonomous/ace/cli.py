@@ -29,20 +29,23 @@ def cmd_reflector():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Analyze last 24 hours of traces for code_developer
-  poetry run ace-reflector --agent code_developer --hours 24
+  # Analyze last 24 hours of traces for user_listener (RECOMMENDED)
+  poetry run ace-reflector --agent user_listener --hours 24
+
+  # Analyze last 24 hours of traces for assistant
+  poetry run ace-reflector --agent assistant --hours 24
 
   # Analyze last 7 days of traces
-  poetry run ace-reflector --agent code_developer --hours 168
+  poetry run ace-reflector --agent user_listener --hours 168
 
   # Specify custom output directory
-  poetry run ace-reflector --agent code_developer --hours 24 --output /tmp/deltas
+  poetry run ace-reflector --agent user_listener --hours 24 --output /tmp/deltas
         """,
     )
     parser.add_argument(
         "--agent",
         required=True,
-        help="Agent name (e.g., code_developer, project_manager)",
+        help="Agent name (e.g., user_listener, assistant, code-searcher)",
     )
     parser.add_argument(
         "--hours",
@@ -62,6 +65,16 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    # Validate agent choice
+    recommended_agents = ["user_listener", "assistant", "code-searcher"]
+    experimental_agents = ["code_developer", "project_manager"]
+
+    if args.agent in experimental_agents:
+        print(f"\n⚠️  WARNING: ACE for {args.agent} is EXPERIMENTAL")
+        print(f"   This agent has slow feedback loops and may not learn effectively")
+        print(f"   Recommended agents: {', '.join(recommended_agents)}")
+        print()
 
     # Configure logging
     logging.basicConfig(
@@ -122,20 +135,23 @@ def cmd_curator():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Consolidate all recent deltas for code_developer
-  poetry run ace-curator --agent code_developer
+  # Consolidate all recent deltas for user_listener (RECOMMENDED)
+  poetry run ace-curator --agent user_listener
+
+  # Consolidate for assistant
+  poetry run ace-curator --agent assistant
 
   # Specify custom delta directory
-  poetry run ace-curator --agent code_developer --input /tmp/deltas
+  poetry run ace-curator --agent user_listener --input /tmp/deltas
 
   # Process specific number of recent deltas
-  poetry run ace-curator --agent code_developer --max-deltas 10
+  poetry run ace-curator --agent user_listener --max-deltas 10
         """,
     )
     parser.add_argument(
         "--agent",
         required=True,
-        help="Agent name (e.g., code_developer)",
+        help="Agent name (e.g., user_listener, assistant, code-searcher)",
     )
     parser.add_argument(
         "--input",
@@ -155,6 +171,16 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    # Validate agent choice
+    recommended_agents = ["user_listener", "assistant", "code-searcher"]
+    experimental_agents = ["code_developer", "project_manager"]
+
+    if args.agent in experimental_agents:
+        print(f"\n⚠️  WARNING: ACE for {args.agent} is EXPERIMENTAL")
+        print(f"   This agent has slow feedback loops and may not learn effectively")
+        print(f"   Recommended agents: {', '.join(recommended_agents)}")
+        print()
 
     # Configure logging
     logging.basicConfig(
@@ -229,17 +255,20 @@ def cmd_status():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Show status for code_developer
-  poetry run ace-status --agent code_developer
+  # Show status for user_listener (RECOMMENDED)
+  poetry run ace-status --agent user_listener
+
+  # Show status for assistant
+  poetry run ace-status --agent assistant
 
   # Show detailed category breakdown
-  poetry run ace-status --agent code_developer --detailed
+  poetry run ace-status --agent user_listener --detailed
         """,
     )
     parser.add_argument(
         "--agent",
         required=True,
-        help="Agent name (e.g., code_developer)",
+        help="Agent name (e.g., user_listener, assistant, code-searcher)",
     )
     parser.add_argument(
         "--detailed",

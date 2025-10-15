@@ -477,6 +477,8 @@ class ACEGenerator:
         owned_dirs = {
             "code_developer": ["coffee_maker/", "tests/", "scripts/", "pyproject.toml"],
             "project_manager": ["docs/", ".claude/"],
+            "user_listener": [],  # UI only, no file ownership
+            "assistant": [],  # Documentation expert, no file ownership
             "code-searcher": ["docs/code-searcher/"],
             "curator": ["docs/curator/"],
             "reflector": ["docs/reflector/"],

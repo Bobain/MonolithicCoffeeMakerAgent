@@ -456,7 +456,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                     "name": f"{next_priority['name']}: {next_priority['title']}",
                 }
                 self.status.update_status(
-                    DeveloperState.WORKING, task=task_info, progress=0, current_step="Starting implementation"
+                    DeveloperState.WORKING,
+                    task=task_info,
+                    progress=0,
+                    current_step="Starting implementation",
                 )
 
                 # Execute implementation
@@ -476,7 +479,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                     self._merge_to_roadmap(f"Completed {next_priority['name']}")
 
                     # PRIORITY 4: Return to idle after task complete
-                    self.status.update_status(DeveloperState.IDLE, current_step="Task completed, waiting for next")
+                    self.status.update_status(
+                        DeveloperState.IDLE,
+                        current_step="Task completed, waiting for next",
+                    )
                 else:
                     logger.warning(f"⚠️  Implementation failed for {next_priority['name']}")
                     # PRIORITY 4: Log error activity
@@ -523,7 +529,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 self.status.report_activity(
                     ActivityType.ERROR_ENCOUNTERED,
                     f"Daemon crashed: {type(e).__name__}",
-                    details={"exception": str(e)[:200], "crash_count": self.crash_count},
+                    details={
+                        "exception": str(e)[:200],
+                        "crash_count": self.crash_count,
+                    },
                 )
 
                 # PRIORITY 2.8: Write status after crash
@@ -630,6 +639,21 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
     def _init_ace_framework(self) -> bool:
         """Initialize ACE framework if enabled.
 
+        NOTE: ACE for code_developer is EXPERIMENTAL and not recommended.
+
+        Reason: code_developer has:
+        - Long operations (30min-4hr) → slow learning
+        - Delayed feedback → hard to measure success
+        - Low volume (5-10/day) → insufficient data
+
+        Better ACE candidates:
+        - user_listener: Fast (< 10s), high volume (50-100/day), immediate feedback ⭐ BEST
+        - assistant: Fast (10-30s), good volume (20-50/day), quick feedback
+        - code-searcher: Fast (5-30s), moderate volume (10-20/day), clear success
+
+        Consider using ACE for those agents first, then code_developer later
+        after the framework is proven and refined.
+
         Returns:
             True if ACE is enabled and initialized, False otherwise
         """
@@ -637,12 +661,17 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             logger.info("ACE framework not available")
             return False
 
-        # Check if ACE is enabled via environment variable
-        ace_enabled = os.getenv("ACE_ENABLED", "false").lower() == "true"
+        # Check if ACE is enabled via environment variable (agent-specific)
+        ace_enabled = os.getenv("ACE_ENABLED_CODE_DEVELOPER", "false").lower() == "true"
 
         if not ace_enabled:
-            logger.info("ACE framework disabled (set ACE_ENABLED=true to enable)")
+            logger.info("ACE framework disabled for code_developer " "(set ACE_ENABLED_CODE_DEVELOPER=true to enable)")
+            logger.info("⚠️  NOTE: ACE for code_developer is EXPERIMENTAL - " "consider user_listener first")
             return False
+
+        logger.warning("⚠️  Using ACE for code_developer (EXPERIMENTAL)")
+        logger.warning("   This agent has slow feedback loops and low volume")
+        logger.warning("   Consider using ACE for user_listener/assistant instead")
 
         try:
             # Initialize ACE components
