@@ -121,7 +121,10 @@ class TestExponentialBackoffRetry:
     def test_integration_retry_then_fallback(self):
         """Test complete retry sequence followed by fallback."""
         retry = ExponentialBackoffRetry(
-            max_retries=2, backoff_base=2.0, max_wait_seconds=100.0, min_wait_before_fallback=10.0
+            max_retries=2,
+            backoff_base=2.0,
+            max_wait_seconds=100.0,
+            min_wait_before_fallback=10.0,
         )
 
         time.time()

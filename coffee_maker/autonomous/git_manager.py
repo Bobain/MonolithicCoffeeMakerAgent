@@ -226,7 +226,17 @@ class GitManager:
         """
         try:
             result = subprocess.run(
-                ["gh", "pr", "create", "--title", title, "--body", body, "--base", base],
+                [
+                    "gh",
+                    "pr",
+                    "create",
+                    "--title",
+                    title,
+                    "--body",
+                    body,
+                    "--base",
+                    base,
+                ],
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,

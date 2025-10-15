@@ -49,7 +49,7 @@ class PlaybookLoader:
                     category=b["category"],
                     effectiveness=b["effectiveness"],
                     usage_count=b.get("usage_count", 0),
-                    added_date=datetime.fromisoformat(b["added_date"]) if b.get("added_date") else None,
+                    added_date=(datetime.fromisoformat(b["added_date"]) if b.get("added_date") else None),
                     status=b.get("status", "active"),
                     metadata=b.get("metadata", {}),
                 )
@@ -61,7 +61,7 @@ class PlaybookLoader:
                 bullets=bullets,
                 total_bullets=len(bullets),
                 avg_effectiveness=data.get("avg_effectiveness", 0.0),
-                last_updated=datetime.fromisoformat(data["last_updated"]) if data.get("last_updated") else None,
+                last_updated=(datetime.fromisoformat(data["last_updated"]) if data.get("last_updated") else None),
             )
         except Exception as e:
             logger.error(f"Failed to load playbook for {self.agent_name}: {e}")

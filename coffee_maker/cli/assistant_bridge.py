@@ -157,7 +157,10 @@ Question: {input}
             - error: str (if failed)
         """
         if not self.is_available():
-            return {"success": False, "error": "Assistant not available (no LLM configured)"}
+            return {
+                "success": False,
+                "error": "Assistant not available (no LLM configured)",
+            }
 
         try:
             logger.info(f"Invoking assistant for: {question[:100]}...")

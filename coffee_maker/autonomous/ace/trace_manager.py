@@ -83,7 +83,13 @@ class TraceManager:
         Returns:
             List of mock ExecutionTrace objects
         """
-        agents = ["user_interpret", "assistant", "code_searcher", "code_developer", "project_manager"]
+        agents = [
+            "user_interpret",
+            "assistant",
+            "code_searcher",
+            "code_developer",
+            "project_manager",
+        ]
         if agent:
             agents = [agent]
 
@@ -121,7 +127,7 @@ class TraceManager:
                     execution_id=exec_id,
                     prompt=f"Process: {user_query}",
                     input_data={"query": user_query, "context": {}},
-                    output=f"Completed {user_query}" if result_status == "success" else "Failed to complete",
+                    output=(f"Completed {user_query}" if result_status == "success" else "Failed to complete"),
                     result_status=result_status,
                     duration_seconds=random.uniform(0.5, 15.0),
                     metadata={"iteration": j + 1},

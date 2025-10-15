@@ -164,7 +164,10 @@ def test_low_confidence_feature(classifier):
     """Test low confidence feature request."""
     result = classifier.classify("Something about notifications would be nice")
     # With at least one indicator ("notification"), will classify as feature
-    assert result.request_type in [RequestType.FEATURE_REQUEST, RequestType.CLARIFICATION_NEEDED]
+    assert result.request_type in [
+        RequestType.FEATURE_REQUEST,
+        RequestType.CLARIFICATION_NEEDED,
+    ]
     # But confidence should be low
     assert result.confidence <= 0.67
 
@@ -206,7 +209,10 @@ def test_very_long_input(classifier):
     """Test very long input doesn't cause issues."""
     long_text = "I want " * 1000 + "to add notifications"
     result = classifier.classify(long_text)
-    assert result.request_type in [RequestType.FEATURE_REQUEST, RequestType.CLARIFICATION_NEEDED]
+    assert result.request_type in [
+        RequestType.FEATURE_REQUEST,
+        RequestType.CLARIFICATION_NEEDED,
+    ]
     assert result.confidence >= 0.0
 
 
@@ -288,7 +294,10 @@ def test_low_confidence_ambiguous(classifier):
     # "need" might trigger feature, but overall should be low confidence
     assert result.confidence <= 0.67
     # Could be classified as either based on "need" keyword
-    assert result.request_type in [RequestType.FEATURE_REQUEST, RequestType.CLARIFICATION_NEEDED]
+    assert result.request_type in [
+        RequestType.FEATURE_REQUEST,
+        RequestType.CLARIFICATION_NEEDED,
+    ]
 
 
 def test_medium_confidence_triggers_clarification(classifier):
@@ -296,7 +305,11 @@ def test_medium_confidence_triggers_clarification(classifier):
     result = classifier.classify("Add some improvements to the process")
     # Has both "add" (feature) and "process" (methodology) - should be hybrid
     # Or could classify as one type if one dominates
-    assert result.request_type in [RequestType.HYBRID, RequestType.FEATURE_REQUEST, RequestType.METHODOLOGY_CHANGE]
+    assert result.request_type in [
+        RequestType.HYBRID,
+        RequestType.FEATURE_REQUEST,
+        RequestType.METHODOLOGY_CHANGE,
+    ]
 
 
 # ============================================================================

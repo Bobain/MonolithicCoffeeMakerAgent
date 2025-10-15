@@ -74,15 +74,26 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
         """,
     )
 
-    parser.add_argument("--roadmap", default="docs/ROADMAP.md", help="Path to ROADMAP.md (default: docs/ROADMAP.md)")
+    parser.add_argument(
+        "--roadmap",
+        default="docs/ROADMAP.md",
+        help="Path to ROADMAP.md (default: docs/ROADMAP.md)",
+    )
 
     parser.add_argument(
-        "--auto-approve", action="store_true", help="Auto-approve implementation without asking (autonomous mode)"
+        "--auto-approve",
+        action="store_true",
+        help="Auto-approve implementation without asking (autonomous mode)",
     )
 
     parser.add_argument("--no-pr", action="store_true", help="Skip creating pull requests")
 
-    parser.add_argument("--sleep", type=int, default=30, help="Seconds to sleep between iterations (default: 30)")
+    parser.add_argument(
+        "--sleep",
+        type=int,
+        default=30,
+        help="Seconds to sleep between iterations (default: 30)",
+    )
 
     parser.add_argument("--model", default="sonnet", help="Claude model to use (default: sonnet)")
 
@@ -105,7 +116,9 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
     # Setup logging
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        level=log_level,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     # Determine mode: CLI is default, API requires --use-api flag

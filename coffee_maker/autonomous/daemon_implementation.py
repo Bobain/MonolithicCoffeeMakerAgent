@@ -88,7 +88,10 @@ class ImplementationMixin:
             title=f"Implement {priority['name']}?",
             message=f"The daemon wants to implement:\n{priority['title']}\n\nApprove?",
             priority=NOTIF_PRIORITY_HIGH,
-            context={"priority_name": priority["name"], "priority_number": priority["number"]},
+            context={
+                "priority_name": priority["name"],
+                "priority_number": priority["number"],
+            },
         )
 
         logger.info(f"Created notification {notif_id} - waiting for response")
@@ -180,7 +183,12 @@ The daemon will skip this priority in future iterations.
 
         # Track subtask: Creating branch (estimated: 10 seconds)
         subtask_start = datetime.now()
-        self._update_subtask("Creating feature branch", "in_progress", subtask_start, estimated_seconds=10)
+        self._update_subtask(
+            "Creating feature branch",
+            "in_progress",
+            subtask_start,
+            estimated_seconds=10,
+        )
 
         # Create branch
         branch_name = f"feature/{priority_name.lower().replace(' ', '-').replace(':', '')}"
@@ -195,7 +203,9 @@ The daemon will skip this priority in future iterations.
 
         # PRIORITY 4: Log branch creation
         self.status.report_activity(
-            ActivityType.GIT_BRANCH, f"Created branch: {branch_name}", details={"branch": branch_name}
+            ActivityType.GIT_BRANCH,
+            f"Created branch: {branch_name}",
+            details={"branch": branch_name},
         )
 
         # Build prompt for Claude
@@ -283,7 +293,9 @@ Status: Requires human decision
 
         # PRIORITY 4: Log commit activity
         self.status.report_activity(
-            ActivityType.GIT_COMMIT, f"Committed {priority_name}", details={"priority": priority_name}
+            ActivityType.GIT_COMMIT,
+            f"Committed {priority_name}",
+            details={"priority": priority_name},
         )
 
         # PRIORITY 4: Update progress - pushing
@@ -305,23 +317,39 @@ Status: Requires human decision
 
         # PRIORITY 4: Log push activity
         self.status.report_activity(
-            ActivityType.GIT_PUSH, f"Pushed branch: {branch_name}", details={"branch": branch_name}
+            ActivityType.GIT_PUSH,
+            f"Pushed branch: {branch_name}",
+            details={"branch": branch_name},
         )
 
         # Create PR if enabled
         if self.create_prs:
             # PRIORITY 4: Update status to REVIEWING
-            self.status.update_status(DeveloperState.REVIEWING, progress=90, current_step="Creating pull request")
+            self.status.update_status(
+                DeveloperState.REVIEWING,
+                progress=90,
+                current_step="Creating pull request",
+            )
 
             # Track subtask: Creating PR (estimated: 45 seconds)
             subtask_start = datetime.now()
-            self._update_subtask("Creating pull request", "in_progress", subtask_start, estimated_seconds=45)
+            self._update_subtask(
+                "Creating pull request",
+                "in_progress",
+                subtask_start,
+                estimated_seconds=45,
+            )
 
             pr_body = self._build_pr_body(priority)
             pr_url = self.git.create_pull_request(f"Implement {priority_name}: {priority_title}", pr_body)
 
             if pr_url:
-                self._update_subtask("Creating pull request", "completed", subtask_start, estimated_seconds=45)
+                self._update_subtask(
+                    "Creating pull request",
+                    "completed",
+                    subtask_start,
+                    estimated_seconds=45,
+                )
                 logger.info(f"✅ PR created: {pr_url}")
 
                 # PRIORITY 4: Update progress - PR created
@@ -336,7 +364,12 @@ Status: Requires human decision
                     context={"priority_name": priority_name, "pr_url": pr_url},
                 )
             else:
-                self._update_subtask("Creating pull request", "failed", subtask_start, estimated_seconds=45)
+                self._update_subtask(
+                    "Creating pull request",
+                    "failed",
+                    subtask_start,
+                    estimated_seconds=45,
+                )
                 logger.warning("Failed to create PR")
                 # PRIORITY 4: Still mark as complete even if PR failed
                 self.status.report_progress(100, "Implementation complete (PR creation failed)")
@@ -359,7 +392,14 @@ Status: Requires human decision
         # Check if this is a documentation/UX priority
         is_documentation = any(
             keyword in title_lower or keyword in content_lower
-            for keyword in ["documentation", "docs", "guide", "ux", "user experience", "quickstart"]
+            for keyword in [
+                "documentation",
+                "docs",
+                "guide",
+                "ux",
+                "user experience",
+                "quickstart",
+            ]
         )
 
         if is_documentation:

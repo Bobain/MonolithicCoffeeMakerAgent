@@ -346,7 +346,12 @@ class ChatSession:
         >>> session.start()  # Starts interactive session
     """
 
-    def __init__(self, ai_service: AIService, editor: RoadmapEditor, enable_streaming: bool = True):
+    def __init__(
+        self,
+        ai_service: AIService,
+        editor: RoadmapEditor,
+        enable_streaming: bool = True,
+    ):
         """Initialize chat session.
 
         Args:
@@ -552,7 +557,10 @@ class ChatSession:
                 # Progress bar based on time (assuming typical priority takes 4-8 hours)
                 # Show progress up to 8 hours, then just show it's ongoing
                 max_hours = 8
-                progress_pct = min(100, int((time_on_priority.total_seconds() / 3600 / max_hours) * 100))
+                progress_pct = min(
+                    100,
+                    int((time_on_priority.total_seconds() / 3600 / max_hours) * 100),
+                )
 
                 # Create progress bar
                 bar_length = 20
@@ -1341,8 +1349,12 @@ class ChatSession:
                 type="bug",
                 title=f"BUG-{bug_number:03d}: {title}",
                 message=f"New bug reported. See {ticket_path} for details.\n\n{bug_description}",
-                priority=NOTIF_PRIORITY_HIGH if priority in ["Critical", "High"] else "normal",
-                context={"bug_number": bug_number, "ticket_path": str(ticket_path), "priority": priority},
+                priority=(NOTIF_PRIORITY_HIGH if priority in ["Critical", "High"] else "normal"),
+                context={
+                    "bug_number": bug_number,
+                    "ticket_path": str(ticket_path),
+                    "priority": priority,
+                },
             )
 
             logger.info(f"Bug ticket {bug_number} created, notification #{notif_id} sent to daemon")
@@ -1377,7 +1389,10 @@ class ChatSession:
             title="Command from project-manager",
             message=command,
             priority=NOTIF_PRIORITY_HIGH,
-            context={"timestamp": datetime.now().isoformat(), "source": "project_manager_chat"},
+            context={
+                "timestamp": datetime.now().isoformat(),
+                "source": "project_manager_chat",
+            },
         )
 
         return (

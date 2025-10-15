@@ -308,7 +308,11 @@ class TestContextLengthManagement(unittest.TestCase):
         # Both have sufficient context for the input
         auto_llm._large_context_models = [
             (large_llm1, "gemini/gemini-2.5-pro", 2097152),  # Will fail
-            (large_llm2, "openai/gpt-4.1", 1000000),  # Will succeed (has enough context)
+            (
+                large_llm2,
+                "openai/gpt-4.1",
+                1000000,
+            ),  # Will succeed (has enough context)
         ]
 
         # Large input (150K tokens)

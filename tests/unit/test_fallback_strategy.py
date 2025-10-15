@@ -285,8 +285,14 @@ class TestFallbackStrategyIntegration:
         # Setup
         model_configs = {
             "openai/gpt-4o-mini": {"context_length": 128000, "provider": "openai"},
-            "gemini/gemini-2.5-flash": {"context_length": 1000000, "provider": "gemini"},
-            "anthropic/claude-3-5-sonnet-20241022": {"context_length": 200000, "provider": "anthropic"},
+            "gemini/gemini-2.5-flash": {
+                "context_length": 1000000,
+                "provider": "gemini",
+            },
+            "anthropic/claude-3-5-sonnet-20241022": {
+                "context_length": 200000,
+                "provider": "anthropic",
+            },
         }
         strategy = SmartFallback(model_configs=model_configs)
 

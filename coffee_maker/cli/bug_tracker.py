@@ -320,7 +320,12 @@ _Phase 5: PR Creation - To be filled by code_developer_
         Returns:
             Formatted response message
         """
-        priority_emoji = {"Critical": "🚨", "High": "⚠️", "Medium": "🔸", "Low": "🔹"}.get(priority, "🔸")
+        priority_emoji = {
+            "Critical": "🚨",
+            "High": "⚠️",
+            "Medium": "🔸",
+            "Low": "🔹",
+        }.get(priority, "🔸")
 
         return f"""🐛 **Bug Ticket Created**
 

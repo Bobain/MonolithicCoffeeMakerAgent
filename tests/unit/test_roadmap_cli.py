@@ -21,7 +21,13 @@ from coffee_maker.cli.notifications import (
     NOTIF_TYPE_INFO,
     NOTIF_TYPE_QUESTION,
 )
-from coffee_maker.cli.roadmap_cli import cmd_notifications, cmd_respond, cmd_status, cmd_sync, cmd_view
+from coffee_maker.cli.roadmap_cli import (
+    cmd_notifications,
+    cmd_respond,
+    cmd_status,
+    cmd_sync,
+    cmd_view,
+)
 
 
 class TestCmdView:

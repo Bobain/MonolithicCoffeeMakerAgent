@@ -134,12 +134,20 @@ class DeveloperStatus:
             self.current_task["eta_seconds"] = self._calculate_eta(self.current_task, progress)
 
         # Log status update as activity
-        self.report_activity(ActivityType.STATUS_UPDATE, f"Status changed to {status.value}", auto_write=False)
+        self.report_activity(
+            ActivityType.STATUS_UPDATE,
+            f"Status changed to {status.value}",
+            auto_write=False,
+        )
 
         self._write_status()
 
     def report_activity(
-        self, activity_type: ActivityType, description: str, details: Optional[Dict] = None, auto_write: bool = True
+        self,
+        activity_type: ActivityType,
+        description: str,
+        details: Optional[Dict] = None,
+        auto_write: bool = True,
     ):
         """Log an activity.
 
@@ -188,7 +196,9 @@ class DeveloperStatus:
 
             # Log progress milestone
             self.report_activity(
-                ActivityType.STATUS_UPDATE, f"Progress: {progress}% - {current_step}", auto_write=False
+                ActivityType.STATUS_UPDATE,
+                f"Progress: {progress}% - {current_step}",
+                auto_write=False,
             )
 
         self._write_status()

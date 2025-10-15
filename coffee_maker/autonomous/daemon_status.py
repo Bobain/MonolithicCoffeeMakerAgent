@@ -239,7 +239,13 @@ The daemon will remain stopped until manually restarted.
         except Exception as e:
             logger.error(f"Failed to write status file: {e}")
 
-    def _update_subtask(self, name: str, status: str, start_time: datetime = None, estimated_seconds: int = 0):
+    def _update_subtask(
+        self,
+        name: str,
+        status: str,
+        start_time: datetime = None,
+        estimated_seconds: int = 0,
+    ):
         """Update or add a subtask to tracking list.
 
         This method tracks individual subtasks within a priority implementation

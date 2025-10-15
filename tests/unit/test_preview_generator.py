@@ -145,7 +145,10 @@ class TestMethodologyChangePreviews:
             request_type=RequestType.METHODOLOGY_CHANGE,
             content="All PRs must have 2 approvals before merging",
             target_documents=["docs/COLLABORATION_METHODOLOGY.md"],
-            metadata={"title": "PR Approval Policy", "rationale": "Improve code quality"},
+            metadata={
+                "title": "PR Approval Policy",
+                "rationale": "Improve code quality",
+            },
         )
 
         assert len(result.previews) == 1
@@ -189,7 +192,10 @@ class TestPreviewValidation:
             request_type=RequestType.FEATURE_REQUEST,
             content="Add feature",
             target_documents=["docs/ROADMAP.md"],
-            metadata={"title": "First Feature", "us_number": 3},  # Title similar to US-001
+            metadata={
+                "title": "First Feature",
+                "us_number": 3,
+            },  # Title similar to US-001
         )
 
         preview = result.previews[0]

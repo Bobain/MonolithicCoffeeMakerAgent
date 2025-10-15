@@ -549,7 +549,14 @@ class MetadataExtractor:
             return applies_match.group(1).strip()
 
         # Look for role mentions
-        roles = ["developers", "team", "everyone", "all", "project manager", "code_developer"]
+        roles = [
+            "developers",
+            "team",
+            "everyone",
+            "all",
+            "project manager",
+            "code_developer",
+        ]
         lower_text = text.lower()
         for role in roles:
             if role in lower_text:

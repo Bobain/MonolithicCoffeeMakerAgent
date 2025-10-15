@@ -71,7 +71,9 @@ class DeveloperStatusDisplay:
         """
         try:
             with Live(
-                self._format_status(self._read_status() or {}), refresh_per_second=0.2, console=self.console
+                self._format_status(self._read_status() or {}),
+                refresh_per_second=0.2,
+                console=self.console,
             ) as live:
                 while True:
                     time.sleep(interval)

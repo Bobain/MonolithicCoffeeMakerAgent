@@ -260,7 +260,9 @@ class TestWithRetry:
         mock_func = Mock(side_effect=[ValueError("1"), ValueError("2"), ValueError("3"), "success"])
 
         @with_retry(
-            max_attempts=4, backoff_base=10.0, max_backoff=5.0  # Would be 10, 100, 1000 without max  # Cap at 5 seconds
+            max_attempts=4,
+            backoff_base=10.0,
+            max_backoff=5.0,  # Would be 10, 100, 1000 without max  # Cap at 5 seconds
         )
         def test_func():
             result = mock_func()

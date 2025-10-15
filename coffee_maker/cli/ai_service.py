@@ -1094,7 +1094,12 @@ Provide a concise analysis in markdown format.
         return first_sentence
 
     def warn_user(
-        self, title: str, message: str, priority: str = "high", context: Optional[Dict] = None, play_sound: bool = True
+        self,
+        title: str,
+        message: str,
+        priority: str = "high",
+        context: Optional[Dict] = None,
+        play_sound: bool = True,
     ) -> int:
         """Create a warning notification for the user.
 
@@ -1152,7 +1157,12 @@ Provide a concise analysis in markdown format.
             db = NotificationDB()
 
             notif_id = db.create_notification(
-                type="warning", title=title, message=message, priority=priority, context=context, play_sound=play_sound
+                type="warning",
+                title=title,
+                message=message,
+                priority=priority,
+                context=context,
+                play_sound=play_sound,
             )
 
             logger.info(f"User warning created: {title} (ID: {notif_id})")

@@ -154,7 +154,7 @@ class AssistantManager:
                     "path": str(full_path),
                     "size": stat.st_size,
                     "modified": datetime.fromtimestamp(stat.st_mtime),
-                    "content_preview": content[:500] if len(content) > 500 else content,  # First 500 chars
+                    "content_preview": (content[:500] if len(content) > 500 else content),  # First 500 chars
                     "line_count": content.count("\n") + 1,
                 }
 
@@ -223,12 +223,17 @@ class AssistantManager:
                 "success": True,
                 "message": "Documentation refreshed successfully",
                 "docs_refreshed": len([k for k in self.docs_cache.keys() if not k.startswith("_")]),
-                "timestamp": self.last_refresh.isoformat() if self.last_refresh else None,
+                "timestamp": (self.last_refresh.isoformat() if self.last_refresh else None),
             }
 
         except Exception as e:
             logger.error(f"Manual refresh failed: {e}", exc_info=True)
-            return {"success": False, "message": f"Refresh failed: {e}", "docs_refreshed": 0, "timestamp": None}
+            return {
+                "success": False,
+                "message": f"Refresh failed: {e}",
+                "docs_refreshed": 0,
+                "timestamp": None,
+            }
 
     def get_status(self) -> Dict:
         """Get current assistant status.
@@ -279,7 +284,7 @@ class AssistantManager:
         return {
             "online": self.is_running,
             "assistant_available": self.assistant.is_available(),
-            "last_refresh": self.last_refresh.isoformat() if self.last_refresh else None,
+            "last_refresh": (self.last_refresh.isoformat() if self.last_refresh else None),
             "next_refresh": next_refresh_str,
             "docs_loaded": len(docs_info),
             "docs_info": docs_info,

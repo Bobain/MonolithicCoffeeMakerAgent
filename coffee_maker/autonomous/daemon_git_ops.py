@@ -155,7 +155,11 @@ class GitOpsMixin:
                 logger.info(f"Committing changes before merge: {message}")
                 subprocess.run(["git", "add", "-A"], cwd=self.git.repo_path, check=True)
                 subprocess.run(["git", "commit", "-m", message], cwd=self.git.repo_path, check=True)
-                subprocess.run(["git", "push", "origin", current_branch], cwd=self.git.repo_path, check=True)
+                subprocess.run(
+                    ["git", "push", "origin", current_branch],
+                    cwd=self.git.repo_path,
+                    check=True,
+                )
 
             # Switch to roadmap
             subprocess.run(["git", "checkout", "roadmap"], cwd=self.git.repo_path, check=True)
@@ -163,7 +167,14 @@ class GitOpsMixin:
 
             # Merge with --no-ff (preserves history)
             merge_result = subprocess.run(
-                ["git", "merge", "--no-ff", "-m", f"Merge {current_branch}: {message}", current_branch],
+                [
+                    "git",
+                    "merge",
+                    "--no-ff",
+                    "-m",
+                    f"Merge {current_branch}: {message}",
+                    current_branch,
+                ],
                 cwd=self.git.repo_path,
                 capture_output=True,
                 text=True,
@@ -172,7 +183,11 @@ class GitOpsMixin:
             if merge_result.returncode != 0:
                 # CONFLICT - abort and notify project_manager
                 subprocess.run(["git", "merge", "--abort"], cwd=self.git.repo_path, check=True)
-                subprocess.run(["git", "checkout", current_branch], cwd=self.git.repo_path, check=True)
+                subprocess.run(
+                    ["git", "checkout", current_branch],
+                    cwd=self.git.repo_path,
+                    check=True,
+                )
 
                 # Create CRITICAL notification for project_manager
                 self.notifications.create_notification(
@@ -219,10 +234,15 @@ Until resolved, project_manager cannot see latest progress.
 
             # Try to recover
             try:
-                subprocess.run(["git", "checkout", current_branch], cwd=self.git.repo_path, check=True)
+                subprocess.run(
+                    ["git", "checkout", current_branch],
+                    cwd=self.git.repo_path,
+                    check=True,
+                )
             except subprocess.CalledProcessError as e:
                 logger.error(
-                    f"Failed to recover branch: {e}", extra={"branch": current_branch, "returncode": e.returncode}
+                    f"Failed to recover branch: {e}",
+                    extra={"branch": current_branch, "returncode": e.returncode},
                 )
             except Exception as e:
                 logger.error(f"Unexpected error during branch recovery: {e}", exc_info=True)

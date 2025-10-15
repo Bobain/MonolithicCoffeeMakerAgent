@@ -517,7 +517,10 @@ class PreviewGenerator:
         return warnings
 
     def _generate_summary(
-        self, previews: List[DocumentPreview], request_type: RequestType, total_additions: int
+        self,
+        previews: List[DocumentPreview],
+        request_type: RequestType,
+        total_additions: int,
     ) -> str:
         """Generate summary of all previews.
 

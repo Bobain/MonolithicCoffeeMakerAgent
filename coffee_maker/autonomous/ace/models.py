@@ -135,5 +135,5 @@ class Playbook:
             "bullets": [b.to_dict() for b in self.bullets],
             "total_bullets": self.total_bullets,
             "avg_effectiveness": self.avg_effectiveness,
-            "last_updated": self.last_updated.isoformat() if self.last_updated else None,
+            "last_updated": (self.last_updated.isoformat() if self.last_updated else None),
         }

@@ -33,7 +33,12 @@ class ReadFileTool(BaseTool):
     )
     args_schema: type[BaseModel] = ReadFileInput
 
-    def _run(self, file_path: str, start_line: Optional[int] = None, end_line: Optional[int] = None) -> str:
+    def _run(
+        self,
+        file_path: str,
+        start_line: Optional[int] = None,
+        end_line: Optional[int] = None,
+    ) -> str:
         """Read file contents."""
         try:
             path = Path(file_path)
@@ -206,7 +211,14 @@ class ExecuteBashTool(BaseTool):
             return "Error: Write operations not allowed"
 
         try:
-            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30, cwd=Path.cwd())
+            result = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=Path.cwd(),
+            )
 
             output = result.stdout if result.stdout else result.stderr
             return output if output else "Command executed successfully (no output)"
@@ -284,7 +296,10 @@ class CreateBugTicketTool(BaseTool):
             # Get current git commit
             try:
                 result = subprocess.run(
-                    ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=5
+                    ["git", "rev-parse", "--short", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
                 )
                 git_commit = result.stdout.strip() if result.returncode == 0 else "unknown"
             except Exception:

@@ -621,7 +621,14 @@ def cmd_assistant_status(args):
 
         # Tools (from assistant_bridge.py - hardcoded for now)
         print("\nTools Available:")
-        tool_names = ["read_file", "search_code", "list_files", "git_log", "git_diff", "execute_bash"]
+        tool_names = [
+            "read_file",
+            "search_code",
+            "list_files",
+            "git_log",
+            "git_diff",
+            "execute_bash",
+        ]
         for tool in tool_names:
             print(f"  ✅ {tool}")
 
@@ -893,7 +900,12 @@ Use 'project-manager chat' for the best experience!
     # Developer status command (PRIORITY 4)
     dev_status_parser = subparsers.add_parser("developer-status", help="Show developer status dashboard")
     dev_status_parser.add_argument("--watch", action="store_true", help="Continuous watch mode")
-    dev_status_parser.add_argument("--interval", type=int, default=5, help="Update interval in seconds (default: 5)")
+    dev_status_parser.add_argument(
+        "--interval",
+        type=int,
+        default=5,
+        help="Update interval in seconds (default: 5)",
+    )
 
     # Notifications command
     subparsers.add_parser("notifications", help="List pending notifications")

@@ -282,7 +282,16 @@ class NotificationDB:
                 (type, priority, title, message, context, status, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (type, priority, title, message, context_json, NOTIF_STATUS_PENDING, now, now),
+                (
+                    type,
+                    priority,
+                    title,
+                    message,
+                    context_json,
+                    NOTIF_STATUS_PENDING,
+                    now,
+                    now,
+                ),
             )
             conn.commit()
             notif_id = cursor.lastrowid

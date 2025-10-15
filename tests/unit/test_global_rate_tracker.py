@@ -114,7 +114,9 @@ class TestGlobalRateTracker:
 
         # The tool's rate tracker should see the request from main LLM
         # Note: We need to access the rate tracker through the global singleton
-        from coffee_maker.langfuse_observe.global_rate_tracker import get_global_rate_tracker
+        from coffee_maker.langfuse_observe.global_rate_tracker import (
+            get_global_rate_tracker,
+        )
 
         shared_tracker = get_global_rate_tracker(tier="tier1")
         stats = shared_tracker.get_usage_stats("openai/gpt-4o-mini")

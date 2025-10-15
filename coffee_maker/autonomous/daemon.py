@@ -433,7 +433,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                     "name": f"{next_priority['name']}: {next_priority['title']}",
                 }
                 self.status.update_status(
-                    DeveloperState.WORKING, task=task_info, progress=0, current_step="Starting implementation"
+                    DeveloperState.WORKING,
+                    task=task_info,
+                    progress=0,
+                    current_step="Starting implementation",
                 )
 
                 # Execute implementation
@@ -453,7 +456,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                     self._merge_to_roadmap(f"Completed {next_priority['name']}")
 
                     # PRIORITY 4: Return to idle after task complete
-                    self.status.update_status(DeveloperState.IDLE, current_step="Task completed, waiting for next")
+                    self.status.update_status(
+                        DeveloperState.IDLE,
+                        current_step="Task completed, waiting for next",
+                    )
                 else:
                     logger.warning(f"⚠️  Implementation failed for {next_priority['name']}")
                     # PRIORITY 4: Log error activity
@@ -500,7 +506,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 self.status.report_activity(
                     ActivityType.ERROR_ENCOUNTERED,
                     f"Daemon crashed: {type(e).__name__}",
-                    details={"exception": str(e)[:200], "crash_count": self.crash_count},
+                    details={
+                        "exception": str(e)[:200],
+                        "crash_count": self.crash_count,
+                    },
                 )
 
                 # PRIORITY 2.8: Write status after crash

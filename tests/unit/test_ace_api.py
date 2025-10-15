@@ -10,8 +10,6 @@ from coffee_maker.autonomous.ace.api import ACEApi
 from coffee_maker.autonomous.ace.models import (
     ExecutionTrace,
     Execution,
-    ExternalObservation,
-    InternalObservation,
     Playbook,
     PlaybookBullet,
 )
@@ -43,8 +41,6 @@ def sample_trace():
         executions=[
             Execution(
                 execution_id=1,
-                external_observation=ExternalObservation(),
-                internal_observation=InternalObservation(),
                 result_status="success",
                 duration_seconds=1.5,
                 token_usage=100,
