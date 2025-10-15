@@ -2,7 +2,7 @@
 name: generator
 description: Orchestrates execution of target agents, captures detailed execution traces (reasoning, tools, errors, context usage), and prepares comprehensive reports for the Reflector to enable context evolution in the ACE framework.
 model: sonnet
-color: cyan
+color: yellow
 ---
 
 # ACE Generator Agent (reference : https://www.arxiv.org/abs/2510.04618)

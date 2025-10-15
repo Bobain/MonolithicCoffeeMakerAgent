@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "agent_name": "user_interpret",
+    "num_traces_analyzed": 1,
+    "analysis_timestamp": "2025-10-15T12:08:55.594270",
+    "reflector_version": "1.0"
+  },
+  "deltas": [
+    {
+      "delta_id": "delta_1760522935",
+      "insight_type": "raw_analysis",
+      "title": "Raw Reflector Analysis",
+      "description": "Could not parse structured deltas. Raw analysis: ## Reflection Analysis Complete\n\nI've analyzed 5 execution traces for the `user_interpret` agent and extracted **12 actionable delta items**.\n\n### Key Findings\n\n🚨 **CRITICAL ISSUES IDENTIFIED:**\n\n1. *...",
+      "recommendation": "Review raw analysis manually",
+      "evidence": [
+        {
+          "trace_id": "1760522796715766",
+          "execution_id": 1,
+          "example": "See raw analysis"
+        }
+      ],
+      "applicability": "",
+      "priority": 3,
+      "confidence": 0.3,
+      "action": "add_new",
+      "related_bullets": []
+    }
+  ],
+  "summary": {
+    "total_deltas": 1,
+    "by_type": {
+      "raw_analysis": 1
+    },
+    "by_priority": {
+      "3": 1
+    },
+    "avg_confidence": 0.3
+  }
+}

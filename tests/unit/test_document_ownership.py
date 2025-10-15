@@ -22,10 +22,7 @@ class TestDocumentOwnershipGuard:
         guard = DocumentOwnershipGuard()
         violations = guard.validate_no_overlaps()
 
-        assert len(violations) == 0, (
-            f"CRITICAL: Ownership overlaps detected:\n" +
-            "\n".join(violations)
-        )
+        assert len(violations) == 0, f"CRITICAL: Ownership overlaps detected:\n" + "\n".join(violations)
 
     def test_project_manager_owns_only_roadmap_subdir(self):
         """Verify project_manager owns docs/roadmap/ NOT all of docs/."""

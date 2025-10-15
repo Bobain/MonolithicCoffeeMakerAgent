@@ -260,6 +260,9 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
     ) -> None:
         """Initialize development daemon.
 
+        CRITICAL: Only ONE code_developer (DevDaemon) can run at a time.
+        This is enforced via AgentRegistry to prevent parallel implementations.
+
         Args:
             roadmap_path: Path to ROADMAP.md
             auto_approve: Auto-approve implementation (skip user confirmation)
@@ -271,7 +274,24 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             max_crashes: Maximum consecutive crashes before stopping (default: 3)
             crash_sleep_interval: Sleep duration after crash in seconds (default: 60)
             compact_interval: Iterations between context resets (default: 10)
+
+        Raises:
+            RuntimeError: If another code_developer is already running
         """
+        # CRITICAL: Check if another code_developer is already running
+        # We need to track this separately since AgentRegistry can't be used during __init__
+        if hasattr(DevDaemon, "_daemon_instance_running"):
+            raise RuntimeError(
+                "❌ CRITICAL: Another code_developer is already running! "
+                "Only ONE code_developer instance allowed at a time. "
+                "Kill the other instance first (use 'ps aux | grep code-developer')."
+            )
+
+        # Mark that a daemon instance is now running
+        DevDaemon._daemon_instance_running = True
+
+        logger.info("✅ code_developer started (singleton confirmed)")
+
         self.roadmap_path = Path(roadmap_path)
         self.auto_approve = auto_approve
         self.create_prs = create_prs
@@ -503,6 +523,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             except KeyboardInterrupt:
                 logger.info("\n⏹️  Daemon stopped by user")
                 self.running = False
+                # CRITICAL: Release singleton lock
+                if hasattr(DevDaemon, "_daemon_instance_running"):
+                    delattr(DevDaemon, "_daemon_instance_running")
+                    logger.info("✅ Singleton lock released")
                 break
 
             except Exception as e:
@@ -544,6 +568,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                     logger.critical(f"🚨 MAX CRASHES REACHED ({self.max_crashes}) - STOPPING DAEMON")
                     self._notify_persistent_failure(crash_info)
                     self.running = False
+                    # CRITICAL: Release singleton lock
+                    if hasattr(DevDaemon, "_daemon_instance_running"):
+                        delattr(DevDaemon, "_daemon_instance_running")
+                        logger.info("✅ Singleton lock released")
                     break
 
                 # Sleep longer after crash
@@ -552,6 +580,11 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
         logger.info("🛑 DevDaemon stopped")
         logger.info(f"Total crashes: {len(self.crash_history)}")
+
+        # CRITICAL: Release singleton lock
+        if hasattr(DevDaemon, "_daemon_instance_running"):
+            delattr(DevDaemon, "_daemon_instance_running")
+            logger.info("✅ Singleton lock released")
 
         # PRIORITY 2.8: Write final status on stop
         self._write_status()
@@ -724,3 +757,8 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         """Stop the daemon gracefully."""
         logger.info("Stopping daemon...")
         self.running = False
+
+        # CRITICAL: Release singleton lock so another daemon can start
+        if hasattr(DevDaemon, "_daemon_instance_running"):
+            delattr(DevDaemon, "_daemon_instance_running")
+            logger.info("✅ Singleton lock released")

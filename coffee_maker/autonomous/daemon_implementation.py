@@ -22,6 +22,7 @@ import time
 from datetime import datetime
 
 from coffee_maker.autonomous.developer_status import ActivityType, DeveloperState
+from coffee_maker.autonomous.git_strategy import CodeDeveloperGitOps, GitStrategy
 from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
 from coffee_maker.autonomous.puppeteer_client import PuppeteerClient
 from coffee_maker.cli.notifications import (
@@ -175,27 +176,42 @@ The daemon will skip this priority in future iterations.
         # Clear previous subtasks
         self.current_subtasks = []
 
-        # PRIORITY 4: Update progress - creating branch
-        self.status.report_progress(10, "Creating feature branch")
-
-        # Track subtask: Creating branch (estimated: 10 seconds)
-        subtask_start = datetime.now()
-        self._update_subtask("Creating feature branch", "in_progress", subtask_start, estimated_seconds=10)
-
-        # Create branch
-        branch_name = f"feature/{priority_name.lower().replace(' ', '-').replace(':', '')}"
-        logger.info(f"Creating branch: {branch_name}")
-
-        if not self.git.create_branch(branch_name):
-            logger.error("Failed to create branch")
-            self._update_subtask("Creating feature branch", "failed", subtask_start, estimated_seconds=10)
+        # CRITICAL: Verify we're on roadmap branch (safety check)
+        if not GitStrategy.verify_on_roadmap_branch():
+            logger.error("❌ CRITICAL: Not on roadmap branch! code_developer must work on roadmap branch.")
+            logger.error("Current branch: " + GitStrategy.get_current_branch())
+            logger.error("Please switch to roadmap branch: git checkout roadmap")
             return False
 
-        self._update_subtask("Creating feature branch", "completed", subtask_start, estimated_seconds=10)
+        # PRIORITY 4: Update progress - creating feature tag
+        self.status.report_progress(10, "Creating feature start tag")
 
-        # PRIORITY 4: Log branch creation
+        # Track subtask: Creating feature tag (estimated: 5 seconds)
+        subtask_start = datetime.now()
+        self._update_subtask("Creating feature start tag", "in_progress", subtask_start, estimated_seconds=5)
+
+        # Extract feature name and US number from priority
+        # Priority name format: "US-033" or "PRIORITY 15"
+        us_number = priority_name.lower().replace(" ", "-").replace(":", "")
+        feature_name = priority_title.lower().replace(" ", "-").replace(":", "")[:30]  # Truncate to 30 chars
+
+        # Create start tag (replaces branch creation)
+        logger.info(f"Creating feature tag for: {us_number}")
+        try:
+            start_tag = CodeDeveloperGitOps.start_feature(us_number, feature_name)
+            logger.info(f"✅ Created start tag: {start_tag}")
+        except Exception as e:
+            logger.error(f"Failed to create start tag: {e}")
+            self._update_subtask("Creating feature start tag", "failed", subtask_start, estimated_seconds=5)
+            return False
+
+        self._update_subtask("Creating feature start tag", "completed", subtask_start, estimated_seconds=5)
+
+        # PRIORITY 4: Log tag creation
         self.status.report_activity(
-            ActivityType.GIT_BRANCH, f"Created branch: {branch_name}", details={"branch": branch_name}
+            ActivityType.GIT_BRANCH,
+            f"Created feature tag: {start_tag}",
+            details={"tag": start_tag, "us_number": us_number, "feature": feature_name},
         )
 
         # Build prompt for Claude
@@ -262,50 +278,60 @@ Status: Requires human decision
             # Return "success" to avoid infinite retry - human will decide next steps
             return True
 
-        # PRIORITY 4: Update progress - committing changes
-        self.status.report_progress(70, "Committing changes")
+        # PRIORITY 4: Update progress - committing changes with completion tag
+        self.status.report_progress(70, "Committing changes with completion tag")
 
         # Track subtask: Committing changes (estimated: 20 seconds)
         subtask_start = datetime.now()
-        self._update_subtask("Committing changes", "in_progress", subtask_start, estimated_seconds=20)
+        self._update_subtask("Committing changes with tag", "in_progress", subtask_start, estimated_seconds=20)
 
-        # Commit changes
+        # Commit changes using tag-based workflow
         commit_message = self._build_commit_message(priority)
+        complete_tag = f"feature/{us_number}-{feature_name}-complete"
 
-        if not self.git.commit(commit_message):
-            logger.error("Failed to commit changes")
-            self._update_subtask("Committing changes", "failed", subtask_start, estimated_seconds=20)
+        try:
+            # Use GitStrategy to commit with tag
+            if not GitStrategy.commit_with_tag(commit_message, complete_tag):
+                raise Exception("Commit with tag failed")
+            logger.info(f"✅ Changes committed with tag: {complete_tag}")
+        except Exception as e:
+            logger.error(f"Failed to commit changes: {e}")
+            self._update_subtask("Committing changes with tag", "failed", subtask_start, estimated_seconds=20)
             return False
 
-        self._update_subtask("Committing changes", "completed", subtask_start, estimated_seconds=20)
-
-        logger.info("✅ Changes committed")
+        self._update_subtask("Committing changes with tag", "completed", subtask_start, estimated_seconds=20)
 
         # PRIORITY 4: Log commit activity
         self.status.report_activity(
-            ActivityType.GIT_COMMIT, f"Committed {priority_name}", details={"priority": priority_name}
+            ActivityType.GIT_COMMIT,
+            f"Committed {priority_name} with tag {complete_tag}",
+            details={"priority": priority_name, "tag": complete_tag},
         )
 
-        # PRIORITY 4: Update progress - pushing
-        self.status.report_progress(80, "Pushing to remote")
+        # PRIORITY 4: Update progress - pushing with tags
+        self.status.report_progress(80, "Pushing to remote with tags")
 
         # Track subtask: Pushing to remote (estimated: 30 seconds)
         subtask_start = datetime.now()
-        self._update_subtask("Pushing to remote", "in_progress", subtask_start, estimated_seconds=30)
+        self._update_subtask("Pushing to remote with tags", "in_progress", subtask_start, estimated_seconds=30)
 
-        # Push
-        if not self.git.push():
-            logger.error("Failed to push branch")
-            self._update_subtask("Pushing to remote", "failed", subtask_start, estimated_seconds=30)
+        # Push roadmap branch and tags
+        try:
+            if not GitStrategy.push_with_tags():
+                raise Exception("Push with tags failed")
+            logger.info("✅ Roadmap branch and tags pushed")
+        except Exception as e:
+            logger.error(f"Failed to push: {e}")
+            self._update_subtask("Pushing to remote with tags", "failed", subtask_start, estimated_seconds=30)
             return False
 
-        self._update_subtask("Pushing to remote", "completed", subtask_start, estimated_seconds=30)
-
-        logger.info("✅ Branch pushed")
+        self._update_subtask("Pushing to remote with tags", "completed", subtask_start, estimated_seconds=30)
 
         # PRIORITY 4: Log push activity
         self.status.report_activity(
-            ActivityType.GIT_PUSH, f"Pushed branch: {branch_name}", details={"branch": branch_name}
+            ActivityType.GIT_PUSH,
+            f"Pushed roadmap with tags: {start_tag}, {complete_tag}",
+            details={"tags": [start_tag, complete_tag]},
         )
 
         # Create PR if enabled

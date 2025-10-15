@@ -16,7 +16,7 @@ This is a **non-negotiable requirement** for parallel agent operations. Overlaps
 - Confusion about which agent is responsible for what
 - Race conditions in git commits
 
-**project_manager is responsible for preventing and detecting overlaps.**
+**project_coordinator is responsible for preventing and detecting overlaps.**
 
 ---
 
@@ -27,10 +27,10 @@ This is a **non-negotiable requirement** for parallel agent operations. Overlaps
 **NO agent can own a parent directory when subdirectories have different owners.**
 
 Example:
-- ❌ WRONG: project_manager owns `docs/` AND architect owns `docs/architecture/` → OVERLAP!
-- ✅ CORRECT: project_manager owns `docs/roadmap/`, architect owns `docs/architecture/` → NO overlap
+- ❌ WRONG: project_coordinator owns `docs/` AND architect owns `docs/architecture/` → OVERLAP!
+- ✅ CORRECT: project_coordinator owns `docs/roadmap/`, architect owns `docs/architecture/` → NO overlap
 
-### project_manager Owns
+### project_coordinator Owns ⭐ MERGED (assistant + project_manager)
 
 **Full Write Control**:
 - `docs/*.md` (top-level markdown files ONLY - not subdirectories)
@@ -42,7 +42,7 @@ Example:
   - `TEAM_COLLABORATION.md`
 - `docs/templates/` (documentation templates)
 - `docs/tutorials/` (tutorial content)
-- `docs/code-searcher/` (code analysis documentation - project_manager writes reports from code-searcher findings)
+- `docs/code-searcher/` (code analysis documentation - project_coordinator writes reports from code-searcher findings)
 - `docs/user_interpret/` (meta-documentation about user_interpret agent)
 - `docs/code_developer/` (meta-documentation about code_developer agent)
 
@@ -52,15 +52,17 @@ Example:
 - `docs/generator/` (generator owns)
 - `docs/reflector/` (reflector owns)
 - `docs/curator/` (curator owns)
+- `coffee_maker/`, `tests/`, `scripts/` (code_developer owns)
+- `.claude/` (code_developer owns)
 
 **Shared Write (with clear boundaries)**:
 - `docs/roadmap/ROADMAP.md`
-  - **project_manager**: Strategic updates (add/remove priorities, change order, modify descriptions)
+  - **project_coordinator**: Strategic updates (add/remove priorities, change order, modify descriptions)
   - **code_developer**: Status updates only (Planned → In Progress → Complete, progress percentages)
 
 **Documentation Delegation Pattern**:
-- **code-searcher** prepares findings → **assistant** receives → **assistant** delegates to **project_manager** → **project_manager** writes docs
-- **code-searcher** and **assistant** NEVER write directly to docs/
+- **code-searcher** prepares findings → **project_coordinator** writes docs in docs/code-searcher/
+- **code-searcher** NEVER writes directly to docs/
 
 ---
 
@@ -71,14 +73,31 @@ Example:
   - `docs/architecture/specs/` (detailed technical specifications)
   - `docs/architecture/decisions/` (Architectural Decision Records - ADRs)
   - `docs/architecture/guidelines/` (implementation guidelines)
+  - `docs/architecture/synergies/` (NEW - roadmap optimization analysis)
 - `pyproject.toml` (dependency management - requires user approval)
 - `poetry.lock` (dependency lock file)
 
 **Critical Responsibilities**:
+- **Strategic analysis**: Analyzes ENTIRE roadmap and ENTIRE codebase (big picture)
+- **Roadmap optimization**: Identifies synergies, recommends priority reordering
+- **Value maximization**: Helps ship maximum value in given timeframe
 - **Proactive approval**: Must ask user before important decisions
 - **Dependency management**: ONLY architect can run `poetry add`
 - **Code design**: All architectural and design decisions
 - **User interaction**: Asks user_listener to present approval requests
+
+**NEW: Roadmap Synergy Analysis Workflow**:
+1. architect periodically reviews ROADMAP (big picture view)
+2. architect analyzes codebase for reuse opportunities
+3. architect identifies implementation synergies between priorities
+4. architect creates synergy reports in `docs/architecture/synergies/`
+   - Format: `SYNERGY_YYYY-MM-DD_[feature-area].md`
+   - Contains: Time savings analysis, priority reordering recommendations
+5. architect advises project_coordinator on priority reordering
+6. project_coordinator updates ROADMAP based on architect's recommendations
+7. architect creates technical specs with synergy in mind
+
+**Example Synergy Report**: `docs/architecture/synergies/SYNERGY_2025-10-15_notifications.md`
 
 **Workflow for Dependencies**:
 1. architect analyzes need for new dependency
@@ -88,19 +107,22 @@ Example:
 5. architect documents decision in ADR
 
 **Workflow for Architecture**:
-1. architect analyzes architectural requirements
-2. architect creates technical specification in `docs/architecture/specs/`
-3. architect documents decisions in ADRs (`docs/architecture/decisions/`)
-4. architect provides guidelines in `docs/architecture/guidelines/`
-5. code_developer reads specifications and guidelines
-6. code_developer implements following architect's design
-7. architect reviews implementation
+1. architect analyzes architectural requirements (ENTIRE roadmap + codebase)
+2. architect identifies synergies with other priorities
+3. architect creates technical specification in `docs/architecture/specs/`
+4. architect documents decisions in ADRs (`docs/architecture/decisions/`)
+5. architect provides guidelines in `docs/architecture/guidelines/`
+6. code_developer reads specifications and guidelines
+7. code_developer implements following architect's design
+8. architect reviews implementation
 
 **Interaction Pattern**:
 - User discusses architecture with architect through user_listener
+- architect takes strategic view (entire roadmap, entire codebase)
 - architect creates specifications BEFORE implementation
+- architect influences ROADMAP prioritization (via project_coordinator)
 - code_developer reads specifications and implements
-- Clear separation: architect designs, code_developer implements
+- Clear separation: architect = STRATEGIC, code_developer = TACTICAL
 
 ---
 
@@ -141,9 +163,9 @@ Example:
   - `conversation_summaries.json`
 
 **Does NOT own**:
-- `docs/user_interpret/` (project_manager owns - this is meta-documentation ABOUT user_interpret)
+- `docs/user_interpret/` (project_coordinator owns - this is meta-documentation ABOUT user_interpret)
 
-**NOTE**: `docs/user_interpret/` contains documentation ABOUT the agent, not operational data. This is owned by project_manager as strategic documentation.
+**NOTE**: `docs/user_interpret/` contains documentation ABOUT the agent, not operational data. This is owned by project_coordinator as strategic documentation.
 
 ---
 
@@ -173,22 +195,10 @@ Example:
 **Process**:
 1. code-searcher performs analysis (READ-ONLY)
 2. code-searcher prepares findings report
-3. code-searcher presents to assistant
-4. assistant delegates to project_manager
-5. project_manager creates documentation in `docs/code-searcher/`
+3. code-searcher presents to project_coordinator
+4. project_coordinator creates documentation in `docs/code-searcher/`
 
 **Document Format**: `docs/code-searcher/[analysis_type]_analysis_[date].md`
-
----
-
-### assistant Owns
-
-**NONE** - assistant is READ-ONLY
-
-**Role**: Documentation expert and intelligent dispatcher
-- Reads all documentation
-- Answers questions using deep documentation knowledge
-- Delegates modifications to appropriate agents
 
 ---
 
@@ -199,7 +209,7 @@ Example:
 **Process**:
 1. ux-design-expert provides design specifications
 2. code_developer implements design
-3. project_manager documents design decisions (if needed)
+3. project_coordinator documents design decisions (if needed)
 
 ---
 
@@ -221,21 +231,21 @@ Previously owned: `.claude/CLAUDE.md` (synchronization updates)
 After thorough analysis with the NO PARENT DIRECTORY OWNERSHIP rule:
 
 1. **docs/ directories**: Each subdirectory has EXACTLY one owner
-   - `docs/*.md`: project_manager (top-level files ONLY)
-   - `docs/roadmap/`: project_manager
+   - `docs/*.md`: project_coordinator (top-level files ONLY)
+   - `docs/roadmap/`: project_coordinator
    - `docs/architecture/`: architect
    - `docs/generator/`: generator
    - `docs/reflector/`: reflector
    - `docs/curator/`: curator
-   - `docs/templates/`: project_manager
-   - `docs/tutorials/`: project_manager
-   - `docs/code-searcher/`: project_manager
-   - `docs/user_interpret/`: project_manager (meta-docs ABOUT user_interpret)
-   - `docs/code_developer/`: project_manager (meta-docs ABOUT code_developer)
+   - `docs/templates/`: project_coordinator
+   - `docs/tutorials/`: project_coordinator
+   - `docs/code-searcher/`: project_coordinator
+   - `docs/user_interpret/`: project_coordinator (meta-docs ABOUT user_interpret)
+   - `docs/code_developer/`: project_coordinator (meta-docs ABOUT code_developer)
    - **NO agent owns `docs/` parent directory** ✅
 
 2. **docs/roadmap/ROADMAP.md**: Clear boundaries defined
-   - project_manager: Strategic updates (add/remove priorities, descriptions)
+   - project_coordinator: Strategic updates (add/remove priorities, descriptions)
    - code_developer: Status updates only (Planned → In Progress → Complete)
    - No overlap (different fields) ✅
 
@@ -281,7 +291,8 @@ class DocumentOwnershipGuard:
     """Enforces document ownership rules"""
 
     OWNERSHIP = {
-        "docs/": "project_manager",
+        "docs/roadmap/": "project_coordinator",
+        "docs/architecture/": "architect",
         "docs/generator/": "generator",
         "docs/reflector/": "reflector",
         "docs/curator/": "curator",
@@ -328,7 +339,7 @@ def test_no_overlapping_ownership():
 
 ### 4. Documentation Review
 
-**project_manager responsibility**:
+**project_coordinator responsibility**:
 - Review this document quarterly
 - Check for new overlaps when agents are added
 - Update ownership rules as project evolves
@@ -359,8 +370,8 @@ def test_no_overlapping_ownership():
 **Flow**:
 1. user_listener receives request
 2. user_interpret determines intent: modify ROADMAP
-3. Delegates to project_manager (owns docs/roadmap/)
-4. project_manager updates ROADMAP.md (strategic change)
+3. Delegates to project_coordinator (owns docs/roadmap/)
+4. project_coordinator updates ROADMAP.md (strategic change)
 5. Success - correct owner
 
 ---
@@ -381,29 +392,19 @@ def test_no_overlapping_ownership():
 **Flow**:
 1. user_listener receives request
 2. user_interpret determines intent: create documentation
-3. Delegates to project_manager (owns docs/)
-4. project_manager creates docs/AUTHENTICATION_DESIGN.md
+3. Delegates to project_coordinator (owns docs/)
+4. project_coordinator creates docs/AUTHENTICATION_DESIGN.md
 5. Success - correct owner
 
 ---
 
 ### Incorrect Attempts (Prevented)
 
-**User**: "assistant, update the ROADMAP"
+**User**: "project_coordinator, fix the CLI bug"
 
 **Flow**:
-1. assistant recognizes: I don't own docs/
-2. assistant delegates to project_manager
-3. project_manager updates ROADMAP.md
-4. Success - prevented overlap
-
----
-
-**User**: "project_manager, fix the CLI bug"
-
-**Flow**:
-1. project_manager recognizes: I don't own coffee_maker/
-2. project_manager delegates to code_developer
+1. project_coordinator recognizes: I don't own coffee_maker/
+2. project_coordinator delegates to code_developer
 3. code_developer fixes bug
 4. Success - prevented overlap
 
@@ -429,6 +430,7 @@ def test_no_overlapping_ownership():
 
 ---
 
-**Maintained By**: project_manager
+**Maintained By**: project_coordinator (merged assistant + project_manager)
 **Review Frequency**: Quarterly or when adding new agents
 **Next Review**: 2026-01-15
+**Last Updated**: 2025-10-15 (Agent merge: assistant + project_manager → project_coordinator)

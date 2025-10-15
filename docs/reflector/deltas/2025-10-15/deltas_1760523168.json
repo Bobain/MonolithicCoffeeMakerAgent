@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "agent_name": "user_interpret",
+    "num_traces_analyzed": 1,
+    "analysis_timestamp": "2025-10-15T12:12:48.429914",
+    "reflector_version": "1.0"
+  },
+  "deltas": [
+    {
+      "delta_id": "delta_1760523168",
+      "insight_type": "raw_analysis",
+      "title": "Raw Reflector Analysis",
+      "description": "Could not parse structured deltas. Raw analysis: ## Summary\n\nI've completed the ACE Reflector analysis of the 5 user_interpret execution traces. Here's what I found:\n\n### 📊 Analysis Complete\n\n**Generated Files**:\n1. **`deltas_1760522949.json`** - 12...",
+      "recommendation": "Review raw analysis manually",
+      "evidence": [
+        {
+          "trace_id": "1760522949144883",
+          "execution_id": 1,
+          "example": "See raw analysis"
+        }
+      ],
+      "applicability": "",
+      "priority": 3,
+      "confidence": 0.3,
+      "action": "add_new",
+      "related_bullets": []
+    }
+  ],
+  "summary": {
+    "total_deltas": 1,
+    "by_type": {
+      "raw_analysis": 1
+    },
+    "by_priority": {
+      "3": 1
+    },
+    "avg_confidence": 0.3
+  }
+}

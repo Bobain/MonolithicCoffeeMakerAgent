@@ -1,0 +1,55 @@
+{
+  "trace_id": "test_123",
+  "timestamp": "2025-10-15T09:32:41.387204",
+  "agent_identity": {
+    "target_agent": "code_developer"
+  },
+  "user_query": "Implement feature",
+  "current_context": "",
+  "executions": [
+    {
+      "execution_id": 1,
+      "external_observation": {
+        "git_changes": [],
+        "files_created": [
+          "feature.py"
+        ],
+        "files_modified": [],
+        "files_deleted": [],
+        "commands_executed": []
+      },
+      "internal_observation": {
+        "reasoning_steps": [
+          "Analyzed requirements"
+        ],
+        "decisions_made": [],
+        "tools_called": [],
+        "context_used": [],
+        "context_ignored": []
+      },
+      "result_status": "success",
+      "errors": [],
+      "duration_seconds": 0.0,
+      "token_usage": 0,
+      "agent_plan": null,
+      "plan_progress": null,
+      "difficulties": null,
+      "concerns": null,
+      "retries": 0,
+      "context_snapshot": null
+    }
+  ],
+  "comparative_observations": null,
+  "helpful_context_elements": [],
+  "problematic_context_elements": [],
+  "new_insights_surfaced": [],
+  "skip_reason": null,
+  "user_satisfaction": {
+    "score": 5,
+    "positive_feedback": "Perfect execution",
+    "improvement_areas": "",
+    "timestamp": "2025-10-15T09:32:41.387127"
+  },
+  "parent_trace_id": null,
+  "delegation_chain": []
+}

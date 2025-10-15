@@ -81,12 +81,14 @@ Plus ACE Framework components:
 - Access: READ-ONLY on all files
 - Motto: "Librarian + Traffic Controller"
 
-**architect** - Architectural Design & Dependencies
-- Role: System architecture, technical specifications, dependency management
+**architect** - Strategic Architecture & Roadmap Optimization
+- Role: Strategic architectural oversight, roadmap optimization, dependency management
 - Scope: docs/architecture/, pyproject.toml, poetry.lock
-- Authority: Creates ADRs, manages dependencies (requires user approval), provides implementation guidelines
-- Workflow: Works BEFORE code_developer (pre-implementation design)
-- Motto: "Design first, implement second"
+- Authority: Creates ADRs, manages dependencies (requires user approval), provides implementation guidelines, influences ROADMAP prioritization
+- Philosophy: Takes a step back - analyzes ENTIRE roadmap and ENTIRE codebase (big picture)
+- Workflow: Works BEFORE code_developer (strategic design and priority optimization)
+- Impact: Identifies implementation synergies, recommends priority reordering to maximize value
+- Motto: "Design first, optimize priorities, implement efficiently"
 
 **code_developer** - Autonomous Implementation
 - Role: Executes all code changes
@@ -546,10 +548,12 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
 - Agent definitions, prompt management
 
 **Architectural design?** → architect
+- STRATEGIC: Analyzes ENTIRE roadmap and ENTIRE codebase
+- Roadmap optimization: Identifies synergies, recommends priority reordering
 - System architecture, technical specs
 - ADRs (Architectural Decision Records)
 - Dependency management (user approval required)
-- Works BEFORE code_developer
+- Works BEFORE code_developer (strategic design + priority optimization)
 
 **Code quality?** → code-sanitizer
 - Complexity analysis
@@ -588,7 +592,92 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
 
 ## Common Workflows
 
-### Workflow 1: Architect → code_developer
+### Workflow 1: architect Strategic Analysis & Roadmap Optimization
+
+```
+1. User: "We need Slack integration and Email notifications"
+        │
+        ▼
+2. user_listener → architect:
+   "Analyze notification requirements and optimize implementation"
+        │
+        ▼
+3. architect (STRATEGIC ANALYSIS - Step Back, Big Picture):
+   ├─► Analyze ENTIRE ROADMAP:
+   │   • US-034: Slack Integration (Status: Planned, Estimate: 8h)
+   │   • US-042: Email Notifications (Status: Planned, Estimate: 8h)
+   │   • Both currently separate priorities
+   │
+   ├─► Analyze ENTIRE CODEBASE:
+   │   • coffee_maker/notifications/ already exists
+   │   • Base notification system implemented
+   │   • Pattern: Channel-agnostic notification framework
+   │
+   ├─► IDENTIFY SYNERGY:
+   │   • Both US-034 and US-042 use same notification patterns
+   │   • If Slack implemented first with extensibility,
+   │     Email becomes trivial (reuse 80% of infrastructure)
+   │   • TIME SAVINGS IDENTIFIED: 6 hours (37.5% reduction!)
+   │
+   ├─► CREATE SYNERGY REPORT:
+   │   docs/architecture/synergies/SYNERGY_2025-10-15_notifications.md
+   │   Contains:
+   │   - Original estimates: US-034 (8h) + US-042 (8h) = 16h total
+   │   - Optimized estimates: US-034 (8h) + US-042 (2h) = 10h total
+   │   - Time savings: 6h (37.5%)
+   │   - Recommendation: Move US-042 immediately after US-034
+   │
+        ▼
+4. architect → project_manager:
+   "PRIORITY OPTIMIZATION RECOMMENDATION:
+
+   Current ROADMAP order:
+   - US-030: Feature A
+   - US-031: Feature B
+   - US-034: Slack Integration (8h)
+   - US-040: Feature C
+   - US-042: Email Notifications (8h)
+   Total: 16h for notifications
+
+   RECOMMENDED order:
+   - US-030: Feature A
+   - US-031: Feature B
+   - US-034: Slack Integration (8h - implement with extensibility)
+   - US-042: Email Notifications (2h - reuse infrastructure!)
+   - US-040: Feature C
+   Total: 10h for notifications (SAVES 6 hours!)
+
+   Rationale: Implementing consecutively allows 80% code reuse.
+   This ships both features faster, maximizing value/time."
+        │
+        ▼
+5. project_manager:
+   ├─► Reviews architect's synergy report
+   ├─► Updates ROADMAP priorities (reorders US-042)
+   ├─► Reduces US-042 estimate from 8h to 2h
+   ├─► Documents synergy in US-042 description
+   └─► Notifies team of priority changes
+        │
+        ▼
+6. architect:
+   ├─► Creates technical specifications:
+   │   docs/architecture/specs/notification_framework_spec.md
+   ├─► Designs extensible architecture
+   ├─► Creates ADR: docs/architecture/decisions/ADR-007-notification-channels.md
+   ├─► Provides implementation guidelines for code_developer
+        │
+        ▼
+7. code_developer:
+   ├─► Implements US-034 (Slack) with extensibility per architect's design
+   ├─► Then quickly implements US-042 (Email) reusing infrastructure
+   └─► Total time: 10h instead of 16h ✅
+```
+
+**Key Distinction**:
+- **architect** = STRATEGIC (step back, entire roadmap, entire codebase, find synergies)
+- **code_developer** = TACTICAL (focus on next priority, execute design)
+
+### Workflow 2: Architect Design & Dependency Management
 
 ```
 1. User: "Add authentication system"
@@ -628,7 +717,7 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
 6. architect reviews implementation (optional)
 ```
 
-### Workflow 2: Code Quality Monitoring
+### Workflow 3: Code Quality Monitoring
 
 ```
 1. code_developer commits code
@@ -668,7 +757,7 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
    → Continue with features
 ```
 
-### Workflow 3: Implement New Feature
+### Workflow 4: Implement New Feature
 
 ```
 1. User: "Implement PRIORITY 12: Email Notifications"
@@ -704,7 +793,7 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
 6. code_developer reports: "PRIORITY 12 complete, PR #42 created"
 ```
 
-### Workflow 4: Create Technical Spec
+### Workflow 5: Create Technical Spec
 
 ```
 1. User: "Create spec for PRIORITY 15: Dashboard Redesign"
@@ -745,7 +834,7 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
 7. project_manager reports: "Spec created at docs/PRIORITY_15_TECHNICAL_SPEC.md"
 ```
 
-### Workflow 5: Investigate Bug
+### Workflow 6: Investigate Bug
 
 ```
 1. User: "Why is the CLI crashing on startup?"
@@ -782,7 +871,7 @@ Report: "PR #5 ready to merge, PR #4 tests failing"
    └─► Commit and create PR
 ```
 
-### Workflow 6: Check Project Status
+### Workflow 7: Check Project Status
 
 ```
 1. User: "How's the project going?"
@@ -1022,34 +1111,55 @@ Should we address before continuing?"
 └──────────────────────────────────┘
 ```
 
-### 3. architect Designs First
+### 3. architect Strategizes First (STRATEGIC vs TACTICAL)
 
 ```
 ┌──────────────────────────────────┐
 │         architect                │
 │                                  │
+│  ROLE: STRATEGIC                 │
+│  • Step back (big picture)       │
+│  • Analyzes ENTIRE roadmap       │
+│  • Analyzes ENTIRE codebase      │
+│                                  │
 │  OWNS:                           │
 │  • docs/architecture/            │
+│  • docs/architecture/synergies/  │
 │  • pyproject.toml                │
 │  • poetry.lock                   │
 │                                  │
 │  RESPONSIBILITIES:               │
+│  • Roadmap optimization          │
+│  • Identify synergies            │
+│  • Recommend priority reordering │
+│  • Maximize value/time           │
 │  • System architecture           │
 │  • Technical specifications      │
 │  • ADRs                          │
 │  • Dependency management         │
 │  • Works BEFORE code_developer   │
 │                                  │
+│  IMPACT ON PRIORITIZATION:       │
+│  • Can recommend moving up/down  │
+│  • Identifies quick wins         │
+│  • Estimates time savings        │
+│  • project_manager adjusts       │
+│                                  │
 │  REQUIRES:                       │
 │  • User approval for deps        │
 └──────────────────────────────────┘
 ```
 
-### 4. code_developer Implements Second
+### 4. code_developer Implements Second (TACTICAL)
 
 ```
 ┌──────────────────────────────────┐
 │       code_developer             │
+│                                  │
+│  ROLE: TACTICAL                  │
+│  • Focus on next priority        │
+│  • Execute design                │
+│  • Single priority at a time     │
 │                                  │
 │  OWNS:                           │
 │  • coffee_maker/                 │
@@ -1066,10 +1176,16 @@ Should we address before continuing?"
 │  • Works AFTER architect         │
 │                                  │
 │  DOES NOT:                       │
+│  • Analyze entire roadmap        │
+│  • Optimize priorities           │
 │  • Create technical specs        │
 │  • Monitor project health        │
 │  • Make strategic decisions      │
 │  • Manage dependencies           │
+│                                  │
+│  KEY DISTINCTION:                │
+│  architect = STRATEGIC           │
+│  code_developer = TACTICAL       │
 └──────────────────────────────────┘
 ```
 

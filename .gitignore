@@ -143,5 +143,9 @@ data/*.db
 data/*.sqlite
 data/*.sqlite3
 
+# User interpret conversation logs (owned by user_interpret agent)
+data/user_interpret/*.jsonl
+data/user_interpret/*.json
+
 # User configuration files (use config.yaml.example as template)
 config.yaml

@@ -201,8 +201,21 @@ class ACEGenerator:
         logger.info(f"Starting execution {execution_id}")
         start_time = time.time()
 
+        # Initialize plan tracking on agent (NEW)
+        self.agent_interface._current_plan = []
+        self.agent_interface._current_difficulties = []
+        self.agent_interface._current_concerns = []
+        self.agent_interface._plan_progress = {}
+
+        # Capture context snapshot (NEW)
+        context = kwargs.get("context", {})
+        context_snapshot = context.copy() if context else {}
+
         # Capture pre-execution state
         pre_state = self._capture_git_state()
+
+        # Track retries
+        retries = 0
 
         # Execute agent
         try:
@@ -217,6 +230,17 @@ class ACEGenerator:
             errors = [str(e)]
             agent_response = None  # No valid response on failure
 
+            # Capture exception as difficulty (NEW)
+            difficulties = getattr(self.agent_interface, "_current_difficulties", [])
+            difficulties.append(
+                {
+                    "description": f"Execution failed: {str(e)}",
+                    "severity": "high",
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+            retries += 1
+
         # Capture post-execution state
         post_state = self._capture_git_state()
 
@@ -229,6 +253,12 @@ class ACEGenerator:
         # Build internal observation
         internal_obs = self._extract_internal_observation(response)
 
+        # Capture plan and difficulties from agent (NEW)
+        agent_plan = getattr(self.agent_interface, "_current_plan", [])
+        difficulties = getattr(self.agent_interface, "_current_difficulties", [])
+        concerns = getattr(self.agent_interface, "_current_concerns", [])
+        plan_progress = getattr(self.agent_interface, "_plan_progress", {})
+
         # Build execution object
         execution = Execution(
             execution_id=execution_id,
@@ -239,9 +269,25 @@ class ACEGenerator:
             duration_seconds=duration,
             token_usage=(response.get("token_usage", 0) if isinstance(response, dict) else 0),
             agent_response=agent_response,  # Store agent's actual result
+            # Plan tracking (NEW)
+            agent_plan=agent_plan if agent_plan else None,
+            plan_progress=plan_progress if plan_progress else None,
+            # Difficulty tracking (NEW)
+            difficulties=difficulties if difficulties else None,
+            concerns=concerns if concerns else None,
+            retries=retries,
+            # Context snapshot (NEW)
+            context_snapshot=context_snapshot,
         )
 
         logger.info(f"Execution {execution_id} complete: {result_status}")
+        if agent_plan:
+            logger.info(f"  Plan: {len(agent_plan)} steps")
+        if difficulties:
+            logger.info(f"  Difficulties: {len(difficulties)}")
+        if concerns:
+            logger.info(f"  Concerns: {len(concerns)}")
+
         return execution
 
     def _capture_git_state(self) -> Dict[str, Any]:

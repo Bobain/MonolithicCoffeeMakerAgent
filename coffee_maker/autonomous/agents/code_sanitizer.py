@@ -49,7 +49,9 @@ class CodeSanitizer(ACEAgent):
     @property
     def success_criteria(self) -> str:
         """Success criteria for ACE evaluation."""
-        return "Accurate complexity analysis, actionable refactoring recommendations, and improved code quality over time"
+        return (
+            "Accurate complexity analysis, actionable refactoring recommendations, and improved code quality over time"
+        )
 
     def __init__(self):
         """Initialize code-sanitizer agent."""
@@ -157,9 +159,7 @@ class CodeSanitizer(ACEAgent):
         """Analyze code complexity using radon."""
         try:
             # Run radon complexity analysis
-            result = subprocess.run(
-                ["radon", "cc", path, "-a", "--json"], capture_output=True, text=True, timeout=30
-            )
+            result = subprocess.run(["radon", "cc", path, "-a", "--json"], capture_output=True, text=True, timeout=30)
 
             if result.returncode == 0:
                 return json.loads(result.stdout) if result.stdout else {}
@@ -182,7 +182,9 @@ class CodeSanitizer(ACEAgent):
     def _check_style_compliance(self, path: str) -> Dict[str, Any]:
         """Check PEP 8 compliance using flake8."""
         try:
-            result = subprocess.run(["flake8", path, "--count", "--statistics"], capture_output=True, text=True, timeout=30)
+            result = subprocess.run(
+                ["flake8", path, "--count", "--statistics"], capture_output=True, text=True, timeout=30
+            )
 
             return {"total_violations": result.stdout.count("\n"), "details": result.stdout}
         except FileNotFoundError:

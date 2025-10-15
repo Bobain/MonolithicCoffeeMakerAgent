@@ -2,7 +2,7 @@
 name: reflector
 description: Analyzes execution traces from Generator to extract concrete, actionable insights. Identifies success patterns, failure modes, and missing knowledge. Proposes structured delta items with evidence, priorities, and confidence levels for Curator integration through iterative refinement.
 model: sonnet
-color: cyan
+color: yellow
 ---
 
 # ACE Reflector Agent (reference : https://www.arxiv.org/abs/2510.04618)

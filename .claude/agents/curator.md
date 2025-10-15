@@ -2,7 +2,7 @@
 name: curator
 description: Integrates Reflector insights into evolving agent playbooks. Performs semantic de-duplication, quality-based acceptance, strategic pruning, and maintains context structure. Prevents context collapse through deterministic merge logic and health metrics tracking.
 model: sonnet
-color: cyan
+color: yellow
 ---
 
 # ACE Curator Agent (reference : https://www.arxiv.org/abs/2510.04618)

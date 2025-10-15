@@ -86,6 +86,18 @@ class Execution:
     token_usage: int = 0
     agent_response: Optional[Any] = None  # Actual agent result (not serialized in trace)
 
+    # Plan tracking (NEW)
+    agent_plan: Optional[List[str]] = None  # Steps agent plans to take
+    plan_progress: Optional[Dict[str, Any]] = None  # Progress through plan
+
+    # Difficulty tracking (NEW)
+    difficulties: Optional[List[Dict[str, Any]]] = None  # Issues encountered
+    concerns: Optional[List[str]] = None  # Warnings/edge cases
+    retries: int = 0  # Number of retries
+
+    # Context snapshot (NEW)
+    context_snapshot: Optional[Dict[str, Any]] = None  # State before execution
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -97,6 +109,15 @@ class Execution:
             "duration_seconds": self.duration_seconds,
             "token_usage": self.token_usage,
             # Don't serialize agent_response (too large, not needed in trace)
+            # Plan tracking
+            "agent_plan": self.agent_plan,
+            "plan_progress": self.plan_progress,
+            # Difficulty tracking
+            "difficulties": self.difficulties,
+            "concerns": self.concerns,
+            "retries": self.retries,
+            # Context snapshot
+            "context_snapshot": self.context_snapshot,
         }
 
     @classmethod
@@ -110,6 +131,15 @@ class Execution:
             errors=data.get("errors", []),
             duration_seconds=data.get("duration_seconds", 0.0),
             token_usage=data.get("token_usage", 0),
+            # Plan tracking
+            agent_plan=data.get("agent_plan"),
+            plan_progress=data.get("plan_progress"),
+            # Difficulty tracking
+            difficulties=data.get("difficulties"),
+            concerns=data.get("concerns"),
+            retries=data.get("retries", 0),
+            # Context snapshot
+            context_snapshot=data.get("context_snapshot"),
         )
 
 

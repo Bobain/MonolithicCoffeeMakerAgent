@@ -3,8 +3,10 @@
 import json
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import logging
+
+from coffee_maker.autonomous.document_ownership import DocumentOwnershipGuard
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,10 @@ class ConversationLogger:
     - Complete conversation history in JSONL format
     - Conversation summaries for quick analysis
     - Intent patterns for learning user behavior
+
+    IMPORTANT: Conversation logs are stored in data/user_interpret/ (NOT docs/)
+    to maintain clear ownership boundaries. user_interpret exclusively owns
+    this directory per the document ownership rules.
 
     Example:
         logger = ConversationLogger()
@@ -29,17 +35,26 @@ class ConversationLogger:
         recent = logger.get_recent_conversations(limit=10)
     """
 
-    def __init__(self, docs_dir: str = "docs/user_interpret"):
+    def __init__(self, docs_dir: str = "data/user_interpret"):
         """Initialize conversation logger.
 
         Args:
-            docs_dir: Directory for storing conversation data
+            docs_dir: Directory for storing conversation data (default: data/user_interpret)
+
+        Raises:
+            PermissionError: If user_interpret doesn't have write permission to docs_dir
         """
         self.docs_dir = Path(docs_dir)
+
+        # Verify ownership BEFORE creating directory
+        DocumentOwnershipGuard.assert_can_write("user_interpret", str(self.docs_dir))
+
         self.docs_dir.mkdir(parents=True, exist_ok=True)
 
         self.history_file = self.docs_dir / "conversation_history.jsonl"
         self.summaries_file = self.docs_dir / "conversation_summaries.json"
+
+        logger.debug(f"ConversationLogger initialized with directory: {self.docs_dir}")
 
     def log_conversation(
         self,
@@ -105,9 +120,7 @@ class ConversationLogger:
 
         return conversations[-limit:]
 
-    def get_conversations_by_intent(
-        self, intent: str, limit: int = 5
-    ) -> List[Dict[str, Any]]:
+    def get_conversations_by_intent(self, intent: str, limit: int = 5) -> List[Dict[str, Any]]:
         """Get conversations matching specific intent.
 
         Args:
@@ -136,9 +149,7 @@ class ConversationLogger:
         recent = self.get_recent_conversations(limit=1000)
 
         # Filter by date
-        relevant = [
-            c for c in recent if datetime.fromisoformat(c["timestamp"]) > cutoff
-        ]
+        relevant = [c for c in recent if datetime.fromisoformat(c["timestamp"]) > cutoff]
 
         # Summarize
         summary = {

@@ -11,6 +11,8 @@ color: green
 
 **Status**: Active
 
+**GIT NOTE**: All agents work on `roadmap` branch. NEVER switch branches. code_developer uses tags for milestones.
+
 ---
 
 ## Agent Identity

@@ -54,14 +54,14 @@ def test_architect_create_specification():
             "Show success/failure rates per agent",
             "Visualize average execution duration",
             "Track playbook effectiveness",
-            "Export metrics to CSV/JSON"
+            "Export metrics to CSV/JSON",
         ],
         "constraints": [
             "Must work with existing ACE framework",
             "Should use existing trace data",
             "No external dependencies without user approval",
-            "Must be responsive (mobile-friendly)"
-        ]
+            "Must be responsive (mobile-friendly)",
+        ],
     }
 
     print("\n📋 Test Scenario:")
@@ -82,8 +82,8 @@ def test_architect_create_specification():
     print(f"   Ready for implementation: {result.get('ready_for_implementation', False)}")
 
     # Verify spec file created
-    if result.get('specification'):
-        spec_path = Path(result['specification'])
+    if result.get("specification"):
+        spec_path = Path(result["specification"])
         print(f"\n📄 Specification File:")
         print(f"   Path: {spec_path}")
         print(f"   Exists: {spec_path.exists()}")
@@ -97,8 +97,8 @@ def test_architect_create_specification():
             print(f"   {'-'*76}")
 
     # Verify guidelines file
-    if result.get('guidelines'):
-        guidelines_path = Path(result['guidelines'])
+    if result.get("guidelines"):
+        guidelines_path = Path(result["guidelines"])
         print(f"\n📖 Guidelines File:")
         print(f"   Path: {guidelines_path}")
         print(f"   Exists: {guidelines_path.exists()}")
@@ -141,7 +141,7 @@ def test_architect_create_adr():
             "- Adds new dependency (streamlit + deps)\n"
             "- Limited customization vs custom frontend\n"
             "- Requires separate process to run"
-        )
+        ),
     )
 
     print(f"   ✅ ADR created: {adr_path}")
@@ -172,7 +172,7 @@ def test_architect_dependency_approval():
     print(f"   Status: {result['status']}")
     print(f"   Message: {result['message']}")
 
-    assert result['status'] == "pending_approval", "Should require approval"
+    assert result["status"] == "pending_approval", "Should require approval"
     print("   ✅ Correctly requires user approval")
 
     # Simulate user approval flow
@@ -180,7 +180,7 @@ def test_architect_dependency_approval():
     print("   (In real usage, architect would ask user_listener to present to user)")
     approval_request = architect.request_user_approval(
         decision="Add 'streamlit' dependency",
-        context="Need web framework for metrics dashboard. Streamlit chosen for rapid Python-only development."
+        context="Need web framework for metrics dashboard. Streamlit chosen for rapid Python-only development.",
     )
 
     print(f"   Approval request:")
@@ -247,20 +247,19 @@ def test_architect_trace_generation():
         print(f"      - User query: {trace_data.get('user_query', 'N/A')}")
 
         # Check first execution
-        if trace_data.get('executions'):
-            first_exec = trace_data['executions'][0]
+        if trace_data.get("executions"):
+            first_exec = trace_data["executions"][0]
             print(f"      - Duration (exec 1): {first_exec.get('duration_seconds', 0):.2f}s")
             print(f"      - Result (exec 1): {first_exec.get('result_status', 'N/A')}")
 
-            if first_exec.get('agent_plan'):
+            if first_exec.get("agent_plan"):
                 print(f"\n   Plan followed:")
-                for step in first_exec['agent_plan']:
+                for step in first_exec["agent_plan"]:
                     print(f"      • {step}")
 
-            if first_exec.get('plan_progress'):
-                completed = sum(1 for p in first_exec['plan_progress'].values()
-                              if p.get('status') == 'completed')
-                total = len(first_exec['plan_progress'])
+            if first_exec.get("plan_progress"):
+                completed = sum(1 for p in first_exec["plan_progress"].values() if p.get("status") == "completed")
+                total = len(first_exec["plan_progress"])
                 print(f"\n   Plan progress: {completed}/{total} steps completed")
     else:
         print("   ⚠️  No architect traces found yet")
@@ -288,7 +287,7 @@ def main():
         adr_path = test_architect_create_adr()
 
         # Test 3: Dependency approval workflow
-        approval_request = test_architect_dependency_approval()
+        test_architect_dependency_approval()
 
         # Test 4: Trace generation
         traces = test_architect_trace_generation()

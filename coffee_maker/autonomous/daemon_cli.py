@@ -207,6 +207,24 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
         # Run daemon main loop
         daemon.run()
 
+    except RuntimeError as e:
+        # CRITICAL: Handle singleton violation (another code_developer already running)
+        if "already running" in str(e):
+            print("\n" + "=" * 70)
+            print("❌ CRITICAL ERROR: Another code_developer is already running!")
+            print("=" * 70)
+            print(f"\n{e}")
+            print("\n🔧 TO FIX:")
+            print("  1. Find the running code_developer:")
+            print("     ps aux | grep code-developer")
+            print("\n  2. Kill the other instance:")
+            print("     kill <PID>")
+            print("\n  3. Or wait for it to finish")
+            print("\n" + "=" * 70 + "\n")
+            process_manager._clean_stale_pid()
+            sys.exit(1)
+        # Re-raise if it's a different RuntimeError
+        raise
     except KeyboardInterrupt:
         print("\n\n⏹️  Daemon stopped by user")
         process_manager._clean_stale_pid()

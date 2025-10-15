@@ -266,41 +266,25 @@ Accepted
             Result with approval status
         """
         if not user_approved:
-            self._report_concern(
-                f"Dependency '{package_name}' requires user approval before adding"
-            )
+            self._report_concern(f"Dependency '{package_name}' requires user approval before adding")
             return {
                 "status": "pending_approval",
                 "package": package_name,
                 "message": "architect needs user approval to add dependency",
-                "action_required": f"User must approve adding '{package_name}' before architect can proceed"
+                "action_required": f"User must approve adding '{package_name}' before architect can proceed",
             }
 
         # User approved - proceed with adding dependency
         import subprocess
-        result = subprocess.run(
-            ["poetry", "add", package_name],
-            capture_output=True,
-            text=True
-        )
+
+        result = subprocess.run(["poetry", "add", package_name], capture_output=True, text=True)
 
         if result.returncode == 0:
             logger.info(f"✅ Added dependency: {package_name}")
-            return {
-                "status": "success",
-                "package": package_name,
-                "message": f"Successfully added {package_name}"
-            }
+            return {"status": "success", "package": package_name, "message": f"Successfully added {package_name}"}
         else:
-            self._report_difficulty(
-                f"Failed to add dependency '{package_name}': {result.stderr}",
-                severity="high"
-            )
-            return {
-                "status": "error",
-                "package": package_name,
-                "message": result.stderr
-            }
+            self._report_difficulty(f"Failed to add dependency '{package_name}': {result.stderr}", severity="high")
+            return {"status": "error", "package": package_name, "message": result.stderr}
 
     def remove_dependency(self, package_name: str, user_approved: bool = False) -> Dict[str, Any]:
         """Remove dependency from pyproject.toml (requires user approval).
@@ -313,41 +297,25 @@ Accepted
             Result with approval status
         """
         if not user_approved:
-            self._report_concern(
-                f"Removing dependency '{package_name}' requires user approval"
-            )
+            self._report_concern(f"Removing dependency '{package_name}' requires user approval")
             return {
                 "status": "pending_approval",
                 "package": package_name,
                 "message": "architect needs user approval to remove dependency",
-                "action_required": f"User must approve removing '{package_name}' before architect can proceed"
+                "action_required": f"User must approve removing '{package_name}' before architect can proceed",
             }
 
         # User approved - proceed with removing dependency
         import subprocess
-        result = subprocess.run(
-            ["poetry", "remove", package_name],
-            capture_output=True,
-            text=True
-        )
+
+        result = subprocess.run(["poetry", "remove", package_name], capture_output=True, text=True)
 
         if result.returncode == 0:
             logger.info(f"✅ Removed dependency: {package_name}")
-            return {
-                "status": "success",
-                "package": package_name,
-                "message": f"Successfully removed {package_name}"
-            }
+            return {"status": "success", "package": package_name, "message": f"Successfully removed {package_name}"}
         else:
-            self._report_difficulty(
-                f"Failed to remove dependency '{package_name}': {result.stderr}",
-                severity="high"
-            )
-            return {
-                "status": "error",
-                "package": package_name,
-                "message": result.stderr
-            }
+            self._report_difficulty(f"Failed to remove dependency '{package_name}': {result.stderr}", severity="high")
+            return {"status": "error", "package": package_name, "message": result.stderr}
 
     def request_user_approval(self, decision: str, context: str) -> Dict[str, Any]:
         """Request user approval for architectural decision.
@@ -369,5 +337,5 @@ Accepted
             "decision": decision,
             "context": context,
             "requested_by": "architect",
-            "message": f"architect requests approval: {decision}"
+            "message": f"architect requests approval: {decision}",
         }
