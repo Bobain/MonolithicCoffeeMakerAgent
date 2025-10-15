@@ -1843,7 +1843,8 @@ Insights:
 
 **Project**: **📐 US-016 - PM Must Create Full Technical Specs Before Estimating Delivery**
 
-**Status**: 📝 **PLANNED** (2025-10-10 - Requirements defined)
+**Status**: 🔄 **IN PROGRESS** - Phase 1 COMPLETE (2025-10-16)
+**Progress**: Phase 1/6 complete (Methodology Update ✅)
 
 **User Story**:
 > "As a project_manager I need the technical full specification to be already written with estimated time for each task, to give an estimated time delivery."
@@ -1939,12 +1940,21 @@ Build tools to help PM generate these detailed specs more efficiently:
 
 **Implementation Approach**:
 
-**Phase 1: Methodology Update** (Day 1 - 2 hours)
-1. Update COLLABORATION_METHODOLOGY.md Section 2.4
-2. Add mandatory spec-before-estimate rule
-3. Document the process flow
-4. Add examples of PM refusing to estimate without spec
-5. Cross-reference US-016
+**Phase 1: Methodology Update** ✅ COMPLETE (2025-10-16 - 2 hours)
+1. ✅ Update COLLABORATION_METHODOLOGY.md Section 2.4
+2. ✅ Add mandatory spec-before-estimate rule
+3. ✅ Document the process flow
+4. ✅ Add examples of PM refusing to estimate without spec (2 examples)
+5. ✅ Cross-reference US-016
+6. ✅ Update Definition of Done section (6.2) with spec requirement
+
+**Deliverables**:
+- docs/COLLABORATION_METHODOLOGY.md
+  - Section 2.4: Enhanced with 2 PM refusal examples (lines 167-251)
+  - Section 6.2: Added "Planning & Specification Criteria" to DoD (lines 3261-3270)
+- Git: Commit 1eec7a2 on roadmap branch
+
+**Next**: Phase 2 - Spec Template System (6 hours)
 
 **Phase 2: Spec Template System** (Day 1-2 - 6 hours)
 1. Create technical spec template with task-level structure
