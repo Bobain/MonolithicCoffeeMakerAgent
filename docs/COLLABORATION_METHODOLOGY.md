@@ -3233,6 +3233,235 @@ PM: [Next time user checks in]
 
 ---
 
+### 5.9 Technical Spec Generation via `/spec` Command (US-016)
+
+**Pattern**: `/spec` command → AI Analysis → Time Estimation → Delivery Calculation → User Review → ROADMAP Update
+
+**Philosophy**: Automated technical specification generation with realistic time estimates and delivery dates
+
+**What This Is**:
+The `/spec` command provides AI-powered technical specification generation that:
+- Breaks down user stories into phases and tasks
+- Estimates time with confidence levels
+- Calculates realistic delivery dates with buffer
+- Integrates with ROADMAP for approved specs
+- Generates consistent markdown documentation
+
+**The Spec Generation Workflow**:
+
+```
+User provides user story description
+  ↓
+/spec command with feature type and complexity
+  ↓
+AI Analysis (SpecGenerator)
+  ├─ Extract feature info
+  ├─ Break down into components
+  └─ Identify phases and tasks
+  ↓
+Time Estimation (TaskEstimator)
+  ├─ Estimate each task (base + multipliers)
+  ├─ Calculate confidence levels
+  └─ Apply historical adjustments (if Phase 4)
+  ↓
+Delivery Calculation
+  ├─ Apply buffer based on confidence (10-20%)
+  ├─ Use velocity (6h/day) for realistic dates
+  └─ Generate delivery date estimate
+  ↓
+Spec File Generated (docs/US-XXX_TECHNICAL_SPEC.md)
+  ↓
+User Review
+  ├─ View summary with estimates
+  ├─ Review full spec (optional)
+  └─ Approve or Reject
+  ↓
+If Approved → ROADMAP Updated with spec reference
+If Rejected → Spec kept for reference (no ROADMAP update)
+```
+
+**Command Syntax**:
+
+```bash
+poetry run project-manager /spec "user story description" \
+  --type {crud|integration|ui|infrastructure|analytics|security|general} \
+  --complexity {low|medium|high} \
+  --id US-XXX
+```
+
+**Parameters**:
+- `user_story` (required): Natural language description
+- `--type` (optional): Feature type for estimate adjustment (default: general)
+- `--complexity` (optional): Overall complexity (default: medium)
+- `--id` (optional): User story ID for ROADMAP integration
+
+**Example Interaction**:
+
+```
+User: "I need a technical spec for email notifications"
+
+PM: "Let me generate that for you. Running /spec command..."
+
+PM: [Executes /spec command]
+    poetry run project-manager /spec \
+      "As a user, I want email notifications when tasks complete" \
+      --type integration \
+      --complexity medium \
+      --id US-033
+
+System Output:
+Specification complete! 📋
+
+Total Estimated Time: 24.0 hours (3.0 days)
+Phases: 4
+Tasks: 12
+Confidence: 85%
+
+With 15% buffer for unknowns:
+- Buffered Time: 27.6 hours (4.6 days)
+- Expected Delivery: 2025-10-20
+
+Spec saved to: docs/US-033_TECHNICAL_SPEC.md
+
+Would you like to review the spec? [y/n]
+
+User: y
+
+[Spec opens in editor showing detailed breakdown]
+
+PM: "Here's what will be added to ROADMAP when you approve..."
+
+When approved, ROADMAP.md will be updated:
+
+## US-033: Email Notification System
+
+**Status**: 📝 READY TO IMPLEMENT
+**Estimated Time**: 27.6 hours (4.6 days)
+**Spec**: docs/US-033_TECHNICAL_SPEC.md
+**Confidence**: 85%
+**Expected Delivery**: 2025-10-20 (with 15% buffer)
+
+Approve this spec and update ROADMAP? [y/n]
+
+User: y
+
+PM: "Spec approved! ROADMAP updated with estimate and spec reference.
+     US-033 is now ready for implementation by code_developer."
+```
+
+**Generated Spec Structure**:
+
+All specs follow this consistent format:
+
+```markdown
+# {Feature Name} - Technical Specification
+
+**Feature Type**: {crud|integration|ui|...}
+**Complexity**: {low|medium|high}
+**Estimated Time**: {total_hours} hours ({total_days} days)
+**Confidence**: {confidence}%
+
+## Summary
+{Business value and overview}
+
+## Phase Breakdown
+
+### Phase 1: {Phase Name}
+**Goal**: {Phase objective}
+**Estimated Time**: {hours}h
+
+#### Tasks
+1. **{Task Title}**
+   - **Description**: {What to do}
+   - **Deliverable**: {What's produced}
+   - **Dependencies**: {Prerequisites}
+   - **Testing**: {How to verify}
+   - **Estimated Time**: {hours}h
+
+...
+
+**Risks**:
+- {Identified risks}
+
+**Success Criteria**:
+- {How we know it's done}
+
+...
+
+## Delivery Estimate
+
+- **Total Time**: {base_hours}h ({base_days} days)
+- **With Buffer**: {buffered_hours}h ({buffered_days} days)
+- **Confidence**: {confidence}%
+- **Expected Delivery**: {delivery_date}
+```
+
+**Time Estimation Details**:
+
+**Base Estimation**:
+- **Low complexity**: 1.5h average (1-2h range)
+- **Medium complexity**: 2.5h average (2-3h range)
+- **High complexity**: 3.5h average (3-4h range)
+
+**Multipliers Applied**:
+- Testing: +30%
+- Documentation: +15%
+- Security: +25%
+- Integration Complexity: +20%
+
+**Feature Type Adjustments**:
+- CRUD: +0h (baseline)
+- Integration: +0.5h
+- UI: +0.3h
+- Infrastructure: +0.7h
+- Analytics: +0.4h
+- Security: +0.6h
+
+**Buffer Calculation** (based on confidence):
+- High confidence (90%+): 10% buffer
+- Medium confidence (70-90%): 15% buffer
+- Low confidence (<70%): 20% buffer
+
+**Velocity Adjustment**:
+- Estimates use 6h/day velocity (not 8h)
+- Accounts for meetings, reviews, interruptions
+
+**Benefits**:
+
+1. **Faster Planning**: Generate detailed specs in minutes
+2. **Consistent Format**: All specs follow same structure
+3. **Realistic Estimates**: Include testing, docs, buffers
+4. **Historical Learning**: Estimates improve over time (Phase 4)
+5. **ROADMAP Integration**: Approved specs auto-update ROADMAP
+6. **Team Alignment**: Everyone works from same spec
+
+**Integration with Other Workflows**:
+
+- **Precedes**: `/US` command creates user story, `/spec` creates technical spec
+- **Enables**: code_developer can implement from spec
+- **Connects**: Metrics from US-015 improve estimates (Phase 4)
+- **Updates**: ROADMAP shows estimates and delivery dates
+
+**Common Use Cases**:
+
+1. **Feature Planning**: Generate spec before implementation
+2. **Estimation Request**: Get time estimate for user story
+3. **Exploratory Planning**: Generate spec without ROADMAP update (no --id)
+4. **Batch Planning**: Generate specs for multiple user stories
+
+**Tutorial**: See `docs/tutorials/SPEC_GENERATION_TUTORIAL.md` for comprehensive examples and FAQ.
+
+**Implementation Status**:
+- ✅ **COMPLETE** (US-016 Phase 6 completed 2025-10-16)
+- 100 tests passing (unit + integration)
+- Full documentation and examples
+- Ready for production use
+
+**User Story Reference**: US-016
+> "As a PM, I want to generate technical specifications from user stories with time estimates so that I can plan sprints accurately and provide delivery dates to stakeholders."
+
+---
+
 ## 6. Definition of Done (DoD)
 
 ### 6.1 What is "Done"?

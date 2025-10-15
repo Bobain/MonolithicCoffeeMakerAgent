@@ -24,11 +24,16 @@ def mock_spec_result():
         dependencies=[],
         testing="Unit tests",
         time_estimate=TimeEstimate(
-            core_hours=5.0,
-            testing_hours=1.0,
-            documentation_hours=0.5,
             total_hours=6.5,
+            base_hours=5.0,
+            breakdown={
+                "implementation": 5.0,
+                "testing": 1.0,
+                "documentation": 0.5,
+            },
             confidence=0.85,
+            assumptions=["Base complexity: medium", "Testing required"],
+            risks=[],
         ),
     )
 
@@ -76,7 +81,7 @@ class TestSpecCLI:
     """Test /spec CLI command."""
 
     @patch("coffee_maker.cli.roadmap_cli.AIService")
-    @patch("coffee_maker.cli.roadmap_cli.SpecWorkflow")
+    @patch("coffee_maker.cli.spec_workflow.SpecWorkflow")
     @patch("builtins.input")
     def test_spec_command_user_declines_review(
         self, mock_input, mock_workflow_class, mock_ai_service_class, mock_spec_result
@@ -110,7 +115,7 @@ class TestSpecCLI:
         )
 
     @patch("coffee_maker.cli.roadmap_cli.AIService")
-    @patch("coffee_maker.cli.roadmap_cli.SpecWorkflow")
+    @patch("coffee_maker.cli.spec_workflow.SpecWorkflow")
     @patch("builtins.input")
     def test_spec_command_user_approves(self, mock_input, mock_workflow_class, mock_ai_service_class, mock_spec_result):
         """Test spec command when user reviews and approves."""
@@ -142,7 +147,7 @@ class TestSpecCLI:
         mock_workflow.approve_spec.assert_called_once_with(mock_spec_result, "US-016")
 
     @patch("coffee_maker.cli.roadmap_cli.AIService")
-    @patch("coffee_maker.cli.roadmap_cli.SpecWorkflow")
+    @patch("coffee_maker.cli.spec_workflow.SpecWorkflow")
     @patch("builtins.input")
     def test_spec_command_user_rejects(self, mock_input, mock_workflow_class, mock_ai_service_class, mock_spec_result):
         """Test spec command when user reviews and rejects."""
@@ -174,7 +179,7 @@ class TestSpecCLI:
         mock_workflow.reject_spec.assert_called_once_with(mock_spec_result, "Scope too large")
 
     @patch("coffee_maker.cli.roadmap_cli.AIService")
-    @patch("coffee_maker.cli.roadmap_cli.SpecWorkflow")
+    @patch("coffee_maker.cli.spec_workflow.SpecWorkflow")
     @patch("builtins.input")
     def test_spec_command_without_user_story_id(
         self, mock_input, mock_workflow_class, mock_ai_service_class, mock_spec_result
@@ -207,7 +212,7 @@ class TestSpecCLI:
         mock_workflow.approve_spec.assert_not_called()
 
     @patch("coffee_maker.cli.roadmap_cli.AIService")
-    @patch("coffee_maker.cli.roadmap_cli.SpecWorkflow")
+    @patch("coffee_maker.cli.spec_workflow.SpecWorkflow")
     def test_spec_command_error_handling(self, mock_workflow_class, mock_ai_service_class):
         """Test spec command error handling."""
         # Mock workflow to raise exception

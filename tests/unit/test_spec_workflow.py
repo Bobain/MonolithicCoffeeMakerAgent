@@ -41,11 +41,16 @@ def mock_spec():
         dependencies=[],
         testing="Unit tests for model",
         time_estimate=TimeEstimate(
-            core_hours=2.0,
-            testing_hours=0.5,
-            documentation_hours=0.5,
             total_hours=3.0,
+            base_hours=2.0,
+            breakdown={
+                "implementation": 2.0,
+                "testing": 0.5,
+                "documentation": 0.5,
+            },
             confidence=0.9,
+            assumptions=["Base complexity: medium", "Testing required"],
+            risks=[],
         ),
     )
 
@@ -56,11 +61,16 @@ def mock_spec():
         dependencies=["Create database model"],
         testing="Integration tests",
         time_estimate=TimeEstimate(
-            core_hours=3.0,
-            testing_hours=1.0,
-            documentation_hours=0.5,
             total_hours=4.5,
+            base_hours=3.0,
+            breakdown={
+                "implementation": 3.0,
+                "testing": 1.0,
+                "documentation": 0.5,
+            },
             confidence=0.85,
+            assumptions=["Base complexity: medium", "Testing required", "Documentation required"],
+            risks=["Integration complexity may increase estimate"],
         ),
     )
 
@@ -151,40 +161,41 @@ class TestSpecWorkflow:
         assert workflow._slugify("  Spaces   Around  ") == "spaces-around"
         assert workflow._slugify("Special!@#$%Characters") == "specialcharacters"
 
-    @patch("coffee_maker.cli.spec_workflow.Path")
-    def test_generate_and_review_spec(self, mock_path, workflow, mock_spec):
+    def test_generate_and_review_spec(self, workflow, mock_spec, tmp_path):
         """Test spec generation and review workflow."""
         # Mock spec generator
         workflow.spec_generator.generate_spec_from_user_story = Mock(return_value=mock_spec)
         workflow.spec_generator.render_spec_to_markdown = Mock(return_value="# Test Spec")
 
-        # Mock file writing
-        mock_path_instance = Mock()
-        mock_path_instance.write_text = Mock()
-        mock_path_instance.name = "USER_MANAGEMENT_SYSTEM_TECHNICAL_SPEC.md"
-        mock_path.return_value = mock_path_instance
+        # Use tmp_path for file operations
+        with patch("coffee_maker.cli.spec_workflow.Path") as mock_path_class:
+            # Make Path("docs") return tmp_path
+            mock_path_class.return_value = tmp_path
 
-        # Generate spec
-        result = workflow.generate_and_review_spec(
-            user_story="As a user, I want to manage users",
-            feature_type="crud",
-            complexity="medium",
-            user_story_id="US-016",
-        )
+            # Generate spec
+            result = workflow.generate_and_review_spec(
+                user_story="As a user, I want to manage users",
+                feature_type="crud",
+                complexity="medium",
+                user_story_id="US-016",
+            )
 
-        # Verify result
-        assert isinstance(result, SpecReviewResult)
-        assert result.spec == mock_spec
-        assert result.markdown == "# Test Spec"
-        assert result.summary["total_hours"] == 7.5
-        assert result.summary["phase_count"] == 1
-        assert result.summary["task_count"] == 2
-        assert result.approved is False  # Not approved yet
+            # Verify result
+            assert isinstance(result, SpecReviewResult)
+            assert result.spec == mock_spec
+            assert result.markdown == "# Test Spec"
+            assert result.summary["total_hours"] == 7.5
+            assert result.summary["phase_count"] == 1
+            assert result.summary["task_count"] == 2
+            assert result.approved is False  # Not approved yet
 
-        # Verify delivery estimate
-        assert "delivery_date" in result.delivery_estimate
-        assert "buffered_hours" in result.delivery_estimate
-        assert "confidence" in result.delivery_estimate
+            # Verify delivery estimate
+            assert "delivery_date" in result.delivery_estimate
+            assert "buffered_hours" in result.delivery_estimate
+            assert "confidence" in result.delivery_estimate
+
+            # Verify spec was saved
+            assert result.spec_path.name == "US-016_TECHNICAL_SPEC.md"
 
     def test_format_spec_summary(self, workflow, mock_spec):
         """Test spec summary formatting."""
