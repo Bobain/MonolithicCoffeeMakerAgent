@@ -147,15 +147,17 @@ class SpecGenerator:
         >>> Path("docs/MY_SPEC.md").write_text(markdown)
     """
 
-    def __init__(self, ai_service):
+    def __init__(self, ai_service, use_historical_adjustment: bool = False):
         """Initialize the spec generator.
 
         Args:
             ai_service: AIService instance for LLM calls
+            use_historical_adjustment: If True, use historical metrics to adjust estimates (default: False)
         """
         self.ai_service = ai_service
-        self.estimator = TaskEstimator()
-        logger.info("SpecGenerator initialized")
+        self.estimator = TaskEstimator(use_historical_adjustment=use_historical_adjustment)
+        self.use_historical_adjustment = use_historical_adjustment
+        logger.info(f"SpecGenerator initialized (historical_adjustment={use_historical_adjustment})")
 
     def generate_spec_from_user_story(
         self,

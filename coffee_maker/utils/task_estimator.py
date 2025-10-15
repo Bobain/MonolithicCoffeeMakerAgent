@@ -134,9 +134,27 @@ class TaskEstimator:
         FeatureType.SECURITY: 0.6,  # +0.6h for security best practices
     }
 
-    def __init__(self):
-        """Initialize the task estimator."""
-        logger.info("TaskEstimator initialized")
+    def __init__(self, use_historical_adjustment: bool = False):
+        """Initialize the task estimator.
+
+        Args:
+            use_historical_adjustment: If True, use MetricsIntegration to adjust estimates
+                                     based on historical accuracy data (default: False)
+        """
+        self.use_historical_adjustment = use_historical_adjustment
+        self.metrics_integration = None
+
+        if use_historical_adjustment:
+            try:
+                from coffee_maker.utils.metrics_integration import MetricsIntegration
+
+                self.metrics_integration = MetricsIntegration()
+                logger.info("TaskEstimator initialized with historical adjustment enabled")
+            except ImportError:
+                logger.warning("MetricsIntegration not available, falling back to base estimates")
+                self.use_historical_adjustment = False
+        else:
+            logger.info("TaskEstimator initialized")
 
     def estimate_task(
         self,
@@ -241,8 +259,27 @@ class TaskEstimator:
             total_hours = self.MAX_TASK_HOURS
             assumptions.append(f"Capped at maximum task size ({self.MAX_TASK_HOURS}h)")
 
-        # Calculate confidence based on complexity and factors
-        confidence = self._calculate_confidence(complexity, requires_security, is_integration_complex)
+        # Calculate base confidence
+        base_confidence = self._calculate_confidence(complexity, requires_security, is_integration_complex)
+
+        # Apply historical adjustment if enabled
+        if self.use_historical_adjustment and self.metrics_integration:
+            adjusted_total, accuracy_factor, historical_confidence = self.metrics_integration.adjust_estimate(
+                base_estimate=total_hours, feature_type=feature_type, complexity=complexity
+            )
+
+            # Use historical confidence if available, otherwise use base
+            final_confidence = historical_confidence if historical_confidence > 0.5 else base_confidence
+
+            # Update assumptions with adjustment info
+            assumptions.append(f"Historical adjustment: {total_hours}h → {adjusted_total}h (factor: {accuracy_factor})")
+            assumptions.append(
+                f"Adjusted confidence: {final_confidence:.0%} (based on {self.metrics_integration.get_adjustment_summary(feature_type, complexity)['sample_size']} samples)"
+            )
+
+            total_hours = adjusted_total
+        else:
+            final_confidence = base_confidence
 
         # Round all breakdown values
         breakdown = {k: self._round_to_half_hour(v) for k, v in breakdown.items()}
@@ -251,12 +288,15 @@ class TaskEstimator:
             total_hours=total_hours,
             base_hours=base_hours,
             breakdown=breakdown,
-            confidence=confidence,
+            confidence=final_confidence,
             assumptions=assumptions,
             risks=risks,
         )
 
-        logger.info(f"Task estimated: {total_hours}h " f"(base: {base_hours}h, confidence: {confidence:.0%})")
+        logger.info(
+            f"Task estimated: {total_hours}h (base: {base_hours}h, confidence: {final_confidence:.0%}"
+            + (f", adjusted: {self.use_historical_adjustment})" if self.use_historical_adjustment else ")")
+        )
 
         return estimate
 
