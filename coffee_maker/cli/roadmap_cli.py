@@ -968,6 +968,170 @@ def cmd_metrics(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_summary(args: argparse.Namespace) -> int:
+    """Show delivery summary for recently completed stories.
+
+    US-017 Phase 2: CLI Integration - /summary command
+
+    Displays executive-style summary of recent deliveries including:
+    - Story ID and title
+    - Completion date
+    - Business value
+    - Key features delivered
+    - Estimation accuracy
+
+    Args:
+        args: Parsed command-line arguments with optional --days and --format
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager summary
+        $ project-manager summary --days 7
+        $ project-manager summary --days 30 --format text
+    """
+    from coffee_maker.reports.status_report_generator import StatusReportGenerator
+
+    try:
+        # Get parameters from args
+        days = args.days if hasattr(args, "days") else 14
+        output_format = args.format if hasattr(args, "format") else "markdown"
+
+        # Validate parameters
+        if days <= 0:
+            print("❌ Error: --days must be greater than 0")
+            return 1
+
+        if output_format not in ["text", "markdown"]:
+            print(f"❌ Error: Invalid format '{output_format}'. Use 'text' or 'markdown'")
+            return 1
+
+        # Initialize generator
+        generator = StatusReportGenerator(str(ROADMAP_PATH))
+
+        # Get recent completions
+        completions = generator.get_recent_completions(days=days)
+
+        if not completions:
+            print("\n" + "=" * 80)
+            print(f"📦 DELIVERY SUMMARY (Last {days} days)")
+            print("=" * 80 + "\n")
+            print(f"No deliveries completed in the last {days} days.")
+            print("\nTip: Try increasing the time period with --days N")
+            print()
+            return 0
+
+        # Format summary
+        summary = generator.format_delivery_summary(completions)
+
+        # Display based on format
+        if output_format == "markdown":
+            print("\n" + summary)
+        else:
+            # Text format: Remove markdown formatting
+            text_summary = summary.replace("# ", "").replace("## ", "").replace("**", "").replace("---", "-" * 80)
+            print("\n" + text_summary)
+
+        # Footer
+        print()
+        print(f"💡 TIP: Use 'project-manager summary --days N' to change time period")
+        print(f"   Use 'project-manager calendar' to see upcoming deliverables")
+        print()
+
+        return 0
+
+    except FileNotFoundError:
+        print(f"❌ Error: ROADMAP not found at {ROADMAP_PATH}")
+        return 1
+    except Exception as e:
+        logger.error(f"Failed to generate summary: {e}", exc_info=True)
+        print(f"❌ Error generating summary: {e}")
+        return 1
+
+
+def cmd_calendar(args: argparse.Namespace) -> int:
+    """Show calendar of upcoming deliverables with estimated completion dates.
+
+    US-017 Phase 2: CLI Integration - /calendar command
+
+    Displays upcoming priorities/stories with:
+    - Priority order (1, 2, 3...)
+    - Estimated completion dates
+    - What description
+    - Impact statement
+
+    Args:
+        args: Parsed command-line arguments with optional --limit and --format
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager calendar
+        $ project-manager calendar --limit 5
+        $ project-manager calendar --limit 10 --format text
+    """
+    from coffee_maker.reports.status_report_generator import StatusReportGenerator
+
+    try:
+        # Get parameters from args
+        limit = args.limit if hasattr(args, "limit") else 3
+        output_format = args.format if hasattr(args, "format") else "markdown"
+
+        # Validate parameters
+        if limit <= 0:
+            print("❌ Error: --limit must be greater than 0")
+            return 1
+
+        if output_format not in ["text", "markdown"]:
+            print(f"❌ Error: Invalid format '{output_format}'. Use 'text' or 'markdown'")
+            return 1
+
+        # Initialize generator
+        generator = StatusReportGenerator(str(ROADMAP_PATH))
+
+        # Get upcoming deliverables
+        upcoming = generator.get_upcoming_deliverables(limit=limit)
+
+        if not upcoming:
+            print("\n" + "=" * 80)
+            print("📅 UPCOMING DELIVERABLES CALENDAR")
+            print("=" * 80 + "\n")
+            print("No upcoming deliverables with time estimates found.")
+            print("\nTip: Add estimated effort to stories in ROADMAP.md")
+            print("   Format: **Estimated Effort**: X-Y days")
+            print()
+            return 0
+
+        # Format calendar
+        calendar = generator.format_calendar_report(upcoming)
+
+        # Display based on format
+        if output_format == "markdown":
+            print("\n" + calendar)
+        else:
+            # Text format: Remove markdown formatting
+            text_calendar = calendar.replace("# ", "").replace("## ", "").replace("**", "").replace("---", "-" * 80)
+            print("\n" + text_calendar)
+
+        # Footer
+        print()
+        print(f"💡 TIP: Use 'project-manager calendar --limit N' to see more/fewer items")
+        print(f"   Use 'project-manager summary' to see recent deliveries")
+        print()
+
+        return 0
+
+    except FileNotFoundError:
+        print(f"❌ Error: ROADMAP not found at {ROADMAP_PATH}")
+        return 1
+    except Exception as e:
+        logger.error(f"Failed to generate calendar: {e}", exc_info=True)
+        print(f"❌ Error generating calendar: {e}")
+        return 1
+
+
 def cmd_chat(args):
     """Start interactive chat session with AI (Phase 2).
 
@@ -1200,6 +1364,20 @@ Use 'project-manager chat' for the best experience!
         "--period", type=int, default=7, help="Period in days for velocity calculation (default: 7)"
     )
 
+    # Summary command (US-017 Phase 2)
+    summary_parser = subparsers.add_parser("summary", help="Show delivery summary for recent completions (US-017)")
+    summary_parser.add_argument("--days", type=int, default=14, help="Number of days to look back (default: 14)")
+    summary_parser.add_argument(
+        "--format", type=str, default="markdown", choices=["text", "markdown"], help="Output format (default: markdown)"
+    )
+
+    # Calendar command (US-017 Phase 2)
+    calendar_parser = subparsers.add_parser("calendar", help="Show calendar of upcoming deliverables (US-017)")
+    calendar_parser.add_argument("--limit", type=int, default=3, help="Number of upcoming items to show (default: 3)")
+    calendar_parser.add_argument(
+        "--format", type=str, default="markdown", choices=["text", "markdown"], help="Output format (default: markdown)"
+    )
+
     args = parser.parse_args()
 
     # US-030: Default to chat when no command provided
@@ -1234,6 +1412,8 @@ Use 'project-manager chat' for the best experience!
         "assistant-status": cmd_assistant_status,  # PRIORITY 5
         "assistant-refresh": cmd_assistant_refresh,  # PRIORITY 5
         "metrics": cmd_metrics,  # US-015
+        "summary": cmd_summary,  # US-017 Phase 2
+        "calendar": cmd_calendar,  # US-017 Phase 2
     }
 
     handler = commands.get(args.command)
