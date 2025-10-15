@@ -38,11 +38,23 @@ from typing import Dict, List, Optional
 
 from coffee_maker.cli.request_classifier import RequestType
 
+# Phase 4 imports
+try:
+    from coffee_maker.cli.preview_generator import PreviewGenerator, PreviewResult
+
+    PREVIEW_AVAILABLE = True
+except ImportError:
+    PREVIEW_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
 class DocumentUpdateError(Exception):
     """Raised when document update fails."""
+
+
+class ValidationError(Exception):
+    """Raised when validation fails."""
 
 
 class DocumentUpdater:
@@ -92,7 +104,177 @@ class DocumentUpdater:
         self.backup_dir = self.project_root / ".backups" / "document_updates"
         self.backup_dir.mkdir(parents=True, exist_ok=True)
 
+        # Initialize PreviewGenerator for Phase 4
+        self.preview_generator = None
+        if PREVIEW_AVAILABLE:
+            self.preview_generator = PreviewGenerator(project_root=self.project_root)
+            logger.info("PreviewGenerator initialized (US-021 Phase 4)")
+
         logger.info(f"DocumentUpdater initialized (backup_dir: {self.backup_dir})")
+
+    def preview_updates(
+        self,
+        request_type: RequestType,
+        content: str,
+        target_documents: List[str],
+        metadata: Optional[Dict] = None,
+    ) -> Optional[PreviewResult]:
+        """Generate preview of document updates without applying changes.
+
+        Phase 4 feature: Shows user what will be added before committing changes.
+
+        Args:
+            request_type: Type of request
+            content: Content to add
+            target_documents: List of document paths to update
+            metadata: Additional metadata
+
+        Returns:
+            PreviewResult with previews, or None if preview not available
+
+        Example:
+            >>> updater = DocumentUpdater()
+            >>> preview = updater.preview_updates(
+            ...     request_type=RequestType.FEATURE_REQUEST,
+            ...     content="Add email notifications",
+            ...     target_documents=["docs/ROADMAP.md"],
+            ...     metadata={'title': 'Email Notifications'}
+            ... )
+            >>> print(preview.summary)
+        """
+        if not self.preview_generator:
+            logger.warning("PreviewGenerator not available, skipping preview")
+            return None
+
+        try:
+            # Add US number to metadata if not present
+            metadata = metadata or {}
+            if "us_number" not in metadata and "ROADMAP" in str(target_documents):
+                # Get next US number
+                roadmap_path = self.project_root / "docs/ROADMAP.md"
+                if roadmap_path.exists():
+                    with open(roadmap_path, "r") as f:
+                        lines = f.readlines()
+                    metadata["us_number"] = self._get_next_us_number(lines)
+
+            preview = self.preview_generator.generate_preview(
+                request_type=request_type,
+                content=content,
+                target_documents=target_documents,
+                metadata=metadata,
+            )
+
+            logger.info(f"Preview generated: {len(preview.previews)} document(s), {preview.total_additions} lines")
+            return preview
+
+        except Exception as e:
+            logger.error(f"Preview generation failed: {e}")
+            return None
+
+    def validate_update(
+        self,
+        request_type: RequestType,
+        content: str,
+        target_documents: List[str],
+        metadata: Optional[Dict] = None,
+    ) -> Dict[str, List[str]]:
+        """Validate document update before applying changes.
+
+        Phase 4 feature: Checks for conflicts, duplicates, and consistency issues.
+
+        Args:
+            request_type: Type of request
+            content: Content to add
+            target_documents: List of document paths
+            metadata: Additional metadata
+
+        Returns:
+            Dictionary with validation results:
+            {
+                'errors': ['error1', ...],    # Must fix before applying
+                'warnings': ['warning1', ...], # Should review, but can proceed
+                'info': ['info1', ...]        # Informational messages
+            }
+
+        Example:
+            >>> updater = DocumentUpdater()
+            >>> validation = updater.validate_update(
+            ...     request_type=RequestType.FEATURE_REQUEST,
+            ...     content="Add email notifications",
+            ...     target_documents=["docs/ROADMAP.md"],
+            ...     metadata={'title': 'Email Notifications'}
+            ... )
+            >>> if validation['errors']:
+            ...     print("Cannot proceed:", validation['errors'])
+        """
+        errors = []
+        warnings = []
+        info = []
+
+        metadata = metadata or {}
+
+        try:
+            # Validate target documents exist or can be created
+            for doc_path in target_documents:
+                full_path = self.project_root / doc_path
+
+                if not full_path.exists():
+                    parent_dir = full_path.parent
+                    if not parent_dir.exists():
+                        errors.append(f"Parent directory does not exist: {parent_dir}")
+                    else:
+                        info.append(f"Document will be created: {doc_path}")
+
+            # Validate ROADMAP updates
+            if any("ROADMAP" in doc for doc in target_documents):
+                roadmap_path = self.project_root / "docs/ROADMAP.md"
+                if roadmap_path.exists():
+                    with open(roadmap_path, "r") as f:
+                        roadmap_content = f.read()
+
+                    # Check for duplicate US numbers
+                    us_number = metadata.get("us_number")
+                    if us_number:
+                        pattern = f"## US-{us_number:03d}:"
+                        if pattern in roadmap_content:
+                            errors.append(f"US-{us_number:03d} already exists in ROADMAP")
+
+                    # Check for similar titles
+                    title = metadata.get("title")
+                    if title and title.lower() in roadmap_content.lower():
+                        warnings.append(f"Similar title '{title}' may already exist in ROADMAP")
+
+                    # Check metadata completeness
+                    if not metadata.get("title"):
+                        warnings.append("Title not provided, will use default")
+                    if not metadata.get("business_value"):
+                        info.append("Business value not provided, will be marked as TBD")
+                    if not metadata.get("estimated_effort"):
+                        info.append("Estimated effort not provided, will be marked as TBD")
+
+            # Validate COLLABORATION_METHODOLOGY updates
+            if any("COLLABORATION" in doc for doc in target_documents):
+                # Check metadata completeness
+                if not metadata.get("rationale"):
+                    warnings.append("Rationale not provided for methodology change")
+                if not metadata.get("applies_to"):
+                    info.append("'Applies to' not specified, defaulting to 'All team members'")
+
+            # Validate content not empty
+            if not content or not content.strip():
+                errors.append("Content is empty, cannot create update")
+
+            # Check for very long content
+            if len(content) > 10000:
+                warnings.append(f"Content is very long ({len(content)} chars), may be too detailed")
+
+        except Exception as e:
+            logger.error(f"Validation failed: {e}")
+            errors.append(f"Validation error: {e}")
+
+        logger.info(f"Validation completed: {len(errors)} errors, {len(warnings)} warnings, {len(info)} info")
+
+        return {"errors": errors, "warnings": warnings, "info": info}
 
     def update_documents(
         self,
