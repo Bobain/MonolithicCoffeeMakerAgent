@@ -39,6 +39,14 @@ try:
 except ImportError:
     CLASSIFIER_AVAILABLE = False
 
+# Import DocumentUpdater for Phase 3 integration (US-021)
+try:
+    from coffee_maker.cli.document_updater import DocumentUpdater, DocumentUpdateError
+
+    UPDATER_AVAILABLE = True
+except ImportError:
+    UPDATER_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # Import Claude CLI interface (optional)
@@ -118,6 +126,14 @@ class AIService:
             logger.info("RequestClassifier initialized (US-021 Phase 1)")
         else:
             logger.debug("RequestClassifier not available (will be added in Phase 2)")
+
+        # Initialize DocumentUpdater for Phase 3 (US-021)
+        self.document_updater = None
+        if UPDATER_AVAILABLE:
+            self.document_updater = DocumentUpdater()
+            logger.info("DocumentUpdater initialized (US-021 Phase 3)")
+        else:
+            logger.debug("DocumentUpdater not available (will be added in Phase 3)")
 
         if use_claude_cli:
             # Use Claude CLI (subscription-based, no API credits needed)
@@ -277,12 +293,57 @@ class AIService:
             # Extract action if present
             action = self._extract_action(content)
 
-            # Return with classification metadata
+            # Phase 3: Update documents if classification indicates it (US-021)
+            update_results = None
+            if (
+                self.document_updater
+                and classification
+                and classification.request_type.value != "clarification_needed"
+                and classification.target_documents
+            ):
+                try:
+                    # Extract metadata from AI response or use defaults
+                    metadata = self._extract_metadata_from_response(user_input, content, classification)
+
+                    # Update documents
+                    logger.info(f"Updating documents for {classification.request_type.value} request")
+                    update_results = self.document_updater.update_documents(
+                        request_type=classification.request_type,
+                        content=user_input,
+                        target_documents=classification.target_documents,
+                        metadata=metadata,
+                    )
+
+                    # Log results
+                    for doc_path, success in update_results.items():
+                        if success:
+                            logger.info(f"✅ Successfully updated {doc_path}")
+                        else:
+                            logger.warning(f"❌ Failed to update {doc_path}")
+
+                except DocumentUpdateError as e:
+                    logger.error(f"Document update failed: {e}")
+                    # Return error response
+                    return AIResponse(
+                        message=f"I understood your request, but failed to update documents: {e}\n\nAI Response: {content}",
+                        action=action,
+                        confidence=0.5,
+                        metadata={
+                            "classification": classification_context,
+                            "update_error": str(e),
+                        },
+                    )
+
+            # Return with classification and update metadata
+            response_metadata = {"classification": classification_context} if classification else {}
+            if update_results:
+                response_metadata["document_updates"] = update_results
+
             return AIResponse(
                 message=content,
                 action=action,
                 confidence=1.0,
-                metadata={"classification": classification_context} if classification else None,
+                metadata=response_metadata if response_metadata else None,
             )
 
         except Exception as e:
@@ -931,6 +992,106 @@ Provide a concise analysis in markdown format.
         except Exception as e:
             logger.error(f"Classification failed: {e}")
             return None
+
+    def _extract_metadata_from_response(
+        self, user_input: str, ai_response: str, classification: "ClassificationResult"
+    ) -> Dict:
+        """Extract metadata for document update from AI response and user input.
+
+        This method intelligently extracts metadata needed for document updates,
+        including title, business_value, estimated_effort, acceptance_criteria, etc.
+
+        Args:
+            user_input: Original user input
+            ai_response: AI's response to the request
+            classification: Classification result with indicators
+
+        Returns:
+            Dictionary with metadata for document update
+
+        Example:
+            >>> metadata = self._extract_metadata_from_response(
+            ...     "I want to add email notifications",
+            ...     "Great idea! I'll add that to the roadmap...",
+            ...     classification
+            ... )
+            >>> print(metadata['title'])
+            'Add email notifications'
+        """
+        metadata = {}
+
+        # Extract title from user input
+        # Try to find the core request in the user input
+        metadata["title"] = self._extract_title(user_input)
+
+        # Set defaults based on request type
+        if classification.request_type.value == "feature_request":
+            metadata["business_value"] = "TBD - please specify business value"
+            metadata["estimated_effort"] = "TBD - to be estimated during planning"
+            metadata["acceptance_criteria"] = [
+                "Feature implemented and tested",
+                "Documentation updated",
+                "User acceptance testing passed",
+            ]
+        elif classification.request_type.value == "methodology_change":
+            metadata["rationale"] = "TBD - please specify rationale"
+            metadata["applies_to"] = "All team members"
+            metadata["section"] = "General Guidelines"
+        elif classification.request_type.value == "hybrid":
+            # Hybrid gets both feature and methodology metadata
+            metadata["business_value"] = "TBD - please specify business value"
+            metadata["estimated_effort"] = "TBD - to be estimated during planning"
+            metadata["acceptance_criteria"] = [
+                "Feature implemented and tested",
+                "Methodology documented and communicated",
+            ]
+            metadata["rationale"] = "TBD - please specify rationale"
+            metadata["applies_to"] = "All team members"
+
+        return metadata
+
+    def _extract_title(self, text: str) -> str:
+        """Extract title from user input.
+
+        Attempts to extract a concise title from the user's request.
+
+        Args:
+            text: User input text
+
+        Returns:
+            Extracted title (max 80 characters)
+
+        Example:
+            >>> title = self._extract_title("I want to add email notifications for completed tasks")
+            >>> print(title)
+            'Add email notifications for completed tasks'
+        """
+        # Remove common prefixes
+        text = text.strip()
+        prefixes_to_remove = [
+            "i want to ",
+            "i need to ",
+            "we should ",
+            "can we ",
+            "please ",
+            "could you ",
+        ]
+
+        lower_text = text.lower()
+        for prefix in prefixes_to_remove:
+            if lower_text.startswith(prefix):
+                text = text[len(prefix) :]
+                break
+
+        # Capitalize first letter
+        text = text[0].upper() + text[1:] if text else text
+
+        # Take first sentence or truncate to 80 chars
+        first_sentence = text.split(".")[0]
+        if len(first_sentence) > 80:
+            first_sentence = first_sentence[:77] + "..."
+
+        return first_sentence
 
     def warn_user(
         self, title: str, message: str, priority: str = "high", context: Optional[Dict] = None, play_sound: bool = True
