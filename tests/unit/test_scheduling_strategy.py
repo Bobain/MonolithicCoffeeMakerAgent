@@ -69,6 +69,7 @@ class TestProactiveRateLimitScheduler:
         assert wait_time > 0
         assert wait_time <= 0.12  # Should be at most 60/RPM seconds
 
+    @pytest.mark.slow
     def test_allows_proceed_after_spacing(self, scheduler, rate_tracker):
         """Test that we can proceed after minimum spacing has elapsed."""
         model_name = "openai/gpt-4o-mini"
@@ -88,6 +89,7 @@ class TestProactiveRateLimitScheduler:
         assert can_proceed is True
         assert wait_time == 0.0
 
+    @pytest.mark.slow
     def test_safety_margin_requests(self, scheduler, rate_tracker):
         """Test that scheduler stops at N-2 of request limit."""
         model_name = "openai/gpt-4o-mini"
@@ -111,6 +113,7 @@ class TestProactiveRateLimitScheduler:
         assert can_proceed is False
         assert wait_time > 0
 
+    @pytest.mark.slow
     def test_safety_margin_tokens(self, scheduler, rate_tracker):
         """Test that scheduler stops at N-2 of token limit."""
         model_name = "openai/gpt-4o-mini"
@@ -190,6 +193,7 @@ class TestProactiveRateLimitScheduler:
         ready = scheduler.wait_until_ready(model_name, 1000, max_wait=1.0)
         assert ready is True
 
+    @pytest.mark.slow
     def test_wait_until_ready_with_wait(self, scheduler, rate_tracker):
         """Test wait_until_ready when need to wait."""
         model_name = "openai/gpt-4o-mini"
@@ -208,6 +212,7 @@ class TestProactiveRateLimitScheduler:
         min_spacing = 60.0 / limits["requests_per_minute"]
         assert elapsed >= min_spacing * 0.9  # Allow 10% tolerance
 
+    @pytest.mark.slow
     def test_wait_until_ready_exceeds_max_wait(self, scheduler, rate_tracker):
         """Test wait_until_ready when wait would exceed max_wait."""
         model_name = "openai/gpt-4o-mini"
@@ -292,6 +297,8 @@ class TestProactiveRateLimitScheduler:
         status = scheduler.get_status(unknown_model)
         assert "error" in status
 
+    @pytest.mark.slow
+    @pytest.mark.integration
     def test_integration_realistic_usage(self, scheduler):
         """Test realistic usage pattern with multiple requests."""
         model_name = "openai/gpt-4o-mini"
