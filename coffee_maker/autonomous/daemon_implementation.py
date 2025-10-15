@@ -89,7 +89,10 @@ class ImplementationMixin:
             title=f"Implement {priority['name']}?",
             message=f"The daemon wants to implement:\n{priority['title']}\n\nApprove?",
             priority=NOTIF_PRIORITY_HIGH,
-            context={"priority_name": priority["name"], "priority_number": priority["number"]},
+            context={
+                "priority_name": priority["name"],
+                "priority_number": priority["number"],
+            },
         )
 
         logger.info(f"Created notification {notif_id} - waiting for response")
@@ -188,7 +191,12 @@ The daemon will skip this priority in future iterations.
 
         # Track subtask: Creating feature tag (estimated: 5 seconds)
         subtask_start = datetime.now()
-        self._update_subtask("Creating feature start tag", "in_progress", subtask_start, estimated_seconds=5)
+        self._update_subtask(
+            "Creating feature start tag",
+            "in_progress",
+            subtask_start,
+            estimated_seconds=5,
+        )
 
         # Extract feature name and US number from priority
         # Priority name format: "US-033" or "PRIORITY 15"
@@ -202,10 +210,20 @@ The daemon will skip this priority in future iterations.
             logger.info(f"✅ Created start tag: {start_tag}")
         except Exception as e:
             logger.error(f"Failed to create start tag: {e}")
-            self._update_subtask("Creating feature start tag", "failed", subtask_start, estimated_seconds=5)
+            self._update_subtask(
+                "Creating feature start tag",
+                "failed",
+                subtask_start,
+                estimated_seconds=5,
+            )
             return False
 
-        self._update_subtask("Creating feature start tag", "completed", subtask_start, estimated_seconds=5)
+        self._update_subtask(
+            "Creating feature start tag",
+            "completed",
+            subtask_start,
+            estimated_seconds=5,
+        )
 
         # PRIORITY 4: Log tag creation
         self.status.report_activity(
@@ -283,7 +301,12 @@ Status: Requires human decision
 
         # Track subtask: Committing changes (estimated: 20 seconds)
         subtask_start = datetime.now()
-        self._update_subtask("Committing changes with tag", "in_progress", subtask_start, estimated_seconds=20)
+        self._update_subtask(
+            "Committing changes with tag",
+            "in_progress",
+            subtask_start,
+            estimated_seconds=20,
+        )
 
         # Commit changes using tag-based workflow
         commit_message = self._build_commit_message(priority)
@@ -296,10 +319,20 @@ Status: Requires human decision
             logger.info(f"✅ Changes committed with tag: {complete_tag}")
         except Exception as e:
             logger.error(f"Failed to commit changes: {e}")
-            self._update_subtask("Committing changes with tag", "failed", subtask_start, estimated_seconds=20)
+            self._update_subtask(
+                "Committing changes with tag",
+                "failed",
+                subtask_start,
+                estimated_seconds=20,
+            )
             return False
 
-        self._update_subtask("Committing changes with tag", "completed", subtask_start, estimated_seconds=20)
+        self._update_subtask(
+            "Committing changes with tag",
+            "completed",
+            subtask_start,
+            estimated_seconds=20,
+        )
 
         # PRIORITY 4: Log commit activity
         self.status.report_activity(
@@ -313,7 +346,12 @@ Status: Requires human decision
 
         # Track subtask: Pushing to remote (estimated: 30 seconds)
         subtask_start = datetime.now()
-        self._update_subtask("Pushing to remote with tags", "in_progress", subtask_start, estimated_seconds=30)
+        self._update_subtask(
+            "Pushing to remote with tags",
+            "in_progress",
+            subtask_start,
+            estimated_seconds=30,
+        )
 
         # Push roadmap branch and tags
         try:
@@ -322,10 +360,20 @@ Status: Requires human decision
             logger.info("✅ Roadmap branch and tags pushed")
         except Exception as e:
             logger.error(f"Failed to push: {e}")
-            self._update_subtask("Pushing to remote with tags", "failed", subtask_start, estimated_seconds=30)
+            self._update_subtask(
+                "Pushing to remote with tags",
+                "failed",
+                subtask_start,
+                estimated_seconds=30,
+            )
             return False
 
-        self._update_subtask("Pushing to remote with tags", "completed", subtask_start, estimated_seconds=30)
+        self._update_subtask(
+            "Pushing to remote with tags",
+            "completed",
+            subtask_start,
+            estimated_seconds=30,
+        )
 
         # PRIORITY 4: Log push activity
         self.status.report_activity(
@@ -337,17 +385,31 @@ Status: Requires human decision
         # Create PR if enabled
         if self.create_prs:
             # PRIORITY 4: Update status to REVIEWING
-            self.status.update_status(DeveloperState.REVIEWING, progress=90, current_step="Creating pull request")
+            self.status.update_status(
+                DeveloperState.REVIEWING,
+                progress=90,
+                current_step="Creating pull request",
+            )
 
             # Track subtask: Creating PR (estimated: 45 seconds)
             subtask_start = datetime.now()
-            self._update_subtask("Creating pull request", "in_progress", subtask_start, estimated_seconds=45)
+            self._update_subtask(
+                "Creating pull request",
+                "in_progress",
+                subtask_start,
+                estimated_seconds=45,
+            )
 
             pr_body = self._build_pr_body(priority)
             pr_url = self.git.create_pull_request(f"Implement {priority_name}: {priority_title}", pr_body)
 
             if pr_url:
-                self._update_subtask("Creating pull request", "completed", subtask_start, estimated_seconds=45)
+                self._update_subtask(
+                    "Creating pull request",
+                    "completed",
+                    subtask_start,
+                    estimated_seconds=45,
+                )
                 logger.info(f"✅ PR created: {pr_url}")
 
                 # PRIORITY 4: Update progress - PR created
@@ -361,8 +423,28 @@ Status: Requires human decision
                     priority=NOTIF_PRIORITY_HIGH,
                     context={"priority_name": priority_name, "pr_url": pr_url},
                 )
+
+                # US-034: Notify Slack about PR creation
+                try:
+                    # Extract PR number from URL (e.g., "https://github.com/user/repo/pull/142" -> 142)
+                    pr_number = int(pr_url.split("/")[-1])
+                    branch = GitStrategy.get_current_branch()
+
+                    self.slack.notify_pr_created(
+                        pr_number=pr_number,
+                        pr_url=pr_url,
+                        title=f"Implement {priority_name}: {priority_title}",
+                        branch=branch,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to send Slack pr_created notification: {e}")
             else:
-                self._update_subtask("Creating pull request", "failed", subtask_start, estimated_seconds=45)
+                self._update_subtask(
+                    "Creating pull request",
+                    "failed",
+                    subtask_start,
+                    estimated_seconds=45,
+                )
                 logger.warning("Failed to create PR")
                 # PRIORITY 4: Still mark as complete even if PR failed
                 self.status.report_progress(100, "Implementation complete (PR creation failed)")
@@ -385,7 +467,14 @@ Status: Requires human decision
         # Check if this is a documentation/UX priority
         is_documentation = any(
             keyword in title_lower or keyword in content_lower
-            for keyword in ["documentation", "docs", "guide", "ux", "user experience", "quickstart"]
+            for keyword in [
+                "documentation",
+                "docs",
+                "guide",
+                "ux",
+                "user experience",
+                "quickstart",
+            ]
         )
 
         if is_documentation:

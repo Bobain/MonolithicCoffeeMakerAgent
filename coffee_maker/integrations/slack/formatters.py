@@ -40,7 +40,10 @@ class DaemonLifecycleFormatter:
         timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
 
         blocks = [
-            {"type": "header", "text": {"type": "plain_text", "text": "🚀 Daemon Started"}},
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "🚀 Daemon Started"},
+            },
             {"type": "divider"},
             {
                 "type": "section",
@@ -94,10 +97,18 @@ class DaemonLifecycleFormatter:
         if runtime_hours is not None:
             fields.append({"type": "mrkdwn", "text": f"*Runtime:*\n{runtime_hours:.2f} hours"})
 
-        fields.append({"type": "mrkdwn", "text": f"*Priorities Completed:*\n{priorities_completed}"})
+        fields.append(
+            {
+                "type": "mrkdwn",
+                "text": f"*Priorities Completed:*\n{priorities_completed}",
+            }
+        )
 
         blocks = [
-            {"type": "header", "text": {"type": "plain_text", "text": "🛑 Daemon Stopped"}},
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "🛑 Daemon Stopped"},
+            },
             {"type": "divider"},
             {"type": "section", "fields": fields},
         ]
@@ -128,7 +139,10 @@ class DaemonLifecycleFormatter:
         error_message = str(error)
 
         blocks = [
-            {"type": "header", "text": {"type": "plain_text", "text": "🚨 Daemon Error"}},
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "🚨 Daemon Error"},
+            },
             {"type": "divider"},
             {
                 "type": "section",
@@ -139,7 +153,10 @@ class DaemonLifecycleFormatter:
             },
             {
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": f"*Message:*\n```{error_message}```"},
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Message:*\n```{error_message}```",
+                },
             },
         ]
 
@@ -366,7 +383,10 @@ class PRStatusFormatter:
         blocks = [
             {
                 "type": "header",
-                "text": {"type": "plain_text", "text": f"❌ CI Failure: PR #{pr_number}"},
+                "text": {
+                    "type": "plain_text",
+                    "text": f"❌ CI Failure: PR #{pr_number}",
+                },
             },
             {"type": "divider"},
             {"type": "section", "text": {"type": "mrkdwn", "text": f"*{title}*"}},
@@ -433,7 +453,10 @@ class SystemAlertFormatter:
             header = "System Warning"
 
         blocks = [
-            {"type": "header", "text": {"type": "plain_text", "text": f"{emoji} {header}"}},
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": f"{emoji} {header}"},
+            },
             {"type": "divider"},
             {
                 "type": "section",
@@ -512,16 +535,25 @@ class DailySummaryFormatter:
         blocks = [
             {
                 "type": "header",
-                "text": {"type": "plain_text", "text": f"📈 Daily Summary - {formatted_date}"},
+                "text": {
+                    "type": "plain_text",
+                    "text": f"📈 Daily Summary - {formatted_date}",
+                },
             },
             {"type": "divider"},
             {
                 "type": "section",
                 "fields": [
-                    {"type": "mrkdwn", "text": f"🎯 *Priorities Completed:*\n{priorities_completed}"},
+                    {
+                        "type": "mrkdwn",
+                        "text": f"🎯 *Priorities Completed:*\n{priorities_completed}",
+                    },
                     {"type": "mrkdwn", "text": f"📝 *PRs Created:*\n{prs_created}"},
                     {"type": "mrkdwn", "text": f"✅ *PRs Merged:*\n{prs_merged}"},
-                    {"type": "mrkdwn", "text": f"⚡ *Velocity:*\n{velocity:.1f} priorities/day"},
+                    {
+                        "type": "mrkdwn",
+                        "text": f"⚡ *Velocity:*\n{velocity:.1f} priorities/day",
+                    },
                 ],
             },
         ]
@@ -550,7 +582,10 @@ class DailySummaryFormatter:
         blocks.append(
             {
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": f"*📊 System Health:* {system_health}"},
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*📊 System Health:* {system_health}",
+                },
             }
         )
 

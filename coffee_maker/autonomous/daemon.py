@@ -190,6 +190,7 @@ from coffee_maker.autonomous.task_metrics import TaskMetricsDB
 from coffee_maker.cli.notifications import (
     NotificationDB,
 )
+from coffee_maker.integrations.slack import DailySummaryScheduler, SlackNotifier
 
 # ACE Framework (optional, only loaded if enabled)
 try:
@@ -325,6 +326,17 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         # Task metrics database for performance tracking
         self.metrics_db = TaskMetricsDB()
 
+        # US-034: Slack integration (graceful degradation if not configured)
+        self.slack = SlackNotifier()
+        if self.slack.is_enabled():
+            logger.info("✅ Slack notifications enabled")
+        else:
+            logger.debug("Slack notifications disabled (not configured or SLACK_ENABLED=false)")
+
+        # US-034: Daily summary scheduler
+        self.daily_summary_scheduler = DailySummaryScheduler(notifier=self.slack, roadmap_path=str(self.roadmap_path))
+        logger.info(f"Daily summary scheduler initialized (time: {self.daily_summary_scheduler.summary_time})")
+
         # ACE Framework integration (optional)
         self.ace_enabled = self._init_ace_framework()
 
@@ -382,10 +394,37 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         # Check prerequisites
         if not self._check_prerequisites():
             logger.error("Prerequisites not met - cannot start")
+
+            # US-034: Alert about prerequisite failure
+            try:
+                self.slack.notify_system_alert(
+                    level="error",
+                    title="Daemon failed to start",
+                    message="Prerequisites check failed - daemon cannot start",
+                    context={"action": "Check logs for details"},
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send Slack system_alert: {e}")
+
             return
 
         # PRIORITY 2.8: Write initial status
         self._write_status()
+
+        # US-034: Start daily summary scheduler
+        try:
+            self.daily_summary_scheduler.start()
+        except Exception as e:
+            logger.warning(f"Failed to start daily summary scheduler: {e}")
+
+        # US-034: Notify Slack about daemon start
+        try:
+            current_branch = self.git.get_current_branch()
+            next_priority = self.parser.get_next_planned_priority()
+            next_priority_name = next_priority.get("name") if next_priority else None
+            self.slack.notify_daemon_started(branch=current_branch, next_priority=next_priority_name)
+        except Exception as e:
+            logger.warning(f"Failed to send Slack daemon_started notification: {e}")
 
         iteration = 0
 
@@ -422,6 +461,17 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 if not self._sync_roadmap_branch():
                     logger.warning("⚠️  Roadmap sync failed - continuing with local version")
 
+                    # US-034: Alert about sync failure (warning level)
+                    try:
+                        self.slack.notify_system_alert(
+                            level="warning",
+                            title="Roadmap sync failed",
+                            message="Failed to sync with remote roadmap branch - using local version",
+                            context={"action": "Continuing with local ROADMAP.md"},
+                        )
+                    except Exception as e:
+                        logger.debug(f"Failed to send Slack system_alert: {e}")
+
                 # Reload roadmap
                 self.parser = RoadmapParser(str(self.roadmap_path))
 
@@ -436,6 +486,17 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                     self._notify_completion()
                     # PRIORITY 4: Return to idle when done
                     self.status.update_status(DeveloperState.IDLE, current_step="All priorities complete")
+
+                    # US-034: Notify Slack about completion
+                    try:
+                        runtime_hours = (datetime.now() - self.start_time).total_seconds() / 3600
+                        self.slack.notify_daemon_stopped(
+                            runtime_hours=runtime_hours,
+                            priorities_completed=self.iteration_count,
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to send Slack daemon_stopped notification: {e}")
+
                     break
 
                 logger.info(f"📋 Next priority: {next_priority['name']} - {next_priority['title']}")
@@ -447,6 +508,21 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 # BUG FIX #3 & #4: Check for technical spec, create if missing
                 if not self._ensure_technical_spec(next_priority):
                     logger.warning("⚠️  Could not ensure technical spec exists - skipping this priority")
+
+                    # US-034: Alert about missing spec
+                    try:
+                        self.slack.notify_system_alert(
+                            level="warning",
+                            title=f"Missing technical spec for {next_priority['name']}",
+                            message=f"Could not create or find technical spec - skipping priority",
+                            context={
+                                "priority": next_priority["name"],
+                                "action": "Check logs and ROADMAP.md for details",
+                            },
+                        )
+                    except Exception as e:
+                        logger.debug(f"Failed to send Slack system_alert: {e}")
+
                     time.sleep(self.sleep_interval)
                     continue
 
@@ -494,6 +570,47 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                     # PRIORITY 2.8: Write status after completion
                     self._write_status(priority=next_priority)
 
+                    # US-034: Notify Slack about priority completion
+                    try:
+                        # Calculate metrics
+                        if self.current_priority_start_time:
+                            duration_hours = (datetime.now() - self.current_priority_start_time).total_seconds() / 3600
+                        else:
+                            duration_hours = 0.0
+
+                        # Get git stats
+                        try:
+                            stats = self.git.get_stats()
+                            files_changed = stats.get("files_changed", 0)
+                            lines_added = stats.get("lines_added", 0)
+                            lines_deleted = stats.get("lines_deleted", 0)
+                        except Exception:
+                            files_changed = 0
+                            lines_added = 0
+                            lines_deleted = 0
+
+                        # Try to extract tests added (optional)
+                        tests_added = 0
+                        try:
+                            # Count test files in diff
+                            diff_output = self.git.run_command("git diff HEAD~1 --name-only | grep test_")
+                            if diff_output:
+                                tests_added = len(diff_output.strip().split("\n"))
+                        except Exception:
+                            pass
+
+                        self.slack.notify_priority_completed(
+                            priority_name=next_priority["name"],
+                            summary=next_priority.get("title", "Implementation completed"),
+                            duration_hours=round(duration_hours, 2),
+                            files_changed=files_changed,
+                            tests_added=tests_added,
+                            lines_added=lines_added,
+                            lines_deleted=lines_deleted,
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to send Slack priority_completed notification: {e}")
+
                     # US-029: CRITICAL - Merge to roadmap after successful implementation
                     logger.info(f"📤 Merging {next_priority['name']} to roadmap for project_manager visibility...")
                     self._merge_to_roadmap(f"Completed {next_priority['name']}")
@@ -523,6 +640,17 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             except KeyboardInterrupt:
                 logger.info("\n⏹️  Daemon stopped by user")
                 self.running = False
+
+                # US-034: Notify Slack about stop
+                try:
+                    runtime_hours = (datetime.now() - self.start_time).total_seconds() / 3600
+                    self.slack.notify_daemon_stopped(
+                        runtime_hours=runtime_hours,
+                        priorities_completed=self.iteration_count,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to send Slack daemon_stopped notification: {e}")
+
                 # CRITICAL: Release singleton lock
                 if hasattr(DevDaemon, "_daemon_instance_running"):
                     delattr(DevDaemon, "_daemon_instance_running")
@@ -548,6 +676,20 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 import traceback
 
                 traceback.print_exc()
+
+                # US-034: Notify Slack about error
+                try:
+                    self.slack.notify_daemon_error(
+                        error=e,
+                        context={
+                            "priority": crash_info["priority"],
+                            "crash_count": self.crash_count,
+                            "max_crashes": self.max_crashes,
+                            "iteration": iteration,
+                        },
+                    )
+                except Exception as slack_err:
+                    logger.warning(f"Failed to send Slack daemon_error notification: {slack_err}")
 
                 # PRIORITY 4: Log crash as error activity
                 self.status.report_activity(
@@ -580,6 +722,12 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
         logger.info("🛑 DevDaemon stopped")
         logger.info(f"Total crashes: {len(self.crash_history)}")
+
+        # US-034: Stop daily summary scheduler
+        try:
+            self.daily_summary_scheduler.stop()
+        except Exception as e:
+            logger.warning(f"Failed to stop daily summary scheduler: {e}")
 
         # CRITICAL: Release singleton lock
         if hasattr(DevDaemon, "_daemon_instance_running"):

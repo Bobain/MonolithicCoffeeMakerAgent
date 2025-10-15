@@ -77,6 +77,50 @@ project-manager respond <id> approve   # Approve daemon's work
 ### 3. Notification System
 SQLite-based communication system between daemon and user with WAL mode for concurrent access.
 
+### 4. Slack Integration (US-034) 🆕
+Real-time notifications for team collaboration and remote monitoring.
+
+**Features**:
+- Daemon lifecycle events (start/stop/errors)
+- Priority completion notifications with metrics
+- PR creation and status updates
+- System alerts (warnings and errors)
+- Daily progress summaries (scheduled at configurable time)
+
+**Setup**:
+```bash
+# 1. Set environment variables
+export SLACK_ENABLED=true
+export SLACK_BOT_TOKEN=xoxb-your-bot-token
+export SLACK_CHANNEL_ID=C123456789
+export SLACK_DAILY_SUMMARY_TIME=18:00  # Optional, defaults to 18:00
+
+# 2. Run daemon - Slack notifications automatically enabled
+poetry run code-developer --auto-approve
+```
+
+**Configuration**:
+- `SLACK_ENABLED`: Enable/disable Slack (default: false)
+- `SLACK_BOT_TOKEN`: Slack Bot User OAuth Token (required)
+- `SLACK_CHANNEL_ID`: Slack channel ID to post to (required)
+- `SLACK_DAILY_SUMMARY_TIME`: Time for daily summaries in HH:MM format (default: 18:00)
+- `SLACK_RATE_LIMIT`: Max messages per second (default: 1)
+- `SLACK_MAX_RETRIES`: Max retry attempts (default: 3)
+
+**Creating a Slack App**:
+1. Go to https://api.slack.com/apps → "Create New App" → "From scratch"
+2. Name your app (e.g., "Coffee Maker Bot") and select your workspace
+3. Navigate to "OAuth & Permissions" → Add these Bot Token Scopes:
+   - `chat:write` - Post messages
+   - `files:write` - Upload files (for future attachments)
+   - `channels:read` - Read channel info
+4. Click "Install to Workspace" and authorize
+5. Copy the "Bot User OAuth Token" (starts with `xoxb-`)
+6. Get your channel ID: Right-click channel → "View channel details" → Copy ID at bottom
+7. Invite the bot to your channel: `/invite @CoffeeMakerBot`
+
+**Features Gracefully Degrade**: If Slack is unavailable or disabled, daemon continues normally and falls back to NotificationDB.
+
 ---
 
 ## 📊 Project Statistics

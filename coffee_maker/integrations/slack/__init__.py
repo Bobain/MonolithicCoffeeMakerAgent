@@ -25,5 +25,14 @@ Reference:
 
 from coffee_maker.integrations.slack.config import SlackConfig
 from coffee_maker.integrations.slack.notifier import SlackNotifier
+from coffee_maker.integrations.slack.scheduler import (
+    DailySummaryScheduler,
+    trigger_daily_summary_now,
+)
 
-__all__ = ["SlackConfig", "SlackNotifier"]
+__all__ = [
+    "SlackConfig",
+    "SlackNotifier",
+    "DailySummaryScheduler",
+    "trigger_daily_summary_now",
+]
