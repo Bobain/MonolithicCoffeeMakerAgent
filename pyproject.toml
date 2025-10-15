@@ -48,6 +48,7 @@ code-developer = "coffee_maker.autonomous.daemon_cli:main"
 ace-reflector = "coffee_maker.autonomous.ace.cli:cmd_reflector"
 ace-curator = "coffee_maker.autonomous.ace.cli:cmd_curator"
 ace-status = "coffee_maker.autonomous.ace.cli:cmd_status"
+ace-ui = "coffee_maker.cli.streamlit_cli:ace_ui"
 
 [tool.poetry.urls]
 "Homepage" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"
