@@ -107,6 +107,32 @@ This is a **non-negotiable requirement** for parallel agent operations. Overlaps
 
 ---
 
+### architect Owns
+
+**Full Write Control**:
+- `docs/architecture/` (all architectural documentation)
+  - `docs/architecture/specs/` (detailed technical specifications)
+  - `docs/architecture/decisions/` (Architectural Decision Records - ADRs)
+  - `docs/architecture/guidelines/` (implementation guidelines for code_developer)
+  - `docs/architecture/README.md` (architecture documentation overview)
+
+**Workflow**:
+1. architect analyzes architectural requirements
+2. architect creates technical specification in `docs/architecture/specs/`
+3. architect documents decisions in ADRs (`docs/architecture/decisions/`)
+4. architect provides guidelines in `docs/architecture/guidelines/`
+5. code_developer reads specifications and guidelines
+6. code_developer implements following architect's design
+7. architect reviews implementation
+
+**Interaction Pattern**:
+- User discusses architecture with architect through user_listener
+- architect creates specifications BEFORE implementation
+- code_developer reads specifications and implements
+- Clear separation: architect designs, code_developer implements
+
+---
+
 ### code-searcher Owns
 
 **NONE** - code-searcher is READ-ONLY

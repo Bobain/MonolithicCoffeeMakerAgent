@@ -70,6 +70,7 @@ This document defines clear roles, responsibilities, file ownership, and boundar
 |-------|-------------|-------------|----------------|-----------|
 | **user_listener** | User interface (ONLY agent with UI) | ❌ (UI, no learning) | ✅ (interactive) | ✅ (ONLY agent) |
 | **user_interpret** | Intent + sentiment + delegation | ✅ | ✅ (singleton) | ❌ (backend) |
+| **architect** | Architectural design and technical specifications | ✅ | As needed | ❌ (backend) |
 | **code_developer** | Implementation, PRs, DoD verification | ✅ | ⚠️ (ONE instance only) | ❌ (backend) |
 | **project_manager** | Strategy, docs, monitoring | ✅ | As needed | ❌ (backend) |
 | **assistant** | Questions, demos, documentation expert | ✅ | As needed | ❌ (backend) |
@@ -171,6 +172,71 @@ user_listener:
 **Example Traces**:
 - "User said 'implement login' → Intent: add_feature, Delegate: code_developer"
 - "User said 'ugh broken' → Intent: report_bug, Sentiment: frustration, Delegate: code_developer"
+
+---
+
+### architect
+
+**Role**: Architectural design and technical specification
+
+**Responsibilities**:
+- Analyze architectural requirements
+- Design system architecture
+- Create detailed technical specifications
+- Document architectural decisions (ADRs)
+- Provide implementation guidelines
+- Review implementation for architectural compliance
+- Interact with user (through user_listener) on architectural topics
+
+**Owned Files**:
+- `docs/architecture/**` (all architectural documentation)
+  - `docs/architecture/specs/` (technical specifications)
+  - `docs/architecture/decisions/` (ADRs)
+  - `docs/architecture/guidelines/` (implementation guidelines)
+
+**Can Read**: All (for architectural context)
+
+**Can Write**: docs/architecture/
+
+**ACE**: ✅ Enabled (learns architectural patterns)
+
+**Key Characteristics**:
+- Works BEFORE code_developer (pre-implementation phase)
+- Focuses on design, not implementation
+- Creates specifications that code_developer follows
+- Documents decisions for future reference
+- Ensures architectural consistency
+
+**Workflow Position**:
+```
+User Request
+    ↓
+user_listener (UI)
+    ↓
+architect (design & specs)
+    ↓
+code_developer (implementation)
+    ↓
+project_manager (verification & docs)
+```
+
+**Example Traces**:
+- "Created caching layer spec with Redis architecture (45s, 1 file created)"
+- "Documented ADR-015: PostgreSQL vs MongoDB decision (30s, 1 file created)"
+- "Provided error handling guidelines for code_developer (20s, 1 file created)"
+
+**Document Types**:
+1. **Technical Specifications**: Detailed design for implementation
+   - Location: `docs/architecture/specs/`
+   - Audience: code_developer (primary)
+
+2. **Architectural Decision Records (ADRs)**: Document key decisions
+   - Location: `docs/architecture/decisions/`
+   - Audience: All team members
+
+3. **Implementation Guidelines**: Best practices for implementation
+   - Location: `docs/architecture/guidelines/`
+   - Audience: code_developer
 
 ---
 
@@ -491,6 +557,7 @@ service.warn_user(
 | **docs/** | project_manager | READ-ONLY |
 | **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | READ-ONLY (others) |
 | **docs/PRIORITY_*_TECHNICAL_SPEC.md** | project_manager | READ-ONLY |
+| **docs/architecture/** | architect | READ-ONLY (all others) |
 | **docs/user_interpret/** | user_interpret | READ-ONLY |
 | **docs/generator/** | Generator (ACE) | READ-ONLY |
 | **docs/reflector/** | Reflector (ACE) | READ-ONLY |
@@ -512,6 +579,9 @@ service.warn_user(
 |----------------|-------|-------|--------|
 | **User Interface (ALL)** | user_listener | ONLY agent with UI, chat, CLI | All others: Backend only, NO UI ❌ |
 | **ACE UI Commands** | user_listener | `/curate`, `/playbook` in CLI | project_manager: Deprecated ❌ |
+| **Architecture specs** | architect | Creates technical specifications before implementation | code_developer reads and implements |
+| **ADRs (Architectural Decision Records)** | architect | Documents architectural decisions | All others: READ-ONLY |
+| **Implementation guidelines** | architect | Provides detailed implementation guides | code_developer follows during implementation |
 | **Puppeteer DoD (during impl)** | code_developer | Verify features DURING implementation | - |
 | **Puppeteer DoD (post-impl)** | project_manager | Verify completed work on user request | - |
 | **Puppeteer demos** | user_listener | Show features visually via UI (delegates to assistant) | assistant prepares demos |
@@ -536,6 +606,8 @@ service.warn_user(
 ### Safe Parallel Combinations
 
 ✅ **code_developer + project_manager**: Different files (code vs docs)
+✅ **architect + project_manager**: Different directories (architecture vs strategic docs)
+✅ **architect + code_developer**: Different directories (architect designs, code_developer implements different feature)
 ✅ **assistant + code-searcher**: Both read-only
 ✅ **user_listener + any backend agent**: UI separate from backend
 ✅ **Reflector + Generator**: Different directories
@@ -546,6 +618,7 @@ service.warn_user(
 
 ❌ **code_developer + code_developer**: Only ONE allowed! (file conflicts)
 ❌ **user_interpret + user_interpret**: Singleton agent (confusion)
+❌ **architect + code_developer (same feature)**: architect must finish design first
 
 ### How to Ensure Safety
 
@@ -649,6 +722,7 @@ git branch --show-current  # Should be: roadmap
 |-------|-------------|--------|
 | user_listener | ❌ | UI only, no learning needed |
 | user_interpret | ✅ | High volume, fast feedback |
+| architect | ✅ | Learn architectural patterns |
 | code_developer | ✅ | Learn implementation patterns |
 | project_manager | ✅ | Learn strategic decisions |
 | assistant | ✅ | Learn better answers |
@@ -836,6 +910,7 @@ Scenario: user_interpret misinterprets intent
 |-------|----------|------|-----|
 | user_listener | UI and delegation | No files (UI only) | ❌ |
 | user_interpret | Intent + sentiment | docs/user_interpret/ | ✅ |
+| architect | Architectural design & specs | docs/architecture/ | ✅ |
 | code_developer | Implementation + PRs + Technical config | coffee_maker/, tests/, .claude/ | ✅ |
 | project_manager | Strategy + docs | docs/ | ✅ |
 | assistant | Questions + demos | None (read-only) | ✅ |
@@ -852,6 +927,7 @@ Scenario: user_interpret misinterprets intent
     ↓
 Does user need a UI? → user_listener (ONLY agent with UI)
 Is it about user intent? → user_interpret (delegates to others)
+Is it architectural design? → architect
 Is it about writing code? → code_developer
 Is it about strategy/docs? → project_manager
 Is it about design? → ux-design-expert

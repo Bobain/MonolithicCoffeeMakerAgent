@@ -14,6 +14,7 @@
 
 1. **Autonomous Agents**
    - `user_listener`: **PRIMARY USER INTERFACE** - Interprets user intent and delegates to team (ONLY agent with UI)
+   - `architect`: Architectural design and technical specifications (interacts through user_listener)
    - `code_developer`: Autonomous implementation of priorities from ROADMAP
    - `project_manager`: Project coordination, notifications, status tracking, GitHub monitoring (backend only)
    - `assistant`: Documentation expert and intelligent dispatcher
@@ -319,6 +320,7 @@ poetry run project-manager /status
 | **docs/** | project_manager | YES - Full control | code_developer: READ-ONLY, assistant: READ-ONLY, user_listener: READ-ONLY |
 | **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Full, code_developer: Status updates only | assistant: READ-ONLY, user_listener: READ-ONLY |
 | **docs/PRIORITY_*_TECHNICAL_SPEC.md** | project_manager | YES - Creates and updates specs | code_developer: READ-ONLY (reads during implementation), assistant: READ-ONLY, user_listener: READ-ONLY |
+| **docs/architecture/** | architect | YES - Technical specs, ADRs, guidelines | All others: READ-ONLY |
 | **.claude/** | code_developer | YES - Technical configurations | All others: READ-ONLY |
 | **.claude/agents/** | code_developer | YES - Agent definitions and configurations | All others: READ-ONLY |
 | **.claude/CLAUDE.md** | code_developer | YES - Technical setup and implementation guide | All others: READ-ONLY |
@@ -338,6 +340,9 @@ poetry run project-manager /status
 |----------------|-------|-------|--------|
 | **User Interface (ALL)** | user_listener | **ONLY** agent with UI, chat, CLI interface | All others: Backend only, NO UI |
 | **ACE UI Commands** | user_listener | `/curate`, `/playbook` in user_listener CLI | project_manager: Deprecated |
+| **Architecture specs** | architect | Creates technical specifications before implementation | code_developer reads and implements |
+| **ADRs (Architectural Decision Records)** | architect | Documents architectural decisions | All others: READ-ONLY |
+| **Implementation guidelines** | architect | Provides detailed implementation guides | code_developer follows during implementation |
 | **Puppeteer DoD (during impl)** | code_developer | Verify features DURING implementation | project_manager for POST-completion verification |
 | **Puppeteer DoD (post-impl)** | project_manager | Verify completed work on user request | - |
 | **Puppeteer demos** | user_listener | Show features visually via UI (delegates to assistant) | assistant prepares demos |
@@ -403,12 +408,23 @@ poetry run project-manager /status
    - **ux-design-expert**: Design decisions (provides specs, doesn't implement)
    - **memory-bank-synchronizer**: DEPRECATED (no longer needed, tag-based workflow)
 
+5. **architect owns ARCHITECTURAL DESIGN**
+   - **ONLY agent that creates architectural specifications**
+   - Designs system architecture BEFORE code_developer implements
+   - Creates technical specifications in docs/architecture/specs/
+   - Documents architectural decisions (ADRs) in docs/architecture/decisions/
+   - Provides implementation guidelines in docs/architecture/guidelines/
+   - Interacts with user through user_listener for architectural discussions
+   - Does NOT implement code (that's code_developer)
+   - Does NOT create strategic roadmap docs (that's project_manager)
+
 ### When in Doubt
 
 ```
 "Who should handle X?"
     ↓
 Does user need a UI? → user_listener (ONLY agent with UI)
+Is it architectural design? → architect
 Is it a quick question? → assistant
 Is it about code internals? → code-searcher
 Is it about project status? → project_manager
@@ -468,6 +484,21 @@ User asks assistant: "Implement feature X"
 → assistant delegates to code_developer
 ```
 
+**✅ Correct Usage - Architecture**:
+```
+User: "Design the architecture for the new authentication system"
+→ architect (architectural design)
+
+User: "Create a technical specification for the caching layer"
+→ architect (technical specifications)
+
+User: "Document the decision to use PostgreSQL vs MongoDB"
+→ architect (creates ADR)
+
+User: "What guidelines should code_developer follow for error handling?"
+→ architect (implementation guidelines)
+```
+
 **❌ Incorrect Usage - Don't Do This**:
 ```
 assistant tries to edit code
@@ -496,6 +527,18 @@ assistant tries to make strategic ROADMAP decisions
 
 code_developer tries to design UI layouts
 → NO! ux-design-expert makes design decisions
+
+architect tries to implement code
+→ NO! code_developer owns implementation
+
+architect tries to update ROADMAP
+→ NO! project_manager owns strategic docs
+
+code_developer tries to modify docs/architecture/
+→ NO! architect owns architectural documentation
+
+project_manager tries to create technical specifications
+→ NO! architect creates technical specs (project_manager creates strategic specs)
 ```
 
 **🎯 Correct Delegation Flow**:
