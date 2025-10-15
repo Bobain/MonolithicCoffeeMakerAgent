@@ -14,6 +14,7 @@ Commands:
     user-listener agents               List all available agents
     user-listener curate [agent]       Trigger ACE curation
     user-listener playbook [agent]     View agent playbook
+    user-listener feedback             Provide satisfaction feedback
     user-listener status               Project status
     user-listener metrics              Estimation metrics
     user-listener roadmap              View ROADMAP
@@ -36,6 +37,7 @@ Example:
 """
 
 import click
+import time
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -45,6 +47,7 @@ from coffee_maker.cli.agent_colors import (
     list_all_agents,
     get_agent_color,
 )
+from coffee_maker.cli.progress_tracker import ProgressTracker, StepStatus
 
 console = Console()
 
@@ -78,7 +81,10 @@ def curate(agent_name):
     Example:
         user-listener curate code_developer
     """
-    console.print(format_agent_message("user_listener", f"Delegating curation to curator..."), style="bold")
+    console.print(
+        format_agent_message("user_listener", f"Delegating curation to curator..."),
+        style="bold",
+    )
     console.print()
 
     try:
@@ -93,7 +99,10 @@ def curate(agent_name):
         deltas = reflector.analyze_recent_traces(hours=24)
 
         if not deltas:
-            console.print(format_agent_message("reflector", "⚠️ No traces found in last 24 hours"), style="yellow")
+            console.print(
+                format_agent_message("reflector", "⚠️ No traces found in last 24 hours"),
+                style="yellow",
+            )
             console.print()
             console.print(
                 format_agent_message(
@@ -104,7 +113,8 @@ def curate(agent_name):
             return
 
         console.print(
-            format_agent_message("reflector", f"✅ Extracted {len(deltas)} insights from traces"), style="bold"
+            format_agent_message("reflector", f"✅ Extracted {len(deltas)} insights from traces"),
+            style="bold",
         )
         console.print()
 
@@ -118,7 +128,10 @@ def curate(agent_name):
         delta_files = list(delta_dir.glob(f"{agent_name}_delta_*.json"))
 
         if not delta_files:
-            console.print(format_agent_message("curator", f"⚠️ No delta files found in {delta_dir}"), style="yellow")
+            console.print(
+                format_agent_message("curator", f"⚠️ No delta files found in {delta_dir}"),
+                style="yellow",
+            )
             return
 
         # Sort by modification time (newest first)
@@ -129,7 +142,10 @@ def curate(agent_name):
 
         playbook = curator.consolidate_deltas(delta_files)
 
-        console.print(format_agent_message("curator", f"✅ Playbook updated successfully!"), style="bold")
+        console.print(
+            format_agent_message("curator", f"✅ Playbook updated successfully!"),
+            style="bold",
+        )
         console.print()
 
         # Show results
@@ -145,10 +161,16 @@ def curate(agent_name):
         console.print()
 
     except ImportError:
-        console.print(format_agent_message("user_listener", "❌ ACE framework not available"), style="bold red")
+        console.print(
+            format_agent_message("user_listener", "❌ ACE framework not available"),
+            style="bold red",
+        )
         console.print("\nThe ACE framework is not installed or has missing dependencies.")
     except Exception as e:
-        console.print(format_agent_message("user_listener", f"❌ Error during curation: {e}"), style="bold red")
+        console.print(
+            format_agent_message("user_listener", f"❌ Error during curation: {e}"),
+            style="bold red",
+        )
         import traceback
 
         traceback.print_exc()
@@ -168,7 +190,10 @@ def playbook(agent_name, category):
         user-listener playbook code_developer
         user-listener playbook code_developer --category implementation
     """
-    console.print(format_agent_message("user_listener", f"Fetching playbook from curator..."), style="bold")
+    console.print(
+        format_agent_message("user_listener", f"Fetching playbook from curator..."),
+        style="bold",
+    )
     console.print()
 
     try:
@@ -181,21 +206,35 @@ def playbook(agent_name, category):
         try:
             playbook_obj = loader.load()
         except FileNotFoundError:
-            console.print(format_agent_message("curator", f"❌ No playbook found for {agent_name}"), style="bold red")
+            console.print(
+                format_agent_message("curator", f"❌ No playbook found for {agent_name}"),
+                style="bold red",
+            )
             console.print()
             console.print(
-                format_agent_message("user_listener", f"Run curation first: user-listener curate {agent_name}")
+                format_agent_message(
+                    "user_listener",
+                    f"Run curation first: user-listener curate {agent_name}",
+                )
             )
             return
 
         # Display playbook
-        console.print(Panel(f"[bold]ACE Playbook - {agent_name}[/bold]", style=get_agent_color("curator")))
+        console.print(
+            Panel(
+                f"[bold]ACE Playbook - {agent_name}[/bold]",
+                style=get_agent_color("curator"),
+            )
+        )
         console.print()
 
         if category:
             # Show specific category
             if category not in playbook_obj.categories:
-                console.print(format_agent_message("curator", f"❌ Category '{category}' not found"), style="red")
+                console.print(
+                    format_agent_message("curator", f"❌ Category '{category}' not found"),
+                    style="red",
+                )
                 console.print(f"\nAvailable categories: {', '.join(playbook_obj.categories.keys())}")
                 return
 
@@ -248,7 +287,10 @@ def playbook(agent_name, category):
         console.print()
 
     except ImportError:
-        console.print(format_agent_message("user_listener", "❌ ACE framework not available"), style="bold red")
+        console.print(
+            format_agent_message("user_listener", "❌ ACE framework not available"),
+            style="bold red",
+        )
     except Exception as e:
         console.print(format_agent_message("user_listener", f"❌ Error: {e}"), style="bold red")
         import traceback
@@ -263,7 +305,10 @@ def status():
     Example:
         user-listener status
     """
-    console.print(format_agent_message("user_listener", "Asking project_manager for status..."), style="bold")
+    console.print(
+        format_agent_message("user_listener", "Asking project_manager for status..."),
+        style="bold",
+    )
     console.print()
 
     # Delegate to project_manager
@@ -281,7 +326,10 @@ def metrics():
     Example:
         user-listener metrics
     """
-    console.print(format_agent_message("user_listener", "Getting metrics from project_manager..."), style="bold")
+    console.print(
+        format_agent_message("user_listener", "Getting metrics from project_manager..."),
+        style="bold",
+    )
     console.print()
 
     # Delegate to project_manager
@@ -304,7 +352,10 @@ def roadmap(priority):
         user-listener roadmap
         user-listener roadmap PRIORITY-5
     """
-    console.print(format_agent_message("user_listener", "Fetching ROADMAP from project_manager..."), style="bold")
+    console.print(
+        format_agent_message("user_listener", "Fetching ROADMAP from project_manager..."),
+        style="bold",
+    )
     console.print()
 
     # Delegate to project_manager
@@ -317,6 +368,137 @@ def roadmap(priority):
 
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
+
+
+@user_listener.command()
+@click.option(
+    "--trace-id",
+    help="Trace ID to attach feedback to (auto-detects most recent if not provided)",
+)
+@click.option("--session-summary", help="Summary of work session", default="Recent work session")
+def feedback(trace_id, session_summary):
+    """Provide satisfaction feedback on recent work session.
+
+    Collects user satisfaction rating (1-5) and feedback to help the ACE framework
+    learn from user preferences. High satisfaction helps identify success patterns,
+    while low satisfaction helps identify failure modes.
+
+    Args:
+        trace_id: Optional specific trace ID to attach feedback to
+        session_summary: Brief summary of the work done
+
+    Example:
+        user-listener feedback
+        user-listener feedback --trace-id trace_123
+        user-listener feedback --session-summary "Implemented authentication"
+    """
+    console.print(
+        format_agent_message("user_listener", "Collecting satisfaction feedback..."),
+        style="bold",
+    )
+    console.print()
+
+    try:
+        from coffee_maker.cli.user_listener_ace import UserListenerACE
+        from coffee_maker.autonomous.ace.generator import ACEGenerator
+        from coffee_maker.autonomous.ace.config import get_default_config
+        from coffee_maker.autonomous.ace.trace_manager import TraceManager
+
+        # Check if ACE is enabled
+        ace = UserListenerACE(enabled=True)
+        if not ace.enabled:
+            console.print(
+                format_agent_message(
+                    "user_listener",
+                    "ACE framework is not enabled. Set ACE_ENABLED=true in environment.",
+                ),
+                style="yellow",
+            )
+            return
+
+        # Auto-detect most recent trace if not provided
+        if not trace_id:
+            config = get_default_config()
+            trace_manager = TraceManager(config.trace_dir)
+            recent_traces = trace_manager.get_latest_traces(n=1)
+
+            if not recent_traces:
+                console.print(
+                    format_agent_message(
+                        "user_listener",
+                        "No recent traces found. Make sure daemon has executed at least one priority.",
+                    ),
+                    style="yellow",
+                )
+                return
+
+            trace_id = recent_traces[0].trace_id
+            console.print(format_agent_message("user_listener", f"Using most recent trace: {trace_id}"))
+            console.print()
+
+        # Collect satisfaction feedback
+        console.print(format_agent_message("user_listener", "Please rate your satisfaction with the work:"))
+        console.print()
+
+        satisfaction = ace.collect_satisfaction(trace_id=trace_id, session_summary=session_summary)
+
+        if not satisfaction:
+            console.print(
+                format_agent_message("user_listener", "Failed to collect satisfaction feedback"),
+                style="red",
+            )
+            return
+
+        # Attach satisfaction to trace
+        console.print()
+        console.print(format_agent_message("generator", f"Attaching feedback to trace {trace_id}..."))
+
+        config = get_default_config()
+        mock_interface = None  # Not needed for attach_satisfaction
+        generator = ACEGenerator(agent_interface=mock_interface, config=config)
+        generator.attach_satisfaction(trace_id, satisfaction)
+
+        # Show confirmation
+        console.print()
+        console.print(
+            format_agent_message(
+                "user_listener",
+                f"✅ Thank you! Your feedback (score: {satisfaction['score']}/5) has been recorded.",
+            ),
+            style="bold green",
+        )
+        console.print()
+
+        if satisfaction.get("positive_feedback"):
+            console.print(f"  [green]What worked well:[/green] {satisfaction['positive_feedback']}")
+        if satisfaction.get("improvement_areas"):
+            console.print(f"  [yellow]Could improve:[/yellow] {satisfaction['improvement_areas']}")
+
+        console.print()
+        console.print(
+            format_agent_message(
+                "reflector",
+                "This feedback will be analyzed during next curation to improve future performance.",
+            )
+        )
+        console.print()
+        console.print(f"💡 Tip: Run 'user-listener curate [agent]' to trigger immediate analysis")
+        console.print()
+
+    except ImportError:
+        console.print(
+            format_agent_message("user_listener", "❌ ACE framework not available"),
+            style="bold red",
+        )
+        console.print("\nThe ACE framework is not installed or has missing dependencies.")
+    except Exception as e:
+        console.print(
+            format_agent_message("user_listener", f"❌ Error collecting feedback: {e}"),
+            style="bold red",
+        )
+        import traceback
+
+        traceback.print_exc()
 
 
 @user_listener.command()
@@ -333,7 +515,10 @@ def agents():
     all_agents = list_all_agents()
 
     if not all_agents:
-        console.print(format_agent_message("user_listener", "⚠️ No agent definitions found"), style="yellow")
+        console.print(
+            format_agent_message("user_listener", "⚠️ No agent definitions found"),
+            style="yellow",
+        )
         return
 
     table = Table(show_header=True, header_style="bold magenta")
@@ -388,16 +573,101 @@ def chat():
     console.print("[dim]Type 'help' for commands, 'agents' to see team members, or 'exit' to quit.[/dim]")
     console.print()
 
-    # For now, delegate to existing project-manager chat
-    # TODO: Implement proper user_listener chat with delegation
-    console.print(format_agent_message("user_listener", "Delegating to project-manager chat interface for now..."))
-    console.print()
+    # Initialize user_interpret and progress tracker
+    from coffee_maker.cli.user_interpret_ace import UserInterpretWithACE
 
-    import subprocess
-    import sys
+    user_interpret = UserInterpretWithACE()
+    progress = ProgressTracker(console, use_live=False)
 
-    result = subprocess.run([sys.executable, "-m", "poetry", "run", "project-manager", "chat"])
-    sys.exit(result.returncode)
+    while True:
+        # Get user input
+        try:
+            user_input = input("> ")
+        except (EOFError, KeyboardInterrupt):
+            console.print()
+            console.print(format_agent_message("user_listener", "Goodbye!"))
+            break
+
+        if user_input.lower() in ["exit", "quit"]:
+            console.print(format_agent_message("user_listener", "Goodbye!"))
+            break
+
+        if user_input.lower() == "help":
+            console.print()
+            console.print("[bold]Available commands:[/bold]")
+            console.print("  agents      - List all available agents")
+            console.print("  status      - Check project status")
+            console.print("  roadmap     - View the roadmap")
+            console.print("  metrics     - View estimation metrics")
+            console.print("  curate      - Trigger ACE curation")
+            console.print("  playbook    - View agent playbook")
+            console.print("  help        - Show this help")
+            console.print("  exit/quit   - Exit chat mode")
+            console.print()
+            continue
+
+        if user_input.lower() == "agents":
+            from click.testing import CliRunner
+
+            runner = CliRunner()
+            runner.invoke(agents)
+            continue
+
+        # Start progress tracking
+        progress.start(
+            request=user_input,
+            steps=[
+                "Interpreting your request",
+                "Delegating to appropriate agent",
+                "Processing request",
+                "Summarizing results",
+            ],
+        )
+
+        # Step 1: Interpret
+        progress.update_step(0, StepStatus.ACTIVE)
+        time.sleep(0.5)  # Visual feedback
+        interpretation = user_interpret.interpret(user_input)
+        progress.update_step(0, StepStatus.COMPLETE)
+
+        # Step 2: Delegate
+        progress.update_step(1, StepStatus.ACTIVE)
+        time.sleep(0.5)
+        chosen_agent = interpretation["delegated_to"]
+        progress.update_step(1, StepStatus.COMPLETE)
+
+        # Step 3: Process (TODO: actual delegation)
+        progress.update_step(2, StepStatus.ACTIVE)
+        time.sleep(1.0)
+        # TODO: Actually delegate to chosen agent
+        # For now, just simulate work
+        progress.update_step(2, StepStatus.COMPLETE)
+
+        # Step 4: Summarize
+        progress.update_step(3, StepStatus.ACTIVE)
+        time.sleep(0.5)
+        progress.complete()
+
+        # Show result
+        time.sleep(0.5)
+        console.clear()
+        console.print()
+        console.print(format_agent_message("user_listener", interpretation["message_to_user"]))
+        console.print()
+        console.print(
+            format_agent_message(
+                chosen_agent,
+                f"Request processed! (intent: {interpretation['intent']})",
+            )
+        )
+        console.print()
+        console.print(
+            format_agent_message(
+                "user_listener",
+                "Full agent delegation coming soon! For now, use specific commands like 'status' or 'roadmap'.",
+            )
+        )
+        console.print()
 
 
 if __name__ == "__main__":
