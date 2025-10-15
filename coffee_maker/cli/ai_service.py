@@ -31,6 +31,14 @@ from anthropic import Anthropic
 from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
 from coffee_maker.config import ConfigManager
 
+# Import RequestClassifier for Phase 2 integration (US-021)
+try:
+    from coffee_maker.cli.request_classifier import RequestClassifier
+
+    CLASSIFIER_AVAILABLE = True
+except ImportError:
+    CLASSIFIER_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # Import Claude CLI interface (optional)
@@ -100,6 +108,14 @@ class AIService:
         self.use_claude_cli = use_claude_cli
         self.client = None
         self.cli_interface = None
+
+        # Initialize RequestClassifier for Phase 2 (US-021)
+        self.classifier = None
+        if CLASSIFIER_AVAILABLE:
+            self.classifier = RequestClassifier()
+            logger.info("RequestClassifier initialized (US-021 Phase 1)")
+        else:
+            logger.debug("RequestClassifier not available (will be added in Phase 2)")
 
         if use_claude_cli:
             # Use Claude CLI (subscription-based, no API credits needed)
@@ -723,6 +739,73 @@ Provide a concise analysis in markdown format.
         except Exception as e:
             logger.error(f"AI service not available: {e}")
             return False
+
+    def classify_user_request(self, user_input: str) -> Optional[Dict]:
+        """Classify user request into feature/methodology/hybrid/clarification.
+
+        This is the integration point for US-021 Phase 2.
+        Currently returns classification result if classifier is available.
+        Phase 2 will integrate this into the main processing flow.
+
+        Args:
+            user_input: Raw user input text
+
+        Returns:
+            Dictionary with classification results:
+            {
+                'type': 'feature_request' | 'methodology_change' | 'hybrid' | 'clarification_needed',
+                'confidence': 0.0-1.0,
+                'target_documents': ['docs/roadmap/ROADMAP.md', ...],
+                'suggested_questions': ['Question 1', 'Question 2', ...],
+                'feature_indicators': ['indicator1', ...],
+                'methodology_indicators': ['indicator1', ...]
+            }
+            or None if classifier not available
+
+        Example:
+            >>> service = AIService()
+            >>> result = service.classify_user_request("I want to add email notifications")
+            >>> print(result['type'])
+            'feature_request'
+            >>> print(result['target_documents'])
+            ['docs/roadmap/ROADMAP.md']
+
+        Phase 2 Integration Plan:
+            1. Call this method at the start of process_request()
+            2. If type == 'clarification_needed', ask clarification questions first
+            3. Route to appropriate document update based on target_documents
+            4. Add explicit confirmation: "I'll update ROADMAP.md with this feature..."
+        """
+        if not self.classifier:
+            logger.warning("RequestClassifier not available, skipping classification")
+            return None
+
+        try:
+            # Classify the request
+            classification = self.classifier.classify(user_input)
+
+            # Convert to dictionary for easier consumption
+            result = {
+                "type": classification.request_type.value,
+                "confidence": classification.confidence,
+                "target_documents": classification.target_documents,
+                "suggested_questions": classification.suggested_questions,
+                "feature_indicators": classification.feature_indicators,
+                "methodology_indicators": classification.methodology_indicators,
+            }
+
+            logger.info(f"Request classified as: {result['type']} " f"(confidence: {result['confidence']:.2f})")
+
+            # Log for debugging (Phase 2 will use this for routing)
+            logger.debug(f"Target documents: {result['target_documents']}")
+            if result["suggested_questions"]:
+                logger.debug(f"Clarification needed: {len(result['suggested_questions'])} questions")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Classification failed: {e}")
+            return None
 
     def warn_user(
         self, title: str, message: str, priority: str = "high", context: Optional[Dict] = None, play_sound: bool = True
