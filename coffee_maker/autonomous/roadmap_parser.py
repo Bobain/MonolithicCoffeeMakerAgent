@@ -268,3 +268,78 @@ class RoadmapParser:
                 return "✅" in priority["status"] or "complete" in status
 
         return False
+
+    def extract_estimated_time(self, priority_name: str) -> Optional[Dict]:
+        """Extract estimated time from a priority section.
+
+        Looks for patterns like:
+        - **Estimated Effort**: 3-4 days
+        - **Estimated Effort**: 3-5 days (description)
+        - **Total Estimated**: 1-2 days (7-10 hours)
+
+        Args:
+            priority_name: Priority name (e.g., "PRIORITY 2", "US-015")
+
+        Returns:
+            Dictionary with min_days and max_days, or None if not found
+
+        Example:
+            >>> parser = RoadmapParser("docs/ROADMAP.md")
+            >>> estimate = parser.extract_estimated_time("US-015")
+            >>> if estimate:
+            ...     print(f"Estimated: {estimate['min_days']}-{estimate['max_days']} days")
+            Estimated: 3-4 days
+        """
+        priorities = self.get_priorities()
+
+        # Find priority by name (handle both "PRIORITY X" and "US-XXX" formats)
+        priority_content = None
+        for priority in priorities:
+            if priority["name"] == priority_name or priority_name in priority["title"]:
+                priority_content = priority["content"]
+                break
+
+        if not priority_content:
+            # Try searching in full content (for US-XXX stories)
+            # Look for US-XXX section headers
+            us_pattern = rf"##\s+.*{re.escape(priority_name)}[:\s]"
+            match = re.search(us_pattern, self.content, re.IGNORECASE)
+            if match:
+                # Extract section starting from match
+                start_pos = match.start()
+                # Find next ## heading or end of document
+                next_section = re.search(r"\n##\s+", self.content[start_pos + 1 :])
+                end_pos = start_pos + next_section.start() if next_section else len(self.content)
+                priority_content = self.content[start_pos:end_pos]
+
+        if not priority_content:
+            logger.debug(f"Could not find content for {priority_name}")
+            return None
+
+        # Look for **Estimated Effort**: X-Y days pattern
+        # Patterns to match:
+        # - **Estimated Effort**: 3-4 days
+        # - **Total Estimated**: 1-2 days
+        # - **Estimated**: 3-5 days
+        estimate_patterns = [
+            r"\*\*Estimated Effort\*\*:\s*(\d+)-(\d+)\s*days?",
+            r"\*\*Total Estimated\*\*:\s*(\d+)-(\d+)\s*days?",
+            r"\*\*Estimated\*\*:\s*(\d+)-(\d+)\s*days?",
+        ]
+
+        for pattern in estimate_patterns:
+            match = re.search(pattern, priority_content, re.IGNORECASE)
+            if match:
+                min_days = float(match.group(1))
+                max_days = float(match.group(2))
+
+                logger.info(f"Extracted estimate for {priority_name}: {min_days}-{max_days} days")
+
+                return {
+                    "min_days": min_days,
+                    "max_days": max_days,
+                    "avg_days": (min_days + max_days) / 2,
+                }
+
+        logger.debug(f"No estimate found for {priority_name}")
+        return None

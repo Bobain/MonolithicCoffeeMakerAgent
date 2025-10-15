@@ -815,6 +815,159 @@ def cmd_assistant_refresh(args):
         return 1
 
 
+def cmd_metrics(args: argparse.Namespace) -> int:
+    """Show estimation metrics and velocity tracking.
+
+    US-015: Estimation Metrics & Velocity Tracking
+
+    Displays comprehensive metrics including:
+    - Current velocity (stories/week, points/week)
+    - Estimation accuracy trends
+    - Category-specific accuracy
+    - Spec vs no-spec comparison
+    - Recent completed stories
+
+    Args:
+        args: Parsed command-line arguments with optional filters
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager metrics
+        $ project-manager metrics --period 14
+        $ project-manager metrics --category feature
+    """
+    from coffee_maker.autonomous.story_metrics import StoryMetricsDB
+
+    try:
+        print("\n" + "=" * 80)
+        print("📊 ESTIMATION METRICS & VELOCITY TRACKING (US-015)")
+        print("=" * 80 + "\n")
+
+        metrics_db = StoryMetricsDB()
+
+        # Get period from args (default: 7 days for weekly)
+        period_days = args.period if hasattr(args, "period") else 7
+
+        # Current Velocity
+        print("📈 CURRENT VELOCITY")
+        print("-" * 80)
+        velocity = metrics_db.get_current_velocity(period_days=period_days)
+
+        print(f"Period: Last {period_days} days")
+        print(f"Stories per week: {velocity['stories_per_week']:.2f}")
+        print(f"Story points per week: {velocity['points_per_week']:.2f}")
+        print(f"Average days per story: {velocity['avg_days_per_story']:.2f}")
+        print(f"Average accuracy: {velocity['avg_accuracy_pct']:.1f}%")
+        print()
+
+        # Accuracy Trends
+        print("🎯 ACCURACY TRENDS (Recent 10 Stories)")
+        print("-" * 80)
+        trends = metrics_db.get_accuracy_trends(limit=10)
+
+        if trends:
+            print(f"{'Story':<15} {'Estimated':<12} {'Actual':<10} {'Error':<10} {'Accuracy':>10}")
+            print("-" * 80)
+            for trend in trends:
+                story_id = trend["story_id"]
+                est_min = trend["estimated_min_days"]
+                est_max = trend["estimated_max_days"]
+                actual = trend["actual_days"]
+                error = trend["estimation_error"]
+                accuracy = trend["estimation_accuracy_pct"]
+
+                est_str = f"{est_min}-{est_max}"
+                error_str = f"{error:+.1f}d" if error else "N/A"
+                accuracy_str = f"{accuracy:.1f}%" if accuracy else "N/A"
+
+                # Color coding based on accuracy
+                if accuracy and accuracy >= 90:
+                    marker = "✅"
+                elif accuracy and accuracy >= 75:
+                    marker = "⚠️ "
+                else:
+                    marker = "❌"
+
+                print(f"{story_id:<15} {est_str:<12} {actual:<10.1f} {error_str:<10} {marker} {accuracy_str:>8}")
+        else:
+            print("No completed stories yet")
+        print()
+
+        # Category Accuracy
+        print("📂 ACCURACY BY CATEGORY")
+        print("-" * 80)
+        category_stats = metrics_db.get_category_accuracy()
+
+        if category_stats:
+            print(f"{'Category':<15} {'Stories':<10} {'Avg Accuracy':<15} {'Avg Actual':<12} {'Avg Estimated':<15}")
+            print("-" * 80)
+            for stat in category_stats:
+                category = stat["category"]
+                count = stat["story_count"]
+                accuracy = stat["avg_accuracy_pct"]
+                actual = stat["avg_actual_days"]
+                estimated = stat["avg_estimated_days"]
+
+                print(f"{category:<15} {count:<10} {accuracy:<15.1f}% {actual:<12.1f} {estimated:<15.1f}")
+        else:
+            print("No category data yet")
+        print()
+
+        # Spec vs No-Spec Comparison
+        print("📋 TECHNICAL SPEC COMPARISON")
+        print("-" * 80)
+        spec_comparison = metrics_db.get_spec_comparison()
+
+        with_spec = spec_comparison["with_spec"]
+        without_spec = spec_comparison["without_spec"]
+
+        print(f"{'Type':<20} {'Stories':<10} {'Avg Accuracy':<15} {'Avg Days':<12}")
+        print("-" * 80)
+        print(
+            f"{'With Spec':<20} {with_spec['count']:<10} {with_spec['avg_accuracy_pct']:<15.1f}% {with_spec['avg_actual_days']:<12.1f}"
+        )
+        print(
+            f"{'Without Spec':<20} {without_spec['count']:<10} {without_spec['avg_accuracy_pct']:<15.1f}% {without_spec['avg_actual_days']:<12.1f}"
+        )
+
+        if with_spec["count"] > 0 and without_spec["count"] > 0:
+            accuracy_diff = with_spec["avg_accuracy_pct"] - without_spec["avg_accuracy_pct"]
+            if accuracy_diff > 0:
+                print(f"\n✅ Stories with technical specs are {accuracy_diff:.1f}% more accurate!")
+            elif accuracy_diff < 0:
+                print(f"\n⚠️  Stories without specs are {abs(accuracy_diff):.1f}% more accurate")
+            else:
+                print("\n➡️  No significant difference")
+        print()
+
+        # Tips
+        print("💡 TIPS")
+        print("-" * 80)
+        if velocity["avg_accuracy_pct"] < 75:
+            print("⚠️  Accuracy below 75% - consider creating more detailed technical specs")
+        elif velocity["avg_accuracy_pct"] >= 90:
+            print("✅ Excellent estimation accuracy! Keep up the good work!")
+        else:
+            print("✅ Good estimation accuracy - room for improvement")
+
+        if with_spec["count"] > 0 and with_spec["avg_accuracy_pct"] > without_spec["avg_accuracy_pct"]:
+            print("✅ Technical specs improve accuracy - keep using them!")
+
+        print()
+        print(f"Database: {metrics_db.db_path}")
+        print(f"Use 'project-manager metrics --period 14' to see 2-week velocity")
+        print()
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Failed to show metrics: {e}", exc_info=True)
+        print(f"❌ Error showing metrics: {e}")
+        return 1
+
+
 def cmd_chat(args):
     """Start interactive chat session with AI (Phase 2).
 
@@ -1041,6 +1194,12 @@ Use 'project-manager chat' for the best experience!
     subparsers.add_parser("assistant-status", help="Show assistant status and knowledge state")
     subparsers.add_parser("assistant-refresh", help="Manually refresh assistant documentation")
 
+    # Metrics command (US-015)
+    metrics_parser = subparsers.add_parser("metrics", help="Show estimation metrics and velocity tracking (US-015)")
+    metrics_parser.add_argument(
+        "--period", type=int, default=7, help="Period in days for velocity calculation (default: 7)"
+    )
+
     args = parser.parse_args()
 
     # US-030: Default to chat when no command provided
@@ -1074,6 +1233,7 @@ Use 'project-manager chat' for the best experience!
         "chat": cmd_chat,  # Phase 2
         "assistant-status": cmd_assistant_status,  # PRIORITY 5
         "assistant-refresh": cmd_assistant_refresh,  # PRIORITY 5
+        "metrics": cmd_metrics,  # US-015
     }
 
     handler = commands.get(args.command)
