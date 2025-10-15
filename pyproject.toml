@@ -41,6 +41,9 @@ mypy = "^1.18.2"
 [tool.poetry.scripts]
 project-manager = "coffee_maker.cli.roadmap_cli:main"
 code-developer = "coffee_maker.autonomous.daemon_cli:main"
+ace-reflector = "coffee_maker.autonomous.ace.cli:cmd_reflector"
+ace-curator = "coffee_maker.autonomous.ace.cli:cmd_curator"
+ace-status = "coffee_maker.autonomous.ace.cli:cmd_status"
 
 [tool.poetry.urls]
 "Homepage" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"

@@ -9,6 +9,7 @@ Reference: https://www.arxiv.org/abs/2510.04618
 
 from coffee_maker.autonomous.ace.curator import ACECurator
 from coffee_maker.autonomous.ace.embeddings import compute_similarity, get_embedding
+from coffee_maker.autonomous.ace.generator import ACEGenerator
 from coffee_maker.autonomous.ace.models import (
     ConsolidatedInsight,
     DeltaItem,
@@ -33,6 +34,7 @@ __all__ = [
     "ConsolidatedInsight",
     "ACEReflector",
     "ACECurator",
+    "ACEGenerator",
     "PlaybookLoader",
     "get_embedding",
     "compute_similarity",

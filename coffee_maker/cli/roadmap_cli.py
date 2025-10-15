@@ -853,6 +853,236 @@ def cmd_assistant_refresh(args):
         return 1
 
 
+def cmd_curate(args):
+    """Manually trigger ACE curation for code_developer.
+
+    Runs both reflector and curator to analyze recent execution traces
+    and update the playbook with new insights.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager curate
+    """
+    try:
+        from coffee_maker.autonomous.ace import ACECurator, ACEReflector
+        from coffee_maker.autonomous.ace.config import get_default_config
+
+        print("\n" + "=" * 80)
+        print("ACE Manual Curation")
+        print("=" * 80 + "\n")
+
+        # Initialize config
+        config = get_default_config()
+
+        # Check if ACE is enabled
+        import os
+
+        if not os.getenv("ACE_ENABLED", "false").lower() == "true":
+            print("⚠️  ACE Framework is disabled")
+            print("\nTo enable ACE:")
+            print("  1. Set ACE_ENABLED=true in .env file")
+            print("  2. Restart daemon")
+            print("\nFor now, running manual curation anyway...")
+            print()
+
+        # Step 1: Run reflector
+        print("Step 1/2: Running Reflector...")
+        print("Analyzing execution traces from last 24 hours...\n")
+
+        reflector = ACEReflector(config=config, agent_name="code_developer")
+        deltas = reflector.analyze_recent_traces(hours=24)
+
+        if not deltas:
+            print("❌ No traces found in last 24 hours")
+            print("\nMake sure:")
+            print("  - Daemon is running with ACE_ENABLED=true")
+            print("  - Daemon has executed at least one priority")
+            print("  - Trace files exist in", config.trace_dir)
+            return 1
+
+        print(f"✅ Extracted {len(deltas)} insights from traces")
+        print()
+
+        # Step 2: Run curator
+        print("Step 2/2: Running Curator...")
+        print("Consolidating deltas into playbook...\n")
+
+        curator = ACECurator(config=config, agent_name="code_developer")
+
+        # Find recent delta files
+        delta_dir = config.delta_dir
+        delta_files = list(delta_dir.glob("code_developer_delta_*.json"))
+
+        if not delta_files:
+            print("❌ No delta files found")
+            print(f"   Delta directory: {delta_dir}")
+            return 1
+
+        # Sort by modification time (newest first)
+        delta_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
+        # Use up to 100 most recent deltas
+        delta_files = delta_files[:100]
+
+        playbook = curator.consolidate_deltas(delta_files)
+
+        print(f"✅ Playbook updated successfully!")
+        print()
+
+        # Display results
+        print("=" * 80)
+        print("CURATION RESULTS")
+        print("=" * 80)
+        print(f"Playbook version: {playbook.playbook_version}")
+        print(f"Total bullets: {playbook.total_bullets}")
+        print(f"Effectiveness score: {playbook.effectiveness_score:.2f}")
+
+        if playbook.health_metrics:
+            print(f"\nHealth Metrics:")
+            print(f"  Avg helpful count: {playbook.health_metrics.avg_helpful_count:.2f}")
+            print(f"  Effectiveness ratio: {playbook.health_metrics.effectiveness_ratio:.2f}")
+            print(f"  Coverage score: {playbook.health_metrics.coverage_score:.2f}")
+
+        print(f"\nCategories:")
+        for category, bullets in playbook.categories.items():
+            active = [b for b in bullets if not b.deprecated]
+            print(f"  {category}: {len(active)} bullets")
+
+        print("\n💡 TIP: Use 'project-manager playbook' to view full playbook")
+        print()
+
+        return 0
+
+    except ImportError:
+        print("❌ ACE framework not available")
+        print("\nThe ACE framework is not installed or has missing dependencies.")
+        return 1
+    except Exception as e:
+        logger.error(f"Curation failed: {e}", exc_info=True)
+        print(f"❌ Error: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return 1
+
+
+def cmd_playbook(args):
+    """Show current ACE playbook for code_developer.
+
+    Displays the current playbook content including all active bullets,
+    categories, and health metrics.
+
+    Args:
+        args: Parsed command-line arguments with optional category filter
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager playbook
+        $ project-manager playbook --category implementation
+    """
+    try:
+        from coffee_maker.autonomous.ace.playbook_loader import PlaybookLoader
+        from coffee_maker.autonomous.ace.config import get_default_config
+
+        print("\n" + "=" * 80)
+        print("ACE Playbook - code_developer")
+        print("=" * 80 + "\n")
+
+        # Load playbook
+        config = get_default_config()
+        loader = PlaybookLoader(agent_name="code_developer", config=config)
+
+        try:
+            playbook = loader.load()
+        except FileNotFoundError:
+            print("❌ No playbook found for code_developer")
+            print("\nRun curation first:")
+            print("  $ project-manager curate")
+            print("\nOr enable ACE in daemon:")
+            print("  1. Set ACE_ENABLED=true in .env")
+            print("  2. Restart daemon")
+            print("  3. Let it run for a few iterations")
+            print("  4. Run: poetry run ace-reflector && poetry run ace-curator")
+            return 1
+
+        # Filter by category if specified
+        category_filter = args.category if hasattr(args, "category") else None
+
+        if category_filter:
+            print(f"Showing category: {category_filter}\n")
+            if category_filter not in playbook.categories:
+                print(f"❌ Category '{category_filter}' not found")
+                print(f"\nAvailable categories:")
+                for cat in playbook.categories.keys():
+                    print(f"  - {cat}")
+                return 1
+
+            bullets = playbook.categories[category_filter]
+            active_bullets = [b for b in bullets if not b.deprecated]
+
+            print(f"Active bullets in '{category_filter}': {len(active_bullets)}\n")
+
+            for i, bullet in enumerate(active_bullets, 1):
+                print(f"{i}. {bullet.text}")
+                print(f"   Helpful: {bullet.helpful_count} | Pruned: {bullet.pruned_count}")
+                if bullet.evidence:
+                    print(f"   Evidence: {len(bullet.evidence)} trace(s)")
+                print()
+
+        else:
+            # Show full playbook summary
+            print(f"Version: {playbook.playbook_version}")
+            print(f"Last updated: {playbook.last_updated}")
+            print(f"Total bullets: {playbook.total_bullets}")
+            print(f"Effectiveness score: {playbook.effectiveness_score:.2f}")
+
+            if playbook.health_metrics:
+                print(f"\nHealth Metrics:")
+                print(f"  Avg helpful count: {playbook.health_metrics.avg_helpful_count:.2f}")
+                print(f"  Effectiveness ratio: {playbook.health_metrics.effectiveness_ratio:.2f}")
+                print(f"  Coverage score: {playbook.health_metrics.coverage_score:.2f}")
+                print(f"  Stale bullets: {playbook.health_metrics.stale_bullet_count}")
+
+            print(f"\nCategories:")
+            for category, bullets in playbook.categories.items():
+                active = [b for b in bullets if not b.deprecated]
+                deprecated = [b for b in bullets if b.deprecated]
+                print(f"\n  {category.upper()} ({len(active)} active, {len(deprecated)} deprecated)")
+
+                # Show top 3 bullets per category
+                for i, bullet in enumerate(active[:3], 1):
+                    helpful = bullet.helpful_count
+                    print(f"    {i}. [{helpful} helpful] {bullet.text[:70]}...")
+
+                if len(active) > 3:
+                    print(f"    ... and {len(active) - 3} more")
+
+            print(f"\n💡 TIP: Use --category <name> to see full category details")
+            print(f"   Available categories: {', '.join(playbook.categories.keys())}")
+
+        print()
+        return 0
+
+    except ImportError:
+        print("❌ ACE framework not available")
+        print("\nThe ACE framework is not installed or has missing dependencies.")
+        return 1
+    except Exception as e:
+        logger.error(f"Failed to load playbook: {e}", exc_info=True)
+        print(f"❌ Error: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return 1
+
+
 def cmd_chat(args):
     """Start interactive chat session with AI (Phase 2).
 
@@ -1070,6 +1300,11 @@ Use 'project-manager chat' for the best experience!
     subparsers.add_parser("assistant-status", help="Show assistant status and knowledge state")
     subparsers.add_parser("assistant-refresh", help="Manually refresh assistant documentation")
 
+    # ACE commands
+    subparsers.add_parser("curate", help="Manually trigger ACE curation (reflector + curator)")
+    playbook_parser = subparsers.add_parser("playbook", help="Show current ACE playbook")
+    playbook_parser.add_argument("--category", type=str, help="Filter by category")
+
     args = parser.parse_args()
 
     # US-030: Default to chat when no command provided
@@ -1103,6 +1338,8 @@ Use 'project-manager chat' for the best experience!
         "chat": cmd_chat,  # Phase 2
         "assistant-status": cmd_assistant_status,  # PRIORITY 5
         "assistant-refresh": cmd_assistant_refresh,  # PRIORITY 5
+        "curate": cmd_curate,  # ACE
+        "playbook": cmd_playbook,  # ACE
     }
 
     handler = commands.get(args.command)

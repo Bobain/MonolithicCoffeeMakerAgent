@@ -169,6 +169,7 @@ Configuration:
 """
 
 import logging
+import os
 import time
 from datetime import datetime
 from pathlib import Path
@@ -189,6 +190,17 @@ from coffee_maker.autonomous.task_metrics import TaskMetricsDB
 from coffee_maker.cli.notifications import (
     NotificationDB,
 )
+
+# ACE Framework (optional, only loaded if enabled)
+try:
+    from coffee_maker.autonomous.ace import ACEGenerator
+    from coffee_maker.autonomous.ace.config import get_default_config
+    from coffee_maker.autonomous.ace.playbook_loader import PlaybookLoader
+
+    ACE_AVAILABLE = True
+except ImportError:
+    ACE_AVAILABLE = False
+    logger.warning("ACE framework not available - continuing without it")
 
 # Lazy imports for expensive modules (only loaded when needed)
 if TYPE_CHECKING:
@@ -292,6 +304,9 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
         # Task metrics database for performance tracking
         self.metrics_db = TaskMetricsDB()
+
+        # ACE Framework integration (optional)
+        self.ace_enabled = self._init_ace_framework()
 
         # State
         self.running = False
@@ -611,6 +626,70 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         except Exception as e:
             logger.error(f"Error resetting context: {e}")
             return False
+
+    def _init_ace_framework(self) -> bool:
+        """Initialize ACE framework if enabled.
+
+        Returns:
+            True if ACE is enabled and initialized, False otherwise
+        """
+        if not ACE_AVAILABLE:
+            logger.info("ACE framework not available")
+            return False
+
+        # Check if ACE is enabled via environment variable
+        ace_enabled = os.getenv("ACE_ENABLED", "false").lower() == "true"
+
+        if not ace_enabled:
+            logger.info("ACE framework disabled (set ACE_ENABLED=true to enable)")
+            return False
+
+        try:
+            # Initialize ACE components
+            config = get_default_config()
+            config.ensure_directories()
+
+            self.ace_config = config
+            self.ace_generator = ACEGenerator(
+                agent_interface=self.claude,
+                config=config,
+                agent_name="code_developer",
+                agent_objective="Implement features from ROADMAP autonomously",
+                success_criteria="Code runs, tests pass, DoD verified, PR created",
+            )
+
+            # Load current playbook for context
+            self.ace_loader = PlaybookLoader(agent_name="code_developer", config=config)
+
+            logger.info("✅ ACE Framework enabled")
+            logger.info(f"   Trace dir: {config.trace_dir}")
+            logger.info(f"   Delta dir: {config.delta_dir}")
+            logger.info(f"   Playbook dir: {config.playbook_dir}")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to initialize ACE framework: {e}")
+            return False
+
+    def _get_ace_context(self) -> str:
+        """Get current ACE playbook as context.
+
+        Returns:
+            Playbook markdown if available, empty string otherwise
+        """
+        if not self.ace_enabled or not hasattr(self, "ace_loader"):
+            return ""
+
+        try:
+            playbook = self.ace_loader.load()
+            return self.ace_loader.to_markdown(playbook)
+        except FileNotFoundError:
+            logger.debug("No playbook found yet - will be created after first curation")
+            return ""
+        except Exception as e:
+            logger.warning(f"Failed to load playbook: {e}")
+            return ""
 
     def stop(self):
         """Stop the daemon gracefully."""
