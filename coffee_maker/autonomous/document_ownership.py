@@ -47,29 +47,27 @@ class DocumentOwnershipGuard:
         "docs/generator/": {"generator"},
         "docs/reflector/": {"reflector"},
         "docs/curator/": {"curator"},
-
         # Agent-specific docs directories
         "docs/architecture/": {"architect"},
         "docs/roadmap/": {"project_manager"},
         "docs/code-searcher/": {"project_manager"},  # project_manager writes code-searcher reports
+        "docs/refacto/": {"code_sanitizer"},  # code-sanitizer owns refactoring recommendations
         "docs/templates/": {"project_manager"},
         "docs/tutorials/": {"project_manager"},
         "docs/user_interpret/": {"project_manager"},  # Meta-documentation about user_interpret
-
         # NO "docs/" entry - would create overlaps!
         # Each subdirectory must be explicitly owned
-
         # architect owns dependency management (NOT code_developer)
         "pyproject.toml": {"architect"},
         "poetry.lock": {"architect"},
-
+        # code-sanitizer owns style guide
+        ".gemini.styleguide.md": {"code_sanitizer"},
         # code_developer owns implementation
         "coffee_maker/": {"code_developer"},
         "tests/": {"code_developer"},
         "scripts/": {"code_developer"},
         ".claude/": {"code_developer"},
         ".pre-commit-config.yaml": {"code_developer"},
-
         # operational data (not docs)
         "data/user_interpret/": {"user_interpret"},
     }
@@ -78,7 +76,7 @@ class DocumentOwnershipGuard:
     SHARED_WRITE_RULES: Dict[str, Dict[str, Set[str]]] = {
         "docs/roadmap/ROADMAP.md": {
             "strategic_updates": {"project_manager"},  # Add/remove priorities, descriptions
-            "status_updates": {"code_developer"},      # Status fields only (Planned → In Progress → Complete)
+            "status_updates": {"code_developer"},  # Status fields only (Planned → In Progress → Complete)
         }
     }
 
@@ -154,9 +152,7 @@ class DocumentOwnershipGuard:
                 # Allow project_manager and code_developer with field restrictions
                 if agent_name in ["project_manager", "code_developer"]:
                     # WARN: Agent must respect field boundaries
-                    logger.warning(
-                        f"{agent_name} can write to ROADMAP.md but ONLY their designated fields"
-                    )
+                    logger.warning(f"{agent_name} can write to ROADMAP.md but ONLY their designated fields")
                     return
 
             raise PermissionError(
@@ -217,7 +213,7 @@ class DocumentOwnershipGuard:
         paths = sorted(cls.OWNERSHIP_RULES.keys())
 
         for i, path1 in enumerate(paths):
-            for path2 in paths[i + 1:]:
+            for path2 in paths[i + 1 :]:
                 # Check if path1 is parent of path2 or vice versa
                 if path2.startswith(path1) or path1.startswith(path2):
                     owners1 = cls.OWNERSHIP_RULES[path1]
@@ -225,9 +221,7 @@ class DocumentOwnershipGuard:
 
                     # If different owners, this is an overlap violation
                     if owners1 != owners2:
-                        violations.append(
-                            f"OVERLAP: {path1} (owned by {owners1}) and {path2} (owned by {owners2})"
-                        )
+                        violations.append(f"OVERLAP: {path1} (owned by {owners1}) and {path2} (owned by {owners2})")
 
         if violations:
             logger.error(f"❌ {len(violations)} ownership overlaps detected")
