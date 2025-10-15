@@ -77,6 +77,37 @@ project-manager respond <id> approve   # Approve daemon's work
 ### 3. Notification System
 SQLite-based communication system between daemon and user with WAL mode for concurrent access.
 
+### 4. ACE Streamlit App (`ace-ui`) ⭐ NEW
+Visual interface for ACE (Agentic Context Engineering) framework management.
+
+**Launch**:
+```bash
+poetry run ace-ui
+```
+
+**Features**:
+- 📊 **Real-time Monitoring**: Live trace feed with agent performance metrics
+- 📚 **Playbook Management**: Interactive bullet curation with search, filters, and bulk actions
+- 📈 **Analytics Dashboard**: Comprehensive performance insights, cost tracking, and recommendations
+- ⚙️ **Configuration**: Agent-level ACE settings *(Phase 1 - Coming Soon)*
+
+**Documentation**:
+- **User Guide**: [`docs/ACE_STREAMLIT_USER_GUIDE.md`](docs/ACE_STREAMLIT_USER_GUIDE.md) - Complete usage instructions
+- **Technical Spec**: [`docs/STREAMLIT_ACE_APP_SPEC.md`](docs/STREAMLIT_ACE_APP_SPEC.md) - Architecture and implementation details
+
+**Quick Start**:
+```bash
+# Start the app
+poetry run ace-ui
+
+# Open browser at http://localhost:8501
+
+# Navigate between pages using the sidebar:
+# - 📊 Monitor: Real-time execution traces
+# - 📚 Playbooks: Manage playbook bullets
+# - 📈 Analytics: Performance insights
+```
+
 ---
 
 ## 📊 Project Statistics

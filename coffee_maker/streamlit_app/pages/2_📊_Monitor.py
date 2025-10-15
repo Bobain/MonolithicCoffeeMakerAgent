@@ -2,13 +2,34 @@
 
 import streamlit as st
 from datetime import datetime
-from coffee_maker.autonomous.ace.api import ACEApi
+from coffee_maker.autonomous.ace.api import ACEAPI
+import sys
+from pathlib import Path
 
-st.title("📊 Monitor")
-st.markdown("Real-time ACE execution monitoring and agent performance tracking")
+# Add parent directory to path for components
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from components.layout import (
+    load_css,
+    page_header,
+    loading_spinner,
+    error_message,
+    empty_state,
+)
+
+st.set_page_config(page_title="Monitor", page_icon="📊", layout="wide")
+
+# Load custom CSS
+load_css()
+
+# Page header
+page_header(
+    "Monitor",
+    "Real-time ACE execution monitoring and agent performance tracking",
+    icon="📊",
+)
 
 # Initialize API
-api = ACEApi()
+api = ACEAPI()
 
 # Filters
 st.subheader("Filters")
@@ -54,8 +75,13 @@ if auto_refresh:
     st.rerun()
 
 # Fetch traces
-agent_name = None if agent_filter == "All" else agent_filter
-traces = api.get_traces(agent=agent_name, hours=hours_filter[1], limit=100)
+try:
+    with loading_spinner("Loading traces..."):
+        agent_name = None if agent_filter == "All" else agent_filter
+        traces = api.get_traces(agent=agent_name, hours=hours_filter[1], limit=100)
+except Exception as e:
+    error_message(f"Failed to load traces: {str(e)}")
+    traces = []
 
 # Display summary metrics
 st.subheader("Quick Stats")
@@ -89,7 +115,11 @@ st.divider()
 st.subheader(f"Live Trace Feed ({len(traces)} traces)")
 
 if not traces:
-    st.info("No traces found for the selected filters. Try adjusting the time range or agent filter.")
+    empty_state(
+        "No traces found",
+        icon="📭",
+        suggestion="Try adjusting the time range or agent filter, or run the daemon to generate traces.",
+    )
 else:
     for trace in traces[:50]:  # Limit to 50 for performance
         # Determine status

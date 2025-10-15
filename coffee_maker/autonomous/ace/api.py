@@ -566,3 +566,377 @@ class ACEApi:
         except Exception as e:
             logger.error(f"Failed to get categories: {e}")
             return []
+
+    # Analytics methods
+
+    def get_cost_analytics(self, agent: Optional[str] = None, days: int = 30) -> Dict[str, Any]:
+        """Get cost analytics for traces.
+
+        Args:
+            agent: Optional agent filter
+            days: Number of days to analyze
+
+        Returns:
+            Dictionary with cost metrics including:
+            - total_cost: Total cost across all traces
+            - cost_by_agent: Cost breakdown by agent
+            - cost_by_day: Daily cost trend
+            - avg_cost_per_trace: Average cost per trace
+            - most_expensive_agent: Agent with highest cost
+            - trend: Cost trend (increasing/decreasing/stable)
+        """
+        try:
+            cutoff = datetime.now() - timedelta(days=days)
+            all_traces = self.trace_manager.list_traces()
+            recent_traces = [t for t in all_traces if t.timestamp >= cutoff]
+
+            if agent:
+                recent_traces = [t for t in recent_traces if t.agent_identity.get("target_agent") == agent]
+
+            # Calculate costs (simulate based on executions and tokens)
+            total_cost = 0.0
+            cost_by_agent = {}
+            cost_by_day = {}
+
+            for trace in recent_traces:
+                # Estimate cost: $0.001 per execution + token cost
+                trace_cost = 0.0
+                for execution in trace.executions:
+                    # Base cost per execution
+                    trace_cost += 0.001
+                    # Token cost (estimate ~$0.003 per 1K tokens)
+                    tokens = execution.metadata.get("tokens", len(execution.prompt.split()) * 1.5)
+                    trace_cost += (tokens / 1000) * 0.003
+
+                total_cost += trace_cost
+
+                # Aggregate by agent
+                agent_name = trace.agent_identity.get("target_agent", "unknown")
+                cost_by_agent[agent_name] = cost_by_agent.get(agent_name, 0.0) + trace_cost
+
+                # Aggregate by day
+                day = trace.timestamp.strftime("%Y-%m-%d")
+                cost_by_day[day] = cost_by_day.get(day, 0.0) + trace_cost
+
+            # Calculate average cost per trace
+            avg_cost_per_trace = total_cost / len(recent_traces) if recent_traces else 0.0
+
+            # Find most expensive agent
+            most_expensive_agent = max(cost_by_agent, key=cost_by_agent.get) if cost_by_agent else "N/A"
+
+            # Calculate trend (compare first half vs second half)
+            trend = "stable"
+            if len(recent_traces) >= 10:
+                mid_point = len(recent_traces) // 2
+                first_half_cost = sum(
+                    sum(0.001 + (e.metadata.get("tokens", 100) / 1000) * 0.003 for e in t.executions)
+                    for t in recent_traces[:mid_point]
+                )
+                second_half_cost = sum(
+                    sum(0.001 + (e.metadata.get("tokens", 100) / 1000) * 0.003 for e in t.executions)
+                    for t in recent_traces[mid_point:]
+                )
+                if second_half_cost > first_half_cost * 1.2:
+                    trend = "increasing"
+                elif second_half_cost < first_half_cost * 0.8:
+                    trend = "decreasing"
+
+            # Convert cost_by_day to sorted list
+            cost_by_day_list = [{"date": date, "cost": cost} for date, cost in sorted(cost_by_day.items())]
+
+            return {
+                "total_cost": round(total_cost, 2),
+                "cost_by_agent": {k: round(v, 2) for k, v in cost_by_agent.items()},
+                "cost_by_day": cost_by_day_list,
+                "avg_cost_per_trace": round(avg_cost_per_trace, 4),
+                "most_expensive_agent": most_expensive_agent,
+                "trend": trend,
+            }
+        except Exception as e:
+            logger.error(f"Failed to get cost analytics: {e}")
+            return {
+                "total_cost": 0.0,
+                "cost_by_agent": {},
+                "cost_by_day": [],
+                "avg_cost_per_trace": 0.0,
+                "most_expensive_agent": "N/A",
+                "trend": "stable",
+            }
+
+    def get_effectiveness_analytics(self, agent: Optional[str] = None, days: int = 30) -> Dict[str, Any]:
+        """Get effectiveness analytics for traces.
+
+        Args:
+            agent: Optional agent filter
+            days: Number of days to analyze
+
+        Returns:
+            Dictionary with effectiveness metrics including:
+            - success_rate: Overall success rate (0.0-1.0)
+            - error_rate: Overall error rate (0.0-1.0)
+            - avg_effectiveness: Average effectiveness score
+            - effectiveness_by_agent: Effectiveness breakdown by agent
+            - effectiveness_trend: Time series of effectiveness
+            - problem_areas: Agents/categories with low effectiveness
+        """
+        try:
+            cutoff = datetime.now() - timedelta(days=days)
+            all_traces = self.trace_manager.list_traces()
+            recent_traces = [t for t in all_traces if t.timestamp >= cutoff]
+
+            if agent:
+                recent_traces = [t for t in recent_traces if t.agent_identity.get("target_agent") == agent]
+
+            if not recent_traces:
+                return {
+                    "success_rate": 0.0,
+                    "error_rate": 0.0,
+                    "avg_effectiveness": 0.0,
+                    "effectiveness_by_agent": {},
+                    "effectiveness_trend": [],
+                    "problem_areas": [],
+                }
+
+            # Calculate success/error rates
+            success_count = len([t for t in recent_traces if self._is_success(t)])
+            error_count = len(recent_traces) - success_count
+            success_rate = success_count / len(recent_traces)
+            error_rate = error_count / len(recent_traces)
+
+            # Calculate effectiveness by agent
+            effectiveness_by_agent = {}
+            agents = set(t.agent_identity.get("target_agent", "unknown") for t in recent_traces)
+
+            for agent_name in agents:
+                agent_traces = [t for t in recent_traces if t.agent_identity.get("target_agent") == agent_name]
+                agent_success = len([t for t in agent_traces if self._is_success(t)])
+                effectiveness_by_agent[agent_name] = agent_success / len(agent_traces) if agent_traces else 0.0
+
+            # Average effectiveness
+            avg_effectiveness = (
+                sum(effectiveness_by_agent.values()) / len(effectiveness_by_agent) if effectiveness_by_agent else 0.0
+            )
+
+            # Effectiveness trend over time (by day)
+            effectiveness_by_day = {}
+            for trace in recent_traces:
+                day = trace.timestamp.strftime("%Y-%m-%d")
+                if day not in effectiveness_by_day:
+                    effectiveness_by_day[day] = {"success": 0, "total": 0}
+                effectiveness_by_day[day]["total"] += 1
+                if self._is_success(trace):
+                    effectiveness_by_day[day]["success"] += 1
+
+            effectiveness_trend = [
+                {
+                    "date": date,
+                    "effectiveness": (data["success"] / data["total"] if data["total"] > 0 else 0.0),
+                }
+                for date, data in sorted(effectiveness_by_day.items())
+            ]
+
+            # Identify problem areas (effectiveness < 0.7)
+            problem_areas = [
+                f"{agent_name} ({eff:.2%})" for agent_name, eff in effectiveness_by_agent.items() if eff < 0.7
+            ]
+
+            return {
+                "success_rate": round(success_rate, 3),
+                "error_rate": round(error_rate, 3),
+                "avg_effectiveness": round(avg_effectiveness, 3),
+                "effectiveness_by_agent": {k: round(v, 3) for k, v in effectiveness_by_agent.items()},
+                "effectiveness_trend": effectiveness_trend,
+                "problem_areas": problem_areas,
+            }
+        except Exception as e:
+            logger.error(f"Failed to get effectiveness analytics: {e}")
+            return {
+                "success_rate": 0.0,
+                "error_rate": 0.0,
+                "avg_effectiveness": 0.0,
+                "effectiveness_by_agent": {},
+                "effectiveness_trend": [],
+                "problem_areas": [],
+            }
+
+    def get_performance_analytics(self, agent: Optional[str] = None, days: int = 30) -> Dict[str, Any]:
+        """Get performance analytics for traces.
+
+        Args:
+            agent: Optional agent filter
+            days: Number of days to analyze
+
+        Returns:
+            Dictionary with performance metrics including:
+            - avg_duration: Average duration in seconds
+            - avg_tokens: Average token usage
+            - duration_by_agent: Duration breakdown by agent
+            - tokens_by_agent: Token usage breakdown by agent
+            - slowest_operations: List of slowest operations
+            - optimization_opportunities: List of optimization suggestions
+        """
+        try:
+            cutoff = datetime.now() - timedelta(days=days)
+            all_traces = self.trace_manager.list_traces()
+            recent_traces = [t for t in all_traces if t.timestamp >= cutoff]
+
+            if agent:
+                recent_traces = [t for t in recent_traces if t.agent_identity.get("target_agent") == agent]
+
+            if not recent_traces:
+                return {
+                    "avg_duration": 0.0,
+                    "avg_tokens": 0,
+                    "duration_by_agent": {},
+                    "tokens_by_agent": {},
+                    "slowest_operations": [],
+                    "optimization_opportunities": [],
+                }
+
+            # Calculate durations and tokens
+            total_duration = 0.0
+            total_tokens = 0
+            duration_by_agent = {}
+            tokens_by_agent = {}
+            agent_counts = {}
+            slowest_ops = []
+
+            for trace in recent_traces:
+                agent_name = trace.agent_identity.get("target_agent", "unknown")
+                trace_duration = sum(e.duration_seconds for e in trace.executions)
+                trace_tokens = sum(e.metadata.get("tokens", len(e.prompt.split()) * 1.5) for e in trace.executions)
+
+                total_duration += trace_duration
+                total_tokens += trace_tokens
+
+                # Aggregate by agent
+                if agent_name not in duration_by_agent:
+                    duration_by_agent[agent_name] = 0.0
+                    tokens_by_agent[agent_name] = 0
+                    agent_counts[agent_name] = 0
+
+                duration_by_agent[agent_name] += trace_duration
+                tokens_by_agent[agent_name] += trace_tokens
+                agent_counts[agent_name] += 1
+
+                # Track slowest operations
+                slowest_ops.append(
+                    {
+                        "agent": agent_name,
+                        "task": (trace.user_query[:50] + "..." if len(trace.user_query) > 50 else trace.user_query),
+                        "duration": round(trace_duration, 2),
+                        "trace_id": trace.trace_id,
+                    }
+                )
+
+            # Calculate averages
+            avg_duration = total_duration / len(recent_traces)
+            avg_tokens = int(total_tokens / len(recent_traces))
+
+            # Average by agent
+            for agent_name in duration_by_agent:
+                duration_by_agent[agent_name] = round(duration_by_agent[agent_name] / agent_counts[agent_name], 2)
+                tokens_by_agent[agent_name] = int(tokens_by_agent[agent_name] / agent_counts[agent_name])
+
+            # Get top 10 slowest operations
+            slowest_operations = sorted(slowest_ops, key=lambda x: x["duration"], reverse=True)[:10]
+
+            # Generate optimization opportunities
+            optimization_opportunities = []
+            for agent_name, avg_dur in duration_by_agent.items():
+                if avg_dur > avg_duration * 1.5:
+                    optimization_opportunities.append(
+                        f"Optimize {agent_name}: {avg_dur:.2f}s avg (system avg: {avg_duration:.2f}s)"
+                    )
+
+            if avg_tokens > 5000:
+                optimization_opportunities.append(
+                    f"High token usage detected: {avg_tokens} tokens/trace. Consider prompt optimization."
+                )
+
+            return {
+                "avg_duration": round(avg_duration, 2),
+                "avg_tokens": avg_tokens,
+                "duration_by_agent": duration_by_agent,
+                "tokens_by_agent": tokens_by_agent,
+                "slowest_operations": slowest_operations,
+                "optimization_opportunities": optimization_opportunities,
+            }
+        except Exception as e:
+            logger.error(f"Failed to get performance analytics: {e}")
+            return {
+                "avg_duration": 0.0,
+                "avg_tokens": 0,
+                "duration_by_agent": {},
+                "tokens_by_agent": {},
+                "slowest_operations": [],
+                "optimization_opportunities": [],
+            }
+
+    def get_executive_summary(self, days: int = 30) -> Dict[str, Any]:
+        """Get high-level executive summary.
+
+        Args:
+            days: Number of days to analyze
+
+        Returns:
+            Dictionary with executive-level metrics including:
+            - total_traces: Total number of traces
+            - total_cost: Total estimated cost
+            - avg_effectiveness: Average effectiveness score
+            - top_performing_agent: Best performing agent
+            - biggest_cost_driver: Agent with highest cost
+            - key_insights: List of key insights
+            - recommendations: List of recommendations
+        """
+        try:
+            from coffee_maker.autonomous.ace.insights import (
+                generate_insights,
+                generate_recommendations,
+            )
+
+            # Get component analytics
+            cost_data = self.get_cost_analytics(days=days)
+            effectiveness_data = self.get_effectiveness_analytics(days=days)
+            performance_data = self.get_performance_analytics(days=days)
+
+            # Count total traces
+            cutoff = datetime.now() - timedelta(days=days)
+            all_traces = self.trace_manager.list_traces()
+            recent_traces = [t for t in all_traces if t.timestamp >= cutoff]
+            total_traces = len(recent_traces)
+
+            # Find top performing agent (highest effectiveness)
+            top_performing_agent = (
+                max(
+                    effectiveness_data["effectiveness_by_agent"],
+                    key=effectiveness_data["effectiveness_by_agent"].get,
+                )
+                if effectiveness_data["effectiveness_by_agent"]
+                else "N/A"
+            )
+
+            # Generate insights and recommendations
+            key_insights = generate_insights(cost_data, effectiveness_data, performance_data)
+            recommendations = generate_recommendations(key_insights)
+
+            return {
+                "total_traces": total_traces,
+                "total_cost": cost_data["total_cost"],
+                "avg_effectiveness": effectiveness_data["avg_effectiveness"],
+                "top_performing_agent": top_performing_agent,
+                "biggest_cost_driver": cost_data["most_expensive_agent"],
+                "key_insights": key_insights,
+                "recommendations": recommendations,
+            }
+        except Exception as e:
+            logger.error(f"Failed to get executive summary: {e}")
+            return {
+                "total_traces": 0,
+                "total_cost": 0.0,
+                "avg_effectiveness": 0.0,
+                "top_performing_agent": "N/A",
+                "biggest_cost_driver": "N/A",
+                "key_insights": [],
+                "recommendations": [],
+            }

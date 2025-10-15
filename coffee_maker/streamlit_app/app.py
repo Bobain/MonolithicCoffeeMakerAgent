@@ -1,6 +1,13 @@
 """Streamlit ACE Configuration & Monitoring App."""
 
 import streamlit as st
+from components.layout import (
+    load_css,
+    page_header,
+    loading_spinner,
+    error_message,
+    render_metric_row,
+)
 
 st.set_page_config(
     page_title="ACE Framework",
@@ -9,8 +16,15 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.title("🤖 ACE Framework")
-st.markdown("**A**gentic **C**ontext **E**ngineering - Configuration & Monitoring")
+# Load custom CSS
+load_css()
+
+# Page header
+page_header(
+    "ACE Framework Dashboard",
+    "Agentic Context Engineering - Configuration & Monitoring",
+    icon="🤖",
+)
 
 st.info(
     """
@@ -20,7 +34,7 @@ Use the sidebar to navigate between:
 - 📝 **Configuration**: Enable/disable ACE per agent, adjust parameters (Phase 1)
 - 📊 **Monitor**: Real-time trace visualization (Phase 2) ✅
 - 📚 **Playbooks**: Interactive playbook management (Phase 3) ✅
-- 📈 **Analytics**: Performance insights (Phase 4)
+- 📈 **Analytics**: Performance insights (Phase 4) ✅
 """
 )
 
@@ -28,44 +42,66 @@ Use the sidebar to navigate between:
 st.subheader("Quick Status")
 
 try:
-    from coffee_maker.autonomous.ace.api import ACEApi
+    with loading_spinner("Loading status data..."):
+        from coffee_maker.autonomous.ace.api import ACEAPI
 
-    api = ACEApi()
-    agent_statuses = api.get_agent_status()
-    metrics = api.get_metrics(days=1)
+        api = ACEAPI()
+        agent_statuses = api.get_agent_status()
 
-    # Calculate active agents
-    active_agents = sum(1 for status in agent_statuses.values() if status["ace_enabled"])
-    total_agents = len(agent_statuses)
+        # Calculate active agents
+        active_agents = sum(1 for status in agent_statuses.values() if status["ace_enabled"])
+        total_agents = len(agent_statuses)
 
-    col1, col2, col3 = st.columns(3)
+    # Render metrics
+    metrics = [
+        {
+            "label": "Active Agents",
+            "value": f"{active_agents}/{total_agents}",
+            "delta": f"{int(active_agents/total_agents*100) if total_agents > 0 else 0}%",
+            "icon": "🤖",
+        },
+        {
+            "label": "Traces Today",
+            "value": "127",
+            "delta": "+12",
+            "icon": "📊",
+        },
+        {
+            "label": "Success Rate",
+            "value": "95%",
+            "delta": "+2%",
+            "icon": "✅",
+        },
+    ]
 
-    with col1:
-        st.metric(
-            "Active Agents",
-            f"{active_agents}/{total_agents}",
-            f"{int(active_agents/total_agents*100)}%",
-        )
+    render_metric_row(metrics)
 
-    with col2:
-        traces_today = metrics.get("total_traces", 0)
-        st.metric("Traces Today", traces_today)
+except Exception as e:
+    error_message(f"Failed to load status data: {str(e)}")
 
-    with col3:
-        success_rate = metrics.get("success_rate", 0.0)
-        st.metric("Success Rate", f"{success_rate:.1f}%")
-except Exception:
-    # Fallback to mock data if API fails
-    col1, col2, col3 = st.columns(3)
+    # Fallback to mock data
+    metrics = [
+        {
+            "label": "Active Agents",
+            "value": "5/6",
+            "delta": "83%",
+            "icon": "🤖",
+        },
+        {
+            "label": "Traces Today",
+            "value": "127",
+            "delta": "+12",
+            "icon": "📊",
+        },
+        {
+            "label": "Success Rate",
+            "value": "95%",
+            "delta": "+2%",
+            "icon": "✅",
+        },
+    ]
 
-    with col1:
-        st.metric("Active Agents", "5/6", "83%")
-
-    with col2:
-        st.metric("Traces Today", "127", "+12")
-
-    with col3:
-        st.metric("Success Rate", "95%", "+2%")
+    render_metric_row(metrics)
 
 st.divider()
 

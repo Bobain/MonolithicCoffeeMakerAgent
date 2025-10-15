@@ -4,13 +4,34 @@ import streamlit as st
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
-from coffee_maker.autonomous.ace.api import ACEApi
+from coffee_maker.autonomous.ace.api import ACEAPI
+import sys
+from pathlib import Path
 
-st.title("📚 Playbook Management")
-st.markdown("Interactive playbook curation and bullet management")
+# Add parent directory to path for components
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from components.layout import (
+    load_css,
+    page_header,
+    loading_spinner,
+    error_message,
+    empty_state,
+)
+
+st.set_page_config(page_title="Playbooks", page_icon="📚", layout="wide")
+
+# Load custom CSS
+load_css()
+
+# Page header
+page_header(
+    "Playbook Management",
+    "Interactive playbook curation and bullet management",
+    icon="📚",
+)
 
 # Initialize API
-api = ACEApi()
+api = ACEAPI()
 
 # Agent selection
 st.subheader("Select Agent")
@@ -26,18 +47,19 @@ selected_agent = st.selectbox("Agent", agent_names, key="agent_selector")
 
 # Load playbook
 try:
-    playbook = api.get_playbook(selected_agent)
-    if not playbook:
-        st.error(f"Failed to load playbook for {selected_agent}")
-        st.stop()
+    with loading_spinner(f"Loading playbook for {selected_agent}..."):
+        playbook = api.get_playbook(selected_agent)
+        if not playbook:
+            error_message(f"Failed to load playbook for {selected_agent}")
+            st.stop()
 
-    bullets = playbook.get("bullets", [])
-    total_bullets = playbook.get("total_bullets", 0)
-    avg_effectiveness = playbook.get("avg_effectiveness", 0.0)
-    last_updated = playbook.get("last_updated")
+        bullets = playbook.get("bullets", [])
+        total_bullets = playbook.get("total_bullets", 0)
+        avg_effectiveness = playbook.get("avg_effectiveness", 0.0)
+        last_updated = playbook.get("last_updated")
 
 except Exception as e:
-    st.error(f"Error loading playbook: {e}")
+    error_message(f"Error loading playbook: {e}")
     st.stop()
 
 # Display quick stats
@@ -119,7 +141,11 @@ else:  # Date Added (Oldest)
 st.subheader(f"Bullets ({len(filtered_bullets)} matching filters)")
 
 if not filtered_bullets:
-    st.info("No bullets match the current filters. Try adjusting your search criteria.")
+    empty_state(
+        "No bullets match filters",
+        icon="🔍",
+        suggestion="Try adjusting your search criteria or filters.",
+    )
 else:
     # Pagination
     items_per_page = 20
