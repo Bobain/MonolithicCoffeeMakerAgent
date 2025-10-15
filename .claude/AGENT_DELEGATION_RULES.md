@@ -15,7 +15,6 @@
 | **code-searcher** | Deep codebase analysis | Find code, analyze patterns, security audits, forensics |
 | **code_developer** | Autonomous implementation | Implement features, create specs, autonomous development |
 | **ux-design-expert** | UI/UX design guidance | Design systems, layouts, data viz, Tailwind CSS |
-| **memory-bank-synchronizer** | Documentation sync | Update CLAUDE.md files to match code reality |
 
 ---
 
@@ -31,8 +30,7 @@ Is it a QUICK question? (< 2 min answer)
         ├─ Code analysis? → code-searcher
         ├─ Project/ROADMAP? → project_manager
         ├─ Design/UX? → ux-design-expert
-        ├─ Implementation? → code_developer
-        └─ Doc sync? → memory-bank-synchronizer
+        └─ Implementation? → code_developer
 ```
 
 ---
@@ -53,7 +51,6 @@ Is it a QUICK question? (< 2 min answer)
 - ⏩ ROADMAP/strategy questions → **project_manager**
 - ⏩ Design questions → **ux-design-expert**
 - ⏩ Implementation requests → **code_developer**
-- ⏩ Doc updates → **memory-bank-synchronizer**
 
 **Examples**:
 
@@ -214,33 +211,6 @@ service.warn_user(
 
 ---
 
-### 6. memory-bank-synchronizer (Doc Sync)
-
-**When to Use**:
-- ✅ Sync CLAUDE.md with code reality
-- ✅ Update architectural patterns in docs
-- ✅ Align technical decisions with implementation
-- ✅ Maintain consistency between docs and code
-
-**When to Delegate**:
-- ⏩ Find actual patterns → **code-searcher**
-- ⏩ Strategic decisions → **project_manager**
-
-**Examples**:
-
-```
-✅ HANDLE: "CLAUDE.md is outdated"
-→ Compare docs with code, update patterns
-
-⏩ DELEGATE: "Find all error handling patterns"
-→ Use code-searcher (analyze codebase first)
-
-❌ DON'T: Make strategic decisions
-→ Document reality, let project_manager decide changes
-```
-
----
-
 ## Inter-Agent Communication
 
 ### How Agents Delegate
@@ -365,11 +335,6 @@ assistant (explain to user)
 - ❌ Strategic decisions
 - ❌ Code analysis
 
-**memory-bank-synchronizer**:
-- ❌ Strategic decisions
-- ❌ Code analysis (get from code-searcher)
-- ❌ New feature design
-
 ---
 
 ## Best Practices
@@ -461,9 +426,6 @@ assistant (explain to user)
 
 **"Does this require implementation?"**
 - YES → code_developer
-
-**"Does this require doc sync?"**
-- YES → memory-bank-synchronizer
 
 ---
 

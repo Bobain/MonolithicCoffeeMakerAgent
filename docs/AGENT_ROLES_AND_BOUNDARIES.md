@@ -594,7 +594,6 @@ service.warn_user(
 | **Code analysis docs** | project_manager | Creates docs/[analysis]_[date].md | code-searcher prepares findings |
 | **ROADMAP updates** | project_manager (full), code_developer (status only) | Strategic vs. execution updates | assistant: READ-ONLY ❌ |
 | **Design decisions** | ux-design-expert | All UI/UX, Tailwind, charts | user_listener delegates via UI |
-| **Doc sync** | memory-bank-synchronizer (DEPRECATED) | No longer needed (tag-based workflow) | code_developer owns .claude/CLAUDE.md |
 | **ACE observation** | Generator | Capture all agent executions | All agents: Observed by generator |
 | **ACE reflection** | Reflector | Extract insights from traces | - |
 | **ACE curation** | Curator | Maintain evolving playbooks | user_listener invokes via UI |

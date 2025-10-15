@@ -20,7 +20,6 @@
    - `assistant`: Documentation expert and intelligent dispatcher
    - `code-searcher`: Deep codebase analysis and forensic examination
    - `ux-design-expert`: UI/UX design guidance and Tailwind CSS
-   - `memory-bank-synchronizer`: Documentation synchronization with code reality
 
 2. **Prompt Management System** ⭐ NEW
    - **Local Store**: `.claude/commands/` (centralized prompt templates)
@@ -164,7 +163,6 @@ git push origin roadmap
 2. **No Branch Switching**: Eliminates major source of errors
 3. **Single Source of Truth**: One CLAUDE.md, no synchronization needed
 4. **Simpler Git State**: Easier to reason about
-5. **memory-bank-synchronizer**: No longer needed (DEPRECATED)
 
 #### Safety
 
@@ -414,7 +412,6 @@ poetry run project-manager /status
      - **Document Format**: docs/[analysis_type]_analysis_[date].md (e.g., docs/security_audit_2025-10-13.md)
      - See .claude/agents/code-searcher.md for complete documentation workflow
    - **ux-design-expert**: Design decisions (provides specs, doesn't implement)
-   - **memory-bank-synchronizer**: DEPRECATED (no longer needed, tag-based workflow)
 
 5. **architect owns ARCHITECTURAL DESIGN & DEPENDENCIES**
    - **ONLY agent that creates architectural specifications**
@@ -442,7 +439,6 @@ Is it about code internals? → code-searcher
 Is it about project status? → project_manager
 Is it about design? → ux-design-expert
 Is it implementation? → code_developer
-Is it doc sync? → memory-bank-synchronizer
 Is it ACE curation? → user_listener (delegates to curator)
 ```
 
@@ -697,7 +693,6 @@ Langfuse (execution metrics)
 - **2025-10-15**: 🚨 Git Branch Strategy - Tag-based workflow on `roadmap` branch
   - NO MORE BRANCH SWITCHING - all agents stay on roadmap branch
   - code_developer uses tags for milestones
-  - memory-bank-synchronizer DEPRECATED
   - See: `.claude/CLAUDE.md` Git Workflow section
 
 ---

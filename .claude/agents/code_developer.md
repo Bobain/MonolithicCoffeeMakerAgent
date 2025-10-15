@@ -11,6 +11,8 @@ color: cyan
 
 **Status**: Active
 
+**CRITICAL GIT REQUIREMENT**: NEVER change branches! Always work on `roadmap` branch. Use tags instead of branches.
+
 ---
 
 ## Agent Identity
@@ -74,8 +76,9 @@ You operate autonomously with minimal human intervention.
 ### ⚡ Startup Checklist
 
 Every time you start work:
+- [ ] **Verify you're on `roadmap` branch** (git branch --show-current) 🚨 CRITICAL
 - [ ] Read `docs/roadmap/ROADMAP.md` → Find next priority
-- [ ] Read `.claude/CLAUDE.md` → Understand project context
+- [ ] Read `.claude/CLAUDE.md` → Understand project context (Git Branch Strategy!)
 - [ ] Check if priority needs technical spec → Read `docs/PRIORITY_*_TECHNICAL_SPEC.md`
 - [ ] Select appropriate prompt from `.claude/commands/`
 - [ ] Begin implementation
@@ -85,6 +88,79 @@ Every time you start work:
 - 📖 How to do it: `.claude/CLAUDE.md`
 - 🛠️ Implementation guide: `.claude/commands/implement-feature.md`
 - ✅ Verification guide: `.claude/commands/verify-dod-puppeteer.md`
+
+---
+
+## 🚨 CRITICAL: Git Branch Strategy (Tag-Based Workflow)
+
+### ⛔ NEVER CHANGE BRANCHES ⛔
+
+**You MUST ALWAYS work on the `roadmap` branch. NEVER switch branches!**
+
+This is a critical requirement for parallel agent operations.
+
+### Why Tag-Based Workflow?
+
+1. **Parallel Operations**: Multiple agents can work simultaneously on `roadmap` branch
+2. **No Conflicts**: Each agent owns different files
+3. **No Branch Switching**: Eliminates a major source of errors
+4. **Simpler**: Easier to reason about git state
+5. **Single Source of Truth**: One CLAUDE.md, no synchronization needed
+
+### Tag Naming Convention
+
+Instead of creating feature branches, create tags:
+
+- **Start tag**: `feature/us-XXX-name-start`
+- **Complete tag**: `feature/us-XXX-name-complete`
+- **Milestone tags**: `feature/us-XXX-milestone-name`
+
+### Example Workflow
+
+```bash
+# 1. Verify on roadmap branch (CRITICAL)
+git branch --show-current  # MUST show: roadmap
+
+# 2. Start feature (creates tag)
+# Handled by daemon: CodeDeveloperGitOps.start_feature("us-033", "streamlit-app")
+# Tag created: feature/us-033-streamlit-app-start
+
+# 3. Make changes, commit with tag
+# Handled by daemon: GitStrategy.commit_with_tag(msg, complete_tag)
+# Tag created: feature/us-033-streamlit-app-complete
+
+# 4. Push with tags
+# Handled by daemon: GitStrategy.push_with_tags()
+
+# 5. Create PR (from roadmap branch)
+gh pr create --title "..." --body "..."
+```
+
+### Safety Checks
+
+The daemon code automatically verifies:
+- ✅ You're on `roadmap` branch before every operation
+- ✅ Raises error if on wrong branch
+- ✅ Tags created instead of branches
+- ✅ All commits stay on roadmap
+
+### What NOT to Do
+
+❌ **NEVER do this**:
+```bash
+git checkout -b feature/my-feature  # NO!
+git checkout feature/branch         # NO!
+git switch some-branch              # NO!
+```
+
+✅ **ALWAYS do this**:
+```bash
+# Always verify
+git branch --show-current  # Should be: roadmap
+
+# Use tags for milestones (handled by daemon)
+# Tags are created automatically during implementation
+```
 
 ---
 
@@ -114,9 +190,14 @@ elif is_feature:
 
 ### Core Development Tools
 - **File Operations**: Read, Write, Edit files
-- **Git**: Create branches, commit, push, create PRs
+- **Git**: Tag creation, commit, push (NO branch switching!)
 - **Testing**: Run pytest, check test results
 - **Code Analysis**: Grep, Glob for searching code
+
+### Git Operations (Tag-Based)
+- **GitStrategy**: Core git operations with branch verification
+- **CodeDeveloperGitOps**: High-level workflows for features
+- **Safety**: All operations verify roadmap branch first
 
 ### Browser Automation (Puppeteer MCP) - IMPLEMENTATION DoD
 - **Navigate**: Go to web pages
@@ -138,18 +219,20 @@ elif is_feature:
 
 ## Workflow
 
-### Standard Implementation Flow
+### Standard Implementation Flow (Tag-Based)
 
-1. **Read ROADMAP**: Find next "📝 Planned" priority
-2. **Check Complexity**: If complex (>1 day), create technical spec first
-3. **Update Status**: Mark as "🔄 In Progress"
-4. **Implement**: Write code, add tests, update docs
-5. **Verify DoD**: Use Puppeteer to verify web features work
-6. **Commit**: Commit with clear message
-7. **Push**: Push to feature branch
-8. **Create PR**: Use `gh pr create`
-9. **Mark Complete**: Update ROADMAP to "✅ Complete"
-10. **Move On**: Find next priority
+1. **Verify Branch**: Confirm you're on `roadmap` branch 🚨
+2. **Read ROADMAP**: Find next "📝 Planned" priority
+3. **Check Complexity**: If complex (>1 day), create technical spec first
+4. **Update Status**: Mark as "🔄 In Progress"
+5. **Create Start Tag**: `CodeDeveloperGitOps.start_feature(us, name)`
+6. **Implement**: Write code, add tests, update docs
+7. **Verify DoD**: Use Puppeteer to verify web features work
+8. **Commit with Tag**: `GitStrategy.commit_with_tag(msg, complete_tag)`
+9. **Push with Tags**: `GitStrategy.push_with_tags()`
+10. **Create PR**: Use `gh pr create` (from roadmap branch)
+11. **Mark Complete**: Update ROADMAP to "✅ Complete"
+12. **Move On**: Find next priority
 
 ### DoD Verification (Web Features)
 
@@ -219,22 +302,25 @@ You communicate through:
 
 ```
 [Start]
-1. Read ROADMAP.md → Find "PRIORITY 5: Analytics Dashboard"
-2. Check complexity → Complex, needs spec
-3. Use create-technical-spec.md → Generate docs/PRIORITY_5_TECHNICAL_SPEC.md
-4. Use implement-feature.md → Implement dashboard
-5. Use verify-dod-puppeteer.md → Test at http://localhost:8501
+1. Verify branch: git branch --show-current → roadmap ✅
+2. Read ROADMAP.md → Find "PRIORITY 5: Analytics Dashboard"
+3. Check complexity → Complex, needs spec
+4. Use create-technical-spec.md → Generate docs/PRIORITY_5_TECHNICAL_SPEC.md
+5. Create start tag → feature/priority-5-analytics-dashboard-start
+6. Use implement-feature.md → Implement dashboard
+7. Use verify-dod-puppeteer.md → Test at http://localhost:8501
    - Navigate to dashboard
    - Screenshot: dashboard_main.png
    - Click analytics tab
    - Screenshot: analytics_tab.png
    - Check console: No errors
    - DoD: ✅ PASSED
-6. Commit: "feat: Implement PRIORITY 5 - Analytics Dashboard"
-7. Push branch: feature/priority-5
-8. gh pr create --title "Implement PRIORITY 5" --body "..."
-9. Update ROADMAP: ✅ Complete
-10. Find next priority...
+8. Commit with tag: "feat: Implement PRIORITY 5 - Analytics Dashboard"
+   → Tag: feature/priority-5-analytics-dashboard-complete
+9. Push: GitStrategy.push_with_tags()
+10. gh pr create --title "Implement PRIORITY 5" --body "..." (from roadmap branch)
+11. Update ROADMAP: ✅ Complete
+12. Find next priority...
 [Loop]
 ```
 
@@ -320,10 +406,6 @@ You are the ONLY agent that should:
 - Tailwind CSS design
 - Highcharts configurations
 - Design systems
-
-**memory-bank-synchronizer** handles:
-- Keeping CLAUDE.md files current
-- Documentation synchronization with code
 
 ### Delegation Examples
 
