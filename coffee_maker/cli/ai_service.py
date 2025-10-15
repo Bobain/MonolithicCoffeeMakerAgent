@@ -61,11 +61,13 @@ class AIResponse:
         message: Response message from Claude
         action: Optional structured action to execute
         confidence: Confidence score (0.0-1.0)
+        metadata: Optional metadata (e.g., classification info)
     """
 
     message: str
     action: Optional[Dict] = None
     confidence: float = 1.0
+    metadata: Optional[Dict] = None
 
 
 class AIService:
@@ -157,7 +159,13 @@ class AIService:
             logger.info(f"AIService initialized with Anthropic API: {model}")
 
     def process_request(self, user_input: str, context: Dict, history: List[Dict], stream: bool = True) -> AIResponse:
-        """Process user request with AI.
+        """Process user request with AI and automatic classification.
+
+        This is the Phase 2 integration point for US-021. The flow:
+        1. Classify the request (feature/methodology/hybrid/clarification)
+        2. If clarification needed, return clarifying questions
+        3. Otherwise, add classification context and process with AI
+        4. Return response with classification metadata
 
         Args:
             user_input: User's natural language input
@@ -166,31 +174,64 @@ class AIService:
             stream: If True, returns a streaming response (default: True)
 
         Returns:
-            AIResponse with message and optional action
+            AIResponse with message, action, and classification metadata
 
         Example:
-            >>> # Non-streaming (blocking)
+            >>> # Feature request
             >>> response = service.process_request(
-            ...     "Add a priority for authentication",
+            ...     "I want to add email notifications",
             ...     context={'roadmap_summary': summary},
             ...     history=[],
             ...     stream=False
             ... )
-            >>> print(response.message)
-
-            >>> # Streaming (progressive)
-            >>> response = service.process_request(
-            ...     "Explain the roadmap",
-            ...     context=context,
-            ...     history=[],
-            ...     stream=True
-            ... )
-            >>> for chunk in response.stream_iterator:
-            ...     print(chunk, end="")
+            >>> response.metadata['classification']['request_type']
+            'feature_request'
+            >>> response.metadata['classification']['target_documents']
+            ['docs/roadmap/ROADMAP.md']
         """
         try:
-            # Build system prompt with context
-            system_prompt = self._build_system_prompt(context)
+            # Phase 2: Classify the request FIRST (US-021)
+            classification = None
+            classification_context = {}
+
+            if self.classifier:
+                classification = self.classifier.classify(user_input)
+
+                # Log classification
+                logger.info(
+                    f"Request classified as: {classification.request_type.value} "
+                    f"(confidence: {classification.confidence:.2f})"
+                )
+                logger.debug(f"Target documents: {classification.target_documents}")
+
+                # Build classification context for AI
+                classification_context = {
+                    "request_type": classification.request_type.value,
+                    "confidence": classification.confidence,
+                    "target_documents": classification.target_documents,
+                    "feature_indicators": classification.feature_indicators,
+                    "methodology_indicators": classification.methodology_indicators,
+                    "needs_clarification": classification.request_type.value == "clarification_needed",
+                }
+
+                # If clarification needed, ask questions FIRST
+                if classification.request_type.value == "clarification_needed":
+                    clarification_prompt = self._build_clarification_prompt(classification)
+                    return AIResponse(
+                        message=clarification_prompt,
+                        action=None,
+                        confidence=classification.confidence,
+                        metadata={
+                            "needs_clarification": True,
+                            "classification": classification_context,
+                        },
+                    )
+
+            # Add classification to context
+            enhanced_context = {**context, "classification": classification_context}
+
+            # Build system prompt with classification context
+            system_prompt = self._build_system_prompt_with_classification(enhanced_context)
 
             # Build conversation messages
             messages = self._build_messages(user_input, history)
@@ -236,7 +277,13 @@ class AIService:
             # Extract action if present
             action = self._extract_action(content)
 
-            return AIResponse(message=content, action=action)
+            # Return with classification metadata
+            return AIResponse(
+                message=content,
+                action=action,
+                confidence=1.0,
+                metadata={"classification": classification_context} if classification else None,
+            )
 
         except Exception as e:
             logger.error(f"AI request failed: {e}")
@@ -244,6 +291,7 @@ class AIService:
                 message=f"Sorry, I encountered an error: {str(e)}",
                 action=None,
                 confidence=0.0,
+                metadata=None,
             )
 
     def process_request_stream(self, user_input: str, context: Dict, history: List[Dict]):
@@ -394,6 +442,44 @@ class AIService:
         logger.debug("Classified intent: general_query")
         return "general_query"
 
+    def _build_clarification_prompt(self, classification: "ClassificationResult") -> str:
+        """Build clarification prompt from classification result.
+
+        Args:
+            classification: Classification result with suggested questions
+
+        Returns:
+            Formatted clarification prompt
+
+        Example:
+            >>> # This is called when confidence is low or request is ambiguous
+            >>> prompt = service._build_clarification_prompt(classification)
+            >>> "clarification" in prompt.lower()
+            True
+        """
+        prompt = "I need some clarification to help you effectively.\n\n"
+
+        # Add confidence info if low
+        if classification.confidence < 0.5:
+            prompt += (
+                f"I'm not confident about interpreting your request (confidence: {classification.confidence:.0%}).\n\n"
+            )
+
+        # Add suggested questions
+        if classification.suggested_questions:
+            prompt += "\n".join(classification.suggested_questions)
+
+        # Add what we detected (for transparency)
+        if classification.feature_indicators:
+            indicators = ", ".join([ind.split(": ")[1] for ind in classification.feature_indicators[:3]])
+            prompt += f"\n\nFeature indicators I detected: {indicators}"
+
+        if classification.methodology_indicators:
+            indicators = ", ".join([ind.split(": ")[1] for ind in classification.methodology_indicators[:3]])
+            prompt += f"\n\nMethodology indicators I detected: {indicators}"
+
+        return prompt
+
     def _build_system_prompt(self, context: Dict) -> str:
         """Build system prompt with roadmap context.
 
@@ -433,6 +519,45 @@ class AIService:
         )
 
         return prompt
+
+    def _build_system_prompt_with_classification(self, context: Dict) -> str:
+        """Build system prompt with classification context (Phase 2 enhancement).
+
+        This method enhances the base system prompt with classification guidance
+        to help the AI understand what type of request it's handling and which
+        documents should be updated.
+
+        Args:
+            context: Context dictionary with roadmap and classification info
+
+        Returns:
+            Enhanced system prompt with classification guidance
+        """
+        # Start with base system prompt
+        system_prompt = self._build_system_prompt(context)
+
+        # Add classification guidance if available
+        classification = context.get("classification", {})
+        if classification and classification.get("request_type"):
+            classification_guidance = f"""
+
+**Request Classification (US-021 Phase 2):**
+- Type: {classification['request_type']}
+- Confidence: {classification['confidence']:.0%}
+- Target Documents: {', '.join(classification['target_documents'])}
+
+**Your Instructions Based on Classification:**
+1. Acknowledge the request type explicitly (e.g., "I see you're requesting a new feature...")
+2. Explain which documents will be updated: {', '.join(classification['target_documents'])}
+3. If hybrid request (both feature + methodology), explain you'll update both ROADMAP and TEAM_COLLABORATION
+4. Provide your response addressing the specific request type
+5. End with confirmation: "I'll update [documents] with this information."
+
+Remember: Be transparent about what you'll do with the user's request!
+"""
+            system_prompt += classification_guidance
+
+        return system_prompt
 
     def _build_messages(self, user_input: str, history: List[Dict]) -> List[Dict]:
         """Build conversation messages.
