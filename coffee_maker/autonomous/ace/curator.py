@@ -221,8 +221,8 @@ class ACECurator:
         """Merge delta into existing bullet.
 
         Updates:
-        - helpful_count (increments)
-        - confidence (weighted average)
+        - helpful_count (increments, weighted by satisfaction if available)
+        - confidence (weighted average, boosted by satisfaction)
         - priority (takes max)
         - evidence_sources (appends)
         - last_updated (current time)
@@ -231,13 +231,19 @@ class ACECurator:
             bullet: Existing bullet to update
             delta: Delta item to merge in
         """
-        # Increment helpful count (evidence of usefulness)
-        bullet.helpful_count += 1
+        # Calculate satisfaction boost
+        satisfaction_boost = self._get_satisfaction_boost(delta)
 
-        # Update confidence (weighted average)
+        # Increment helpful count (evidence of usefulness)
+        # High satisfaction deltas count more
+        bullet.helpful_count += int(1 * (1 + satisfaction_boost))
+
+        # Update confidence (weighted average with satisfaction boost)
         total_weight = bullet.helpful_count + bullet.harmful_count
         if total_weight > 0:
-            bullet.confidence = (bullet.confidence * (total_weight - 1) + delta.confidence) / total_weight
+            # Apply satisfaction boost to delta confidence
+            boosted_confidence = min(1.0, delta.confidence * (1 + satisfaction_boost))
+            bullet.confidence = (bullet.confidence * (total_weight - 1) + boosted_confidence) / total_weight
 
         # Update priority (take higher priority)
         bullet.priority = max(bullet.priority, delta.priority)
@@ -252,7 +258,8 @@ class ACECurator:
 
         logger.debug(
             f"Merged delta {delta.delta_id} into bullet {bullet.bullet_id} "
-            f"(helpful: {bullet.helpful_count}, confidence: {bullet.confidence:.2f})"
+            f"(helpful: {bullet.helpful_count}, confidence: {bullet.confidence:.2f}, "
+            f"satisfaction_boost: {satisfaction_boost:.2f})"
         )
 
     def _add_new_bullet(self, delta: DeltaItem, playbook: Playbook):
@@ -436,3 +443,65 @@ class ACECurator:
 
         write_json_file(report_path, report)
         logger.info(f"Saved curation report to {report_path}")
+
+    def _get_satisfaction_boost(self, delta: DeltaItem) -> float:
+        """Calculate confidence boost based on user satisfaction.
+
+        Satisfaction-based deltas get a boost to their confidence and weight:
+        - High satisfaction (score 4-5): +0.2 boost → Success patterns prioritized
+        - Low satisfaction (score 1-2): -0.2 penalty → Failure modes marked for review
+        - Neutral or no satisfaction: 0.0 → No adjustment
+
+        Args:
+            delta: Delta item to check for satisfaction
+
+        Returns:
+            Confidence boost factor (typically -0.2 to +0.2)
+
+        Example:
+            >>> curator = ACECurator("code_developer")
+            >>> delta = DeltaItem(...)  # High satisfaction delta
+            >>> boost = curator._get_satisfaction_boost(delta)
+            >>> boost
+            0.2
+        """
+        # Check if delta is from satisfaction signal
+        if not delta.delta_id.startswith("satisfaction_"):
+            return 0.0
+
+        # Extract satisfaction score from evidence
+        if not delta.evidence:
+            return 0.0
+
+        # Look for satisfaction score in evidence example
+        for evidence in delta.evidence:
+            if "satisfaction:" in evidence.example.lower():
+                try:
+                    # Extract score from "User satisfaction: X/5"
+                    import re
+
+                    match = re.search(r"(\d)/5", evidence.example)
+                    if match:
+                        score = int(match.group(1))
+
+                        if score >= 4:
+                            # High satisfaction: boost confidence
+                            return 0.2
+                        elif score <= 2:
+                            # Low satisfaction: penalize confidence
+                            return -0.2
+                        else:
+                            # Neutral satisfaction
+                            return 0.0
+                except (ValueError, AttributeError):
+                    pass
+
+        # Check insight type as fallback
+        if delta.insight_type == "success_pattern" and delta.confidence >= 0.8:
+            # Likely high satisfaction pattern
+            return 0.1
+        elif delta.insight_type == "failure_mode" and delta.priority >= 5:
+            # Likely low satisfaction failure
+            return -0.1
+
+        return 0.0

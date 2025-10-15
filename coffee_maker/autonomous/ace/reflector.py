@@ -10,7 +10,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from coffee_maker.autonomous.ace.models import DeltaItem, Evidence, ExecutionTrace
 from coffee_maker.autonomous.ace.trace_manager import TraceManager
@@ -110,7 +110,14 @@ class ACEReflector:
         # Extract insights
         deltas = self._extract_insights(traces)
 
-        logger.info(f"Extracted {len(deltas)} insights from {len(traces)} traces")
+        # Extract satisfaction signals
+        satisfaction_deltas = self._extract_satisfaction_signals(traces)
+        deltas.extend(satisfaction_deltas)
+
+        logger.info(
+            f"Extracted {len(deltas)} insights from {len(traces)} traces "
+            f"({len(satisfaction_deltas)} from satisfaction signals)"
+        )
 
         return deltas
 
@@ -489,6 +496,268 @@ class ACEReflector:
             logger.warning(f"Failed to load playbook: {e}")
             return None
 
+    def _extract_satisfaction_signals(self, traces: List[ExecutionTrace]) -> List[DeltaItem]:
+        """Extract insights based on user satisfaction signals.
+
+        Handles both explicit and implicit satisfaction:
+        - Explicit: High satisfaction (4-5) → success patterns, Low (1-2) → failure modes
+        - Implicit: Sentiment analysis (frustration, satisfaction, confusion, etc.)
+
+        Args:
+            traces: List of execution traces to analyze
+
+        Returns:
+            List of DeltaItem insights weighted by satisfaction
+
+        Example:
+            >>> deltas = reflector._extract_satisfaction_signals(traces)
+            >>> high_sat_deltas = [d for d in deltas if d.confidence >= 0.8]
+        """
+        satisfaction_deltas = []
+
+        for trace in traces:
+            if not trace.user_satisfaction:
+                continue
+
+            # Handle explicit satisfaction score (1-5)
+            score = trace.user_satisfaction.get("score", 0)
+            if score != 0:
+                satisfaction_deltas.extend(self._extract_explicit_satisfaction(trace, score))
+
+            # Handle implicit sentiment signals
+            implicit_sentiment = trace.user_satisfaction.get("implicit_sentiment", [])
+            if implicit_sentiment:
+                satisfaction_deltas.extend(self._extract_implicit_sentiment(trace, implicit_sentiment))
+
+        return satisfaction_deltas
+
+    def _extract_explicit_satisfaction(self, trace: ExecutionTrace, score: int) -> List[DeltaItem]:
+        """Extract deltas from explicit satisfaction score (1-5).
+
+        Args:
+            trace: Execution trace with satisfaction score
+            score: Satisfaction score (1-5)
+
+        Returns:
+            List of DeltaItem insights
+        """
+        deltas = []
+
+        if score == 0:
+            return deltas
+
+        # Extract actions taken (from external observation)
+        if not trace.executions:
+            return deltas
+
+        execution = trace.executions[0]  # Use first execution
+        actions = []
+
+        # Collect actions from external observation
+        if execution.external_observation.files_created:
+            actions.append(f"Created files: {', '.join(execution.external_observation.files_created[:3])}")
+        if execution.external_observation.files_modified:
+            actions.append(f"Modified files: {', '.join(execution.external_observation.files_modified[:3])}")
+        if execution.external_observation.commands_executed:
+            actions.append(f"Executed commands: {', '.join(execution.external_observation.commands_executed[:3])}")
+
+        # Collect reasoning from internal observation
+        reasoning = (
+            execution.internal_observation.reasoning_steps[:2] if execution.internal_observation.reasoning_steps else []
+        )
+
+        # Determine insight type and priority based on satisfaction score
+        if score >= 4:
+            # High satisfaction → Success pattern
+            insight_type = "success_pattern"
+            priority = 4
+            confidence = 0.8 + (score - 4) * 0.1  # 0.8 for score=4, 0.9 for score=5
+            title = f"High satisfaction pattern: {trace.user_query[:50]}"
+            recommendation = f"Continue using this approach for similar tasks. User rated {score}/5."
+
+        elif score <= 2:
+            # Low satisfaction → Failure mode
+            insight_type = "failure_mode"
+            priority = 5  # High priority to avoid failures
+            confidence = 0.7 + (2 - score) * 0.1  # 0.8 for score=1, 0.7 for score=2
+            title = f"Low satisfaction failure: {trace.user_query[:50]}"
+            recommendation = f"Avoid this approach. User rated {score}/5. Needs improvement."
+
+        else:
+            # Neutral satisfaction (score=3) → Skip
+            return deltas
+
+        # Build description
+        description_parts = []
+        if trace.user_satisfaction.get("positive_feedback"):
+            description_parts.append(f"Positive: {trace.user_satisfaction['positive_feedback']}")
+        if trace.user_satisfaction.get("improvement_areas"):
+            description_parts.append(f"Improvement: {trace.user_satisfaction['improvement_areas']}")
+        if actions:
+            description_parts.append(f"Actions: {'; '.join(actions)}")
+        if reasoning:
+            description_parts.append(f"Reasoning: {'; '.join(reasoning)}")
+
+        description = " | ".join(description_parts) if description_parts else "See trace for details"
+
+        # Create delta item
+        delta = DeltaItem(
+            delta_id=f"satisfaction_{trace.trace_id}_{int(datetime.now().timestamp())}",
+            insight_type=insight_type,
+            title=title,
+            description=description,
+            recommendation=recommendation,
+            evidence=[
+                Evidence(
+                    trace_id=trace.trace_id,
+                    execution_id=1,
+                    example=f"User satisfaction: {score}/5",
+                )
+            ],
+            applicability=f"Similar to: {trace.user_query[:100]}",
+            priority=priority,
+            confidence=confidence,
+            action="add_new",
+            related_bullets=[],
+        )
+
+        deltas.append(delta)
+        logger.info(
+            f"Extracted explicit satisfaction signal: {insight_type} "
+            f"(score={score}, confidence={confidence:.2f}, priority={priority})"
+        )
+
+        return deltas
+
+    def _extract_implicit_sentiment(
+        self, trace: ExecutionTrace, sentiment_signals: List[Dict[str, Any]]
+    ) -> List[DeltaItem]:
+        """Extract deltas from implicit sentiment signals.
+
+        Processes sentiment analysis results (frustration, satisfaction, confusion, etc.)
+        and creates appropriate delta items.
+
+        Args:
+            trace: Execution trace
+            sentiment_signals: List of sentiment signal dicts from SentimentAnalyzer
+
+        Returns:
+            List of DeltaItem insights
+
+        Example:
+            >>> signals = [{"sentiment": "frustration", "confidence": 0.8, ...}]
+            >>> deltas = reflector._extract_implicit_sentiment(trace, signals)
+        """
+        deltas = []
+
+        for sentiment_data in sentiment_signals:
+            sentiment_type = sentiment_data.get("sentiment")
+            confidence = sentiment_data.get("confidence", 0.5)
+            severity = sentiment_data.get("severity", 3)
+            indicators = sentiment_data.get("indicators", [])
+
+            # Determine insight type and priority based on sentiment
+            if sentiment_type in ["frustration", "annoyance_repetition"]:
+                # Negative sentiment → failure mode
+                insight_type = "failure_mode"
+                priority = min(5, severity)  # Map severity (1-5) to priority
+                title = f"User {sentiment_type} detected: {trace.user_query[:50]}"
+                recommendation = (
+                    f"Avoid patterns that lead to {sentiment_type}. "
+                    f"Review execution for root cause and improve approach."
+                )
+                action = "mark_harmful"
+
+            elif sentiment_type == "impatience":
+                # Impatience → optimization opportunity
+                insight_type = "optimization"
+                priority = min(4, severity)
+                title = f"User impatience detected: {trace.user_query[:50]}"
+                recommendation = (
+                    f"Improve response time or provide progress updates. "
+                    f"User expects faster results for this type of request."
+                )
+                action = "add_new"
+
+            elif sentiment_type == "satisfaction":
+                # Positive sentiment → success pattern
+                insight_type = "success_pattern"
+                priority = min(4, severity)
+                title = f"User satisfaction expressed: {trace.user_query[:50]}"
+                recommendation = (
+                    f"Continue using this approach for similar tasks. "
+                    f"User found this approach effective and satisfying."
+                )
+                action = "add_new"
+
+            elif sentiment_type == "confusion":
+                # Confusion → missing knowledge or unclear communication
+                insight_type = "missing_knowledge"
+                priority = min(3, severity)
+                title = f"User confusion detected: {trace.user_query[:50]}"
+                recommendation = (
+                    f"Provide clearer explanations or better context. " f"User needed more information or guidance."
+                )
+                action = "add_new"
+
+            else:
+                # Unknown sentiment type - skip
+                logger.warning(f"Unknown sentiment type: {sentiment_type}")
+                continue
+
+            # Extract actions from trace
+            actions = []
+            if trace.executions:
+                execution = trace.executions[0]
+                if execution.external_observation.files_created:
+                    actions.append(f"Created: {', '.join(execution.external_observation.files_created[:3])}")
+                if execution.external_observation.files_modified:
+                    actions.append(f"Modified: {', '.join(execution.external_observation.files_modified[:3])}")
+                if execution.external_observation.commands_executed:
+                    actions.append(f"Commands: {', '.join(execution.external_observation.commands_executed[:3])}")
+
+            # Build description
+            indicators_str = ", ".join(str(i) for i in indicators[:3])
+            description_parts = [
+                f"Sentiment: {sentiment_type}",
+                f"Indicators: {indicators_str}",
+                f"Confidence: {confidence:.2f}",
+                f"Severity: {severity}/5",
+            ]
+            if actions:
+                description_parts.append(f"Actions: {'; '.join(actions)}")
+
+            description = " | ".join(description_parts)
+
+            # Create delta item
+            delta = DeltaItem(
+                delta_id=f"sentiment_{sentiment_type}_{trace.trace_id}_{int(datetime.now().timestamp())}",
+                insight_type=insight_type,
+                title=title,
+                description=description,
+                recommendation=recommendation,
+                evidence=[
+                    Evidence(
+                        trace_id=trace.trace_id,
+                        execution_id=1,
+                        example=f"Sentiment: {sentiment_type} (confidence={confidence:.2f})",
+                    )
+                ],
+                applicability=f"Similar to: {trace.user_query[:100]}",
+                priority=priority,
+                confidence=confidence,
+                action=action,
+                related_bullets=[],
+            )
+
+            deltas.append(delta)
+            logger.info(
+                f"Extracted implicit sentiment signal: {sentiment_type} "
+                f"→ {insight_type} (confidence={confidence:.2f}, priority={priority})"
+            )
+
+        return deltas
+
     def analyze_recent_traces(self, hours: int = 24) -> List[DeltaItem]:
         """Convenience method to analyze traces from last N hours.
 
@@ -533,3 +802,91 @@ class ACEReflector:
             "date_range": f"{min(dates)} to {max(dates)}" if dates else "No deltas",
             "dates_with_deltas": len(dates),
         }
+
+    def propagate_satisfaction(self, trace_id: str) -> int:
+        """Propagate satisfaction from parent trace to all child traces in delegation chain.
+
+        When user provides satisfaction to user_listener, propagate it to
+        all agents in the delegation chain (code_developer, etc.).
+
+        This ensures that real work satisfaction signals reach the agents that
+        performed the actual execution, enabling proper learning from user feedback.
+
+        Args:
+            trace_id: Trace ID that received satisfaction (parent)
+
+        Returns:
+            Number of child traces that received propagated satisfaction
+
+        Example:
+            >>> reflector = ACEReflector(agent_name="user_listener")
+            >>> # User provides satisfaction to user_listener trace
+            >>> num_propagated = reflector.propagate_satisfaction("trace_123")
+            >>> print(f"Propagated to {num_propagated} child traces")
+        """
+        try:
+            # Load parent trace
+            parent_trace = self.trace_manager.read_trace(trace_id)
+        except FileNotFoundError:
+            logger.error(f"Parent trace not found: {trace_id}")
+            return 0
+
+        if not parent_trace.user_satisfaction:
+            logger.warning(f"No satisfaction data to propagate from trace: {trace_id}")
+            return 0
+
+        satisfaction = parent_trace.user_satisfaction
+        logger.info(f"Propagating satisfaction (score={satisfaction.get('score')}) " f"from trace {trace_id}")
+
+        # Find all child traces in delegation chain
+        # Search for traces with parent_trace_id == trace_id
+        all_traces = self._load_all_traces()
+
+        propagated_count = 0
+
+        for trace in all_traces:
+            if trace.parent_trace_id == trace_id:
+                # This is a child trace - propagate satisfaction
+                child_agent = trace.agent_identity.get("target_agent", "unknown")
+                logger.info(f"Propagating satisfaction to child trace: {trace.trace_id} " f"(agent: {child_agent})")
+
+                # Attach satisfaction with note that it's propagated
+                propagated_satisfaction = satisfaction.copy()
+                propagated_satisfaction["propagated_from"] = trace_id
+                propagated_satisfaction["propagated_from_agent"] = parent_trace.agent_identity.get(
+                    "target_agent", "unknown"
+                )
+                propagated_satisfaction["note"] = (
+                    f"Satisfaction propagated from parent agent " f"({parent_trace.agent_identity.get('target_agent')})"
+                )
+
+                trace.user_satisfaction = propagated_satisfaction
+                self.trace_manager.write_trace(trace)
+                propagated_count += 1
+
+                # Recursively propagate to grandchildren
+                grandchildren_count = self.propagate_satisfaction(trace.trace_id)
+                propagated_count += grandchildren_count
+
+        if propagated_count > 0:
+            logger.info(
+                f"Successfully propagated satisfaction to {propagated_count} " f"child trace(s) from {trace_id}"
+            )
+        else:
+            logger.info(f"No child traces found for {trace_id}")
+
+        return propagated_count
+
+    def _load_all_traces(self) -> List[ExecutionTrace]:
+        """Load all traces from trace directory.
+
+        Returns:
+            List of all ExecutionTrace instances
+
+        Example:
+            traces = self._load_all_traces()
+        """
+        # Use TraceManager's list_traces method which handles this correctly
+        all_traces = self.trace_manager.list_traces()
+        logger.debug(f"Loaded {len(all_traces)} traces from {self.traces_base_dir}")
+        return all_traces

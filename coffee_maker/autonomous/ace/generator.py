@@ -77,13 +77,20 @@ class ACEGenerator:
         logger.info(f"ACEGenerator initialized for agent: {agent_name}")
 
     def execute_with_trace(
-        self, prompt: str, priority_context: Optional[Dict[str, Any]] = None, **kwargs
+        self,
+        prompt: str,
+        priority_context: Optional[Dict[str, Any]] = None,
+        parent_trace_id: Optional[str] = None,
+        delegation_chain: Optional[List[Dict[str, str]]] = None,
+        **kwargs,
     ) -> Dict[str, Any]:
         """Execute agent with full ACE observation and tracing.
 
         Args:
             prompt: User query/task for the agent
             priority_context: Context about the priority being worked on
+            parent_trace_id: Trace ID of delegating agent (if applicable)
+            delegation_chain: List of agents in delegation chain
             **kwargs: Additional parameters to pass to agent
 
         Returns:
@@ -92,13 +99,30 @@ class ACEGenerator:
         Example:
             result = generator.execute_with_trace(
                 prompt="Implement authentication",
-                priority_context={"priority": 10, "name": "User Auth"}
+                priority_context={"priority": 10, "name": "User Auth"},
+                parent_trace_id="trace_123",
+                delegation_chain=[{"agent": "user_listener", "trace_id": "trace_123"}]
             )
         """
-        trace_id = str(int(time.time()))
+        # Use microsecond-level timestamp to avoid collisions
         timestamp = datetime.now()
+        trace_id = str(int(timestamp.timestamp() * 1000000))  # Microseconds since epoch
 
         logger.info(f"Starting ACE execution with trace_id: {trace_id}")
+
+        # Build delegation chain
+        if delegation_chain is None:
+            delegation_chain = []
+        else:
+            # Make a copy to avoid mutating the input
+            delegation_chain = delegation_chain.copy()
+
+        # Add current agent to chain
+        current_entry = {"agent": self.agent_name, "trace_id": trace_id, "timestamp": timestamp.isoformat()}
+        delegation_chain.append(current_entry)
+
+        if parent_trace_id:
+            logger.info(f"Delegation from parent trace: {parent_trace_id}")
 
         # Create trace object
         trace = ExecutionTrace(
@@ -111,6 +135,8 @@ class ACEGenerator:
             },
             user_query=prompt,
             current_context=self._load_current_context(),
+            parent_trace_id=parent_trace_id,
+            delegation_chain=delegation_chain,
         )
 
         # Execute first
@@ -152,9 +178,10 @@ class ACEGenerator:
         except Exception as e:
             logger.error(f"Failed to write trace: {e}")
 
-        # Return first execution result (they should be similar)
+        # Return first execution result with agent's actual response
         return {
-            "result": execution1.result_status,
+            "agent_result": execution1.agent_response,  # Actual agent result
+            "result": execution1.result_status,  # success/failure status
             "trace_id": trace_id,
             "duration": execution1.duration_seconds,
             "errors": execution1.errors,
@@ -182,11 +209,13 @@ class ACEGenerator:
             response = self.agent_interface.send_message(prompt, **kwargs)
             result_status = "success"
             errors = []
+            agent_response = response  # Store actual response
         except Exception as e:
             logger.error(f"Execution {execution_id} failed: {e}")
             response = {"error": str(e)}
             result_status = "failure"
             errors = [str(e)]
+            agent_response = None  # No valid response on failure
 
         # Capture post-execution state
         post_state = self._capture_git_state()
@@ -209,6 +238,7 @@ class ACEGenerator:
             errors=errors,
             duration_seconds=duration,
             token_usage=(response.get("token_usage", 0) if isinstance(response, dict) else 0),
+            agent_response=agent_response,  # Store agent's actual result
         )
 
         logger.info(f"Execution {execution_id} complete: {result_status}")
@@ -515,3 +545,64 @@ class ACEGenerator:
             return f"Second execution skipped: owned directories were modified ({len(modified)} files changed). Real work was done, comparison less valuable."
 
         return "Second execution skipped: unknown reason"
+
+    def attach_satisfaction(self, trace_id: str, satisfaction_data: Dict[str, Any]) -> None:
+        """Attach user satisfaction feedback to existing trace.
+
+        This method loads an existing trace and adds user satisfaction data.
+        The satisfaction data is used by the Reflector to weight insights:
+        - High satisfaction (4-5) → Success patterns
+        - Low satisfaction (1-2) → Failure modes
+
+        Args:
+            trace_id: ID of trace to update
+            satisfaction_data: User satisfaction dict with keys:
+                - score (int): 1-5 rating
+                - positive_feedback (str): What worked well
+                - improvement_areas (str): What could be improved
+                - timestamp (str): ISO timestamp of feedback
+
+        Raises:
+            FileNotFoundError: If trace doesn't exist
+            ValueError: If satisfaction_data is invalid
+
+        Example:
+            >>> generator = ACEGenerator(agent_interface=cli)
+            >>> generator.attach_satisfaction("trace_123", {
+            ...     "score": 4,
+            ...     "positive_feedback": "Fast and accurate",
+            ...     "improvement_areas": "Could add more tests",
+            ...     "timestamp": "2025-10-15T12:00:00"
+            ... })
+        """
+        # Validate satisfaction data
+        if not satisfaction_data:
+            raise ValueError("satisfaction_data cannot be empty")
+
+        if "score" not in satisfaction_data:
+            raise ValueError("satisfaction_data must contain 'score' field")
+
+        score = satisfaction_data["score"]
+        if not isinstance(score, int) or not (1 <= score <= 5):
+            raise ValueError(f"score must be integer between 1-5, got: {score}")
+
+        logger.info(f"Attaching satisfaction (score={score}) to trace: {trace_id}")
+
+        try:
+            # Load existing trace
+            trace = self.trace_manager.read_trace(trace_id)
+
+            # Attach satisfaction
+            trace.user_satisfaction = satisfaction_data
+
+            # Save updated trace
+            self.trace_manager.write_trace(trace)
+
+            logger.info(f"Successfully attached satisfaction to trace: {trace_id}")
+
+        except FileNotFoundError:
+            logger.error(f"Trace not found: {trace_id}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to attach satisfaction to trace {trace_id}: {e}")
+            raise

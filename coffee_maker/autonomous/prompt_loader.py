@@ -219,3 +219,4 @@ class PromptNames:
     ACE_GENERATOR_OBSERVE = "ace-generator-observe"
     ACE_REFLECTOR_EXTRACT = "ace-reflector-extract"
     ACE_CURATOR_CONSOLIDATE = "ace-curator-consolidate"
+    ACE_SATISFACTION_PROMPT = "ace-satisfaction-prompt"

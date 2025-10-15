@@ -84,6 +84,7 @@ class Execution:
     errors: List[str] = field(default_factory=list)
     duration_seconds: float = 0.0
     token_usage: int = 0
+    agent_response: Optional[Any] = None  # Actual agent result (not serialized in trace)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -95,6 +96,7 @@ class Execution:
             "errors": self.errors,
             "duration_seconds": self.duration_seconds,
             "token_usage": self.token_usage,
+            # Don't serialize agent_response (too large, not needed in trace)
         }
 
     @classmethod
@@ -155,6 +157,10 @@ class ExecutionTrace:
     problematic_context_elements: List[str] = field(default_factory=list)
     new_insights_surfaced: List[str] = field(default_factory=list)
     skip_reason: Optional[str] = None  # Why second execution was skipped
+    user_satisfaction: Optional[Dict[str, Any]] = None  # {"score": 1-5, "feedback": str, "timestamp": str}
+    parent_trace_id: Optional[str] = None  # If this execution was delegated from another agent
+    delegation_chain: List[Dict[str, str]] = field(default_factory=list)  # Chain of delegation
+    # delegation_chain format: [{"agent": "user_listener", "trace_id": "trace_123", "timestamp": "2025-10-15T..."}, ...]
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -172,6 +178,9 @@ class ExecutionTrace:
             "problematic_context_elements": self.problematic_context_elements,
             "new_insights_surfaced": self.new_insights_surfaced,
             "skip_reason": self.skip_reason,
+            "user_satisfaction": self.user_satisfaction,
+            "parent_trace_id": self.parent_trace_id,
+            "delegation_chain": self.delegation_chain,
         }
 
     @classmethod
@@ -193,6 +202,9 @@ class ExecutionTrace:
             problematic_context_elements=data.get("problematic_context_elements", []),
             new_insights_surfaced=data.get("new_insights_surfaced", []),
             skip_reason=data.get("skip_reason"),
+            user_satisfaction=data.get("user_satisfaction"),
+            parent_trace_id=data.get("parent_trace_id"),
+            delegation_chain=data.get("delegation_chain", []),
         )
 
     def to_markdown(self) -> str:
@@ -204,14 +216,32 @@ class ExecutionTrace:
             f"**Agent**: {self.agent_identity.get('target_agent', 'Unknown')}",
             f"**Query**: {self.user_query}",
             "",
-            "## Agent Identity",
-            "",
-            f"- **Objective**: {self.agent_identity.get('agent_objective', 'N/A')}",
-            f"- **Success Criteria**: {self.agent_identity.get('success_criteria', 'N/A')}",
-            "",
-            "## Executions",
-            "",
         ]
+
+        # Show delegation chain if present
+        if self.delegation_chain:
+            lines.extend(["## Delegation Chain", ""])
+            for i, entry in enumerate(self.delegation_chain, 1):
+                agent = entry.get("agent", "unknown")
+                entry_trace_id = entry.get("trace_id", "N/A")
+                timestamp = entry.get("timestamp", "N/A")
+                lines.append(f"{i}. **{agent}** (trace: `{entry_trace_id}`, time: {timestamp})")
+            lines.append("")
+
+        if self.parent_trace_id:
+            lines.extend([f"**Parent Trace**: {self.parent_trace_id}", ""])
+
+        lines.extend(
+            [
+                "## Agent Identity",
+                "",
+                f"- **Objective**: {self.agent_identity.get('agent_objective', 'N/A')}",
+                f"- **Success Criteria**: {self.agent_identity.get('success_criteria', 'N/A')}",
+                "",
+                "## Executions",
+                "",
+            ]
+        )
 
         for execution in self.executions:
             lines.extend(
@@ -275,6 +305,18 @@ class ExecutionTrace:
             lines.extend(["## New Insights", ""])
             for insight in self.new_insights_surfaced:
                 lines.append(f"- {insight}")
+            lines.append("")
+
+        if self.user_satisfaction:
+            lines.extend(["## User Satisfaction", ""])
+            score = self.user_satisfaction.get("score", "N/A")
+            feedback = self.user_satisfaction.get("feedback", "")
+            timestamp = self.user_satisfaction.get("timestamp", "N/A")
+
+            lines.append(f"**Score**: {score}/5")
+            lines.append(f"**Timestamp**: {timestamp}")
+            if feedback:
+                lines.append(f"**Feedback**: {feedback}")
             lines.append("")
 
         return "\n".join(lines)
