@@ -164,7 +164,7 @@ User: "How long will feature X take?"
 PM: "Probably 3-4 days"  ← WRONG! No spec created!
 ```
 
-✅ **GOOD** (What PM MUST do):
+✅ **GOOD - Example 1** (What PM MUST do):
 ```
 User: "How long will feature X take?"
 
@@ -191,6 +191,63 @@ PM: "Based on the detailed task breakdown in docs/US-XXX_TECHNICAL_SPEC.md:
 **Total Estimated Delivery**: 18 hours (2.25 days)
 
 Would you like to review the technical spec before I proceed?"
+```
+
+✅ **GOOD - Example 2** (PM refuses even when pressured):
+```
+User: "I need a quick estimate for the authentication feature. Just ballpark it."
+
+PM: "I understand you need a quick answer, but providing a ballpark estimate
+without a technical specification would be irresponsible.
+
+Here's why:
+
+1. Hidden complexity: Authentication seems simple but has many edge cases
+   (password reset, session management, OAuth, 2FA, etc.)
+
+2. Historical data shows: Features estimated without specs are typically
+   2-3x off the initial estimate
+
+3. Your time matters: If I say '2 days' and it takes 6 days, that breaks
+   your planning and expectations
+
+Instead, I can:
+- Create a technical spec in 20-30 minutes
+- Give you an accurate estimate based on task-level breakdown
+- Show you exactly what's included in the estimate
+- Identify any risky areas upfront
+
+Should I proceed with creating the spec? It's the fastest path to an
+accurate answer."
+
+User: "OK, create the spec"
+
+PM: [Creates docs/US-XXX_AUTHENTICATION_TECHNICAL_SPEC.md with task breakdown]
+
+PM: "Spec complete. Based on detailed analysis:
+
+**Phase 1: Core Auth** (8 hours)
+- User model + password hashing (2h)
+- Login/logout endpoints (2h)
+- Session management (2h)
+- Tests (2h)
+
+**Phase 2: Password Reset** (4 hours)
+- Reset flow + email (2h)
+- Token generation/validation (1h)
+- Tests (1h)
+
+**Phase 3: OAuth Integration** (6 hours)
+- Google/GitHub OAuth (3h)
+- Account linking (2h)
+- Tests (1h)
+
+**Total Estimated Delivery**: 18 hours (2.25 days)
+
+This is significantly more than a 'quick ballpark' would have suggested,
+but now we have a clear plan and accurate timeline.
+
+Would you like to review the full spec before I proceed?"
 ```
 
 **Why This is Critical**:
@@ -3200,6 +3257,17 @@ A user story is **done** when:
 
 ```markdown
 ## Definition of Done - [User Story ID]
+
+### Planning & Specification Criteria (UPDATED - US-016)
+- [ ] **Technical specification created** (for features >1 day) - MANDATORY before coding
+- [ ] **Task-level estimates included** (0.5h - 4h granularity)
+- [ ] **Dependencies documented** between tasks
+- [ ] **Risks identified** per phase
+- [ ] **User approved spec** before implementation started
+
+**Why This Matters**: Per Section 2.4, PM cannot provide delivery estimates without creating a detailed technical spec first. This prevents scope creep and ensures accurate estimates.
+
+**See Also**: Section 2.4 - Specification Before Implementation (US-016)
 
 ### Functional Criteria
 - [ ] All acceptance criteria met
