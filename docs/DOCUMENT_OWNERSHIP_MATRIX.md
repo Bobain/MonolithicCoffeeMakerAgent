@@ -20,18 +20,38 @@ This is a **non-negotiable requirement** for parallel agent operations. Overlaps
 
 ---
 
-## Ownership Structure
+## Ownership Structure (NO OVERLAPS)
+
+### CRITICAL RULE: NO PARENT DIRECTORY OWNERSHIP
+
+**NO agent can own a parent directory when subdirectories have different owners.**
+
+Example:
+- ❌ WRONG: project_manager owns `docs/` AND architect owns `docs/architecture/` → OVERLAP!
+- ✅ CORRECT: project_manager owns `docs/roadmap/`, architect owns `docs/architecture/` → NO overlap
 
 ### project_manager Owns
 
 **Full Write Control**:
-- `docs/*.md` (all top-level markdown files)
-- `docs/roadmap/` (strategic planning)
-  - `ROADMAP.md` (strategic updates only; code_developer updates status fields)
+- `docs/*.md` (top-level markdown files ONLY - not subdirectories)
+  - `docs/PRIORITY_*_TECHNICAL_SPEC.md` (strategic specifications)
+  - `docs/README.md` (if exists)
+  - `docs/CONTRIBUTING.md` (if exists)
+- `docs/roadmap/` (strategic planning ONLY)
+  - `ROADMAP.md` (strategic updates; code_developer updates status fields)
   - `TEAM_COLLABORATION.md`
 - `docs/templates/` (documentation templates)
 - `docs/tutorials/` (tutorial content)
-- `docs/code-searcher/` (code analysis documentation)
+- `docs/code-searcher/` (code analysis documentation - project_manager writes reports from code-searcher findings)
+- `docs/user_interpret/` (meta-documentation about user_interpret agent)
+- `docs/code_developer/` (meta-documentation about code_developer agent)
+
+**Does NOT own**:
+- `docs/` (parent directory - would create overlaps)
+- `docs/architecture/` (architect owns)
+- `docs/generator/` (generator owns)
+- `docs/reflector/` (reflector owns)
+- `docs/curator/` (curator owns)
 
 **Shared Write (with clear boundaries)**:
 - `docs/roadmap/ROADMAP.md`
@@ -44,20 +64,63 @@ This is a **non-negotiable requirement** for parallel agent operations. Overlaps
 
 ---
 
+### architect Owns
+
+**Full Write Control**:
+- `docs/architecture/` (all architectural documentation)
+  - `docs/architecture/specs/` (detailed technical specifications)
+  - `docs/architecture/decisions/` (Architectural Decision Records - ADRs)
+  - `docs/architecture/guidelines/` (implementation guidelines)
+- `pyproject.toml` (dependency management - requires user approval)
+- `poetry.lock` (dependency lock file)
+
+**Critical Responsibilities**:
+- **Proactive approval**: Must ask user before important decisions
+- **Dependency management**: ONLY architect can run `poetry add`
+- **Code design**: All architectural and design decisions
+- **User interaction**: Asks user_listener to present approval requests
+
+**Workflow for Dependencies**:
+1. architect analyzes need for new dependency
+2. architect requests user approval via user_listener
+3. User approves/rejects
+4. If approved: architect runs `poetry add [package]`
+5. architect documents decision in ADR
+
+**Workflow for Architecture**:
+1. architect analyzes architectural requirements
+2. architect creates technical specification in `docs/architecture/specs/`
+3. architect documents decisions in ADRs (`docs/architecture/decisions/`)
+4. architect provides guidelines in `docs/architecture/guidelines/`
+5. code_developer reads specifications and guidelines
+6. code_developer implements following architect's design
+7. architect reviews implementation
+
+**Interaction Pattern**:
+- User discusses architecture with architect through user_listener
+- architect creates specifications BEFORE implementation
+- code_developer reads specifications and implements
+- Clear separation: architect designs, code_developer implements
+
+---
+
 ### code_developer Owns
 
 **Full Write Control**:
 - `coffee_maker/` (all implementation code)
 - `tests/` (all test code)
 - `scripts/` (utility scripts)
-- `pyproject.toml` (dependency management)
-- `poetry.lock` (dependency lock)
-- `.pre-commit-config.yaml` (pre-commit configuration)
 - `.claude/` (technical configurations)
   - `.claude/agents/` (agent definitions and configurations)
   - `.claude/CLAUDE.md` (technical setup and implementation guide)
   - `.claude/commands/` (prompt templates)
   - `.claude/mcp/` (MCP server configurations)
+- `.pre-commit-config.yaml` (pre-commit hooks)
+
+**Does NOT own**:
+- `pyproject.toml` (architect owns - dependency management)
+- `poetry.lock` (architect owns)
+- `docs/` (any subdirectory - various owners)
 
 **Shared Write (with clear boundaries)**:
 - `docs/roadmap/ROADMAP.md`
@@ -65,26 +128,22 @@ This is a **non-negotiable requirement** for parallel agent operations. Overlaps
   - **Progress tracking**: Percentage complete
   - **Does NOT** modify: Priority order, descriptions, strategic content
 
+**CRITICAL**: code_developer CANNOT modify dependencies. Must request architect to add dependencies.
+
 ---
 
 ### user_interpret Owns
 
 **Full Write Control**:
-- `docs/user_interpret/` (user interaction documentation)
-  - `IMPLEMENTATION_SUMMARY.md`
-  - `README.md`
-
-**NOTE**: This is documentation ABOUT user_interpret, not operational data.
-
-**Operational Data** (NOT docs/):
-- `data/user_interpret/` (future location - not yet created)
+- `data/user_interpret/` (operational data - future location)
   - `conversation_history.jsonl`
   - `user_requests.json`
   - `conversation_summaries.json`
 
-**Current State**: user_interpret docs are in `docs/user_interpret/` which creates confusion.
+**Does NOT own**:
+- `docs/user_interpret/` (project_manager owns - this is meta-documentation ABOUT user_interpret)
 
-**Resolution**: See "Overlap Resolution" section below.
+**NOTE**: `docs/user_interpret/` contains documentation ABOUT the agent, not operational data. This is owned by project_manager as strategic documentation.
 
 ---
 
@@ -104,32 +163,6 @@ This is a **non-negotiable requirement** for parallel agent operations. Overlaps
 - `docs/curator/` (playbooks and curation)
   - `README.md`
   - `playbooks/` (all playbook files)
-
----
-
-### architect Owns
-
-**Full Write Control**:
-- `docs/architecture/` (all architectural documentation)
-  - `docs/architecture/specs/` (detailed technical specifications)
-  - `docs/architecture/decisions/` (Architectural Decision Records - ADRs)
-  - `docs/architecture/guidelines/` (implementation guidelines for code_developer)
-  - `docs/architecture/README.md` (architecture documentation overview)
-
-**Workflow**:
-1. architect analyzes architectural requirements
-2. architect creates technical specification in `docs/architecture/specs/`
-3. architect documents decisions in ADRs (`docs/architecture/decisions/`)
-4. architect provides guidelines in `docs/architecture/guidelines/`
-5. code_developer reads specifications and guidelines
-6. code_developer implements following architect's design
-7. architect reviews implementation
-
-**Interaction Pattern**:
-- User discusses architecture with architect through user_listener
-- architect creates specifications BEFORE implementation
-- code_developer reads specifications and implements
-- Clear separation: architect designs, code_developer implements
 
 ---
 
@@ -172,7 +205,7 @@ This is a **non-negotiable requirement** for parallel agent operations. Overlaps
 
 ### memory-bank-synchronizer Owns
 
-**DEPRECATED** - Removed completely
+**DEPRECATED** - Completely removed
 
 Previously owned: `.claude/CLAUDE.md` (synchronization updates)
 
@@ -183,55 +216,57 @@ Previously owned: `.claude/CLAUDE.md` (synchronization updates)
 
 ## Overlap Detection
 
-### Identified Overlap: docs/user_interpret/
+### ✅ NO OVERLAPS DETECTED
 
-**Problem**: `docs/user_interpret/` contains documentation ABOUT user_interpret
+After thorough analysis with the NO PARENT DIRECTORY OWNERSHIP rule:
 
-**Current Ownership**:
-- Directory exists in `docs/` (project_manager territory)
-- Contains user_interpret-specific docs
-- Creates confusion: Is this docs or operational data?
-
-**Analysis**:
-- `docs/user_interpret/IMPLEMENTATION_SUMMARY.md` - Documentation ABOUT user_interpret implementation
-- `docs/user_interpret/README.md` - Documentation ABOUT user_interpret agent
-
-**Verdict**: This is META-DOCUMENTATION about the agent, not operational data.
-
-**Resolution**: Keep in `docs/user_interpret/` as project_manager owned documentation.
-
-**Future Operational Data**: If user_interpret needs to store conversation logs, those should go in `data/user_interpret/` (not docs/)
-
----
-
-## Overlap Resolution Plan
-
-### Resolved: No Current Overlaps Detected
-
-After thorough analysis:
-
-1. **docs/user_interpret/**: Correctly located (project_manager owned)
-   - Contains documentation ABOUT the agent
-   - Does NOT contain operational data
-   - No overlap
+1. **docs/ directories**: Each subdirectory has EXACTLY one owner
+   - `docs/*.md`: project_manager (top-level files ONLY)
+   - `docs/roadmap/`: project_manager
+   - `docs/architecture/`: architect
+   - `docs/generator/`: generator
+   - `docs/reflector/`: reflector
+   - `docs/curator/`: curator
+   - `docs/templates/`: project_manager
+   - `docs/tutorials/`: project_manager
+   - `docs/code-searcher/`: project_manager
+   - `docs/user_interpret/`: project_manager (meta-docs ABOUT user_interpret)
+   - `docs/code_developer/`: project_manager (meta-docs ABOUT code_developer)
+   - **NO agent owns `docs/` parent directory** ✅
 
 2. **docs/roadmap/ROADMAP.md**: Clear boundaries defined
-   - project_manager: Strategic updates
-   - code_developer: Status updates only
-   - No overlap (different fields)
+   - project_manager: Strategic updates (add/remove priorities, descriptions)
+   - code_developer: Status updates only (Planned → In Progress → Complete)
+   - No overlap (different fields) ✅
 
-3. **ACE components**: Each has dedicated directory
+3. **Dependency management**: Single owner with clear workflow
+   - architect: ONLY owner of `pyproject.toml` and `poetry.lock`
+   - code_developer: CANNOT modify dependencies
+   - architect: Must request user approval before changes ✅
+
+4. **ACE components**: Each has dedicated directory
    - generator: `docs/generator/`
    - reflector: `docs/reflector/`
    - curator: `docs/curator/`
-   - No overlap
+   - No overlap ✅
 
-4. **.claude/CLAUDE.md**: Single owner with clear rules
-   - code_developer: Primary owner (technical configurations)
-   - memory-bank-synchronizer: DEPRECATED (removed)
-   - No overlap
+5. **.claude/**: Single owner
+   - code_developer: Primary owner (all technical configurations)
+   - memory-bank-synchronizer: DEPRECATED (completely removed)
+   - No overlap ✅
 
 **Conclusion**: Current ownership structure is clean with NO overlaps.
+
+---
+
+## Overlap Prevention Strategy
+
+### Rule Enforcement
+
+1. **NO parent directory ownership when subdirectories have different owners**
+2. **Each file/directory has EXACTLY one owner**
+3. **Shared write ONLY for specific fields (ROADMAP.md status)**
+4. **Runtime validation** (future enhancement)
 
 ---
 

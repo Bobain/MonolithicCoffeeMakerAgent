@@ -317,22 +317,27 @@ poetry run project-manager /status
 | File/Directory | Owner | Can Modify? | Others |
 |----------------|-------|-------------|--------|
 | **User Interface** | user_listener | **ONLY UI** for all user interactions | All others: NO UI (backend only) |
-| **docs/** | project_manager | YES - Full control | code_developer: READ-ONLY, assistant: READ-ONLY, user_listener: READ-ONLY |
-| **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Full, code_developer: Status updates only | assistant: READ-ONLY, user_listener: READ-ONLY |
-| **docs/PRIORITY_*_TECHNICAL_SPEC.md** | project_manager | YES - Creates and updates specs | code_developer: READ-ONLY (reads during implementation), assistant: READ-ONLY, user_listener: READ-ONLY |
+| **docs/*.md** | project_manager | YES - Top-level files ONLY (not subdirectories) | All others: READ-ONLY |
+| **docs/roadmap/** | project_manager | YES - Strategic planning ONLY | All others: READ-ONLY |
+| **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Strategic, code_developer: Status only | All others: READ-ONLY |
+| **docs/PRIORITY_*_TECHNICAL_SPEC.md** | project_manager | YES - Creates strategic specs | All others: READ-ONLY |
 | **docs/architecture/** | architect | YES - Technical specs, ADRs, guidelines | All others: READ-ONLY |
+| **docs/generator/** | generator | YES - Execution traces | All others: READ-ONLY |
+| **docs/reflector/** | reflector | YES - Delta items (insights) | All others: READ-ONLY |
+| **docs/curator/** | curator | YES - Playbooks and curation | All others: READ-ONLY |
+| **docs/code-searcher/** | project_manager | YES - Code analysis documentation | code-searcher: Prepares findings (READ-ONLY) |
+| **docs/templates/** | project_manager | YES - Documentation templates | All others: READ-ONLY |
+| **docs/tutorials/** | project_manager | YES - Tutorial content | All others: READ-ONLY |
+| **docs/user_interpret/** | project_manager | YES - Meta-docs about user_interpret | All others: READ-ONLY |
+| **docs/code_developer/** | project_manager | YES - Meta-docs about code_developer | All others: READ-ONLY |
+| **pyproject.toml** | architect | YES - Dependency management (requires user approval) | All others: READ-ONLY |
+| **poetry.lock** | architect | YES - Dependency lock file | All others: READ-ONLY |
 | **.claude/** | code_developer | YES - Technical configurations | All others: READ-ONLY |
-| **.claude/agents/** | code_developer | YES - Agent definitions and configurations | All others: READ-ONLY |
-| **.claude/CLAUDE.md** | code_developer | YES - Technical setup and implementation guide | All others: READ-ONLY |
-| **.claude/commands/** | code_developer | YES - Prompt templates | All others: READ-ONLY (load during execution) |
-| **.claude/mcp/** | code_developer | YES - MCP server configurations | All others: READ-ONLY |
 | **coffee_maker/** | code_developer | YES - All implementation | All others: READ-ONLY |
 | **tests/** | code_developer | YES - All test code | All others: READ-ONLY |
 | **scripts/** | code_developer | YES - Utility scripts | All others: READ-ONLY |
-| **pyproject.toml** | code_developer | YES - Dependency management | All others: READ-ONLY |
-| **docs/curator/** | curator | YES - Playbooks and curation reports | All others: READ-ONLY |
-| **docs/generator/** | generator | YES - Execution traces | All others: READ-ONLY |
-| **docs/reflector/** | reflector | YES - Delta items (insights) | All others: READ-ONLY |
+| **.pre-commit-config.yaml** | code_developer | YES - Pre-commit hooks | All others: READ-ONLY |
+| **data/user_interpret/** | user_interpret | YES - Operational data (conversation logs, etc.) | All others: READ-ONLY |
 
 ### Tool Ownership Matrix
 
@@ -343,6 +348,8 @@ poetry run project-manager /status
 | **Architecture specs** | architect | Creates technical specifications before implementation | code_developer reads and implements |
 | **ADRs (Architectural Decision Records)** | architect | Documents architectural decisions | All others: READ-ONLY |
 | **Implementation guidelines** | architect | Provides detailed implementation guides | code_developer follows during implementation |
+| **Dependency management** | architect | ONLY agent that can run `poetry add` (requires user approval) | code_developer: CANNOT modify dependencies |
+| **User approval requests** | architect | Proactively asks user for approval on important decisions | user_listener presents to user |
 | **Puppeteer DoD (during impl)** | code_developer | Verify features DURING implementation | project_manager for POST-completion verification |
 | **Puppeteer DoD (post-impl)** | project_manager | Verify completed work on user request | - |
 | **Puppeteer demos** | user_listener | Show features visually via UI (delegates to assistant) | assistant prepares demos |
@@ -355,7 +362,6 @@ poetry run project-manager /status
 | **Code analysis docs** | project_manager | Creates docs/[analysis]_[date].md | code-searcher prepares findings, user_listener delegates |
 | **ROADMAP updates** | project_manager (full), code_developer (status only) | Strategic vs. execution updates | assistant READ-ONLY |
 | **Design decisions** | ux-design-expert | All UI/UX, Tailwind, charts | user_listener delegates via UI |
-| **Doc sync** | memory-bank-synchronizer | Keep CLAUDE.md files current | - |
 | **ACE observation** | generator | Capture all agent executions | Others: Observed by generator |
 | **ACE reflection** | reflector | Extract insights from traces | - |
 | **ACE curation** | curator | Maintain evolving playbooks | user_listener invokes via UI |
@@ -386,8 +392,8 @@ poetry run project-manager /status
    - Does NOT create strategic documentation in docs/ (that's project_manager)
 
 3. **project_manager owns STRATEGIC DOCUMENTATION**
-   - **ONLY agent that modifies docs/ directory**
-   - Creates and updates technical specs (docs/PRIORITY_*_TECHNICAL_SPEC.md)
+   - **ONLY agent that modifies docs/roadmap/ directory**
+   - Creates and updates strategic specs (docs/PRIORITY_*_TECHNICAL_SPEC.md)
    - Makes strategic ROADMAP decisions (priorities, planning)
    - Monitors GitHub (PRs, issues, CI)
    - Verifies completed work (post-implementation, when user requests)
@@ -395,6 +401,8 @@ poetry run project-manager /status
    - Does NOT create PRs (that's code_developer)
    - Does NOT write implementation code (that's code_developer)
    - Does NOT modify .claude/ (that's code_developer)
+   - Does NOT modify docs/architecture/ (that's architect)
+   - Does NOT modify pyproject.toml (that's architect)
 
 4. **Specialized agents own their domain**
    - **code-searcher**: Deep codebase analysis (READ-ONLY)
@@ -408,15 +416,19 @@ poetry run project-manager /status
    - **ux-design-expert**: Design decisions (provides specs, doesn't implement)
    - **memory-bank-synchronizer**: DEPRECATED (no longer needed, tag-based workflow)
 
-5. **architect owns ARCHITECTURAL DESIGN**
+5. **architect owns ARCHITECTURAL DESIGN & DEPENDENCIES**
    - **ONLY agent that creates architectural specifications**
+   - **ONLY agent that manages dependencies (pyproject.toml, poetry.lock)**
    - Designs system architecture BEFORE code_developer implements
    - Creates technical specifications in docs/architecture/specs/
    - Documents architectural decisions (ADRs) in docs/architecture/decisions/
    - Provides implementation guidelines in docs/architecture/guidelines/
+   - **Proactive**: Asks user for approval on important decisions (especially dependencies)
+   - **Dependency management**: ONLY architect can run `poetry add` (requires user consent)
    - Interacts with user through user_listener for architectural discussions
    - Does NOT implement code (that's code_developer)
    - Does NOT create strategic roadmap docs (that's project_manager)
+   - Does NOT modify coffee_maker/ (that's code_developer)
 
 ### When in Doubt
 
@@ -505,7 +517,7 @@ assistant tries to edit code
 → NO! code_developer owns ALL code changes
 
 assistant tries to update ROADMAP.md
-→ NO! project_manager owns docs/ directory
+→ NO! project_manager owns docs/roadmap/ directory
 
 project_manager tries to modify coffee_maker/cli/roadmap_cli.py
 → NO! code_developer owns coffee_maker/ directory
@@ -514,7 +526,7 @@ project_manager tries to modify .claude/agents/
 → NO! code_developer owns .claude/ directory
 
 code_developer tries to create technical specs in docs/
-→ NO! project_manager owns docs/ directory
+→ NO! project_manager owns docs/ directory (strategic), architect owns docs/architecture/ (technical)
 
 project_manager tries to create a PR
 → NO! code_developer creates PRs autonomously
@@ -539,6 +551,21 @@ code_developer tries to modify docs/architecture/
 
 project_manager tries to create technical specifications
 → NO! architect creates technical specs (project_manager creates strategic specs)
+
+code_developer tries to run `poetry add requests`
+→ NO! ONLY architect manages dependencies
+
+code_developer tries to modify pyproject.toml
+→ NO! architect owns dependency management
+
+architect adds dependency without user approval
+→ NO! architect must request user approval first
+
+project_manager tries to create ADRs in docs/architecture/
+→ NO! architect owns docs/architecture/
+
+project_manager tries to modify docs/generator/
+→ NO! generator owns docs/generator/
 ```
 
 **🎯 Correct Delegation Flow**:

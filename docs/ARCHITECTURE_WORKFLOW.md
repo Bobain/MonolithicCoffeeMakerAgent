@@ -181,10 +181,113 @@ docs/architecture/guidelines/module_boundaries.md
 
 ---
 
+## Dependency Management Workflow
+
+### Proactive Approval Process
+
+architect is **proactive** and asks user for approval on important decisions:
+
+1. **Identify Need**: architect identifies need for new dependency
+2. **Analyze Options**: architect researches alternatives
+3. **Request Approval**: architect asks user_listener to present to user:
+   ```
+   architect requests approval:
+   - Decision: Add 'fastapi[all]' dependency
+   - Context: Need async web framework for API endpoints
+   - Alternatives considered: Flask (sync), Django (too heavy)
+   - Recommendation: FastAPI (async, modern, type-safe)
+   - Impact: +15MB to deployment, +3 transitive dependencies
+   ```
+4. **Wait for User**: User reviews and approves/rejects
+5. **Execute**: If approved, architect runs `poetry add fastapi[all]`
+6. **Document**: architect creates ADR documenting decision
+
+### Example: Adding a Dependency
+
+```
+code_developer: "I need requests library for HTTP calls"
+    ↓
+code_developer asks architect (cannot modify pyproject.toml)
+    ↓
+architect: Analyzes need, researches options
+    ↓
+architect: Requests user approval via user_listener
+    ↓
+user_listener presents to user:
+    "architect requests approval to add 'requests' dependency
+     Context: HTTP client for external API calls
+     Alternatives: httpx (async), urllib3 (low-level)
+     Recommendation: requests (mature, widely used, simple)"
+    ↓
+User: "Approved"
+    ↓
+architect: Runs `poetry add requests`
+    ↓
+architect: Creates ADR-017-requests-for-http.md
+    ↓
+code_developer: Can now implement using requests library
+```
+
+### CRITICAL Rules
+
+1. **ONLY architect can modify pyproject.toml**
+2. **User approval required for new dependencies**
+3. **architect is proactive (asks before adding)**
+4. **code_developer CANNOT run `poetry add`**
+5. **Every dependency decision gets an ADR**
+
+### ADR Template for Dependencies
+
+```markdown
+# ADR-XXX: Add [Package Name] for [Purpose]
+
+**Status**: Approved
+**Date**: YYYY-MM-DD
+**Decider**: architect
+**Approved By**: [User name]
+
+## Context
+[Why do we need this dependency?]
+
+## Decision
+Add `[package-name]` version `[version]` for `[purpose]`.
+
+## Alternatives Considered
+1. **[Alternative 1]**: [Why rejected]
+2. **[Alternative 2]**: [Why rejected]
+
+## Consequences
+
+**Positive**:
+- [Benefit 1]
+- [Benefit 2]
+
+**Negative**:
+- [Cost/tradeoff 1]
+- [Cost/tradeoff 2]
+
+**Impact Analysis**:
+- Package size: +XMB
+- Transitive dependencies: X packages
+- Maintenance burden: [Low/Medium/High]
+- License: [License type]
+
+## Implementation
+```bash
+poetry add [package-name]
+```
+
+## Notes
+[Any additional context]
+```
+
+---
+
 ## Related Documentation
 - `.claude/CLAUDE.md` - Agent responsibilities
 - `docs/DOCUMENT_OWNERSHIP_MATRIX.md` - File ownership
 - `docs/AGENT_ROLES_AND_BOUNDARIES.md` - Agent roles
+- `docs/architecture/decisions/` - All ADRs
 
 ---
 
