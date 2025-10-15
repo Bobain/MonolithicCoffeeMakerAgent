@@ -48,8 +48,58 @@ from coffee_maker.cli.agent_colors import (
     get_agent_color,
 )
 from coffee_maker.cli.progress_tracker import ProgressTracker, StepStatus
+from coffee_maker.autonomous.ace.feedback_suggestor import FeedbackSuggestor
 
 console = Console()
+
+
+def check_for_feedback_questions(agent_name: str) -> None:
+    """Check if curator suggests feedback questions for this agent.
+
+    The curator analyzes playbook effectiveness and may suggest targeted
+    questions to gather user feedback on specific bullets.
+
+    Args:
+        agent_name: Agent that just completed a task
+    """
+    try:
+        feedback_suggestor = FeedbackSuggestor()
+        questions = feedback_suggestor.get_suggested_questions(agent_name, max_questions=2)
+
+        if questions:
+            console.print()
+            console.print(format_agent_message("curator", "Quick feedback to improve future performance:"))
+            console.print()
+
+            for q in questions:
+                console.print(f"  [bold cyan]•[/bold cyan] {q['question']}")
+                console.print(f"    [dim]{q['context']}[/dim]")
+
+                # Get user response
+                response = input("    (y/n/skip): ").strip().lower()
+
+                if response == "y":
+                    helpful = True
+                    feedback_suggestor.record_feedback(agent_name, q["bullet_id"], helpful)
+                    console.print("    [green]✓ Recorded as helpful[/green]")
+                elif response == "n":
+                    helpful = False
+                    feedback_suggestor.record_feedback(agent_name, q["bullet_id"], helpful)
+                    console.print("    [yellow]✓ Recorded as not helpful[/yellow]")
+                else:
+                    console.print("    [dim]Skipped[/dim]")
+
+                console.print()
+
+            console.print(format_agent_message("curator", "Thank you! This helps me improve the playbook."))
+            console.print()
+
+    except Exception as e:
+        # Don't crash user_listener if feedback fails
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Failed to check feedback questions: {e}")
 
 
 @click.group(invoke_without_command=True)
@@ -399,14 +449,14 @@ def feedback(trace_id, session_summary):
     console.print()
 
     try:
-        from coffee_maker.cli.user_listener_ace import UserListenerACE
         from coffee_maker.autonomous.ace.generator import ACEGenerator
         from coffee_maker.autonomous.ace.config import get_default_config
         from coffee_maker.autonomous.ace.trace_manager import TraceManager
+        import os
 
         # Check if ACE is enabled
-        ace = UserListenerACE(enabled=True)
-        if not ace.enabled:
+        ace_enabled = os.getenv("ACE_ENABLED_USER_LISTENER", "false").lower() == "true"
+        if not ace_enabled:
             console.print(
                 format_agent_message(
                     "user_listener",
@@ -440,6 +490,10 @@ def feedback(trace_id, session_summary):
         console.print(format_agent_message("user_listener", "Please rate your satisfaction with the work:"))
         console.print()
 
+        # Use UserListenerACE for satisfaction collection
+        from coffee_maker.cli.user_listener_ace import UserListenerACE
+
+        ace = UserListenerACE(enabled=ace_enabled)
         satisfaction = ace.collect_satisfaction(trace_id=trace_id, session_summary=session_summary)
 
         if not satisfaction:
@@ -570,14 +624,25 @@ def chat():
         )
     )
     console.print()
+
+    # Initialize user_interpret (singleton) and progress tracker
+    from coffee_maker.cli.user_interpret import UserInterpret
+
+    # UserInterpret uses singleton pattern via ACEAgent base class
+    # Multiple calls return the same instance
+    user_interpret = UserInterpret()
+    progress = ProgressTracker(console, use_live=False)
+
+    # NEW: Show proactive greeting suggestions
+    greeting_suggestions = user_interpret.get_greeting_suggestions()
+    if greeting_suggestions:
+        console.print()
+        for suggestion in greeting_suggestions[:2]:  # Max 2 to avoid overwhelming
+            console.print(f"[italic cyan]{suggestion}[/italic cyan]")
+        console.print()
+
     console.print("[dim]Type 'help' for commands, 'agents' to see team members, or 'exit' to quit.[/dim]")
     console.print()
-
-    # Initialize user_interpret and progress tracker
-    from coffee_maker.cli.user_interpret_ace import UserInterpretWithACE
-
-    user_interpret = UserInterpretWithACE()
-    progress = ProgressTracker(console, use_live=False)
 
     while True:
         # Get user input
@@ -661,6 +726,13 @@ def chat():
             )
         )
         console.print()
+
+        # NEW: Show contextual suggestions
+        contextual = user_interpret.get_contextual_suggestions(user_input)
+        if contextual:
+            console.print(f"[dim cyan]💡 {contextual[0]}[/dim cyan]")
+            console.print()
+
         console.print(
             format_agent_message(
                 "user_listener",
@@ -668,6 +740,10 @@ def chat():
             )
         )
         console.print()
+
+        # CRITICAL: Check for curator feedback questions
+        # The curator is allowed to suggest feedback questions to user_listener
+        check_for_feedback_questions("user_interpret")
 
 
 if __name__ == "__main__":
