@@ -1173,3 +1173,97 @@ Provide a concise analysis in markdown format.
             # Log the warning even if notification fails
             logger.warning(f"USER WARNING: {title} - {message}")
             return -1
+
+    def generate_technical_spec(
+        self, user_story: str, feature_type: str = "general", complexity: str = "medium"
+    ) -> Dict[str, any]:
+        """Generate complete technical specification from user story.
+
+        This method integrates SpecGenerator to automatically create
+        detailed technical specifications with:
+        - AI-assisted task breakdown
+        - Intelligent time estimation
+        - Phase grouping
+        - Risk identification
+        - Success criteria
+
+        **US-016 Phase 3: AI-Assisted Task Breakdown**
+
+        Args:
+            user_story: User story description (natural language)
+            feature_type: Type of feature (crud, integration, ui, infrastructure, analytics, security)
+            complexity: Overall complexity (low, medium, high)
+
+        Returns:
+            Dictionary with:
+            {
+                'spec': TechnicalSpec object,
+                'markdown': str (rendered markdown),
+                'summary': {
+                    'total_hours': float,
+                    'total_days': float,
+                    'phase_count': int,
+                    'task_count': int,
+                    'confidence': float
+                }
+            }
+
+        Example:
+            >>> service = AIService()
+            >>> result = service.generate_technical_spec(
+            ...     "As a user, I want email notifications when tasks complete",
+            ...     feature_type="integration",
+            ...     complexity="medium"
+            ... )
+            >>> print(result['summary']['total_hours'])
+            16.5
+            >>> print(result['markdown'][:100])
+            # Technical Specification: Email Notifications
+            >>> # Save to file
+            >>> from pathlib import Path
+            >>> Path("docs/EMAIL_NOTIFICATIONS_SPEC.md").write_text(result['markdown'])
+        """
+        from coffee_maker.autonomous.spec_generator import SpecGenerator
+
+        try:
+            logger.info(
+                f"Generating technical spec for: '{user_story[:50]}...' "
+                f"(type={feature_type}, complexity={complexity})"
+            )
+
+            # Initialize spec generator
+            generator = SpecGenerator(self)
+
+            # Generate spec
+            spec = generator.generate_spec_from_user_story(
+                user_story=user_story, feature_type=feature_type, complexity=complexity
+            )
+
+            # Render to markdown
+            markdown = generator.render_spec_to_markdown(spec)
+
+            # Count total tasks
+            total_tasks = sum(len(phase.tasks) for phase in spec.phases)
+
+            # Build summary
+            summary = {
+                "total_hours": spec.total_hours,
+                "total_days": spec.total_days,
+                "phase_count": len(spec.phases),
+                "task_count": total_tasks,
+                "confidence": spec.confidence,
+            }
+
+            logger.info(
+                f"Spec generated: {summary['total_hours']}h "
+                f"({summary['total_days']} days), "
+                f"{summary['phase_count']} phases, "
+                f"{summary['task_count']} tasks, "
+                f"{summary['confidence']:.0%} confidence"
+            )
+
+            return {"spec": spec, "markdown": markdown, "summary": summary}
+
+        except Exception as e:
+            logger.error(f"Technical spec generation failed: {e}")
+            raise Exception(f"Failed to generate technical spec: {str(e)}") from e
