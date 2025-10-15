@@ -13,9 +13,10 @@
 ### Core Components
 
 1. **Autonomous Agents**
+   - `user_listener`: **PRIMARY USER INTERFACE** - Interprets user intent and delegates to team (ONLY agent with UI)
    - `code_developer`: Autonomous implementation of priorities from ROADMAP
-   - `project_manager`: Project coordination, notifications, status tracking, GitHub monitoring
-   - `assistant`: User interaction, triage, and delegation to specialized agents
+   - `project_manager`: Project coordination, notifications, status tracking, GitHub monitoring (backend only)
+   - `assistant`: Documentation expert and intelligent dispatcher
    - `code-searcher`: Deep codebase analysis and forensic examination
    - `ux-design-expert`: UI/UX design guidance and Tailwind CSS
    - `memory-bank-synchronizer`: Documentation synchronization with code reality
@@ -266,12 +267,13 @@ poetry run project-manager /status
 
 | File/Directory | Owner | Can Modify? | Others |
 |----------------|-------|-------------|--------|
-| **docs/** | project_manager | YES - Full control | code_developer: READ-ONLY, assistant: READ-ONLY |
-| **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Full, code_developer: Status updates only | assistant: READ-ONLY |
-| **docs/PRIORITY_*_TECHNICAL_SPEC.md** | project_manager | YES - Creates and updates specs | code_developer: READ-ONLY (reads during implementation), assistant: READ-ONLY |
+| **User Interface** | user_listener | **ONLY UI** for all user interactions | All others: NO UI (backend only) |
+| **docs/** | project_manager | YES - Full control | code_developer: READ-ONLY, assistant: READ-ONLY, user_listener: READ-ONLY |
+| **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Full, code_developer: Status updates only | assistant: READ-ONLY, user_listener: READ-ONLY |
+| **docs/PRIORITY_*_TECHNICAL_SPEC.md** | project_manager | YES - Creates and updates specs | code_developer: READ-ONLY (reads during implementation), assistant: READ-ONLY, user_listener: READ-ONLY |
 | **.claude/agents/** | project_manager | YES - Defines agent configurations | All others: READ-ONLY |
-| **.claude/CLAUDE.md** | project_manager, memory-bank-synchronizer | YES - Strategic updates | code_developer: READ-ONLY, assistant: READ-ONLY |
-| **.claude/commands/** | project_manager | YES - Manages prompts | code_developer: READ-ONLY (loads during execution), assistant: READ-ONLY |
+| **.claude/CLAUDE.md** | project_manager, memory-bank-synchronizer | YES - Strategic updates | code_developer: READ-ONLY, assistant: READ-ONLY, user_listener: READ-ONLY |
+| **.claude/commands/** | project_manager | YES - Manages prompts | code_developer: READ-ONLY (loads during execution), assistant: READ-ONLY, user_listener: READ-ONLY |
 | **coffee_maker/** | code_developer | YES - All implementation | All others: READ-ONLY |
 | **tests/** | code_developer | YES - All test code | All others: READ-ONLY |
 | **scripts/** | code_developer | YES - Utility scripts | All others: READ-ONLY |
@@ -281,22 +283,24 @@ poetry run project-manager /status
 
 | Tool/Capability | Owner | Usage | Others |
 |----------------|-------|-------|--------|
+| **User Interface (ALL)** | user_listener | **ONLY** agent with UI, chat, CLI interface | All others: Backend only, NO UI |
+| **ACE UI Commands** | user_listener | `/curate`, `/playbook` in user_listener CLI | project_manager: Deprecated |
 | **Puppeteer DoD (during impl)** | code_developer | Verify features DURING implementation | project_manager for POST-completion verification |
 | **Puppeteer DoD (post-impl)** | project_manager | Verify completed work on user request | - |
-| **Puppeteer demos** | assistant | Show features visually (demos only) | NOT for verification |
+| **Puppeteer demos** | user_listener | Show features visually via UI (delegates to assistant) | assistant prepares demos |
 | **GitHub PR create** | code_developer | Create PRs autonomously | - |
 | **GitHub monitoring** | project_manager | Monitor PRs, issues, CI/CD status | - |
-| **GitHub queries** | project_manager | All `gh` commands | assistant delegates |
+| **GitHub queries** | project_manager | All `gh` commands | user_listener delegates via UI |
 | **Code editing** | code_developer | ALL code changes | assistant READ-ONLY |
-| **Code search (simple)** | assistant | 1-2 files with Grep/Read | Delegate complex to code-searcher |
-| **Code search (complex)** | code-searcher | Deep analysis, patterns, forensics | - |
-| **Code analysis docs** | project_manager | Creates docs/[analysis]_[date].md | code-searcher prepares findings, assistant delegates |
+| **Code search (simple)** | assistant | 1-2 files with Grep/Read | user_listener delegates via UI |
+| **Code search (complex)** | code-searcher | Deep analysis, patterns, forensics | user_listener delegates via UI |
+| **Code analysis docs** | project_manager | Creates docs/[analysis]_[date].md | code-searcher prepares findings, user_listener delegates |
 | **ROADMAP updates** | project_manager (full), code_developer (status only) | Strategic vs. execution updates | assistant READ-ONLY |
-| **Design decisions** | ux-design-expert | All UI/UX, Tailwind, charts | Others delegate |
+| **Design decisions** | ux-design-expert | All UI/UX, Tailwind, charts | user_listener delegates via UI |
 | **Doc sync** | memory-bank-synchronizer | Keep CLAUDE.md files current | - |
 | **ACE observation** | generator | Capture all agent executions | Others: Observed by generator |
 | **ACE reflection** | reflector | Extract insights from traces | - |
-| **ACE curation** | curator | Maintain evolving playbooks | - |
+| **ACE curation** | curator | Maintain evolving playbooks | user_listener invokes via UI |
 
 ### Key Principles
 
@@ -347,12 +351,14 @@ poetry run project-manager /status
 ```
 "Who should handle X?"
     ↓
+Does user need a UI? → user_listener (ONLY agent with UI)
 Is it a quick question? → assistant
 Is it about code internals? → code-searcher
 Is it about project status? → project_manager
 Is it about design? → ux-design-expert
 Is it implementation? → code_developer
 Is it doc sync? → memory-bank-synchronizer
+Is it ACE curation? → user_listener (delegates to curator)
 ```
 
 ### Examples
@@ -431,15 +437,21 @@ code_developer tries to design UI layouts
 
 **🎯 Correct Delegation Flow**:
 ```
-User to assistant: "Fix bug in CLI and update the docs"
+User to user_listener: "Fix bug in CLI and update the docs"
 
-assistant: "This requires two agents:
+user_listener: "I'll coordinate this for you:
 1. code_developer - Fix the bug in CLI (code changes)
 2. project_manager - Update documentation (docs/ directory)
 
-Let me delegate appropriately..."
+Let me delegate to the team..."
 
-[assistant creates tasks for both agents, does NOT implement directly]
+[user_listener delegates to both agents, synthesizes responses]
+
+User to user_listener: "Show me the ACE playbook"
+
+user_listener: "Fetching playbook from curator..."
+[curator] Playbook loaded: 237 bullets, effectiveness 0.82
+[user_listener] "Here's the playbook summary with categories..."
 ```
 
 ---

@@ -526,14 +526,14 @@ This ensures the methodology document is not just documentation, but an **active
 
 **Example: CLI Nesting Fix (2025-10-11)**
 
-When fixing the CLI nesting detection bug in `project-manager chat`:
+When fixing the CLI nesting detection bug in `user-listener`:
 
 ✅ **Complete Implementation**:
 ```
 Branch: fix/cli-nesting-detection
 
 Commits:
-1. fix: Add CLI nesting detection to project-manager chat
+1. fix: Add CLI nesting detection to user-listener
    - Code changes in coffee_maker/cli/roadmap_cli.py
 
 2. docs: Document CLI nesting detection fix
@@ -547,7 +547,7 @@ Commits:
 Branch: fix/cli-nesting-detection
 
 Commits:
-1. fix: Add CLI nesting detection to project-manager chat
+1. fix: Add CLI nesting detection to user-listener
    - Only code changes, no documentation
    - User doesn't know bug was fixed
    - No explanation of behavior change
@@ -2038,7 +2038,7 @@ This ensures the assistant always has current context when answering questions.
 
 **Availability**:
 - Assistant should always be available when project-manager is running
-- Runs in same process as project-manager chat
+- Runs in same process as user-listener
 - No separate startup required
 - Integrated seamlessly via LangChain agent
 
@@ -2080,7 +2080,7 @@ User (Product Owner)
 
 ### 4.1 Synchronous Communication (User ↔ PM)
 
-**Channel**: `project-manager chat` (interactive CLI)
+**Channel**: `user-listener` (interactive CLI)
 
 **When to Use**:
 - User wants to add/modify priorities
@@ -2094,7 +2094,7 @@ User (Product Owner)
 
 **Example**:
 ```bash
-$ poetry run project-manager chat
+$ poetry run user-listener
 
 You: Add a new priority for authentication
 PM: I'll create PRIORITY X with:
@@ -2440,7 +2440,7 @@ The `/US` command provides a streamlined, conversational way to create user stor
 - Collaborative validation (user approves before adding to roadmap)
 
 **Steps**:
-1. **User**: Types `/US [description]` in project-manager chat
+1. **User**: Types `/US [description]` in user-listener
 2. **PM**: Searches for similar existing user stories
 3. **PM**: Checks if already shipped or partially done
 4. **PM**: Presents findings with options (new, enhance existing, or already done)
@@ -3460,7 +3460,7 @@ PM documents decision and informs developer
 | 1.6 | 2025-10-10 | Enhanced Section 2.4 - Specification Before Implementation (US-016) | PM MUST create detailed technical spec with task-level estimates before providing delivery estimates. PM must refuse to estimate without spec. |
 | 1.7 | 2025-10-10 | Added Section 2.7 - Code References Methodology Document (US-017) | Code implementing PM and code_developer must read and reference COLLABORATION_METHODOLOGY.md to understand processes, rules, and behavioral requirements. Ensures methodology is active specification driving code behavior. |
 | 1.8 | 2025-10-11 | Added Section 2.8 - Documentation and Roadmap Versioning Policy | Documentation and ROADMAP.md must always be up-to-date. Every bug fix or feature must update relevant docs in the same PR. Includes CLI nesting detection fix documentation (fix/cli-nesting-detection branch). User story: "Documentation in branch must always be most up-to-date version." |
-| 1.9 | 2025-10-11 | Added Section 9.1.1 - project-manager chat Modes | Documented CLI vs API modes, nesting detection, mode selection logic, user decision matrix. Addresses CLI nesting prevention feature. |
+| 1.9 | 2025-10-11 | Added Section 9.1.1 - user-listener Modes | Documented CLI vs API modes, nesting detection, mode selection logic, user decision matrix. Addresses CLI nesting prevention feature. |
 | 2.0 | 2025-10-11 | Added Section 9.3 - Updating Roadmap Branch on GitHub | **MAJOR VERSION**: Complete automated workflow for updating 'roadmap' branch on GitHub using Python script (scripts/merge_roadmap_pr.py). Addresses user stories: "main branch always up to date" and "roadmap branch in github always current so developer can see what to achieve". Includes setup instructions, integration examples for all team members (project_manager, code_developer, assistant), safety guarantees, and error handling. Branch strategy documented. |
 | 2.1 | 2025-10-11 | Added Section 3.4 - Role: Assistant (LangChain-Powered AI Helper) | Defined assistant role, responsibilities, authorities, and task delegation guidelines. Includes: delegation decision matrix (ALWAYS/COLLABORATIVE/NEVER), 6 tools available to assistant (read_file, search_code, list_files, git_log, git_diff, execute_bash), best practices for PM→Assistant delegation, auto-refresh documentation requirement (every 30 minutes), availability requirements (always up when project-manager running). Renumbered Team Dynamics to 3.5. Addresses user request: "project_manager should know which tasks to delegate to assistant thanks to team collaboration document". |
 | 2.2 | 2025-10-11 | Enhanced Section 3.4 - Added DoD Validation Capability for Assistant | Added "DoD Validation" to assistant delegation matrix (ALWAYS DELEGATE category). Documented assistant's ability to validate Definition of Done criteria using execute_bash tool. Includes comprehensive DoD validation example: running pytest, checking exit codes, parsing test results, validating build success. Assistant can now answer "Are all tests passing?" by running tests and reporting clear ✅/❌ status. Critical for PM to validate DoD without manual testing. Addresses assistant's need to run bash commands for DoD validation. |
@@ -3482,15 +3482,15 @@ PM documents decision and informs developer
 | Tool | Purpose | Owner | Update Frequency |
 |------|---------|-------|------------------|
 | `docs/roadmap/ROADMAP.md` | Single source of truth for priorities | PM | Real-time (every decision) |
-| `project-manager chat` | Interactive communication (User ↔ PM) | PM | During chat session |
+| `user-listener` | Interactive communication (User ↔ PM) | PM | During chat session |
 | `data/notifications.db` | Async communication (PM ↔ Developer) | Developer | Continuous (polling) |
 | Technical Specs (`docs/US-XXX_TECHNICAL_SPEC.md`) | Detailed implementation plans | PM | Before implementation |
 | Git commits | Implementation history and decisions | Developer | Per commit |
 | Pull Requests | Code review and approval | Developer | Per feature |
 
-#### 9.1.1 `project-manager chat` Modes (Added 2025-10-11)
+#### 9.1.1 `user-listener` Modes (Added 2025-10-11)
 
-**Overview**: `project-manager chat` supports two operational modes with automatic detection to prevent CLI nesting issues.
+**Overview**: `user-listener` supports two operational modes with automatic detection to prevent CLI nesting issues.
 
 **Mode Selection Logic**:
 
@@ -3523,7 +3523,7 @@ elif has_api_key:
 ```bash
 # From regular terminal
 cd /path/to/MonolithicCoffeeMakerAgent
-poetry run project-manager chat
+poetry run user-listener
 ```
 
 **Advantages**:
@@ -3544,11 +3544,11 @@ poetry run project-manager chat
 
 ```bash
 # From Claude Code (automatic API mode)
-poetry run project-manager chat
+poetry run user-listener
 
 # Or set API key explicitly
 export ANTHROPIC_API_KEY='your-key-here'
-poetry run project-manager chat
+poetry run user-listener
 ```
 
 **Advantages**:
@@ -3558,7 +3558,7 @@ poetry run project-manager chat
 
 **3. CLI Nesting Prevention**
 
-**Problem**: Running `project-manager chat` inside Claude Code would cause CLI nesting (Claude CLI calling Claude CLI), which can lead to unexpected behavior.
+**Problem**: Running `user-listener` inside Claude Code would cause CLI nesting (Claude CLI calling Claude CLI), which can lead to unexpected behavior.
 
 **Solution**: Automatic detection via environment variables:
 - `CLAUDECODE`: Set by Claude Code
@@ -3590,7 +3590,7 @@ If running inside Claude Code without API key:
 ```
 ❌ ERROR: Running inside Claude Code without API key
 
-You're running project-manager chat from within Claude Code.
+You're running user-listener from within Claude Code.
 To avoid CLI nesting, we need to use API mode.
 
 🔧 SOLUTION:
@@ -4007,7 +4007,7 @@ The automated script includes these safety checks:
 
 ```bash
 # 1. project_manager updates roadmap during chat
-$ poetry run project-manager chat
+$ poetry run user-listener
 You: Mark US-020 as complete
 Claude: ✅ Updated ROADMAP.md to mark US-020 complete
         📝 Creating automated PR to 'roadmap' branch...
@@ -4224,7 +4224,7 @@ User: "add a User story: As a developer I don't have time to answer
 
 **Complete List of User Stories** (How Each Demonstrates Our Methodology):
 
-**US-006: Claude-CLI Level UX for project_manager chat** ✅ COMPLETE (2025-10-10)
+**US-006: Claude-CLI Level UX for user_listener** ✅ COMPLETE (2025-10-10)
 - **User Request**: "I want a better chat interface like Claude CLI"
 - **Methodology Applied**: Spec before implementation, incremental delivery
 - **What Was Built**:
@@ -4411,7 +4411,7 @@ Action Items:
 
 | Channel | Use For | Response Time |
 |---------|---------|---------------|
-| `project-manager chat` | User ↔ PM interaction | Immediate |
+| `user-listener` | User ↔ PM interaction | Immediate |
 | `notifications.db` | PM ↔ Developer async | Minutes to 12+ hours |
 | `ROADMAP.md` | Document decisions | Real-time updates |
 | Git commits | Implementation history | Per commit |

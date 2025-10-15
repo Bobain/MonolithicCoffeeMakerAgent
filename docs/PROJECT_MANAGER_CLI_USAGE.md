@@ -639,7 +639,7 @@ ModuleNotFoundError: No module named 'coffee_maker'
 
 2. **Use Poetry to run**:
    ```bash
-   poetry run project-manager view
+   poetry run user-listener view
    ```
 
 3. **Activate virtual environment**:
@@ -666,7 +666,7 @@ command not found: project-manager
 
 2. **Check Poetry scripts**:
    ```bash
-   poetry run project-manager view
+   poetry run user-listener view
    ```
 
 3. **Add to PATH** (if using global install):
@@ -898,11 +898,11 @@ jobs:
       - name: Check and approve LOW priority notifications
         run: |
           # Get all LOW priority notification IDs
-          poetry run project-manager notifications | \
+          poetry run user-listener notifications | \
             awk '/NORMAL:/{flag=1; next} /^$/{flag=0} flag && /^\[/ {print $1}' | \
             tr -d '[]' | \
             while read id; do
-              poetry run project-manager respond $id "auto-approved (CI)"
+              poetry run user-listener respond $id "auto-approved (CI)"
             done
 ```
 
@@ -953,7 +953,7 @@ logging.basicConfig(
 
 1. **Database locked**: Wait a few seconds, WAL mode handles concurrent access
 2. **Permission denied**: Check file permissions on `data/notifications.db`
-3. **Module not found**: Run `poetry install` and use `poetry run project-manager`
+3. **Module not found**: Run `poetry install` and use `poetry run user-listener`
 
 ### Run Integration Tests
 

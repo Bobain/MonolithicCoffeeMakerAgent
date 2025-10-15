@@ -854,7 +854,35 @@ def cmd_assistant_refresh(args):
 
 
 def cmd_curate(args):
-    """Manually trigger ACE curation for code_developer.
+    """[DEPRECATED] Use user-listener curate instead.
+
+    This command has been moved to user_listener CLI.
+    user_listener is the ONLY UI for the system.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        1 (deprecated)
+
+    Example:
+        $ user-listener curate code_developer
+    """
+    print("\n" + "=" * 80)
+    print("⚠️  DEPRECATED COMMAND")
+    print("=" * 80 + "\n")
+    print("This command has been moved to user_listener.")
+    print("user_listener is the ONLY UI for the Coffee Maker Agent system.")
+    print("\nPlease use instead:")
+    print("  $ user-listener curate code_developer")
+    print("\nOr for other agents:")
+    print("  $ user-listener curate <agent_name>")
+    print("\n" + "=" * 80 + "\n")
+    return 1
+
+
+def cmd_curate_old(args):
+    """OLD IMPLEMENTATION - DEPRECATED.
 
     Runs both reflector and curator to analyze recent execution traces
     and update the playbook with new insights.
@@ -972,7 +1000,36 @@ def cmd_curate(args):
 
 
 def cmd_playbook(args):
-    """Show current ACE playbook for code_developer.
+    """[DEPRECATED] Use user-listener playbook instead.
+
+    This command has been moved to user_listener CLI.
+    user_listener is the ONLY UI for the system.
+
+    Args:
+        args: Parsed command-line arguments with optional category filter
+
+    Returns:
+        1 (deprecated)
+
+    Example:
+        $ user-listener playbook code_developer
+        $ user-listener playbook code_developer --category implementation
+    """
+    print("\n" + "=" * 80)
+    print("⚠️  DEPRECATED COMMAND")
+    print("=" * 80 + "\n")
+    print("This command has been moved to user_listener.")
+    print("user_listener is the ONLY UI for the Coffee Maker Agent system.")
+    print("\nPlease use instead:")
+    print("  $ user-listener playbook code_developer")
+    print("\nOr with category filter:")
+    print("  $ user-listener playbook code_developer --category implementation")
+    print("\n" + "=" * 80 + "\n")
+    return 1
+
+
+def cmd_playbook_old(args):
+    """OLD IMPLEMENTATION - DEPRECATED.
 
     Displays the current playbook content including all active bullets,
     categories, and health metrics.

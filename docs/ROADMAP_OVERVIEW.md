@@ -88,17 +88,17 @@ poetry run code-developer --auto-approve
 **Commands**:
 ```bash
 # Interactive chat mode
-poetry run project-manager chat
+poetry run user-listener
 
 # View roadmap
-poetry run project-manager view
+poetry run user-listener view
 
 # Manage User Stories
-poetry run project-manager user-story list
-poetry run project-manager user-story add
+poetry run user-listener user-story list
+poetry run user-listener user-story add
 
 # Analyze roadmap health
-poetry run project-manager analyze
+poetry run user-listener analyze
 ```
 
 **Recent Features**:
@@ -450,7 +450,7 @@ tests:
 - ✅ Daemon stability verification
 - ✅ ClaudeCLIInterface implementation
 - ✅ `--use-cli` flag functional
-- 🎨 project-manager chat UI at claude-cli quality level
+- 🎨 user-listener UI at claude-cli quality level
 - 🎨 Streaming responses + syntax highlighting
 - 🎨 Multi-line input + command history + auto-completion
 - 🎨 Session persistence
@@ -460,7 +460,7 @@ tests:
   - Show cost savings: €200/month subscription vs API credits
   - End-to-end workflow: ROADMAP → Implementation → PR → Merge
 
-- **Part 2 - UI Polish**: project-manager chat with professional UX
+- **Part 2 - UI Polish**: user-listener with professional UX
   - Streaming responses (text appears word-by-word like claude-cli)
   - Multi-line input (Shift+Enter for complex commands)
   - Command auto-completion (Tab key)
@@ -723,4 +723,4 @@ Cycle repeats
 
 **Questions? Feedback? New User Stories?**
 
-Run: `poetry run project-manager chat`
+Run: `poetry run user-listener`

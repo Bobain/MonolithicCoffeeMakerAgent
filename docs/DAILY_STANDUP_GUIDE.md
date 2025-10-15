@@ -254,10 +254,10 @@ poetry run project-manager dev export --format json --output metrics.json
 
 ### Morning Greeting with Daily Update
 
-When you start a new day with `project-manager chat`, the system automatically detects it's a new day and presents the daily standup **before** starting the conversation:
+When you start a new day with `user-listener`, the system automatically detects it's a new day and presents the daily standup **before** starting the conversation:
 
 ```bash
-$ poetry run project-manager chat
+$ poetry run user-listener
 
 🤖 project-manager: Good morning! Before we start, here's what
    code_developer accomplished yesterday:
@@ -286,7 +286,7 @@ Now, how can I help you today?
 The project manager detects when it's a "new day":
 - First interaction after midnight
 - More than 12 hours since last chat
-- Explicit request: `project-manager chat --daily-update`
+- Explicit request: `user-listener --daily-update`
 
 ### Disable Auto-Updates
 
@@ -297,7 +297,7 @@ If you don't want automatic daily updates:
 poetry run project-manager dev config set daily_update.auto false
 
 # Or use flag
-poetry run project-manager chat --no-daily-update
+poetry run user-listener --no-daily-update
 ```
 
 ---
@@ -385,7 +385,7 @@ poetry run project-manager dev config show
 
 ```bash
 # Start your day
-$ poetry run project-manager chat
+$ poetry run user-listener
 
 # System automatically shows daily standup
 # You see what was accomplished yesterday
@@ -536,7 +536,7 @@ $ poetry run project-manager dev export --since 2025-10-01 --format csv --output
 3. Optional: Slack notification sent
 
 **When You Check In**:
-1. Run `project-manager chat`
+1. Run `user-listener`
 2. See automatic daily update
 3. Understand status immediately
 4. Engage with project
@@ -626,7 +626,7 @@ notifications:
 Make it part of your morning routine:
 ```bash
 # Add to your shell startup (~/.zshrc or ~/.bashrc)
-alias morning="poetry run project-manager chat"
+alias morning="poetry run user-listener"
 ```
 
 ### 2. Use Watch Mode During Active Development
@@ -675,7 +675,7 @@ For issues or questions:
 1. **Documentation**: Check [ROADMAP.md](ROADMAP.md) PRIORITY 9 section
 2. **GitHub Issues**: Report bugs at https://github.com/your-repo/issues
 3. **Community**: Join discussions in GitHub Discussions
-4. **Direct Help**: Run `poetry run project-manager chat` and ask!
+4. **Direct Help**: Run `poetry run user-listener` and ask!
 
 ---
 

@@ -39,6 +39,10 @@ mypy = "^1.18.2"
 
 
 [tool.poetry.scripts]
+# User interface (ONLY UI in the system)
+user-listener = "coffee_maker.cli.user_listener:user_listener"
+
+# Backend CLIs (no UI, for automation and delegation only)
 project-manager = "coffee_maker.cli.roadmap_cli:main"
 code-developer = "coffee_maker.autonomous.daemon_cli:main"
 ace-reflector = "coffee_maker.autonomous.ace.cli:cmd_reflector"

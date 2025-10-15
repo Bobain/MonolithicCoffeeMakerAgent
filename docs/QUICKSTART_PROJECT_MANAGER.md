@@ -149,7 +149,7 @@ python run_daemon.py --auto-approve
 ### Start Chat Mode
 
 ```bash
-poetry run project-manager chat
+poetry run user-listener
 ```
 
 **You'll see**:
@@ -279,7 +279,7 @@ Claude: Thank you for using Coffee Maker!
 
 **Option A: Using Chat (Recommended)**
 ```bash
-poetry run project-manager chat
+poetry run user-listener
 
 # Then in chat:
 /status                  # Check daemon status
@@ -340,13 +340,13 @@ echo "ANTHROPIC_API_KEY=your-key-here" >> .env
 export ANTHROPIC_API_KEY='your-key-here'
 ```
 
-**Problem: "project-manager chat" forces API mode when running inside Claude Code**
+**Problem: "user-listener" forces API mode when running inside Claude Code**
 
-When you run `project-manager chat` from within Claude Code (the Claude CLI interface), it automatically detects CLI nesting and switches to API mode to prevent issues.
+When you run `user-listener` from within Claude Code (the Claude CLI interface), it automatically detects CLI nesting and switches to API mode to prevent issues.
 
 **What's happening:**
 - Claude Code is running on Claude CLI
-- Running `project-manager chat` would try to call Claude CLI again (nesting)
+- Running `user-listener` would try to call Claude CLI again (nesting)
 - The system detects this and uses API mode instead
 
 **Solutions:**
@@ -355,7 +355,7 @@ Option 1: Run from regular terminal (Recommended - Free)
 ```bash
 # Open a new terminal (not Claude Code)
 cd /path/to/MonolithicCoffeeMakerAgent
-poetry run project-manager chat
+poetry run user-listener
 ```
 This will use Claude CLI mode and is free with your subscription.
 
@@ -365,7 +365,7 @@ Option 2: Use API mode with credits
 echo "ANTHROPIC_API_KEY=your-key-here" >> .env
 
 # Then run from Claude Code
-poetry run project-manager chat
+poetry run user-listener
 ```
 This will use API mode with your API credits.
 
