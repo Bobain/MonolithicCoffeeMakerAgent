@@ -1,10 +1,10 @@
 # Coffee Maker Agent - Prioritized Roadmap
 
-**Last Updated**: 2025-10-11 🎉 **US-029 (CRITICAL) & US-030 IMPLEMENTED - VISIBILITY LOOP COMPLETE!**
-**Current Branch**: `roadmap`
-**Status**: PRIORITY 1-4 ✅ COMPLETE | US-028/029/030 ✅ ADDED | **Next: 🚨 US-021 (Refactoring)**
-**Quick-Start**: ⚡ CLI: `project-manager` (defaults to chat!) | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py`
-**Achievement**: 🎉 **VISIBILITY LOOP OPERATIONAL** - code_developer now merges to roadmap frequently, project_manager has real-time visibility!
+**Last Updated**: 2025-10-15 🎉 **US-032 ACE FRAMEWORK PHASE 5 COMPLETE - 75% OF ACE DELIVERED!**
+**Current Branch**: `feature/us-015-metrics-tracking`
+**Status**: US-032 (ACE) ✅ PHASE 1-5 COMPLETE | 🔨 PHASE 6 IN PROGRESS | **Next: Complete ACE end-to-end workflow**
+**Quick-Start**: ⚡ CLI: `user-listener` (primary UI with ACE!) | Daemon: `code-developer` | Status: `project-manager status`
+**Achievement**: 🎉 **ACE FRAMEWORK 75% COMPLETE** - Generator, Reflector, Curator, CLI, user_listener, user_interpret with sentiment analysis all working!
 
 ---
 
@@ -532,6 +532,9 @@ PRIORITY 2: Project Manager with UI ← Current focus
 - Overall accuracy: >90%
 
 **Recent Completions**:
+✅ US-032 Phase 5: User Interface & Sentiment Analysis (2025-10-15) - user_listener, user_interpret, ACE integration
+✅ US-032 Phase 4: Integration & Automation (2025-10-15) - CLI commands, GitHub Actions, daemon integration
+✅ US-015: Estimation Metrics & Velocity Tracking (2025-10-14)
 ✅ US-009: Process Management & Status Monitoring (2025-10-10)
 ✅ US-010: Living Documentation & Tutorials (2025-10-10)
 
@@ -730,11 +733,11 @@ Create detailed spec: `docs/US-023_TECHNICAL_SPEC.md`
 
 ---
 
-## ✅ US-032 - ACE Framework Integration (Agentic Context Engineering) - PHASE 3 COMPLETE
+## 🔨 US-032 - ACE Framework Integration (Agentic Context Engineering) - PHASE 5 COMPLETE, PHASE 6 IN PROGRESS
 
 **Project**: **🤖 US-032 - ACE Framework Integration for Continuous Agent Improvement**
 
-**Status**: ✅ **PHASE 1-3 COMPLETE** (2025-10-14) - 60% of ACE Framework Delivered!
+**Status**: ✅ **PHASE 1-5 COMPLETE** (2025-10-15) - 🔨 **PHASE 6 IN PROGRESS** - 75% of ACE Framework Delivered!
 
 **Implementation Tracker**: See `docs/ACE_IMPLEMENTATION_TRACKER.md` for comprehensive tracking
 
@@ -799,18 +802,26 @@ Implement a three-component system:
    - Tracks playbook health metrics
    - Saves playbooks to `docs/curator/playbooks/`
 
-**Success Criteria**:
-- [x] ✅ Generator captures dual execution traces for code_developer
-- [x] ✅ Traces include external (git) and internal (reasoning) observations
-- [x] ✅ Reflector extracts 3-5 actionable insights per trace
-- [x] ✅ Curator performs semantic de-duplication (>0.85 similarity)
-- [x] ✅ Playbook management (load, save, update, prune)
-- [x] ✅ Health metrics tracked (effectiveness ratio, coverage)
-- [x] ✅ All 161 ACE tests passing (Phases 1-3)
-- [x] ✅ Documentation complete (Guide + Technical Spec + Implementation Tracker)
-- [ ] 📝 Scheduled tasks run daily (GitHub Actions) - Phase 4
-- [ ] 📝 Daemon integration complete - Phase 4
-- [ ] 📝 Integration tests for full ACE loop - Phase 4
+**Success Criteria** (Overall Progress: 75% Complete):
+- [x] ✅ Generator captures dual execution traces for code_developer - Phase 1
+- [x] ✅ Traces include external (git) and internal (reasoning) observations - Phase 1
+- [x] ✅ Reflector extracts 3-5 actionable insights per trace - Phase 2
+- [x] ✅ Curator performs semantic de-duplication (>0.85 similarity) - Phase 3
+- [x] ✅ Playbook management (load, save, update, prune) - Phase 3
+- [x] ✅ Health metrics tracked (effectiveness ratio, coverage) - Phase 3
+- [x] ✅ All 161 ACE tests passing (Phases 1-3) - Phase 3
+- [x] ✅ Documentation complete (Guide + Technical Spec + Implementation Tracker) - Phase 1-3
+- [x] ✅ Scheduled tasks run daily (GitHub Actions) - Phase 4
+- [x] ✅ Daemon integration complete - Phase 4
+- [x] ✅ CLI commands (ace-reflector, ace-curator, ace-status) - Phase 4
+- [x] ✅ user_interpret agent with sentiment analysis - Phase 5
+- [x] ✅ user_listener CLI as primary UI - Phase 5
+- [x] ✅ user_interpret wrapped by ACEGenerator - Phase 5
+- [ ] 📝 All agents wrapped by generator (traces for all executions) - Phase 6
+- [ ] 📝 Full delegation chain with actual agent execution - Phase 6
+- [ ] 📝 Progress indicator in user_listener UI - Phase 6
+- [ ] 📝 Integration tests for full ACE loop - Phase 6
+- [ ] 📝 End-to-end demo and user testing - Phase 6
 
 **Deliverables**:
 
@@ -861,26 +872,121 @@ Implement a three-component system:
   - [x] Playbook Loader: 17 tests
   - [x] Curator: 34 tests (including 5 integration tests)
 
-**Phase 4 (Ready to Start 📝)** - Integration & Automation:
-- [ ] 📝 CLI commands (1 day)
-  - [ ] `ace-reflector --agent code_developer --hours 24`
-  - [ ] `ace-curator --agent code_developer`
-  - [ ] `/curate` in project-manager chat
-  - [ ] `/playbook [agent]` to view playbook
-- [ ] 📝 GitHub Actions workflow (0.5 days)
-  - [ ] Daily cron job (2am UTC)
-  - [ ] Runs reflector on last 24h traces
-  - [ ] Runs curator to update playbook
-  - [ ] Commits updated playbook
-- [ ] 📝 Daemon integration (0.5 days)
-  - [ ] Enable ACE via config (ACE_ENABLED=true)
-  - [ ] Load playbook as context
-  - [ ] Toggle on/off
-- [ ] 📝 End-to-end tests (0.5 days)
-  - [ ] Full ACE workflow test
-  - [ ] Daemon integration test
+**Phase 4 (Complete ✅)** - Integration & Automation (2025-10-15):
+- [x] ✅ **CLI commands** (`coffee_maker/autonomous/ace/cli.py`)
+  - [x] `ace-reflector --agent code_developer --hours 24`
+  - [x] `ace-curator --agent code_developer`
+  - [x] `ace-status` - Show ACE framework status
+  - [x] Entry points added to `pyproject.toml`
+  - [x] Comprehensive help text and error handling
+- [x] ✅ **GitHub Actions workflow** (`.github/workflows/ace-curation.yml`)
+  - [x] Daily cron job (2am UTC) + manual trigger
+  - [x] Runs reflector on last 24h traces
+  - [x] Runs curator to update playbook
+  - [x] Auto-commits updated playbooks and deltas
+  - [x] Summary generation and change detection
+- [x] ✅ **Daemon integration**
+  - [x] ACE integrated into `coffee_maker/autonomous/daemon.py`
+  - [x] `_init_ace_framework()` for optional ACE initialization
+  - [x] `_get_ace_context()` to load playbook as context
+  - [x] Toggle on/off via environment variable
+- [x] ✅ **Documentation updates**
+  - [x] Updated `.claude/CLAUDE.md` with ACE integration
+  - [x] Updated ACE_FRAMEWORK_GUIDE.md
+  - [x] Created usage examples
+- [x] ✅ **Commit**: d751390
 
-**Total ACE Tests**: 161 passing (Phases 1-3 complete)
+**Phase 5 (Complete ✅)** - User Interface & Sentiment Analysis (2025-10-15):
+- [x] ✅ **user_interpret agent** (`coffee_maker/cli/user_interpret.py`)
+  - [x] Intent interpretation and delegation routing
+  - [x] Sentiment analysis with SentimentAnalyzer
+  - [x] Agent selection based on intent
+  - [x] Response synthesis for user
+  - [x] Confidence calculation
+  - [x] Conversation history tracking
+- [x] ✅ **user_interpret ACE wrapper** (`coffee_maker/cli/user_interpret_ace.py`)
+  - [x] Wrapped by ACEGenerator for observation and learning
+  - [x] Traces generated for all user interactions
+  - [x] Integration with sentiment signals
+- [x] ✅ **user_listener CLI** (`coffee_maker/cli/user_listener.py`)
+  - [x] Primary UI for all user interactions
+  - [x] Interactive chat mode
+  - [x] Delegation to user_interpret
+  - [x] Rich console formatting with agent colors
+  - [x] Subcommands: agents, status, metrics, roadmap
+  - [x] ACE commands: curate, playbook, feedback
+- [x] ✅ **SentimentAnalyzer** (`coffee_maker/cli/sentiment_analyzer.py`)
+  - [x] Detects frustration, confusion, satisfaction
+  - [x] Confidence scores for sentiment signals
+  - [x] Context-aware analysis using conversation history
+- [x] ✅ **Agent color system** (`coffee_maker/cli/agent_colors.py`)
+  - [x] Consistent agent coloring across CLI
+  - [x] Parses .claude/agents/*.md for agent definitions
+  - [x] format_agent_message() for Rich console output
+- [x] ✅ **Tests**
+  - [x] `tests/unit/test_user_interpret.py` - Intent interpretation
+  - [x] `tests/unit/test_user_interpret_ace.py` - ACE integration
+- [x] ✅ **Documentation**
+  - [x] `docs/USER_LISTENER_GUIDE.md` - Complete user guide
+  - [x] `docs/MIGRATION_USER_LISTENER.md` - Migration docs
+- [x] ✅ **Commits**: 1d1d467, 62b5d84
+
+**Phase 6 (In Progress 🔨)** - Complete End-to-End ACE Loop (Remaining Work):
+- [ ] 🔨 **Progress indicator for user_listener** (2-4 hours)
+  - [ ] Add Rich progress spinner/status panel to chat UI
+  - [ ] Show "Working on: [user's request]" at top of console
+  - [ ] Update status as delegation progresses
+  - [ ] Step-by-step progress display (e.g., "Step 1/3: Interpreting... [DONE]")
+  - [ ] Clear indicator when work complete
+  - [ ] Files: `coffee_maker/cli/user_listener.py`
+- [ ] 📝 **Wrap ALL agents with ACEGenerator** (1-2 days) **CRITICAL**
+  - [ ] Create `CodeDeveloperWithACE` wrapper (`coffee_maker/autonomous/code_developer_ace.py`)
+  - [ ] Create `ProjectManagerWithACE` wrapper (`coffee_maker/cli/project_manager_ace.py`)
+  - [ ] Create `AssistantWithACE` wrapper (`coffee_maker/cli/assistant_ace.py`)
+  - [ ] Wrap other agents (code-searcher, ux-design-expert, memory-bank-synchronizer)
+  - [ ] Update daemon to use wrapped code_developer
+  - [ ] Update all CLI entry points to use wrapped agents
+  - [ ] **Goal**: ALL agents generate traces (not just user_interpret)
+- [ ] 📝 **Implement actual agent delegation** (1 day) **HIGH PRIORITY**
+  - [ ] Create `AgentDelegator` class (`coffee_maker/cli/agent_delegator.py`)
+  - [ ] Delegate to wrapped agents with trace generation
+  - [ ] Track parent-child trace relationships
+  - [ ] Result synthesis from multiple agents
+  - [ ] Integration with user_listener
+  - [ ] Replace TODO placeholder in user_listener.py line 710-726
+- [ ] 📝 **End-to-end integration** (2-3 days) **CRITICAL**
+  - [ ] Full workflow: User message → interpret → delegate → execute → feedback
+  - [ ] Verify traces generated for entire delegation chain
+  - [ ] Verify satisfaction propagation works end-to-end
+  - [ ] Verify playbook evolves from user feedback
+  - [ ] Integration tests for complete ACE loop
+- [ ] 📝 **Documentation updates** (1 day)
+  - [ ] Update ACE_FRAMEWORK_GUIDE.md with Phase 6 completion
+  - [ ] Create AGENT_WRAPPER_GUIDE.md for wrapping agents
+  - [ ] Update USER_LISTENER_GUIDE.md with progress indicators
+  - [ ] Update ACE_IMPLEMENTATION_TRACKER.md
+  - [ ] Create demo tutorial for end-to-end ACE workflow
+- [ ] 📝 **Demo and user testing** (0.5 day)
+  - [ ] Create demo script showing complete ACE workflow
+  - [ ] User acceptance testing
+  - [ ] Performance verification (trace generation overhead)
+  - [ ] Playbook evolution verification
+
+**Phase 6 Success Criteria**:
+- [ ] ALL agents wrapped by generator (traces for all executions)
+- [ ] Progress indicator shows clear status during work
+- [ ] Full delegation chain works end-to-end
+- [ ] Playbook evolves from user feedback automatically
+- [ ] System learns and improves autonomously
+- [ ] Demo tutorial works flawlessly
+- [ ] User can interact naturally with user_listener
+- [ ] Sentiment detected automatically (>90% accuracy)
+- [ ] Intent interpreted correctly (>90% accuracy)
+- [ ] Agent delegation works (>95% success rate)
+
+**Phase 6 Estimated Effort**: 5-7 days
+
+**Total ACE Tests**: 161 passing (Phases 1-3 complete) + tests from Phases 4-5
 
 **Implementation Plan**:
 
