@@ -278,6 +278,9 @@ poetry run project-manager /status
 | **tests/** | code_developer | YES - All test code | All others: READ-ONLY |
 | **scripts/** | code_developer | YES - Utility scripts | All others: READ-ONLY |
 | **pyproject.toml** | code_developer | YES - Dependency management | All others: READ-ONLY |
+| **docs/curator/** | curator | YES - Playbooks and curation reports | All others: READ-ONLY |
+| **docs/generator/** | generator | YES - Execution traces | All others: READ-ONLY |
+| **docs/reflector/** | reflector | YES - Delta items (insights) | All others: READ-ONLY |
 
 ### Tool Ownership Matrix
 
