@@ -120,10 +120,58 @@ prompt = load_prompt(PromptNames.CREATE_TECHNICAL_SPEC, {
 })
 ```
 
-### Git Workflow
-- **Branch**: Feature branches (`feature/priority-X`)
+### Git Workflow ⭐ CRITICAL: Tag-Based (NO Branch Switching!)
+
+**🚨 ALL agents work on `roadmap` branch - NEVER switch branches! 🚨**
+
+This is a critical requirement for parallel agent operations:
+- **Branch**: `roadmap` (ONLY branch, never switch!)
+- **Tags**: code_developer uses tags instead of branches
 - **Commits**: Descriptive messages with 🤖 footer
 - **Pre-commit**: Hooks run automatically (black, autoflake, trailing-whitespace)
+
+#### Tag-Based Workflow
+
+**code_developer tags milestones**:
+```bash
+# Start feature
+git tag -a feature/us-033-streamlit-app-start -m "Start US-033"
+
+# Commit with completion tag
+git add .
+git commit -m "feat: Implement US-033 - Streamlit App"
+git tag -a feature/us-033-streamlit-app-complete -m "Complete US-033"
+
+# Push with tags
+git push origin roadmap --tags
+```
+
+**Other agents commit directly to roadmap**:
+```bash
+# Verify on roadmap (CRITICAL!)
+git branch --show-current  # Must be: roadmap
+
+# Make changes, commit
+git add .
+git commit -m "docs: Update ROADMAP (project_manager)"
+git push origin roadmap
+```
+
+#### Why Tag-Based?
+
+1. **Parallel Operations**: Multiple agents work simultaneously without conflicts
+2. **No Branch Switching**: Eliminates major source of errors
+3. **Single Source of Truth**: One CLAUDE.md, no synchronization needed
+4. **Simpler Git State**: Easier to reason about
+5. **memory-bank-synchronizer**: No longer needed (DEPRECATED)
+
+#### Safety
+
+- GitStrategy module verifies roadmap branch before every operation
+- Daemon automatically creates tags for features
+- Pre-commit hook enforces roadmap branch (coming soon)
+
+See: `coffee_maker/autonomous/git_strategy.py` for implementation
 
 ---
 
@@ -271,9 +319,11 @@ poetry run project-manager /status
 | **docs/** | project_manager | YES - Full control | code_developer: READ-ONLY, assistant: READ-ONLY, user_listener: READ-ONLY |
 | **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Full, code_developer: Status updates only | assistant: READ-ONLY, user_listener: READ-ONLY |
 | **docs/PRIORITY_*_TECHNICAL_SPEC.md** | project_manager | YES - Creates and updates specs | code_developer: READ-ONLY (reads during implementation), assistant: READ-ONLY, user_listener: READ-ONLY |
-| **.claude/agents/** | project_manager | YES - Defines agent configurations | All others: READ-ONLY |
-| **.claude/CLAUDE.md** | project_manager, memory-bank-synchronizer | YES - Strategic updates | code_developer: READ-ONLY, assistant: READ-ONLY, user_listener: READ-ONLY |
-| **.claude/commands/** | project_manager | YES - Manages prompts | code_developer: READ-ONLY (loads during execution), assistant: READ-ONLY, user_listener: READ-ONLY |
+| **.claude/** | code_developer | YES - Technical configurations | All others: READ-ONLY |
+| **.claude/agents/** | code_developer | YES - Agent definitions and configurations | All others: READ-ONLY |
+| **.claude/CLAUDE.md** | code_developer | YES - Technical setup and implementation guide | All others: READ-ONLY |
+| **.claude/commands/** | code_developer | YES - Prompt templates | All others: READ-ONLY (load during execution) |
+| **.claude/mcp/** | code_developer | YES - MCP server configurations | All others: READ-ONLY |
 | **coffee_maker/** | code_developer | YES - All implementation | All others: READ-ONLY |
 | **tests/** | code_developer | YES - All test code | All others: READ-ONLY |
 | **scripts/** | code_developer | YES - Utility scripts | All others: READ-ONLY |
@@ -317,25 +367,29 @@ poetry run project-manager /status
    - **NEVER modifies code or docs** - Always READ-ONLY, delegates to appropriate agent
    - **Keeps ROADMAP in great detail in mind** at all times
 
-2. **code_developer owns EXECUTION**
-   - **ONLY agent that writes/modifies code**
+2. **code_developer owns EXECUTION & TECHNICAL CONFIGURATION**
+   - **ONLY agent that writes/modifies code and .claude/ configurations**
    - All code changes in coffee_maker/, tests/, scripts/ go through code_developer
+   - All technical configuration changes in .claude/ go through code_developer
    - Creates PRs autonomously (does NOT wait for project_manager)
    - Verifies DoD during implementation
    - Updates ROADMAP status (Planned → In Progress → Complete)
+   - Manages agent configurations (.claude/agents/), prompts (.claude/commands/), MCP (.claude/mcp/)
+   - Updates .claude/CLAUDE.md (technical setup and implementation guide)
    - Does NOT monitor project health (that's project_manager)
    - Does NOT make strategic ROADMAP decisions (that's project_manager)
+   - Does NOT create strategic documentation in docs/ (that's project_manager)
 
-3. **project_manager owns OVERSIGHT & DOCUMENTATION**
+3. **project_manager owns STRATEGIC DOCUMENTATION**
    - **ONLY agent that modifies docs/ directory**
    - Creates and updates technical specs (docs/PRIORITY_*_TECHNICAL_SPEC.md)
-   - Manages .claude/agents/ (agent definitions)
    - Makes strategic ROADMAP decisions (priorities, planning)
    - Monitors GitHub (PRs, issues, CI)
    - Verifies completed work (post-implementation, when user requests)
    - Warns users about blockers
    - Does NOT create PRs (that's code_developer)
    - Does NOT write implementation code (that's code_developer)
+   - Does NOT modify .claude/ (that's code_developer)
 
 4. **Specialized agents own their domain**
    - **code-searcher**: Deep codebase analysis (READ-ONLY)
@@ -347,7 +401,7 @@ poetry run project-manager /status
      - **Document Format**: docs/[analysis_type]_analysis_[date].md (e.g., docs/security_audit_2025-10-13.md)
      - See .claude/agents/code-searcher.md for complete documentation workflow
    - **ux-design-expert**: Design decisions (provides specs, doesn't implement)
-   - **memory-bank-synchronizer**: Documentation sync (updates .claude/CLAUDE.md)
+   - **memory-bank-synchronizer**: DEPRECATED (no longer needed, tag-based workflow)
 
 ### When in Doubt
 
@@ -390,10 +444,13 @@ User: "Update the ROADMAP with new priorities"
 → project_manager (strategic ROADMAP management)
 
 User: "Add a new agent definition"
-→ project_manager (owns .claude/agents/)
+→ code_developer (owns .claude/agents/)
 
-User: "Update CLAUDE.md with new architecture"
-→ project_manager or memory-bank-synchronizer
+User: "Update CLAUDE.md with new technical setup"
+→ code_developer (owns .claude/CLAUDE.md)
+
+User: "Add a new prompt template"
+→ code_developer (owns .claude/commands/)
 ```
 
 **✅ Correct Usage - Delegation**:
@@ -421,6 +478,9 @@ assistant tries to update ROADMAP.md
 
 project_manager tries to modify coffee_maker/cli/roadmap_cli.py
 → NO! code_developer owns coffee_maker/ directory
+
+project_manager tries to modify .claude/agents/
+→ NO! code_developer owns .claude/ directory
 
 code_developer tries to create technical specs in docs/
 → NO! project_manager owns docs/ directory
@@ -558,10 +618,20 @@ Langfuse (execution metrics)
 
 ## Version
 
-**Last Updated**: 2025-10-12
-**Phase**: Prompt Centralization Complete (Phase 1) ✅
+**Last Updated**: 2025-10-15
+**Phase**: Tag-Based Git Workflow Complete ✅
 **Next**: Langfuse Integration (Phase 2) 📝
+
+### Recent Critical Changes
+
+- **2025-10-15**: 🚨 Git Branch Strategy - Tag-based workflow on `roadmap` branch
+  - NO MORE BRANCH SWITCHING - all agents stay on roadmap branch
+  - code_developer uses tags for milestones
+  - memory-bank-synchronizer DEPRECATED
+  - See: `.claude/CLAUDE.md` Git Workflow section
 
 ---
 
-**Remember**: This project emphasizes autonomy, observability, and multi-provider support. Keep prompts centralized, track everything, and design for flexibility! 🚀
+**Remember**: This project emphasizes autonomy, observability, and multi-provider support. Keep prompts centralized, track everything, and design for flexibility!
+
+**🚨 CRITICAL**: Always work on `roadmap` branch - NEVER switch branches! 🚀
