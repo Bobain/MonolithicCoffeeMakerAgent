@@ -28,6 +28,14 @@ except ImportError:
     pass  # python-dotenv not installed, env vars must be set manually
 
 from coffee_maker.autonomous.daemon import DevDaemon
+from coffee_maker.cli.console_ui import (
+    console,
+    create_table,
+    error,
+    info,
+    section_header,
+    warning,
+)
 from coffee_maker.config import ConfigManager
 from coffee_maker.process_manager import ProcessManager
 
@@ -128,62 +136,89 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
     if use_cli_mode:
         # CLI mode (default) - Check if Claude CLI is available
         if not os.path.isfile(args.claude_path):
-            print("=" * 70)
-            print("⚠️  Claude CLI not found (default mode)")
-            print("=" * 70)
-            print(f"\nClaude CLI not found at: {args.claude_path}")
-            print("\nThe daemon uses Claude CLI by default (uses your Claude subscription).")
-            print("\n📋 CHOOSE AN OPTION:")
-            print("\n  Option A: Install Claude CLI (Recommended)")
-            print("  ─────────────────────────────────────────")
-            print("    1. Install from: https://docs.claude.com/docs/claude-cli")
-            print("    2. Verify: claude --version")
-            print("    3. Run: code-developer --auto-approve")
-            print("\n  Option B: Use Anthropic API (Requires Credits)")
-            print("  ───────────────────────────────────────────────")
-            print("    1. Get API key: https://console.anthropic.com/")
-            print("    2. Set: export ANTHROPIC_API_KEY='your-key'")
-            print("    3. Run: code-developer --use-api --auto-approve")
-            print("\n" + "=" * 70 + "\n")
+            console.print()
+            warning("Claude CLI not found (default mode)")
+            console.print()
+            info(f"Claude CLI not found at: [bold]{args.claude_path}[/bold]")
+            console.print()
+            console.print("The daemon uses Claude CLI by default (uses your Claude subscription).")
+            console.print()
+            console.print("[bold cyan]📋 CHOOSE AN OPTION:[/bold cyan]")
+            console.print()
+            console.print("[bold green]  Option A: Install Claude CLI (Recommended)[/bold green]")
+            console.print("  ─" * 30)
+            console.print("    1. Install from: [link]https://docs.claude.com/docs/claude-cli[/link]")
+            console.print("    2. Verify: [cyan]claude --version[/cyan]")
+            console.print("    3. Run: [cyan]code-developer --auto-approve[/cyan]")
+            console.print()
+            console.print("[bold yellow]  Option B: Use Anthropic API (Requires Credits)[/bold yellow]")
+            console.print("  ─" * 30)
+            console.print("    1. Get API key: [link]https://console.anthropic.com/[/link]")
+            console.print("    2. Set: [cyan]export ANTHROPIC_API_KEY='your-key'[/cyan]")
+            console.print("    3. Run: [cyan]code-developer --use-api --auto-approve[/cyan]")
+            console.print()
             sys.exit(1)
     else:
         # API mode (--use-api flag) - Check if API key is set
         if not ConfigManager.has_anthropic_api_key():
-            print("=" * 70)
-            print("❌ ERROR: ANTHROPIC_API_KEY not set!")
-            print("=" * 70)
-            print("\nYou're using --use-api but ANTHROPIC_API_KEY is not set.")
-            print("\n🔧 SOLUTION:")
-            print("  1. Get your API key from: https://console.anthropic.com/")
-            print("  2. Set the environment variable:")
-            print("     export ANTHROPIC_API_KEY='your-api-key-here'")
-            print("  3. Run the daemon again with --use-api")
-            print("\nOR remove --use-api to use Claude CLI (default, no API key needed)")
-            print("\n" + "=" * 70 + "\n")
+            console.print()
+            error("ANTHROPIC_API_KEY not set!")
+            console.print()
+            info("You're using [bold]--use-api[/bold] but ANTHROPIC_API_KEY is not set.")
+            console.print()
+            console.print("[bold cyan]🔧 SOLUTION:[/bold cyan]")
+            console.print("  1. Get your API key from: [link]https://console.anthropic.com/[/link]")
+            console.print("  2. Set the environment variable:")
+            console.print("     [cyan]export ANTHROPIC_API_KEY='your-api-key-here'[/cyan]")
+            console.print("  3. Run the daemon again with [cyan]--use-api[/cyan]")
+            console.print()
+            console.print("[dim]OR remove --use-api to use Claude CLI (default, no API key needed)[/dim]")
+            console.print()
             sys.exit(1)
 
     # Check if running inside Claude session (warning only, not blocking)
     if check_claude_session():
-        print("=" * 70)
-        print("⚠️  INFO: Running inside Claude Code session")
-        print("=" * 70)
-        print("\nYou're running the daemon from within Claude Code.")
-        print("This works fine now (we use the Anthropic SDK directly),")
-        print("but running from a separate terminal provides better isolation.")
-        print("\n💡 TIP: For better debugging, run from a separate terminal.")
-        print("=" * 70 + "\n")
+        console.print()
+        info("Running inside Claude Code session")
+        console.print()
+        console.print("You're running the daemon from within Claude Code.")
+        console.print("This works fine now (we use the Anthropic SDK directly),")
+        console.print("but running from a separate terminal provides better isolation.")
+        console.print()
+        console.print("[dim]💡 TIP: For better debugging, run from a separate terminal.[/dim]")
+        console.print()
 
     # Create and run daemon
-    print("=" * 70)
-    print("🤖 Code Developer Daemon")
-    print("=" * 70)
-    print(f"Roadmap: {args.roadmap}")
-    print(f"Mode: {'Autonomous (auto-approve)' if args.auto_approve else 'Interactive (requires approval)'}")
-    print(f"PRs: {'Disabled' if args.no_pr else 'Enabled'}")
-    print(f"Backend: {'Claude CLI (subscription)' if use_cli_mode else 'Anthropic API (credits)'}")
-    print(f"Model: {args.model}")
-    print("=" * 70)
-    print("\nStarting daemon... (Press Ctrl+C to stop)\n")
+    section_header("Code Developer Daemon", "Autonomous development agent")
+
+    # Show configuration in a table
+    config_table = create_table(title="Configuration", show_header=False)
+    config_table.add_column(style="bold cyan", justify="right", width=20)
+    config_table.add_column(width=50)
+
+    config_table.add_row("Roadmap", args.roadmap)
+    config_table.add_row(
+        "Mode",
+        (
+            "[bold green]Autonomous[/bold green] (auto-approve)"
+            if args.auto_approve
+            else "[bold yellow]Interactive[/bold yellow] (requires approval)"
+        ),
+    )
+    config_table.add_row(
+        "Pull Requests",
+        "[red]Disabled[/red]" if args.no_pr else "[green]Enabled[/green]",
+    )
+    config_table.add_row(
+        "Backend",
+        ("[blue]Claude CLI[/blue] (subscription)" if use_cli_mode else "[magenta]Anthropic API[/magenta] (credits)"),
+    )
+    config_table.add_row("Model", args.model)
+
+    console.print(config_table)
+    console.print()
+    info("Starting daemon... Press [bold]Ctrl+C[/bold] to stop")
+    console.print()
 
     # Initialize process manager for PID file handling
     process_manager = ProcessManager()
@@ -213,17 +248,23 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
 
         # Write PID file after daemon is initialized
         process_manager._write_pid_file(os.getpid())
-        print(f"📝 Daemon PID: {os.getpid()} (written to {process_manager.pid_file})\n")
+        info(f"Daemon PID: [bold]{os.getpid()}[/bold]")
+        console.print(f"[dim]PID file: {process_manager.pid_file}[/dim]")
+        console.print()
 
         # Run daemon main loop
         daemon.run()
 
     except KeyboardInterrupt:
-        print("\n\n⏹️  Daemon stopped by user")
+        console.print()
+        console.print()
+        info("Daemon stopped by user")
         process_manager._clean_stale_pid()
         sys.exit(0)
     except Exception as e:
-        print(f"\n\n❌ Error: {e}")
+        console.print()
+        console.print()
+        error(str(e), suggestion="Check the logs for more details")
         import traceback
 
         traceback.print_exc()

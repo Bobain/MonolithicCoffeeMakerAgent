@@ -132,6 +132,16 @@ import argparse
 import logging
 import sys
 
+from coffee_maker.cli.console_ui import (
+    console,
+    create_table,
+    error,
+    format_notification,
+    info,
+    section_header,
+    success,
+    warning,
+)
 from coffee_maker.cli.notifications import (
     NOTIF_PRIORITY_CRITICAL,
     NOTIF_PRIORITY_HIGH,
@@ -434,9 +444,7 @@ def cmd_notifications(args: argparse.Namespace) -> int:
     Returns:
         0 on success
     """
-    print("\n" + "=" * 80)
-    print("Pending Notifications")
-    print("=" * 80 + "\n")
+    section_header("Pending Notifications", "Review and respond to daemon questions and updates")
 
     db = NotificationDB()
 
@@ -444,7 +452,8 @@ def cmd_notifications(args: argparse.Namespace) -> int:
     pending = db.get_pending_notifications()
 
     if not pending:
-        print("✅ No pending notifications")
+        success("No pending notifications")
+        console.print()
         return 0
 
     # Group by priority
@@ -452,32 +461,56 @@ def cmd_notifications(args: argparse.Namespace) -> int:
     high = [n for n in pending if n["priority"] == NOTIF_PRIORITY_HIGH]
     normal = [n for n in pending if n["priority"] not in [NOTIF_PRIORITY_CRITICAL, NOTIF_PRIORITY_HIGH]]
 
+    # Display critical notifications
     if critical:
-        print("🚨 CRITICAL:")
+        console.print(f"[bold red]🚨 CRITICAL ({len(critical)})[/bold red]")
+        console.print()
         for notif in critical:
-            print(f"  [{notif['id']}] {notif['title']}")
-            print(f"      {notif['message']}")
-            print(f"      Type: {notif['type']} | Created: {notif['created_at']}")
-            print()
+            panel = format_notification(
+                notif_type=notif["type"],
+                title=f"[{notif['id']}] {notif['title']}",
+                message=notif["message"],
+                priority=notif["priority"],
+                created_at=notif["created_at"],
+            )
+            console.print(panel)
+            console.print()
 
+    # Display high priority notifications
     if high:
-        print("⚠️  HIGH:")
+        console.print(f"[bold yellow]⚠️  HIGH PRIORITY ({len(high)})[/bold yellow]")
+        console.print()
         for notif in high:
-            print(f"  [{notif['id']}] {notif['title']}")
-            print(f"      {notif['message']}")
-            print(f"      Type: {notif['type']} | Created: {notif['created_at']}")
-            print()
+            panel = format_notification(
+                notif_type=notif["type"],
+                title=f"[{notif['id']}] {notif['title']}",
+                message=notif["message"],
+                priority=notif["priority"],
+                created_at=notif["created_at"],
+            )
+            console.print(panel)
+            console.print()
 
+    # Display normal notifications
     if normal:
-        print("📋 NORMAL:")
+        console.print(f"[bold blue]📋 NORMAL ({len(normal)})[/bold blue]")
+        console.print()
         for notif in normal:
-            print(f"  [{notif['id']}] {notif['title']}")
-            print(f"      {notif['message']}")
-            print(f"      Type: {notif['type']} | Created: {notif['created_at']}")
-            print()
+            panel = format_notification(
+                notif_type=notif["type"],
+                title=f"[{notif['id']}] {notif['title']}",
+                message=notif["message"],
+                priority=notif["priority"],
+                created_at=notif["created_at"],
+            )
+            console.print(panel)
+            console.print()
 
-    print(f"\nTotal: {len(pending)} pending notification(s)")
-    print("\nTip: Use 'project-manager respond <id> <response>' to respond")
+    # Summary
+    info(f"Total: {len(pending)} pending notification(s)")
+    console.print()
+    console.print("[dim]💡 Tip: Use 'project-manager respond <id> <response>' to respond[/dim]")
+    console.print()
 
     return 0
 
@@ -497,19 +530,36 @@ def cmd_respond(args: argparse.Namespace) -> int:
     notif = db.get_notification(args.notif_id)
 
     if not notif:
-        print(f"❌ Notification {args.notif_id} not found")
+        error(
+            f"Notification {args.notif_id} not found",
+            suggestion="Use 'project-manager notifications' to see available notifications",
+        )
         return 1
 
     if notif["status"] != NOTIF_STATUS_PENDING:
-        print(f"⚠️  Notification {args.notif_id} is not pending (status: {notif['status']})")
+        warning(
+            f"Notification {args.notif_id} is not pending (status: {notif['status']})",
+            suggestion="Only pending notifications can be responded to",
+        )
         return 1
 
     # Respond
     db.respond_to_notification(args.notif_id, args.response)
 
-    print(f"✅ Responded to notification {args.notif_id}: {args.response}")
-    print(f"\nOriginal question: {notif['title']}")
-    print(f"Your response: {args.response}")
+    console.print()
+    success(f"Responded to notification {args.notif_id}")
+    console.print()
+
+    # Show details in a table
+    table = create_table(title="Response Details", show_header=False)
+    table.add_column(style="bold cyan", justify="right")
+    table.add_column()
+    table.add_row("Original Question", notif["title"])
+    table.add_row("Your Response", args.response)
+    table.add_row("Timestamp", notif["created_at"])
+
+    console.print(table)
+    console.print()
 
     return 0
 
@@ -587,7 +637,10 @@ def cmd_spec(args: argparse.Namespace) -> int:
 
         # Generate spec
         result = workflow.generate_and_review_spec(
-            user_story=user_story, feature_type=feature_type, complexity=complexity, user_story_id=user_story_id
+            user_story=user_story,
+            feature_type=feature_type,
+            complexity=complexity,
+            user_story_id=user_story_id,
         )
 
         # Show summary
@@ -1410,7 +1463,9 @@ Use 'project-manager chat' for the best experience!
     spec_parser = subparsers.add_parser("spec", help="Generate technical specification (US-016 Phase 5)")
     spec_parser.add_argument("user_story", help="User story description")
     spec_parser.add_argument(
-        "--type", default="general", help="Feature type (crud, integration, ui, infrastructure, analytics, security)"
+        "--type",
+        default="general",
+        help="Feature type (crud, integration, ui, infrastructure, analytics, security)",
     )
     spec_parser.add_argument("--complexity", default="medium", help="Complexity (low, medium, high)")
     spec_parser.add_argument("--id", help="User story ID (e.g., US-016) for ROADMAP update")
@@ -1425,14 +1480,21 @@ Use 'project-manager chat' for the best experience!
     # Metrics command (US-015)
     metrics_parser = subparsers.add_parser("metrics", help="Show estimation metrics and velocity tracking (US-015)")
     metrics_parser.add_argument(
-        "--period", type=int, default=7, help="Period in days for velocity calculation (default: 7)"
+        "--period",
+        type=int,
+        default=7,
+        help="Period in days for velocity calculation (default: 7)",
     )
 
     # Summary command (US-017 Phase 2 + Phase 4)
     summary_parser = subparsers.add_parser("summary", help="Show delivery summary for recent completions (US-017)")
     summary_parser.add_argument("--days", type=int, default=14, help="Number of days to look back (default: 14)")
     summary_parser.add_argument(
-        "--format", type=str, default="markdown", choices=["text", "markdown"], help="Output format (default: markdown)"
+        "--format",
+        type=str,
+        default="markdown",
+        choices=["text", "markdown"],
+        help="Output format (default: markdown)",
     )
     summary_parser.add_argument(
         "--update",
@@ -1442,9 +1504,18 @@ Use 'project-manager chat' for the best experience!
 
     # Calendar command (US-017 Phase 2 + Phase 4)
     calendar_parser = subparsers.add_parser("calendar", help="Show calendar of upcoming deliverables (US-017)")
-    calendar_parser.add_argument("--limit", type=int, default=3, help="Number of upcoming items to show (default: 3)")
     calendar_parser.add_argument(
-        "--format", type=str, default="markdown", choices=["text", "markdown"], help="Output format (default: markdown)"
+        "--limit",
+        type=int,
+        default=3,
+        help="Number of upcoming items to show (default: 3)",
+    )
+    calendar_parser.add_argument(
+        "--format",
+        type=str,
+        default="markdown",
+        choices=["text", "markdown"],
+        help="Output format (default: markdown)",
     )
     calendar_parser.add_argument(
         "--update",
