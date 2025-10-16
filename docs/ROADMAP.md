@@ -23491,3 +23491,349 @@ Create a comprehensive tutorial document demonstrating how to use the ACE (Agent
 - Focus on **console interface** (Streamlit app tutorial is separate)
 
 ---
+
+## US-038: Implement File Ownership Enforcement in generator Agent
+
+**Status**: 📝 PLANNED (CRITICAL - Architectural Requirement)
+**Type**: Architecture / Safety / ACE Framework
+**Complexity**: High
+**Priority**: CRITICAL
+**Created**: 2025-10-16
+**Depends On**: US-035 (Singleton enforcement must be complete first)
+
+### User Story
+
+> "As the ACE framework orchestrator, I want the generator agent to enforce file ownership rules automatically, so that agents cannot violate ownership boundaries and all file operations are properly delegated to the correct owner."
+
+### Description
+
+Enhance the generator agent to act as the central enforcement point for file ownership rules. Since generator ALWAYS intercepts all agent actions as part of the ACE framework, it's the perfect place to check ownership and automatically delegate operations to the correct owner when violations are detected.
+
+**Why This Is Critical**:
+- Prevents agents from accidentally modifying files they don't own
+- Centralizes enforcement at the orchestration layer (generator)
+- Automatic delegation instead of just blocking violations
+- Provides learning opportunity for reflector (delegation traces)
+- Enforces architectural boundaries systematically
+
+**Current State**:
+- File ownership rules documented in CLAUDE.md
+- Agents manually respect ownership (honor system)
+- No automated enforcement
+- Violations can slip through code review
+- No automatic delegation when violations occur
+
+**Target State**:
+- generator checks ownership before EVERY file operation
+- Automatic delegation to correct owner when violation detected
+- Traces capture ownership checks and delegations
+- Reflector learns from delegation patterns
+- Zero ownership violations reach execution
+
+### Workflow
+
+```
+Agent attempts file operation →
+  generator intercepts action →
+    generator checks FileOwnership registry →
+      If agent OWNS file:
+        Execute action directly
+        Capture success trace
+      If agent does NOT own file:
+        Auto-delegate to correct owner
+        Capture delegation trace
+        Return delegated result
+```
+
+### Example Scenario
+
+```
+project_manager tries to modify .claude/CLAUDE.md →
+  generator intercepts Edit tool call →
+    generator checks ownership:
+      .claude/ owned by code_developer (NOT project_manager)
+    generator auto-delegates:
+      "Delegating to code_developer (owns .claude/)"
+    code_developer modifies .claude/CLAUDE.md →
+    generator captures delegation trace →
+      reflector learns: "project_manager often needs code_developer for .claude/ changes"
+    generator returns success to project_manager
+```
+
+### Business Value
+
+**Architectural Integrity**: Enforces ownership boundaries automatically, preventing corruption and conflicts.
+
+**Developer Productivity**: Automatic delegation means agents don't need to manually check ownership.
+
+**Learning Opportunity**: Delegation traces help reflector identify common patterns and improve agent collaboration.
+
+**Error Prevention**: Blocks violations before they cause file corruption or merge conflicts.
+
+### Estimated Effort
+
+2-3 days (8-10 hours)
+
+### Acceptance Criteria
+
+**Core Implementation**:
+- [ ] Create `FileOwnership` registry in `coffee_maker/autonomous/ace/file_ownership.py`
+- [ ] Registry maps file patterns to agent owners (based on DOCUMENT_OWNERSHIP_MATRIX.md)
+- [ ] generator intercepts ALL file operations (Edit, Write, NotebookEdit tools)
+- [ ] Pre-action ownership check in generator before executing operations
+- [ ] Auto-delegation logic when ownership violation detected
+- [ ] Delegation trace capture for reflector analysis
+
+**Ownership Registry**:
+- [ ] Load ownership rules from DOCUMENT_OWNERSHIP_MATRIX.md (or code)
+- [ ] Support glob patterns for directories (e.g., `.claude/**` → code_developer)
+- [ ] Support specific file mappings (e.g., `docs/ROADMAP.md` → project_manager)
+- [ ] Handle special cases (e.g., docs/roadmap/ROADMAP.md has dual ownership)
+- [ ] Clear error messages when ownership unclear
+
+**Delegation Mechanism**:
+- [ ] generator identifies correct owner for file operation
+- [ ] generator delegates to owner agent with context
+- [ ] Owner executes operation and returns result
+- [ ] generator captures full delegation trace
+- [ ] Trace includes: violating agent, target file, correct owner, operation, result
+
+**Integration**:
+- [ ] Update generator agent definition (`.claude/agents/generator.md`)
+  - Add "Ownership Enforcement" responsibility
+  - Document auto-delegation workflow
+  - Provide examples of enforcement
+- [ ] Update TEAM_COLLABORATION.md with generator's enforcement role
+- [ ] Update CLAUDE.md Tool Ownership Matrix:
+  - Add generator's ownership enforcement capability
+  - Document that generator intercepts all file operations
+  - Provide auto-delegation examples
+
+**Testing**:
+- [ ] Create comprehensive test suite `tests/unit/test_file_ownership_enforcement.py`
+- [ ] Test ownership check for all file patterns
+- [ ] Test auto-delegation for each owner type
+- [ ] Test delegation trace capture
+- [ ] Test edge cases (dual ownership, unclear ownership)
+- [ ] Test error handling when delegation fails
+- [ ] Integration test with real agents (20+ scenarios)
+
+**Documentation**:
+- [ ] Create `docs/US_038_TECHNICAL_SPEC.md` with detailed design
+- [ ] Document FileOwnership registry API
+- [ ] Document delegation protocol between agents
+- [ ] Provide examples for each ownership pattern
+- [ ] Add troubleshooting guide for ownership issues
+
+### Technical Design
+
+**1. FileOwnership Registry**:
+```python
+class FileOwnership:
+    """Registry mapping files/directories to agent owners."""
+
+    OWNERSHIP_RULES = {
+        # Directories
+        ".claude/**": AgentType.CODE_DEVELOPER,
+        "docs/roadmap/**": AgentType.PROJECT_MANAGER,
+        "docs/architecture/**": AgentType.ARCHITECT,
+        "coffee_maker/**": AgentType.CODE_DEVELOPER,
+        "tests/**": AgentType.CODE_DEVELOPER,
+
+        # Special cases
+        "pyproject.toml": AgentType.ARCHITECT,
+        "poetry.lock": AgentType.ARCHITECT,
+    }
+
+    @classmethod
+    def get_owner(cls, file_path: str) -> AgentType:
+        """Return the agent that owns this file."""
+        # Match file_path against OWNERSHIP_RULES patterns
+        # Return matching owner or raise OwnershipUnclearError
+```
+
+**2. generator Ownership Check**:
+```python
+class Generator:
+    def intercept_action(self, agent: AgentType, action: ToolCall):
+        """Intercept and validate all agent actions."""
+
+        if action.tool in ["Edit", "Write", "NotebookEdit"]:
+            file_path = action.parameters["file_path"]
+            owner = FileOwnership.get_owner(file_path)
+
+            if owner != agent:
+                # Ownership violation - auto-delegate
+                return self.delegate_to_owner(
+                    violating_agent=agent,
+                    correct_owner=owner,
+                    action=action,
+                    file_path=file_path
+                )
+
+        # Ownership OK or non-file operation - execute
+        return self.execute_action(agent, action)
+```
+
+**3. Auto-Delegation**:
+```python
+def delegate_to_owner(self, violating_agent, correct_owner, action, file_path):
+    """Delegate file operation to correct owner."""
+
+    # Log delegation
+    logger.info(f"Delegating {action.tool} on {file_path} "
+                f"from {violating_agent} to {correct_owner}")
+
+    # Execute via correct owner
+    result = self.execute_as_agent(correct_owner, action)
+
+    # Capture delegation trace for reflector
+    trace = DelegationTrace(
+        timestamp=now(),
+        violating_agent=violating_agent,
+        correct_owner=correct_owner,
+        file_path=file_path,
+        operation=action.tool,
+        result=result.status,
+        reason="ownership_enforcement"
+    )
+    self.save_trace(trace)
+
+    return result
+```
+
+**4. Trace Capture**:
+- All ownership checks recorded in execution traces
+- Delegation events flagged for reflector analysis
+- Traces include: agent, file, owner, action, result, timestamp
+- reflector can identify delegation patterns over time
+
+### Implementation Plan
+
+**Phase 1: FileOwnership Registry (2 hours)**:
+- Create `file_ownership.py` module
+- Implement ownership rule matching with glob patterns
+- Add all ownership mappings from DOCUMENT_OWNERSHIP_MATRIX.md
+- Write unit tests for ownership lookup
+- Handle edge cases and unclear ownership
+
+**Phase 2: generator Integration (3 hours)**:
+- Add ownership checking to generator's action interception
+- Implement pre-action validation for file operations
+- Add delegation logic when violations detected
+- Test with mock agents and file operations
+
+**Phase 3: Auto-Delegation Mechanism (2 hours)**:
+- Implement delegation protocol between agents
+- Handle delegation context passing
+- Return results from delegated operations
+- Error handling when delegation fails
+
+**Phase 4: Trace Capture (1 hour)**:
+- Extend trace format for delegation events
+- Capture ownership check results
+- Store delegation metadata for reflector
+- Test trace capture and storage
+
+**Phase 5: Testing & Documentation (2 hours)**:
+- Write comprehensive test suite (20+ scenarios)
+- Test all ownership patterns from matrix
+- Test delegation for each agent type
+- Create technical specification document
+- Update agent definitions and collaboration docs
+
+### Files to Create/Modify
+
+**New Files**:
+- `coffee_maker/autonomous/ace/file_ownership.py` - Ownership registry (code_developer creates)
+- `docs/US_038_TECHNICAL_SPEC.md` - Technical specification (project_manager creates)
+- `tests/unit/test_file_ownership_enforcement.py` - Test suite (code_developer creates)
+
+**Modified Files** (code_developer modifies):
+- `coffee_maker/autonomous/ace/generator.py` - Add ownership enforcement
+- `.claude/agents/generator.md` - Update agent definition with enforcement role
+- `.claude/CLAUDE.md` - Update Tool Ownership Matrix
+
+**Modified Files** (project_manager modifies):
+- `docs/roadmap/TEAM_COLLABORATION.md` - Document generator's enforcement role
+- `docs/ROADMAP.md` - This user story
+
+### Testing Strategy
+
+**Unit Tests** (20+ scenarios):
+```python
+def test_ownership_check_code_developer_files():
+    """Test code_developer owns .claude/ files."""
+    assert FileOwnership.get_owner(".claude/CLAUDE.md") == AgentType.CODE_DEVELOPER
+
+def test_ownership_check_project_manager_files():
+    """Test project_manager owns docs/roadmap/ files."""
+    assert FileOwnership.get_owner("docs/roadmap/ROADMAP.md") == AgentType.PROJECT_MANAGER
+
+def test_auto_delegation_on_violation():
+    """Test generator auto-delegates when ownership violated."""
+    # project_manager tries to edit .claude/CLAUDE.md
+    # generator should delegate to code_developer
+    # Verify delegation trace captured
+
+def test_delegation_trace_capture():
+    """Test delegation events recorded in traces."""
+    # Trigger delegation
+    # Verify trace contains: violating agent, owner, file, operation
+```
+
+**Integration Tests**:
+- Real agent interactions with ownership enforcement
+- Test all ownership patterns from matrix
+- Verify auto-delegation works end-to-end
+- Check reflector can analyze delegation traces
+
+### Success Metrics
+
+- **Zero Ownership Violations**: No file operations execute with wrong owner
+- **100% Delegation Success**: All violations properly delegated
+- **Trace Quality**: All delegations captured with complete metadata
+- **Performance**: <50ms overhead per file operation
+- **Coverage**: >95% test coverage for ownership enforcement
+
+### Dependencies
+
+**Requires US-035 Complete**:
+- Singleton enforcement must be in place first
+- Prevents multiple agent instances complicating delegation
+- US-035 provides AgentRegistry that US-038 needs
+
+**Blocks Future Work**:
+- Safe parallel agent execution (no ownership conflicts)
+- Advanced delegation strategies (learned from traces)
+- Automated agent collaboration improvements
+
+### Risks & Mitigation
+
+**Risk 1: Delegation Complexity**:
+- **Mitigation**: Start with simple delegation (direct tool call forwarding)
+- **Mitigation**: Add context passing in Phase 2 if needed
+
+**Risk 2: Performance Overhead**:
+- **Mitigation**: Cache ownership lookups
+- **Mitigation**: Only check file operations (not all actions)
+
+**Risk 3: Circular Delegation**:
+- **Mitigation**: Track delegation chain depth, limit to 1 level initially
+- **Mitigation**: Detect and prevent circular references
+
+**Risk 4: Unclear Ownership**:
+- **Mitigation**: Explicit error messages when ownership ambiguous
+- **Mitigation**: Fallback to user confirmation if needed
+
+### Notes
+
+- **generator is ideal enforcement point**: Already intercepts ALL actions
+- **Automatic delegation is key**: Not just blocking, but fixing violations
+- **Learning opportunity**: reflector can identify delegation patterns
+- **Clean separation**: Enforcement in orchestration layer (generator)
+- **This completes ownership architecture**: US-035 (singleton) + US-038 (ownership)
+- **Code_developer will implement**: project_manager creates spec, code_developer implements
+- **Critical for multi-agent safety**: Prevents file corruption and conflicts
+
+---

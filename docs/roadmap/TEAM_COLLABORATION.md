@@ -79,6 +79,31 @@ This document defines how agents collaborate on the MonolithicCoffeeMakerAgent p
 - Design decisions
 - Provides specs (doesn't implement)
 
+### ACE Framework (Agentic Context Engineering)
+
+**generator**
+- **Ownership Enforcement**: Central enforcement point for file ownership rules
+- **Action Interception**: Intercepts ALL agent actions before execution
+- **Auto-Delegation**: Automatically delegates file operations to correct owner when violations detected
+- **Trace Capture**: Records execution traces for reflector analysis
+- Orchestrates target agent execution
+- Validates ownership before file operations (Edit, Write, NotebookEdit)
+- Captures delegation traces when ownership violations occur
+- Owns docs/generator/ for execution traces
+- **NEVER modifies files directly** - Orchestrates other agents to do the work
+
+**reflector**
+- Insight extraction from execution traces
+- Analyzes patterns and strategies
+- Generates delta items for curator
+- Owns docs/reflector/ for insights
+
+**curator**
+- Maintains evolving playbooks
+- Semantic de-duplication of insights
+- Playbook effectiveness tracking
+- Owns docs/curator/ for playbooks
+
 ---
 
 ## Demo Creation & Bug Reporting Workflow
@@ -485,6 +510,51 @@ assistant:
 user_listener: "Demo ready" (shares with team)
 ```
 
+### Example 5: Ownership Enforcement & Auto-Delegation
+
+**Flow**:
+```
+project_manager attempts to modify .claude/CLAUDE.md:
+    ↓
+generator intercepts Edit tool call:
+  - Checks FileOwnership registry
+  - Finds: .claude/ owned by code_developer (NOT project_manager)
+  - Logs: "Ownership violation detected"
+    ↓
+generator auto-delegates to code_developer:
+  - "Delegating Edit(.claude/CLAUDE.md) from project_manager to code_developer"
+  - Passes Edit parameters to code_developer
+    ↓
+code_developer executes Edit on .claude/CLAUDE.md:
+  - Modifies file successfully
+  - Returns success status
+    ↓
+generator captures delegation trace:
+  - Violating agent: project_manager
+  - Correct owner: code_developer
+  - File: .claude/CLAUDE.md
+  - Operation: Edit
+  - Result: Success
+  - Timestamp: 2025-10-16 14:23:45
+  - Reason: ownership_enforcement
+    ↓
+generator returns success to project_manager:
+  - project_manager receives result as if it did the edit itself
+  - Transparent delegation (project_manager doesn't need to know)
+    ↓
+reflector analyzes delegation trace later:
+  - Learns: "project_manager often needs code_developer for .claude/ changes"
+  - Adds insight: "Pattern detected: Strategic docs → Technical config updates"
+  - curator adds to playbook for future optimization
+```
+
+**Why This Works**:
+- **Centralized enforcement**: generator is ideal interception point
+- **Automatic correction**: Violations fixed, not just blocked
+- **Transparent**: Agents don't need manual ownership checks
+- **Learning opportunity**: reflector identifies delegation patterns
+- **Zero violations**: No file operations execute with wrong owner
+
 ---
 
 ## Key Principles
@@ -585,6 +655,14 @@ Agents NEVER do another agent's work:
 ---
 
 ## Version History
+
+**Version**: 1.1
+**Date**: 2025-10-16
+**Changes**:
+- Added ACE Framework agents (generator, reflector, curator)
+- Added generator's ownership enforcement role
+- Added Example 5: Ownership Enforcement & Auto-Delegation
+- Documented generator as central enforcement point for file ownership
 
 **Version**: 1.0
 **Date**: 2025-10-16
