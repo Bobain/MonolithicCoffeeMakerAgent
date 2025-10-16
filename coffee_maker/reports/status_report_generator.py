@@ -196,8 +196,13 @@ class StatusReportGenerator:
             key_features = self._extract_key_features(section_content)
 
             # Extract estimates
-            estimated_days = self._extract_estimated_days(section_content)
+            estimated_days_dict = self._extract_estimated_days(section_content)
             actual_days = self._extract_actual_days(section_content)
+
+            # Convert estimated_days dict to average float
+            estimated_days = None
+            if estimated_days_dict:
+                estimated_days = (estimated_days_dict["min_days"] + estimated_days_dict["max_days"]) / 2
 
             completion = StoryCompletion(
                 story_id=story_id,
@@ -230,8 +235,13 @@ class StatusReportGenerator:
             # Extract data
             business_value = self._extract_business_value(priority["content"])
             key_features = self._extract_key_features(priority["content"])
-            estimated_days = self._extract_estimated_days(priority["content"])
+            estimated_days_dict = self._extract_estimated_days(priority["content"])
             actual_days = self._extract_actual_days(priority["content"])
+
+            # Convert estimated_days dict to average float
+            estimated_days = None
+            if estimated_days_dict:
+                estimated_days = (estimated_days_dict["min_days"] + estimated_days_dict["max_days"]) / 2
 
             completion = StoryCompletion(
                 story_id=priority["name"],
@@ -772,3 +782,312 @@ class StatusReportGenerator:
                 return impact
 
         return "Improved system functionality"
+
+    def generate_status_tracking_document(self, days: int = 14, upcoming_count: int = 5) -> str:
+        """Generate auto-maintained STATUS_TRACKING.md document.
+
+        Creates a comprehensive internal tracking document with:
+        - Recent completions (last N days) with technical details
+        - Current work in progress with progress indicators
+        - Next up priorities with estimates
+        - Velocity and accuracy metrics
+        - Last updated timestamp
+
+        Args:
+            days: Number of days to look back for completions (default: 14)
+            upcoming_count: Number of upcoming items to show (default: 5)
+
+        Returns:
+            Formatted STATUS_TRACKING.md content (markdown)
+
+        Example:
+            >>> generator = StatusReportGenerator("docs/ROADMAP.md")
+            >>> document = generator.generate_status_tracking_document()
+            >>> Path("docs/STATUS_TRACKING.md").write_text(document)
+        """
+        lines = []
+
+        # Header
+        lines.append("# STATUS TRACKING")
+        lines.append("")
+        lines.append("**Auto-Generated Internal Document** - For PM & code_developer")
+        lines.append("")
+        lines.append(f"**Last Updated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # Recent Completions Section
+        completions = self.get_recent_completions(days=days)
+        lines.append(f"## Recent Completions (Last {days} Days)")
+        lines.append("")
+
+        if completions:
+            for completion in completions:
+                lines.append(f"### {completion.story_id}: {completion.title}")
+                lines.append("")
+                lines.append(f"- **Completed**: {completion.completion_date.strftime('%Y-%m-%d')}")
+
+                # Technical details
+                if completion.estimated_days and completion.actual_days:
+                    accuracy_pct = (
+                        100 - abs(completion.actual_days - completion.estimated_days) / completion.estimated_days * 100
+                    )
+                    accuracy_emoji = "✅" if accuracy_pct >= 90 else "⚠️" if accuracy_pct >= 70 else "❌"
+                    lines.append(
+                        f"- **Estimated**: {completion.estimated_days:.1f} days → "
+                        f"**Actual**: {completion.actual_days:.1f} days "
+                        f"({accuracy_emoji} {accuracy_pct:.0f}% accuracy)"
+                    )
+                elif completion.estimated_days:
+                    lines.append(f"- **Estimated**: {completion.estimated_days:.1f} days")
+
+                # Business value
+                if completion.business_value:
+                    lines.append(f"- **Impact**: {completion.business_value}")
+
+                # Key features
+                if completion.key_features:
+                    lines.append("- **Key Features**:")
+                    for feature in completion.key_features[:3]:  # Top 3 only
+                        lines.append(f"  - {feature}")
+
+                lines.append("")
+        else:
+            lines.append(f"*No completions in the last {days} days*")
+            lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+        # Current Work Section
+        lines.append("## Current Work (In Progress)")
+        lines.append("")
+
+        in_progress_stories = self._get_in_progress_stories()
+        if in_progress_stories:
+            for story in in_progress_stories:
+                lines.append(f"### {story['story_id']}: {story['title']}")
+                lines.append("")
+
+                if story.get("phase"):
+                    lines.append(f"- **Phase**: {story['phase']}")
+
+                if story.get("progress_pct"):
+                    lines.append(f"- **Progress**: {story['progress_pct']}%")
+
+                if story.get("started_date"):
+                    lines.append(f"- **Started**: {story['started_date']}")
+
+                if story.get("estimated_days"):
+                    lines.append(f"- **Estimated Remaining**: {story['estimated_days']} days")
+
+                lines.append("")
+        else:
+            lines.append("*No work currently in progress*")
+            lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+        # Next Up Section
+        lines.append(f"## Next Up (Top {upcoming_count})")
+        lines.append("")
+
+        upcoming = self.get_upcoming_deliverables(limit=upcoming_count)
+        if upcoming:
+            for idx, story in enumerate(upcoming, 1):
+                lines.append(f"{idx}. **{story.story_id}: {story.title}**")
+                lines.append(f"   - Estimated: {story.estimated_min_days:.0f}-{story.estimated_max_days:.0f} days")
+                if story.what_description:
+                    lines.append(f"   - What: {story.what_description}")
+                lines.append(f"   - Status: PLANNED")
+                lines.append("")
+        else:
+            lines.append("*No upcoming priorities with estimates*")
+            lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+        # Velocity & Accuracy Section
+        lines.append("## Velocity & Accuracy Metrics")
+        lines.append("")
+
+        velocity_data = self._calculate_velocity_metrics(completions)
+
+        lines.append(f"**Last {days} Days**:")
+        lines.append(f"- Stories completed: {velocity_data['stories_completed']}")
+
+        if velocity_data["stories_completed"] > 0:
+            lines.append(f"- Average velocity: {velocity_data['avg_velocity']:.1f} stories/week")
+
+            if velocity_data["avg_accuracy"] is not None:
+                trend_emoji = (
+                    "↑"
+                    if velocity_data["trend"] == "improving"
+                    else "↓" if velocity_data["trend"] == "declining" else "→"
+                )
+                lines.append(f"- Average accuracy: {velocity_data['avg_accuracy']:.0f}%")
+                lines.append(f"- Trend: {trend_emoji} {velocity_data['trend'].capitalize()}")
+        else:
+            lines.append("- No velocity data available yet")
+
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # Footer
+        lines.append(
+            "*This document is auto-generated from ROADMAP.md. " "Do not edit manually - changes will be overwritten.*"
+        )
+
+        return "\n".join(lines)
+
+    def _get_in_progress_stories(self) -> List[dict]:
+        """Get list of stories currently in progress.
+
+        Returns:
+            List of dictionaries with story information
+        """
+        in_progress = []
+
+        # Read full roadmap content
+        content = self.roadmap_path.read_text()
+
+        # Pattern to match User Stories: ### 🎯 [US-XXX] Title
+        us_pattern = r"### 🎯 \[(US-\d+)\] (.+?)(?:\n|$)"
+        us_matches = re.finditer(us_pattern, content)
+
+        for match in us_matches:
+            story_id = match.group(1)
+            title = match.group(2).strip()
+
+            # Extract story section
+            section_start = match.start()
+            next_section = re.search(r"\n##", content[section_start + 1 :])
+            section_end = section_start + next_section.start() if next_section else len(content)
+            section_content = content[section_start:section_end]
+
+            # Check if in progress (not complete, has started or progress indicators)
+            if self._is_in_progress(section_content):
+                story_info = {
+                    "story_id": story_id,
+                    "title": title,
+                    "phase": self._extract_phase(section_content),
+                    "progress_pct": self._extract_progress_pct(section_content),
+                    "started_date": self._extract_started_date(section_content),
+                    "estimated_days": self._extract_estimated_remaining(section_content),
+                }
+                in_progress.append(story_info)
+
+        return in_progress
+
+    def _is_in_progress(self, content: str) -> bool:
+        """Check if section is marked as in progress.
+
+        Args:
+            content: Section content
+
+        Returns:
+            True if in progress, False otherwise
+        """
+        # Don't include completed stories
+        if self._is_complete(content):
+            return False
+
+        # Look for in-progress indicators
+        status_lower = content.lower()
+        return "in progress" in status_lower or "🔄" in content or "started:" in status_lower or "phase" in status_lower
+
+    def _extract_phase(self, content: str) -> Optional[str]:
+        """Extract phase information from story content."""
+        pattern = r"[Pp]hase[:\s]+(\d+/\d+|\d+\s+of\s+\d+)"
+        match = re.search(pattern, content)
+        return match.group(1) if match else None
+
+    def _extract_progress_pct(self, content: str) -> Optional[int]:
+        """Extract progress percentage from story content."""
+        pattern = r"[Pp]rogress[:\s]+(\d+)%"
+        match = re.search(pattern, content)
+        return int(match.group(1)) if match else None
+
+    def _extract_started_date(self, content: str) -> Optional[str]:
+        """Extract started date from story content."""
+        patterns = [
+            r"\*\*Started\*\*:\s*(\d{4}-\d{2}-\d{2})",
+            r"Started:\s*(\d{4}-\d{2}-\d{2})",
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, content)
+            if match:
+                return match.group(1)
+
+        return None
+
+    def _extract_estimated_remaining(self, content: str) -> Optional[str]:
+        """Extract estimated remaining time from story content."""
+        patterns = [
+            r"[Ee]stimated [Rr]emaining[:\s]+(\d+-?\d*\s*days?)",
+            r"[Rr]emaining[:\s]+(\d+-?\d*\s*days?)",
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, content)
+            if match:
+                return match.group(1)
+
+        return None
+
+    def _calculate_velocity_metrics(self, completions: List[StoryCompletion]) -> dict:
+        """Calculate velocity and accuracy metrics from completions.
+
+        Args:
+            completions: List of StoryCompletion objects
+
+        Returns:
+            Dictionary with velocity metrics
+        """
+        stories_completed = len(completions)
+
+        if stories_completed == 0:
+            return {"stories_completed": 0, "avg_velocity": 0.0, "avg_accuracy": None, "trend": "unknown"}
+
+        # Calculate average velocity (stories per week)
+        days_range = (datetime.now() - completions[-1].completion_date).days
+        weeks = max(days_range / 7, 1)  # At least 1 week
+        avg_velocity = stories_completed / weeks
+
+        # Calculate average accuracy
+        accuracies = []
+        for completion in completions:
+            if completion.estimated_days and completion.actual_days:
+                accuracy = (
+                    100 - abs(completion.actual_days - completion.estimated_days) / completion.estimated_days * 100
+                )
+                accuracies.append(accuracy)
+
+        avg_accuracy = sum(accuracies) / len(accuracies) if accuracies else None
+
+        # Determine trend (compare first half vs second half)
+        if len(accuracies) >= 4:
+            mid = len(accuracies) // 2
+            first_half = sum(accuracies[:mid]) / mid
+            second_half = sum(accuracies[mid:]) / (len(accuracies) - mid)
+
+            if second_half > first_half + 5:
+                trend = "improving"
+            elif second_half < first_half - 5:
+                trend = "declining"
+            else:
+                trend = "stable"
+        else:
+            trend = "unknown"
+
+        return {
+            "stories_completed": stories_completed,
+            "avg_velocity": avg_velocity,
+            "avg_accuracy": avg_accuracy,
+            "trend": trend,
+        }
