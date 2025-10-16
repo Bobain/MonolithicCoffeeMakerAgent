@@ -1812,7 +1812,7 @@ The system must LEARN from mistakes. Lessons that aren't captured and applied le
    - Gaps in user experience
    - Communication failures
 
-4. **Success Patterns**: `SUCCESS_PATTERN_*.md`
+4. **Success Patterns**: `SUCCESS_PATTERN_*.md` ⭐ EQUALLY IMPORTANT AS FAILURES
    - What worked well
    - Effective workflows
    - Best practices discovered
@@ -1822,14 +1822,47 @@ The system must LEARN from mistakes. Lessons that aren't captured and applied le
    - Patterns identified
    - Actions taken
 
+### Balance: Failures AND Successes
+
+**CRITICAL**: Lessons system must capture BOTH failures and successes equally.
+
+**Why Successes Matter**:
+- Show what works (replicate effective patterns)
+- Build team morale (celebrate wins)
+- Guide future decisions (proven approaches)
+- Create best practices library
+- Demonstrate continuous improvement to user
+- Balance negativity (not just problems)
+
+**Capture Ratio Target**: At least 1 success for every 2 failures
+
+**Success Types**:
+1. **Workflow Success**: Process that worked exceptionally well
+2. **Technical Success**: Implementation that exceeded expectations
+3. **Performance Win**: Significant speedup or efficiency gain
+4. **User Delight**: Feature/approach that pleased user
+5. **Problem Solved Elegantly**: Creative solution to complex problem
+6. **Team Collaboration Win**: Agents worked together effectively
+
+**Success Pattern Examples**:
+- ✅ US-038 Phase 2 completed in 50 minutes (estimated 4-6 hours)
+- ✅ Context-upfront approach eliminated 80% of file searches
+- ✅ Parallel agent execution design (architect/project_manager collaboration)
+- ✅ Refactoring infrastructure setup (proactive quality management)
+- ✅ CFR-006 creation (learning from US-040 failure immediately)
+
 ### Lesson Capture Workflow
 
 **When to Capture**:
 - ❌ Any failure (workflow, technical, process)
 - 😤 User expresses frustration
 - 🔄 Same mistake happens twice
-- ✅ Significant success worth replicating
+- ✅ Significant success worth replicating ⭐ EQUALLY IMPORTANT
+- 🎉 User expresses satisfaction/delight
+- ⚡ Performance significantly exceeds expectations
+- 🤝 Collaboration works exceptionally well
 - 💡 Key insight discovered
+- 🏆 Milestone achieved ahead of schedule
 
 **Who Captures**:
 1. **Any agent** can identify a lesson
@@ -1889,6 +1922,79 @@ The system must LEARN from mistakes. Lessons that aren't captured and applied le
 - [ ] Verified resolved (no recurrence)
 ```
 
+### Success Pattern Document Template
+
+```markdown
+# SUCCESS PATTERN: [Brief Title]
+
+**Date**: YYYY-MM-DD
+**Impact**: [HIGH/MEDIUM/LOW]
+**Category**: [Workflow/Technical/Performance/User Experience/Collaboration]
+**Key Contributors**: [agents or user]
+
+## What Succeeded
+
+[Clear description of the success]
+
+**Metrics**:
+- Expected outcome: [what we expected]
+- Actual outcome: [what we achieved]
+- Improvement: [quantify if possible]
+
+## Why It Worked
+
+[Root cause of success - be specific about what made this effective]
+
+**Key Factors**:
+1. [Factor 1]
+2. [Factor 2]
+3. [Factor 3]
+
+## Context
+
+[What conditions enabled this success? What was different?]
+
+## Value Delivered
+
+- **User benefit**: [how this helped the user]
+- **System benefit**: [how this improved the system]
+- **Time saved**: [estimate if applicable]
+- **Quality improvement**: [if applicable]
+
+## Replication Guide
+
+**How to replicate this success**:
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+**When to use this pattern**:
+- Situation 1
+- Situation 2
+- Situation 3
+
+**Cautions**:
+- [What to watch out for when replicating]
+
+## Update Required Documents
+
+- [ ] Best practices added to agent definitions
+- [ ] Pattern added to TEAM_COLLABORATION.md
+- [ ] Approach documented in relevant guides
+- [ ] Success referenced in future planning
+
+## Recognition
+
+[Acknowledge agents/user who contributed to this success]
+
+## Status
+
+- [ ] Success documented
+- [ ] Documents updated with best practice
+- [ ] Pattern shared with all agents
+- [ ] Replication guide verified
+```
+
 ### Using Lessons to Prevent Recurrence
 
 **Required Reading**:
@@ -1935,16 +2041,59 @@ All agents MUST read docs/roadmap/learnings/ periodically:
 - Refactoring workflow missing → US-044 created
 - Ownership includes maintenance → CFR-005 created
 
+### Monthly Summaries (LESSONS_YYYY_MM.md)
+
+**Required Sections**:
+1. **Summary Statistics**:
+   - Total lessons captured
+   - Failures: [count]
+   - Successes: [count] ⭐
+   - Balance ratio: [success:failure]
+   - Target: ≥1:2 (1 success per 2 failures)
+
+2. **Top Failures** (up to 5):
+   - Brief description
+   - Impact
+   - Status (prevented/recurring)
+
+3. **Top Successes** (up to 5): ⭐ EQUAL PROMINENCE
+   - Brief description
+   - Impact
+   - Replication status
+
+4. **Patterns Identified**:
+   - Recurring themes
+   - Systemic issues
+   - Effective approaches
+
+5. **Actions Taken**:
+   - Documents updated
+   - CFRs promoted
+   - Agent behaviors changed
+
+6. **Effectiveness Metrics**:
+   - Recurrence rate (target: <10%)
+   - Time to resolution
+   - User satisfaction signals
+
 ### Maintenance Responsibility (CFR-005 Applied)
 
 **project_manager maintains docs/roadmap/learnings/**:
 
+**Weekly** (project_manager):
+- Review new lessons (failures AND successes)
+- **Ensure success capture**: Check if recent wins documented
+- Update relevant documents
+- **Balance check**: Maintain ≥1:2 success:failure ratio
+
 **Monthly** (first week of month):
 - Create LESSONS_YYYY_MM.md summary
+- **Highlight top successes** prominently
 - Identify patterns across lessons
 - Promote critical lessons to CFRs if needed
 - Archive old lessons (>6 months to archive/ subdirectory)
 - Update agent definitions with new avoidance patterns
+- **Celebrate wins** with user in summary
 
 **Quarterly** (Q1, Q2, Q3, Q4):
 - Review all lessons for recurring themes
@@ -1956,6 +2105,7 @@ All agents MUST read docs/roadmap/learnings/ periodically:
 - Total lessons captured
 - Lessons by severity
 - Lessons by category
+- **Success:failure ratio** (target: ≥1:2)
 - Recurrence rate (same lesson multiple times = problem)
 - Time to resolution (how long to implement prevention)
 - Effectiveness (did prevention work?)
