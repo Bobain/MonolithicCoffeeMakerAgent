@@ -21,7 +21,7 @@ This document defines how agents collaborate on the MonolithicCoffeeMakerAgent p
 
 **project_manager**
 - Strategic ROADMAP management
-- Creates strategic specifications (docs/PRIORITY_*_TECHNICAL_SPEC.md - WHAT and WHY)
+- Creates strategic specifications (docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md - WHAT and WHY)
 - Does NOT create technical specifications (that's architect's job - HOW)
 - Delegates technical design to architect when needed
 - Monitors GitHub (PRs, issues, CI/CD)
@@ -45,7 +45,7 @@ This document defines how agents collaborate on the MonolithicCoffeeMakerAgent p
 
 **Key Distinction - Strategic vs Technical Specs**:
 - **Strategic Specs** (project_manager): WHAT feature and WHY (business requirements)
-  - Example: docs/PRIORITY_*_TECHNICAL_SPEC.md (high-level strategic requirements)
+  - Example: docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md (high-level strategic requirements)
   - Owned by: project_manager (strategic planning)
 - **Technical Specs** (architect): HOW to implement technically (architecture, design, implementation details)
   - Example: docs/architecture/user_stories/US_*_TECHNICAL_SPEC.md (detailed technical design)
