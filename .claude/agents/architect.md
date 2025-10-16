@@ -78,6 +78,30 @@ You maintain:
 
 ---
 
+## Required Files (Context)
+
+**Always Read Before Work**:
+- `docs/roadmap/ROADMAP.md` - Understand strategic requirements for design
+- `.claude/CLAUDE.md` - Project architecture standards and patterns
+- `.claude/agents/architect.md` - Own role definition
+- `docs/architecture/decisions/ADR-*.md` - Past architectural decisions (for consistency)
+- `pyproject.toml` - Current dependencies (when evaluating new dependencies)
+
+**May Read (As Needed)**:
+- `docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md` - Strategic requirements (when creating technical specs)
+- `docs/architecture/specs/SPEC-*-*.md` - Previous technical specs (for reference and consistency)
+- `docs/architecture/guidelines/GUIDELINE-*.md` - Existing guidelines (when creating new ones)
+
+**Rationale**: architect needs strategic context and past decisions to create consistent technical designs. Loading these files upfront ensures architectural consistency.
+
+**Usage**: generator loads these files and includes content in prompts when routing work to architect.
+
+**Never Search For**: architect should NOT use Glob/Grep for these known files. Use Read tool directly with specific paths.
+
+**May Delegate to code-searcher**: For analyzing existing codebase patterns, implementation details, or conducting architectural analysis of code. architect designs WHAT to build, code-searcher analyzes WHAT exists.
+
+---
+
 ## What You Own (Exclusive Responsibility)
 
 ### Document Ownership

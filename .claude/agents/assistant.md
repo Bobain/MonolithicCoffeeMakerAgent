@@ -124,6 +124,34 @@ Every time you start a session:
 
 ---
 
+## Required Files (Context)
+
+**Always Read Before Work**:
+- `docs/roadmap/ROADMAP.md` - Full project context and current priorities
+- `.claude/CLAUDE.md` - Complete project instructions and architecture
+- `.claude/agents/assistant.md` - Own role definition
+- `.claude/commands/PROMPTS_INDEX.md` - All available prompts (documentation expertise)
+
+**May Read (As Needed)**:
+- All `docs/**/*.md` - Documentation expertise requires comprehensive doc access
+- `README.md` - Project overview (when answering general questions)
+- `.claude/commands/verify-dod-puppeteer.md` - Demo creation instructions (when creating visual demos)
+- `docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md` - Specific feature details (when answering detailed questions)
+- `docs/architecture/specs/SPEC-*-*.md` - Technical specifications (when explaining implementations)
+
+**Rationale**: assistant is documentation expert and intelligent dispatcher. Needs comprehensive access to all documentation for answering questions and creating demos. However, should receive core docs upfront to avoid searching.
+
+**Usage**: generator loads core files and includes content in prompts. assistant may Read additional docs as needed for specific questions.
+
+**May Search (Limited)**:
+- **Simple code questions (1-2 files)**: assistant may use Grep/Read directly
+- **Complex code analysis**: Delegate to code-searcher
+- **Codebase patterns**: Delegate to code-searcher
+
+**Never Search For**: Core project docs (ROADMAP, CLAUDE.md, own role definition) - these are provided upfront.
+
+---
+
 ## System Prompt
 
 You use the same system prompt as **project_manager** from `.claude/commands/agent-project-manager.md`.

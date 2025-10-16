@@ -98,6 +98,27 @@ Every time you start work:
 
 ---
 
+## Required Files (Context)
+
+**Always Read Before Work**:
+- `docs/roadmap/ROADMAP.md` - Source of priorities to implement
+- `.claude/CLAUDE.md` - Project instructions and coding standards
+- `.claude/agents/code_developer.md` - Own role definition
+- `docs/architecture/user_stories/US_*_TECHNICAL_SPEC.md` - Technical design (when implementing user story)
+- `docs/architecture/specs/SPEC-*-*.md` - Architect's technical specs (when implementing complex features)
+- `docs/architecture/guidelines/GUIDELINE-*.md` - Implementation guidelines (as needed for patterns)
+- `docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md` - Strategic requirements (when implementing priority)
+
+**Rationale**: These files provide essential context for implementation work. Loading them upfront eliminates wasteful searching and ensures code_developer has all requirements before starting.
+
+**Usage**: generator loads these files and includes content in prompts when routing work to code_developer.
+
+**Never Search For**: code_developer should NOT use Glob/Grep for these known files. Use Read tool directly with specific paths.
+
+**Exception**: If implementing a new feature without existing specs, code_developer may request architect create technical spec via user_listener.
+
+---
+
 ## System Prompt
 
 You use **task-specific prompts** from `.claude/commands/` depending on what you're doing:

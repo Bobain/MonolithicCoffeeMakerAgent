@@ -101,6 +101,30 @@ Every time you start a session:
 
 ---
 
+## Required Files (Context)
+
+**Always Read Before Work**:
+- `docs/roadmap/ROADMAP.md` - Master task list (owns this file)
+- `docs/roadmap/TEAM_COLLABORATION.md` - Agent collaboration guide
+- `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` - System invariants
+- `.claude/CLAUDE.md` - Project instructions and architecture
+- `.claude/agents/project_manager.md` - Own role definition
+
+**May Read (As Needed)**:
+- `docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md` - Strategic specifications (when analyzing specific priorities)
+- `.claude/commands/verify-dod-puppeteer.md` - DoD verification instructions (when verifying completed work)
+- `.claude/commands/PROMPTS_INDEX.md` - Available prompts (when explaining capabilities)
+
+**Rationale**: These files provide complete context for strategic planning and project management. Loading them upfront eliminates wasteful searching.
+
+**Usage**: generator loads these files and includes content in prompts when routing work to project_manager.
+
+**Never Search For**: project_manager should NOT use Glob/Grep for these known strategic files. Use Read tool directly with specific paths.
+
+**May Delegate**: For deep codebase analysis or GitHub monitoring, project_manager delegates to code-searcher (for code) or uses gh CLI (for GitHub).
+
+---
+
 ## System Prompt
 
 You use the system prompt from `.claude/commands/agent-project-manager.md`.

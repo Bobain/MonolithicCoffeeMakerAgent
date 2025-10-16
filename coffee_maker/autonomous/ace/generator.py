@@ -48,7 +48,8 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from coffee_maker.autonomous.ace.file_ownership import (
     FileOwnership,
@@ -164,7 +165,240 @@ class Generator:
     def __init__(self):
         """Initialize Generator agent."""
         self.delegation_traces: list[DelegationTrace] = []
+        self._file_search_traces: list[Dict[str, Any]] = []
         logger.info("Generator initialized - file ownership enforcement active")
+
+    def load_agent_context(self, agent_type: AgentType) -> Dict[str, str]:
+        """Load required context files for an agent (US-042: Context-Upfront Pattern).
+
+        This method implements the context-upfront file access pattern where agents
+        receive required files upfront rather than searching for them during execution.
+
+        Args:
+            agent_type: The agent type to load context for
+
+        Returns:
+            Dictionary mapping file paths to their contents
+
+        Example:
+            >>> generator = Generator()
+            >>> context = generator.load_agent_context(AgentType.CODE_DEVELOPER)
+            >>> "docs/roadmap/ROADMAP.md" in context
+            True
+        """
+        # Define required files per agent (aligned with agent definitions in .claude/agents/)
+        AGENT_CONTEXT_FILES = {
+            AgentType.CODE_DEVELOPER: [
+                "docs/roadmap/ROADMAP.md",
+                ".claude/CLAUDE.md",
+                ".claude/agents/code_developer.md",
+            ],
+            AgentType.PROJECT_MANAGER: [
+                "docs/roadmap/ROADMAP.md",
+                "docs/roadmap/TEAM_COLLABORATION.md",
+                "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md",
+                ".claude/CLAUDE.md",
+                ".claude/agents/project_manager.md",
+            ],
+            AgentType.ARCHITECT: [
+                "docs/roadmap/ROADMAP.md",
+                ".claude/CLAUDE.md",
+                ".claude/agents/architect.md",
+                "pyproject.toml",
+            ],
+            AgentType.ASSISTANT: [
+                "docs/roadmap/ROADMAP.md",
+                ".claude/CLAUDE.md",
+                ".claude/agents/assistant.md",
+                ".claude/commands/PROMPTS_INDEX.md",
+            ],
+            AgentType.CODE_SEARCHER: [
+                ".claude/CLAUDE.md",
+                ".claude/agents/code-searcher.md",
+                "docs/roadmap/ROADMAP.md",
+            ],
+            AgentType.UX_DESIGN_EXPERT: [
+                ".claude/CLAUDE.md",
+                ".claude/agents/ux-design-expert.md",
+                "docs/roadmap/ROADMAP.md",
+            ],
+        }
+
+        context: Dict[str, str] = {}
+        required_files = AGENT_CONTEXT_FILES.get(agent_type, [])
+
+        logger.info(f"Loading context for {agent_type.value}: {len(required_files)} files")
+
+        for file_path in required_files:
+            try:
+                # Construct absolute path
+                full_path = Path(file_path)
+                if not full_path.is_absolute():
+                    # Assume paths are relative to project root
+                    full_path = Path.cwd() / file_path
+
+                content = full_path.read_text(encoding="utf-8")
+                context[file_path] = content
+                logger.debug(f"Loaded context file: {file_path} ({len(content)} chars)")
+            except FileNotFoundError:
+                error_msg = f"ERROR: Required context file not found: {file_path}"
+                context[file_path] = error_msg
+                logger.warning(f"Context file missing for {agent_type.value}: {file_path}")
+            except Exception as e:
+                error_msg = f"ERROR: Failed to load {file_path}: {str(e)}"
+                context[file_path] = error_msg
+                logger.error(f"Error loading context for {agent_type.value}: {file_path} - {e}")
+
+        return context
+
+    def format_context_for_prompt(self, context: Dict[str, str], max_chars_per_file: int = 5000) -> str:
+        """Format context files for inclusion in agent prompts.
+
+        Args:
+            context: Dictionary of file paths to contents
+            max_chars_per_file: Maximum characters to include per file (for large files)
+
+        Returns:
+            Formatted string ready for prompt inclusion
+
+        Example:
+            >>> generator = Generator()
+            >>> context = generator.load_agent_context(AgentType.CODE_DEVELOPER)
+            >>> prompt_context = generator.format_context_for_prompt(context)
+        """
+        lines: List[str] = []
+        lines.append("=== CONTEXT FILES PROVIDED UPFRONT ===")
+        lines.append("")
+
+        for file_path, content in context.items():
+            lines.append(f"--- {file_path} ---")
+
+            # Truncate if too long
+            if len(content) > max_chars_per_file:
+                truncated = content[:max_chars_per_file]
+                lines.append(truncated)
+                lines.append(f"... [TRUNCATED - {len(content) - max_chars_per_file} chars omitted]")
+            else:
+                lines.append(content)
+
+            lines.append("")
+
+        lines.append("=== END CONTEXT FILES ===")
+        lines.append("")
+        lines.append(
+            "You have all required context above. Use Read tool for specific line ranges if needed, "
+            "but do NOT search with Glob/Grep for these known files."
+        )
+
+        return "\n".join(lines)
+
+    def monitor_file_search(
+        self, agent_type: AgentType, operation: str, file_pattern: str, context_provided: bool = True
+    ) -> None:
+        """Monitor and log file search operations (US-042: Unexpected Search Monitoring).
+
+        This method tracks when agents use Glob/Grep, which may indicate:
+        - Insufficient context provided upfront
+        - Agent should have known the file path
+        - Legitimate search (for code-searcher)
+
+        Args:
+            agent_type: Agent that performed search
+            operation: Type of search (glob/grep)
+            file_pattern: Pattern searched for
+            context_provided: Whether context was provided upfront to this agent
+
+        Example:
+            >>> generator = Generator()
+            >>> generator.monitor_file_search(
+            ...     AgentType.CODE_DEVELOPER,
+            ...     "glob",
+            ...     "**/*test*.py",
+            ...     context_provided=True
+            ... )
+        """
+        # code-searcher is EXPECTED to search - don't log as unexpected
+        if agent_type == AgentType.CODE_SEARCHER:
+            logger.debug(f"code-searcher performed expected {operation}: {file_pattern}")
+            return
+
+        # architect MAY search for codebase analysis - log but not as warning
+        if agent_type == AgentType.ARCHITECT:
+            logger.info(f"architect performed {operation} for analysis: {file_pattern}")
+            self._log_search_trace(agent_type, operation, file_pattern, severity="info")
+            return
+
+        # For other agents, log as unexpected if context was provided
+        if context_provided:
+            logger.warning(
+                f"Unexpected file search: {agent_type.value} used {operation} for '{file_pattern}'. "
+                f"Consider adding to required context files in agent definition."
+            )
+            self._log_search_trace(agent_type, operation, file_pattern, severity="warning")
+        else:
+            logger.info(f"File search (no context): {agent_type.value} used {operation} for '{file_pattern}'")
+            self._log_search_trace(agent_type, operation, file_pattern, severity="info")
+
+    def _log_search_trace(self, agent_type: AgentType, operation: str, file_pattern: str, severity: str) -> None:
+        """Log file search trace for reflector analysis.
+
+        Args:
+            agent_type: Agent that searched
+            operation: Search operation (glob/grep)
+            file_pattern: Pattern searched
+            severity: Severity level (info/warning)
+        """
+        trace = {
+            "timestamp": datetime.now().isoformat(),
+            "agent": agent_type.value,
+            "operation": operation,
+            "pattern": file_pattern,
+            "severity": severity,
+            "note": (
+                "Unexpected file search - context may be insufficient"
+                if severity == "warning"
+                else "File search operation"
+            ),
+        }
+        self._file_search_traces.append(trace)
+        logger.debug(f"Search trace logged: {agent_type.value} {operation} {file_pattern}")
+
+    def get_search_stats(self) -> Dict[str, Any]:
+        """Get statistics about file searches for monitoring.
+
+        Returns:
+            Dictionary with search statistics including:
+            - total_searches: Total number of searches logged
+            - searches_by_agent: Count by agent
+            - unexpected_searches: Count of warning-level searches
+            - most_common_patterns: Most frequent search patterns
+
+        Example:
+            >>> generator = Generator()
+            >>> stats = generator.get_search_stats()
+            >>> print(f"Unexpected searches: {stats['unexpected_searches']}")
+        """
+        total = len(self._file_search_traces)
+        unexpected = len([t for t in self._file_search_traces if t["severity"] == "warning"])
+
+        by_agent = {}
+        for trace in self._file_search_traces:
+            agent = trace["agent"]
+            by_agent[agent] = by_agent.get(agent, 0) + 1
+
+        pattern_counts = {}
+        for trace in self._file_search_traces:
+            pattern = f"{trace['operation']}:{trace['pattern']}"
+            pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
+
+        most_common = sorted(pattern_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+
+        return {
+            "total_searches": total,
+            "unexpected_searches": unexpected,
+            "searches_by_agent": by_agent,
+            "most_common_patterns": [{"pattern": p, "count": c} for p, c in most_common],
+        }
 
     def intercept_file_operation(
         self,
