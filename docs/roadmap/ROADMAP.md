@@ -23631,6 +23631,16 @@ project_manager tries to modify .claude/CLAUDE.md →
 - [ ] Auto-delegation logic when ownership violation detected
 - [ ] Delegation trace capture for reflector analysis
 
+**File Tool Implementation**:
+- [ ] Create WriteTool class with ownership enforcement
+- [ ] Create ReadTool class (unrestricted)
+- [ ] Centralized FILE_TOOL_OWNERSHIP configuration (file_tool_config.py)
+- [ ] All file-owning agents have correctly configured WRITE tools
+- [ ] Non-file-owning agents have empty WRITE tool allowed_paths
+- [ ] Clear error messages when ownership violated
+- [ ] Automatic suggestion to delegate
+- [ ] Integration tests verify blocking and delegation
+
 **Ownership Registry**:
 - [ ] Load ownership rules from DOCUMENT_OWNERSHIP_MATRIX.md (or code)
 - [ ] Support glob patterns for directories (e.g., `.claude/**` → code_developer)

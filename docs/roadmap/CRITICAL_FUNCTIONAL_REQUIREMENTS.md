@@ -443,6 +443,327 @@ architect requests approval → user approves → code_developer adds dependency
 
 ---
 
+## Ownership-Aware File Tools
+
+**Purpose**: Enforce CFR-000 at the tool level by restricting write operations automatically.
+
+### Tool Architecture
+
+Every agent is equipped with two file operation tools:
+
+#### 1. READ Tool (Unrestricted)
+
+**Access**: All agents can read all files
+
+**Why Unrestricted**:
+- Reading never causes file conflicts
+- Agents need context from multiple sources
+- assistant needs to read entire codebase
+- code-searcher analyzes all files
+- No risk of corruption from reads
+
+**Usage**:
+```python
+# Any agent can read any file
+content = read_file("docs/roadmap/ROADMAP.md")
+content = read_file(".claude/CLAUDE.md")
+content = read_file("coffee_maker/autonomous/daemon.py")
+# All allowed - reading is safe
+```
+
+#### 2. WRITE Tool (Ownership-Restricted)
+
+**Access**: Each agent's WRITE tool is pre-configured with ownership boundaries
+
+**Why Restricted**:
+- Writing can cause file conflicts
+- Must enforce CFR-001 (Document Ownership Boundaries)
+- Automatic enforcement prevents accidents
+- Cannot bypass even if agent tries
+
+**Configuration Per Agent**:
+
+```python
+# code_developer WRITE tool configuration
+code_developer_write = WriteTool(
+    allowed_paths=[
+        ".claude/",
+        "coffee_maker/",
+        "tests/",
+        "scripts/",
+        ".pre-commit-config.yaml",
+        "pyproject.toml",  # ONLY if architect delegates
+        "poetry.lock",     # ONLY if architect delegates
+    ]
+)
+
+# project_manager WRITE tool configuration
+project_manager_write = WriteTool(
+    allowed_paths=[
+        "docs/roadmap/",
+        "docs/templates/",
+        "docs/tutorials/",
+        "docs/code-searcher/",
+        "docs/user_interpret/",
+        "docs/code_developer/",
+    ]
+)
+
+# architect WRITE tool configuration
+architect_write = WriteTool(
+    allowed_paths=[
+        "docs/architecture/",
+        "pyproject.toml",
+        "poetry.lock",
+    ]
+)
+
+# assistant WRITE tool configuration
+assistant_write = WriteTool(
+    allowed_paths=[]  # EMPTY - assistant owns NO files
+)
+# assistant can only read and delegate
+```
+
+**Enforcement Logic**:
+
+```python
+class WriteTool:
+    def __init__(self, agent_type: AgentType, allowed_paths: List[str]):
+        self.agent_type = agent_type
+        self.allowed_paths = allowed_paths
+
+    def write_file(self, file_path: str, content: str) -> WriteResult:
+        """Write file with automatic ownership enforcement."""
+
+        # Check if file path is within allowed boundaries
+        if not self._is_path_allowed(file_path):
+            # BLOCK - ownership violation
+            owner = FileOwnership.get_owner(file_path)
+
+            raise OwnershipViolationError(
+                f"Agent '{self.agent_type}' cannot write to '{file_path}'\n"
+                f"Owner: {owner}\n"
+                f"Action: Delegate to {owner} instead.\n"
+                f"\n"
+                f"This agent can only write to:\n" +
+                "\n".join(f"  - {path}" for path in self.allowed_paths)
+            )
+
+        # Allowed - perform write
+        return self._perform_write(file_path, content)
+
+    def _is_path_allowed(self, file_path: str) -> bool:
+        """Check if file path is within allowed boundaries."""
+        for allowed_path in self.allowed_paths:
+            if file_path.startswith(allowed_path):
+                return True
+        return False
+```
+
+**Example: Automatic Blocking**
+
+```python
+# project_manager attempts to write to .claude/CLAUDE.md
+try:
+    project_manager_write.write_file(
+        ".claude/CLAUDE.md",
+        "Updated content"
+    )
+except OwnershipViolationError as e:
+    print(e)
+    # Output:
+    # Agent 'project_manager' cannot write to '.claude/CLAUDE.md'
+    # Owner: code_developer
+    # Action: Delegate to code_developer instead.
+    #
+    # This agent can only write to:
+    #   - docs/roadmap/
+    #   - docs/templates/
+    #   - docs/tutorials/
+    #   - docs/code-searcher/
+    #   - docs/user_interpret/
+    #   - docs/code_developer/
+```
+
+**Example: Automatic Delegation**
+
+```python
+# project_manager needs to update .claude/CLAUDE.md
+# Instead of direct write, use delegation tool
+
+result = delegate_task(
+    task="Update .claude/CLAUDE.md with new ownership matrix",
+    context={"updates": ownership_updates},
+    target_file=".claude/CLAUDE.md"
+)
+
+# generator receives delegation request
+# generator checks: Who owns .claude/CLAUDE.md?
+# generator finds: code_developer
+# generator delegates to code_developer
+# code_developer WRITE tool allows (within owned paths)
+# code_developer performs update
+# Result returns to project_manager
+```
+
+### Benefits
+
+**Automatic Enforcement**:
+- Agents cannot accidentally write outside boundaries
+- No need for manual ownership checks in agent code
+- Impossible to bypass (tool-level enforcement)
+
+**Clear Error Messages**:
+- Agent immediately knows what went wrong
+- Owner clearly identified
+- Allowed paths listed for reference
+- Suggestion to delegate
+
+**Zero Configuration for Agents**:
+- Agent just calls `write_file(path, content)`
+- Tool handles all ownership checks
+- Agent doesn't need to know ownership matrix
+- Enforcement is transparent
+
+**Integration with Delegation**:
+- Blocked writes automatically suggest delegation
+- Delegation tool routes to correct owner
+- Owner's WRITE tool allows the operation
+- Seamless workflow
+
+### Tool Configuration Management
+
+**Centralized Configuration**:
+
+```python
+# coffee_maker/autonomous/ace/file_tool_config.py
+
+FILE_TOOL_OWNERSHIP = {
+    AgentType.CODE_DEVELOPER: [
+        ".claude/",
+        "coffee_maker/",
+        "tests/",
+        "scripts/",
+        ".pre-commit-config.yaml",
+    ],
+
+    AgentType.PROJECT_MANAGER: [
+        "docs/roadmap/",
+        "docs/templates/",
+        "docs/tutorials/",
+        "docs/code-searcher/",
+        "docs/user_interpret/",
+        "docs/code_developer/",
+    ],
+
+    AgentType.ARCHITECT: [
+        "docs/architecture/",
+        "pyproject.toml",
+        "poetry.lock",
+    ],
+
+    AgentType.GENERATOR: [
+        "docs/generator/",
+    ],
+
+    AgentType.REFLECTOR: [
+        "docs/reflector/",
+    ],
+
+    AgentType.CURATOR: [
+        "docs/curator/",
+    ],
+
+    AgentType.ASSISTANT: [],  # READ-ONLY
+    AgentType.USER_LISTENER: [],  # Delegation-only
+    AgentType.CODE_SEARCHER: [],  # READ-ONLY
+    AgentType.UX_DESIGN_EXPERT: [],  # Provides specs only
+}
+
+def create_write_tool(agent_type: AgentType) -> WriteTool:
+    """Create WRITE tool configured for agent's ownership boundaries."""
+    allowed_paths = FILE_TOOL_OWNERSHIP.get(agent_type, [])
+    return WriteTool(agent_type, allowed_paths)
+
+def create_read_tool(agent_type: AgentType) -> ReadTool:
+    """Create READ tool (unrestricted for all agents)."""
+    return ReadTool(agent_type)  # No path restrictions
+```
+
+**Single Source of Truth**:
+- Ownership matrix in CRITICAL_FUNCTIONAL_REQUIREMENTS.md
+- Tool configuration mirrors ownership matrix
+- Changes to ownership require updating both
+- Consistency enforced through documentation
+
+### Integration with Existing Enforcement
+
+**Four Layers of Protection**:
+
+```
+Layer 1: Singleton Enforcement (US-035)
+    ↓
+    Prevents multiple instances of file-owning agents
+
+Layer 2: Tool-Level Enforcement (NEW)
+    ↓
+    WRITE tool blocks writes outside owned paths
+
+Layer 3: generator Enforcement (US-038)
+    ↓
+    generator checks ownership before delegation
+
+Layer 4: Multi-Level Validation (US-039)
+    ↓
+    User story/request/agent validation
+
+= COMPLETE CFR-000 IMPLEMENTATION
+```
+
+**Defense in Depth**: Multiple layers ensure CFR-000 cannot be violated.
+
+### Testing Strategy
+
+**Unit Tests**:
+```python
+def test_write_tool_allows_owned_paths():
+    tool = create_write_tool(AgentType.CODE_DEVELOPER)
+    result = tool.write_file("coffee_maker/test.py", "content")
+    assert result.success
+
+def test_write_tool_blocks_unowned_paths():
+    tool = create_write_tool(AgentType.PROJECT_MANAGER)
+    with pytest.raises(OwnershipViolationError):
+        tool.write_file("coffee_maker/test.py", "content")
+
+def test_read_tool_unrestricted():
+    tool = create_read_tool(AgentType.ASSISTANT)
+    # Can read anything
+    content1 = tool.read_file("docs/roadmap/ROADMAP.md")
+    content2 = tool.read_file(".claude/CLAUDE.md")
+    content3 = tool.read_file("coffee_maker/autonomous/daemon.py")
+    # All succeed
+```
+
+**Integration Tests**:
+```python
+def test_delegation_flow_on_ownership_violation():
+    # project_manager tries to write .claude/CLAUDE.md
+    try:
+        project_manager_write.write_file(".claude/CLAUDE.md", "content")
+    except OwnershipViolationError:
+        # Delegates to code_developer
+        result = delegate_task(
+            task="Update .claude/CLAUDE.md",
+            context={"content": "content"}
+        )
+        # Should succeed
+        assert result.success
+```
+
+---
+
 ## Task Delegation Tool
 
 **Purpose**: All agents use a delegation tool instead of directly calling other agents.
@@ -1260,6 +1581,16 @@ If ANY check fails: STOP, delegate, or escalate.
 
 ## Quick Reference: What to Do When...
 
+### I need to write to a file
+→ Use your WRITE tool: `write_file(path, content)`
+→ If ownership violation: Error tells you who owns it
+→ Delegate to owner using delegation tool
+
+### I need to read a file
+→ Use READ tool: `read_file(path)`
+→ Always allowed - any agent can read any file
+→ Reading never causes conflicts
+
 ### I need another agent to do work
 → Use delegation tool: `delegate_task(description, context)`
 → generator routes to appropriate agent
@@ -1312,11 +1643,20 @@ If ANY check fails: STOP, delegate, or escalate.
 
 **Remember**: These CFRs exist to prevent the system from breaking itself. They are not optional. They are not suggestions. They are CRITICAL FUNCTIONAL REQUIREMENTS.
 
-**Version**: 1.2
+**Version**: 1.3
 **Last Updated**: 2025-10-16
 **Next Review**: After US-038 and US-039 implementation
 
 **Changelog**:
+- **v1.3** (2025-10-16): Added Ownership-Aware File Tools
+  - Tool-level enforcement of CFR-000 (Layer 2 protection)
+  - READ tool unrestricted for all agents
+  - WRITE tool pre-configured with ownership boundaries per agent
+  - Automatic blocking with clear error messages
+  - Integration with delegation tool
+  - Centralized tool configuration in file_tool_config.py
+  - Four-layer defense in depth strategy documented
+  - Updated Quick Reference with file tool usage
 - **v1.2** (2025-10-16): Added CFR-000 (MASTER REQUIREMENT) - Prevent File Conflicts At All Costs
   - All other CFRs now explicitly derive from CFR-000
   - Documented singleton exception for agents that own no files
