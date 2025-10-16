@@ -64,19 +64,18 @@ class SpecManagerMixin:
     def _ensure_technical_spec(self, priority: dict) -> bool:
         """Ensure technical specification exists for this priority.
 
-        US-045: Delegates spec creation to architect agent instead of
-        creating specs directly. This follows proper ownership boundaries
-        where architect owns docs/architecture/specs/.
+        US-045: Phase 1 - Hybrid approach with template fallback
+        1. Check if spec already exists
+        2. Try architect delegation (Phase 2 - not yet implemented)
+        3. Fallback to template generation (Phase 1 - unblocks daemon NOW)
 
         BUG-002 FIX: Validate priority fields before accessing them.
-
-        If spec doesn't exist, delegates to architect to create it.
 
         Args:
             priority: Priority dictionary
 
         Returns:
-            True if spec exists or was created successfully by architect
+            True if spec exists or was created successfully
         """
         # BUG-002: Validate required fields
         if not priority.get("name"):
@@ -88,87 +87,38 @@ class SpecManagerMixin:
 
         priority_name = priority["name"]
 
-        # US-045: Check if spec exists in architect's location (docs/architecture/specs/)
-        # Generate expected spec filename based on priority name
-        # US-XXX -> SPEC-XXX-feature-name.md
-        # PRIORITY X -> SPEC-00X-feature-name.md
-
-        # Extract number from priority name
+        # Extract number from priority name for spec prefix
         if priority_name.startswith("US-"):
-            spec_number = priority_name.split("-")[1]  # "US-033" -> "033"
+            spec_number = priority_name.split("-")[1]
             spec_prefix = f"SPEC-{spec_number}"
         elif priority_name.startswith("PRIORITY"):
-            # PRIORITY 9 -> SPEC-009
-            # PRIORITY 2.6 -> SPEC-002-6
             priority_num = priority_name.replace("PRIORITY", "").strip()
             if "." in priority_num:
-                # Handle decimal priorities like 2.6
                 major, minor = priority_num.split(".")
                 spec_prefix = f"SPEC-{major.zfill(3)}-{minor}"
             else:
-                # Handle single-digit priorities like 9
                 spec_prefix = f"SPEC-{priority_num.zfill(3)}"
         else:
-            # Generic fallback
             spec_prefix = f"SPEC-{priority_name.replace(' ', '-')}"
 
-        # Look for existing spec in architect's directory
-        # US-045: roadmap_path is docs/roadmap/ROADMAP.md
-        # We need docs/architecture/specs/, so go up 2 levels to docs/
-        docs_dir = self.roadmap_path.parent.parent  # From docs/roadmap/ROADMAP.md -> docs/
+        # Locate architect's spec directory
+        docs_dir = self.roadmap_path.parent.parent
         architect_spec_dir = docs_dir / "architecture" / "specs"
 
-        # Search for any spec matching the prefix
-        existing_spec = None
+        # Step 1: Check if spec already exists
         if architect_spec_dir.exists():
             for spec_file in architect_spec_dir.glob(f"{spec_prefix}-*.md"):
-                existing_spec = spec_file
                 logger.info(f"✅ Technical spec exists: {spec_file.name}")
                 return True
 
         logger.info(f"📝 Technical spec not found for {priority_name}")
-        logger.info(f"🏗️  Delegating spec creation to architect agent...")
 
-        # US-045: Delegate to architect agent instead of creating spec directly
-        delegation_prompt = self._build_architect_delegation_prompt(priority, spec_prefix)
+        # Step 2: Try architect delegation (Phase 2 - Tool Use API)
+        # For now, skip to fallback
+        logger.info(f"🏗️  Using template fallback to unblock daemon (US-045 Phase 1)...")
 
-        try:
-            result = self.claude.execute_prompt(delegation_prompt, timeout=600)  # 10 min timeout
-
-            if not result.success:
-                logger.error(f"❌ architect delegation failed: {result.error}")
-                return False
-
-            # US-045: Check if architect created the spec
-            # Re-scan the specs directory for new files
-            if not architect_spec_dir.exists():
-                logger.error("❌ architect spec directory doesn't exist after delegation")
-                return False
-
-            # Find newly created spec
-            new_spec = None
-            for spec_file in architect_spec_dir.glob(f"{spec_prefix}-*.md"):
-                if spec_file != existing_spec:  # New file created
-                    new_spec = spec_file
-                    break
-
-            if not new_spec:
-                logger.error("❌ architect completed but spec file was not created")
-                logger.error(f"   Expected spec in: {architect_spec_dir}")
-                logger.error(f"   Expected prefix: {spec_prefix}-*.md")
-                return False
-
-            logger.info(f"✅ architect created technical spec: {new_spec.name}")
-
-            # Commit the spec
-            self.git.commit(f"docs: Add technical spec for {priority_name} (architect)")
-            self.git.push()
-
-            return True
-
-        except Exception as e:
-            logger.error(f"❌ Error delegating to architect: {e}")
-            return False
+        # Step 3: Fallback to template generation
+        return self._create_spec_from_template(priority, spec_prefix)
 
     def _build_architect_delegation_prompt(self, priority: dict, spec_prefix: str) -> str:
         """Build prompt for delegating technical specification creation to architect.
@@ -236,6 +186,72 @@ Please invoke the architect agent now to create the technical specification.
 """
 
         return delegation_prompt
+
+    def _create_spec_from_template(self, priority: dict, spec_prefix: str) -> bool:
+        """Create technical spec from template as fallback.
+
+        US-045 Phase 1: Fallback mechanism to unblock daemon when architect
+        delegation is not available.
+
+        This method:
+        1. Uses SpecTemplateManager to generate a basic spec
+        2. Marks it with TODO for architect review
+        3. Returns True so daemon can proceed
+        4. Spec will be enhanced by architect later (Phase 2)
+
+        Args:
+            priority: Priority dictionary with name, title, content
+            spec_prefix: Spec filename prefix (e.g., "SPEC-009")
+
+        Returns:
+            True if spec created successfully, False otherwise
+
+        Example:
+            >>> priority = {"name": "PRIORITY 9", "title": "Communication", "content": "..."}
+            >>> self._create_spec_from_template(priority, "SPEC-009")
+            True
+        """
+        try:
+            from coffee_maker.autonomous.spec_template_manager import (
+                SpecTemplateManager,
+            )
+
+            manager = SpecTemplateManager()
+
+            # Generate spec filename from priority name
+            priority_name = priority.get("name", "unknown")
+            priority_title = priority.get("title", "Untitled")
+
+            # Create slug from title for filename
+            title_slug = priority_title.lower().replace(" ", "-").replace("/", "-")
+            spec_filename = f"{spec_prefix}-{title_slug}.md"
+
+            # Create spec from template
+            success = manager.create_spec_from_template(
+                priority=priority,
+                spec_filename=spec_filename,
+            )
+
+            if not success:
+                logger.error(f"Failed to create spec from template for {priority_name}")
+                return False
+
+            logger.info(f"✅ Created technical spec from template: {spec_filename}")
+            logger.info(f"   (Marked for architect review - US-045 Phase 1 fallback)")
+
+            # Commit the generated spec
+            try:
+                self.git.commit(f"docs: Add technical spec from template for {priority_name} (US-045)")
+                self.git.push()
+            except Exception as e:
+                logger.warning(f"Could not commit spec: {e}")
+                # Don't fail - spec is created even if commit fails
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error creating spec from template: {e}", exc_info=True)
+            return False
 
     def _build_spec_creation_prompt(self, priority: dict, spec_filename: str) -> str:
         """Build prompt for creating technical specification.
