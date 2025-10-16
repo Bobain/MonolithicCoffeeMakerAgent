@@ -2169,6 +2169,438 @@ project_manager verifies (no recurrence)
 
 ---
 
+## CFR-007: Agent Context Budget (30% Maximum)
+
+**Rule**: An agent's core materials (prompt, role, responsibilities, tools, and owned critical documents with context) MUST fit in at most 30% of its context window.
+
+**Core Principle**:
+Agents must have room to work. If core materials consume too much context, the agent cannot effectively process user queries, read additional files, or generate responses.
+
+**Why This Is Critical**:
+
+Context window exhaustion causes:
+1. **Agent Ineffectiveness**: No room left for actual work
+2. **Truncated Instructions**: Important guidelines cut off
+3. **Missing Context**: Cannot read additional files when needed
+4. **Poor Responses**: Insufficient space for thoughtful output
+5. **System Degradation**: Agent becomes unusable
+
+**30% Breakdown**:
+
+For an agent with 200K token context window:
+- **Max 60K tokens** for core materials (30%)
+- **Min 140K tokens** remaining for work (70%)
+
+**Core Materials Include**:
+1. **Agent Prompt**: System instructions, role definition
+2. **Responsibilities**: What the agent does
+3. **Tools**: Tool descriptions and usage
+4. **Owned Critical Documents**: Must-read files with full context
+5. **Examples**: Few-shot examples in prompt
+
+**Core Materials EXCLUDE** (not counted toward 30%):
+- User query/request (dynamic input)
+- Retrieved documents requested during work
+- Generated output/responses
+- Conversation history (if applicable)
+
+### Enforcement Strategy
+
+**Measurement**:
+```python
+def measure_core_context(agent_type: AgentType) -> int:
+    """Measure tokens in agent's core materials."""
+    total_tokens = 0
+
+    # 1. Agent prompt/role definition
+    total_tokens += count_tokens(f".claude/agents/{agent_type}.md")
+
+    # 2. Critical owned documents (marked as "Always Read")
+    for doc in agent_critical_docs(agent_type):
+        total_tokens += count_tokens(doc)
+
+    # 3. Tools at disposal
+    total_tokens += count_tokens(agent_tools_description(agent_type))
+
+    return total_tokens
+
+def check_context_budget(agent_type: AgentType):
+    """Enforce 30% context budget."""
+    context_window = agent_context_window_size(agent_type)  # e.g., 200K
+    max_allowed = context_window * 0.30
+    actual = measure_core_context(agent_type)
+
+    if actual > max_allowed:
+        raise ContextBudgetViolationError(
+            f"Agent '{agent_type}' core context: {actual:,} tokens\n"
+            f"Max allowed (30%): {max_allowed:,} tokens\n"
+            f"Overage: {actual - max_allowed:,} tokens ({(actual/context_window)*100:.1f}% of window)\n"
+            f"\n"
+            f"ACTION REQUIRED: Sharpen owned documents or split into indexed structure."
+        )
+```
+
+**When to Check**:
+- Before agent deployment (startup validation)
+- After updating agent definitions
+- After modifying owned critical documents
+- Monthly context budget review
+
+### Remediation Strategies
+
+**When 30% budget is exceeded**, the agent MUST:
+
+#### Strategy 1: Sharpen Main Knowledge Document
+
+**Transform verbose document into concise version**:
+
+**Before (Verbose - 50K tokens)**:
+```markdown
+# Agent Instructions
+
+This agent is responsible for managing the project ROADMAP.
+The ROADMAP is a critical document that contains...
+
+[20 pages of detailed explanations]
+
+## Detailed Procedures
+
+When you receive a request to update the ROADMAP, you should:
+1. First, carefully read the entire ROADMAP...
+2. Then, analyze the user's request in detail...
+[500 lines of step-by-step instructions]
+```
+
+**After (Sharpened - 5K tokens)**:
+```markdown
+# Agent Instructions
+
+Manage project ROADMAP (docs/roadmap/ROADMAP.md).
+
+## Core Responsibilities
+- Update priorities
+- Track status
+- Coordinate agents
+
+## Key Procedures
+See: docs/roadmap/project_manager_procedures.md (lines 1-50, 120-180, 300-350)
+
+## Common Scenarios
+- Update priority: See procedures.md:1-50
+- Add new US: See procedures.md:120-180
+- Archive completed: See procedures.md:300-350
+```
+
+**Result**: Main document becomes an INDEX pointing to detailed procedures document.
+
+#### Strategy 2: Create Detail Documents (Not Always Read)
+
+**Split large owned document into**:
+
+1. **Main Knowledge Document** (Always Read - counted in 30%)
+   - Index/table of contents
+   - Core concepts only
+   - Pointers to detail documents with line numbers
+
+2. **Detail Documents** (Read On-Demand - NOT counted in 30%)
+   - Detailed procedures
+   - Extended examples
+   - Edge case handling
+   - Historical context
+
+**Example Structure**:
+
+```
+docs/roadmap/
+├── CRITICAL_FUNCTIONAL_REQUIREMENTS.md  (Main - Always Read)
+│   ├── Summary of each CFR (1-2 sentences)
+│   ├── Pointer: "Details in CFR_DETAILS.md:100-250"
+│   └── Emergency quick reference
+│
+└── CFR_DETAILS.md  (Detail - Read On-Demand)
+    ├── Full CFR-000 explanation (lines 1-100)
+    ├── Full CFR-001 explanation (lines 101-250)
+    ├── Full CFR-002 explanation (lines 251-400)
+    └── etc.
+```
+
+**Agent behavior**:
+- Reads main document (in core context)
+- When needs details: Reads specific lines from detail document
+- Detail document NOT counted toward 30% budget
+
+#### Strategy 3: Use Line Number References
+
+**In main document, use precise line references**:
+
+```markdown
+## CFR-001: Document Ownership
+
+**Summary**: Each file has exactly one owner agent.
+
+**Details**: docs/roadmap/CFR_DETAILS.md:101-250
+- Ownership matrix: lines 101-150
+- Enforcement: lines 151-200
+- Examples: lines 201-250
+
+**Quick Ref**: Ownership matrix in CRITICAL_FUNCTIONAL_REQUIREMENTS.md:169-200
+```
+
+**Benefits**:
+- Agent knows exactly where to find details
+- No wasteful full-file reads
+- Surgical precision in context usage
+- Main document stays compact
+
+#### Strategy 4: Compress Examples
+
+**Before (Verbose Examples - 20K tokens)**:
+```markdown
+## Example 1: Complete Walkthrough
+
+Step 1: User requests update
+The user might say something like "Please update priority 5 to In Progress"
+When you receive this request, you should...
+
+[500 lines of example with full conversation]
+```
+
+**After (Compressed Examples - 2K tokens)**:
+```markdown
+## Example 1: Update Priority Status
+
+Input: "Update priority 5 to In Progress"
+Actions: Read ROADMAP → Find Priority 5 → Change status → Commit
+Details: docs/roadmap/examples/update_priority_example.md
+
+## Example 2: Add User Story
+[Compressed version]
+```
+
+### Monitoring & Reporting
+
+**Monthly Context Budget Report**:
+
+```
+Agent Context Budget Report - 2025-10
+===========================================
+
+Agent              | Core Context | Max Allowed | Usage | Status
+-------------------|--------------|-------------|-------|--------
+code_developer     |    45K       |    60K      | 75%   | ✅ OK
+project_manager    |    58K       |    60K      | 97%   | ⚠️ WARN
+architect          |    35K       |    60K      | 58%   | ✅ OK
+assistant          |    25K       |    60K      | 42%   | ✅ OK
+user_listener      |    30K       |    60K      | 50%   | ✅ OK
+
+WARNINGS:
+- project_manager at 97% (58K/60K) - approaching limit
+  - Recommend: Sharpen CRITICAL_FUNCTIONAL_REQUIREMENTS.md
+  - Consider: Split into main + details structure
+```
+
+**Thresholds**:
+- **0-70%**: ✅ Healthy (green zone)
+- **71-90%**: ⚠️ Warning (yellow zone) - plan remediation
+- **91-100%**: ❌ Critical (red zone) - immediate action required
+- **>100%**: 🚨 VIOLATION - agent cannot start
+
+### Implementation Requirements
+
+**For Each Agent**:
+
+1. **Identify Critical Documents**
+   - Which owned documents are "Always Read"?
+   - Which are "Read On-Demand"?
+   - Mark clearly in agent definition
+
+2. **Measure Current Context**
+   - Run context measurement tool
+   - Document current usage percentage
+   - Track over time
+
+3. **Optimize If Needed**
+   - If >90%: Sharpen documents immediately
+   - If >70%: Plan optimization
+   - If <70%: Monitor monthly
+
+4. **Maintain Budget**
+   - When updating docs: Check impact on context
+   - Before adding "Always Read" doc: Verify budget
+   - Monthly review: Ensure compliance
+
+### Example: project_manager Optimization
+
+**Current State** (Hypothetical - 97% of budget):
+```
+Core Context Breakdown:
+- .claude/agents/project_manager.md: 5K tokens
+- docs/roadmap/ROADMAP.md: 15K tokens (Always Read)
+- docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md: 35K tokens (Always Read)
+- Tool descriptions: 3K tokens
+TOTAL: 58K tokens (97% of 60K budget) ⚠️
+```
+
+**Optimization Plan**:
+
+**Step 1**: Sharpen CRITICAL_FUNCTIONAL_REQUIREMENTS.md
+```markdown
+# CRITICAL_FUNCTIONAL_REQUIREMENTS.md (Sharpened to 8K tokens)
+
+## CFR-000: Prevent File Conflicts
+**Rule**: Never allow two agents writing to same file.
+**Details**: docs/roadmap/CFR_DETAILS.md:1-200
+**Enforcement**: 4 layers (Singleton, Tool, generator, Validation)
+
+## CFR-001: Document Ownership
+**Rule**: One owner per file/directory.
+**Matrix**: docs/roadmap/CFR_DETAILS.md:201-400
+**Enforcement**: generator auto-delegation
+
+## CFR-002: Agent Role Boundaries
+**Rule**: One primary role per agent, no overlaps.
+**Matrix**: docs/roadmap/CFR_DETAILS.md:401-500
+
+[etc. - all CFRs summarized with pointers]
+
+## Quick Reference
+[Essential quick ref only - 1-2 pages]
+```
+
+**Step 2**: Create CFR_DETAILS.md (Read On-Demand - NOT in core context)
+```markdown
+# CFR_DETAILS.md
+
+Lines 1-200: CFR-000 Full Details
+Lines 201-400: CFR-001 Full Details including ownership matrix
+Lines 401-500: CFR-002 Full Details including role matrix
+[etc.]
+```
+
+**Result After Optimization**:
+```
+Core Context Breakdown:
+- .claude/agents/project_manager.md: 5K tokens
+- docs/roadmap/ROADMAP.md: 15K tokens (Always Read)
+- docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md: 8K tokens (Sharpened) ✅
+- Tool descriptions: 3K tokens
+TOTAL: 31K tokens (52% of 60K budget) ✅ HEALTHY
+```
+
+**Savings**: 27K tokens (45% reduction)
+
+### Violation Response
+
+**If Agent Exceeds 30% Budget**:
+
+1. **Detection**: Startup validation fails
+2. **Block Deployment**: Agent cannot start
+3. **Error Message**:
+   ```
+   🚨 CONTEXT BUDGET VIOLATION - CFR-007
+
+   Agent: project_manager
+   Core Context: 68,000 tokens
+   Max Allowed (30%): 60,000 tokens
+   Overage: 8,000 tokens (34% of context window)
+
+   REMEDIATION REQUIRED:
+   1. Sharpen owned documents (recommended)
+   2. Split into indexed structure
+   3. Move detail to Read On-Demand documents
+
+   Owned Documents:
+   - docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md: 35K tokens ⚠️
+   - docs/roadmap/ROADMAP.md: 15K tokens
+   - docs/roadmap/TEAM_COLLABORATION.md: 10K tokens
+
+   SUGGESTED ACTION:
+   Sharpen CRITICAL_FUNCTIONAL_REQUIREMENTS.md to <10K tokens
+   Create CFR_DETAILS.md for full details
+   ```
+
+4. **Owner Takes Action**: code_developer (owns .claude/agents/) OR document owner
+5. **Verify Fix**: Re-run context measurement
+6. **Deploy**: Once budget compliant, agent can start
+
+### Benefits
+
+**For Agents**:
+- Always have room to work (70% context available)
+- Can read additional files as needed
+- Can generate thoughtful, complete responses
+- No truncation of critical instructions
+
+**For System**:
+- Agents remain effective over time
+- Scalable as documents grow
+- Clear optimization path when needed
+- Proactive management prevents crisis
+
+**For Users**:
+- Agents consistently perform well
+- No degradation over time
+- Fast response (agents not context-choked)
+- Reliable system behavior
+
+### Integration with Other CFRs
+
+**CFR-005** (Ownership Includes Maintenance):
+- Owners must monitor context budget of owned docs
+- When doc grows >threshold: Split or sharpen
+- Maintenance includes context optimization
+
+**CFR-001** (Document Ownership):
+- Owner responsible for keeping owned docs within budget
+- Owner must sharpen if needed
+- Owner creates detail documents as needed
+
+**Agent File Access Patterns**:
+- "Always Read" docs count toward 30%
+- "Read On-Demand" docs do NOT count toward 30%
+- Clear distinction required in agent definitions
+
+### Success Criteria
+
+**Healthy System**:
+- ✅ All agents <70% context budget
+- ✅ Clear "Always Read" vs "Read On-Demand" distinction
+- ✅ Main documents are indexes with line references
+- ✅ Detail documents available when needed
+- ✅ Monthly context budget reviews performed
+- ✅ No agent deployment blocked by context violations
+
+**Unhealthy System** (needs attention):
+- ❌ Any agent >90% context budget
+- ❌ Verbose "Always Read" documents
+- ❌ No indexed structure
+- ❌ Agents can't read additional files
+- ❌ Context violations blocking deployment
+
+### Enforcement Timeline
+
+**Immediate** (2025-10-16):
+- Add CFR-007 to CRITICAL_FUNCTIONAL_REQUIREMENTS.md ✅
+- Update CLAUDE.md with context budget requirement
+- Create context measurement script
+
+**Phase 1** (Next 1-2 weeks):
+- Measure all agents' current context usage
+- Identify agents >70% (optimization needed)
+- Create optimization plans for high-usage agents
+
+**Phase 2** (Next 2-4 weeks):
+- Implement optimizations (sharpen, split, index)
+- Deploy context validation at agent startup
+- Establish monthly review process
+
+**Ongoing**:
+- Monthly context budget reports
+- Proactive optimization when >70%
+- Maintain all agents <90%
+
+---
+
 ## Conclusion
 
 These Critical Functional Requirements are SYSTEM INVARIANTS:
@@ -2525,6 +2957,18 @@ This means US-043 (Parallel Execution) can be implemented safely thanks to CFR e
 **Next Review**: After US-038, US-039, US-043, and US-044 implementation
 
 **Changelog**:
+- **v1.8** (2025-10-16): Added CFR-007 (Agent Context Budget - 30% Maximum)
+  - New CFR-007: Agent core materials must fit in ≤30% of context window
+  - Core materials: prompt, role, responsibilities, tools, owned critical documents
+  - Remaining 70% reserved for actual work
+  - Remediation strategies: Sharpen docs, create detail docs, use line references, compress examples
+  - Main docs become indexes pointing to detail docs with line numbers
+  - "Always Read" docs counted in 30%, "Read On-Demand" docs not counted
+  - Monthly context budget reports required
+  - Thresholds: <70% healthy, 71-90% warning, 91-100% critical, >100% violation
+  - Startup validation blocks agent if budget exceeded
+  - Integrates with CFR-005 (maintenance includes context optimization)
+  - Enforcement timeline: Immediate (add CFR), Phase 1 (measure), Phase 2 (optimize), Ongoing (monitor)
 - **v1.7** (2025-10-16): Added CFR-006 (Lessons Learned Must Be Captured and Applied)
   - New CFR-006: All failures, mistakes, and key lessons MUST be documented, owned, and actively used
   - project_manager owns docs/roadmap/learnings/ (exclusive ownership)
