@@ -11,8 +11,7 @@ Tests:
 
 import pytest
 from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch, call
-from datetime import datetime
+from unittest.mock import Mock
 
 from coffee_maker.autonomous.daemon_spec_manager import SpecManagerMixin
 
@@ -276,6 +275,7 @@ class TestSpecEnforcement:
         """Test behavior when specs directory doesn't exist."""
         # Remove specs directory
         import shutil
+
         shutil.rmtree(spec_manager.specs_dir)
 
         priority = {"name": "US-047", "title": "Test"}

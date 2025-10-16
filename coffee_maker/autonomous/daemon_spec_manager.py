@@ -171,4 +171,3 @@ class SpecManagerMixin:
         except Exception as e:
             logger.error(f"Failed to create notification: {e}", exc_info=True)
             # Don't fail - notification is nice-to-have but not critical
-
