@@ -25098,3 +25098,278 @@ def test_code_developer_not_running():
 - **Documentation Priority**: Clear user guide essential for adoption
 
 ---
+
+## US-041: Implement architect Agent as Operational Subagent
+
+**Status**: 📝 PLANNED - VERY HIGH PRIORITY - BLOCKING US-038, US-039, US-040
+**Type**: Infrastructure / Agent Implementation
+**Complexity**: Medium
+**Priority**: VERY HIGH (blocks critical workflow)
+**Created**: 2025-10-16
+**Estimated Effort**: 1-2 days
+
+**Delegation Flow** (Strategic → Technical → Implementation):
+1. **project_manager (strategic)**: Defines WHAT and WHY (this ROADMAP entry)
+2. **architect (technical design)**: BLOCKED - architect cannot create technical spec because architect is not operational
+3. **code_developer (implementation)**: Will implement once architect can provide technical spec
+
+### User Story
+
+> "As a system, I need architect to be a fully operational agent in the Task tool, so that architect can create technical specifications before code_developer implements features."
+
+### Description
+
+**CRITICAL ISSUE DISCOVERED**: architect agent exists as documentation (`.claude/agents/architect.md`, 659 lines) but is NOT registered as an operational subagent in the system.
+
+**Current Situation**:
+- architect documentation exists and is comprehensive
+- architect directories exist (docs/architecture/)
+- architect role is well-defined in CLAUDE.md
+- US-034 marked as COMPLETE (created architect documentation)
+- BUT: architect is NOT available in Task tool
+- Error message: "Agent type 'architect' not found"
+- Available agents: general-purpose, assistant, code-searcher, project_manager, code_developer, etc.
+- architect is MISSING from this list
+
+**Impact**:
+- US-038, US-039, US-040 are BLOCKED waiting for architect technical specs
+- Cannot create technical designs before implementation
+- Violates proper workflow: architect designs → code_developer implements
+- Strategic specs exist but no technical specs can be created
+
+**Why This Is VERY HIGH PRIORITY**:
+- Multiple user stories are blocked
+- Current workflow violates architectural best practices (code_developer implementing without technical specs)
+- System is incomplete - documentation exists but agent is not operational
+- US-034 was prematurely marked as COMPLETE (only documentation created, not agent registration)
+
+### Workflow Example (Once Fixed)
+
+**Desired Workflow** (after US-041 complete):
+```
+1. User requests feature via user_listener
+2. user_listener delegates to project_manager (strategic spec)
+3. project_manager creates ROADMAP entry (strategic)
+4. project_manager delegates to architect (technical spec)
+5. architect creates docs/architecture/specs/US_XXX_TECHNICAL_SPEC.md (BLOCKED NOW)
+6. architect delegates to code_developer (implementation)
+7. code_developer implements based on architect's spec
+```
+
+**Current Broken Workflow** (US-041 not complete):
+```
+1. User requests feature via user_listener
+2. user_listener delegates to project_manager (strategic spec)
+3. project_manager creates ROADMAP entry (strategic)
+4. project_manager tries to delegate to architect → ERROR: "Agent type 'architect' not found"
+5. code_developer implements without technical spec (bad practice)
+```
+
+### Requirements
+
+**Functional Requirements**:
+
+1. **Agent Registration**:
+   - Register architect as available subagent type in Task tool
+   - architect appears in list of available agents
+   - Can invoke: `Task(subagent_type="architect", prompt="...")`
+   - architect shows up in help/documentation
+
+2. **Agent Configuration**:
+   - architect reads `.claude/agents/architect.md` for role definition
+   - architect has access to all project documentation (READ-ONLY)
+   - architect can write ONLY to owned directories:
+     - docs/architecture/specs/
+     - docs/architecture/decisions/
+     - docs/architecture/guidelines/
+     - pyproject.toml (with user approval)
+     - poetry.lock
+
+3. **Tool Configuration**:
+   - WriteTool configured for architect:
+     - docs/architecture/** (full write access)
+     - pyproject.toml (requires user approval workflow)
+     - poetry.lock (automatic via poetry commands)
+   - ReadTool unrestricted (architect needs to read entire codebase for design)
+   - Task tool available (architect can delegate to code_developer)
+
+4. **Integration with ACE Framework**:
+   - generator can route tasks to architect
+   - architect actions captured in execution traces
+   - reflector can analyze architect decisions
+   - curator learns from architect patterns
+
+5. **Ownership Enforcement** (US-038 Phase 1 already implemented):
+   - FileOwnership registry recognizes architect
+   - architect appears in ownership matrix
+   - architect cannot modify files outside owned directories
+   - System prevents violations
+
+6. **Capabilities After Implementation**:
+   - Create technical specifications in docs/architecture/specs/
+   - Create ADRs in docs/architecture/decisions/
+   - Create implementation guidelines in docs/architecture/guidelines/
+   - Review and approve dependency changes (pyproject.toml, poetry.lock)
+   - Provide technical guidance when escalated from project_manager
+   - Delegate to code_developer after specs are complete
+
+### Acceptance Criteria
+
+**Agent Availability**:
+- [ ] architect appears in Task tool available agents list
+- [ ] Can successfully invoke: `Task(subagent_type="architect", prompt="Design architecture for X")`
+- [ ] architect responds with technical specifications
+- [ ] No "Agent type 'architect' not found" errors
+
+**File Access**:
+- [ ] architect can create files in docs/architecture/specs/
+- [ ] architect can create files in docs/architecture/decisions/
+- [ ] architect can create files in docs/architecture/guidelines/
+- [ ] architect CANNOT create files outside owned directories (enforced by US-038)
+- [ ] architect can read entire codebase (coffee_maker/, tests/, docs/)
+
+**Configuration Loading**:
+- [ ] architect loads role definition from `.claude/agents/architect.md`
+- [ ] architect has access to CLAUDE.md, ROADMAP.md, all documentation
+- [ ] architect follows ownership boundaries defined in DOCUMENT_OWNERSHIP_MATRIX.md
+
+**ACE Integration**:
+- [ ] generator can route architect requests correctly
+- [ ] architect actions appear in execution traces
+- [ ] reflector captures architect insights
+- [ ] curator learns from architect patterns
+
+**Delegation**:
+- [ ] architect can delegate to code_developer
+- [ ] architect can request user approval via user_listener
+- [ ] architect follows proper delegation workflow
+
+**Testing**:
+- [ ] Unit tests for architect agent registration
+- [ ] Integration test: project_manager delegates to architect
+- [ ] Integration test: architect creates technical spec
+- [ ] Integration test: architect delegates to code_developer
+- [ ] Integration test: Full workflow (strategic spec → technical spec → implementation)
+- [ ] Test architect file access permissions
+- [ ] Test architect cannot violate ownership boundaries
+
+**Documentation**:
+- [ ] How to invoke architect (usage guide)
+- [ ] architect appears in agent documentation
+- [ ] Updated CLAUDE.md reflects architect as operational
+- [ ] Updated .claude/agents/README.md (if exists)
+
+### Technical Details
+
+**Files to Create/Modify**:
+
+1. **Agent Registry/Configuration** (exact location TBD by code_developer):
+   - Add architect to agent type registry
+   - Configure architect prompt loading from `.claude/agents/architect.md`
+   - Configure architect file access permissions
+
+2. **ACE Integration**:
+   - Update generator routing to include architect
+   - Ensure architect tasks captured in traces
+
+3. **FileOwnership** (US-038 Phase 1 already done):
+   - Verify architect is in ownership matrix
+   - Test ownership enforcement works for architect
+
+4. **Task Tool**:
+   - Register architect as available subagent type
+   - Ensure Task tool can instantiate architect
+
+5. **Tests**:
+   - `tests/unit/test_architect_agent.py` - Unit tests
+   - `tests/integration/test_architect_workflow.py` - Integration tests
+   - Test coverage for all acceptance criteria
+
+### Implementation Plan (High-Level)
+
+**Phase 1: Agent Registration** (4-6 hours):
+- [ ] Identify where agents are registered (agent registry, config, etc.)
+- [ ] Add architect to available agents list
+- [ ] Configure architect to load `.claude/agents/architect.md`
+- [ ] Test basic invocation: `Task(subagent_type="architect", prompt="test")`
+
+**Phase 2: File Access Configuration** (2-3 hours):
+- [ ] Configure WriteTool for architect:
+  - docs/architecture/**
+  - pyproject.toml (with approval workflow)
+  - poetry.lock
+- [ ] Configure ReadTool (unrestricted)
+- [ ] Test file access permissions
+
+**Phase 3: ACE Integration** (2-3 hours):
+- [ ] Update generator to route architect tasks
+- [ ] Verify trace capture works
+- [ ] Test delegation from project_manager to architect
+- [ ] Test delegation from architect to code_developer
+
+**Phase 4: Testing** (4-6 hours):
+- [ ] Unit tests for architect agent
+- [ ] Integration tests for full workflow
+- [ ] Test ownership enforcement
+- [ ] Test all acceptance criteria
+
+**Phase 5: Documentation** (1-2 hours):
+- [ ] Update CLAUDE.md (architect is operational)
+- [ ] Document how to invoke architect
+- [ ] Update agent documentation
+
+### Dependencies
+
+**Completed**:
+- US-034 Phase 1: architect documentation created ✅
+- US-038 Phase 1: FileOwnership includes architect ✅
+- architect directories exist (docs/architecture/) ✅
+
+**Required**:
+- ACE framework operational (generator, reflector, curator)
+- Task tool exists and works for other agents
+- FileOwnership enforcement (US-038 Phase 1)
+
+**Unblocks**:
+- US-038 Phase 2: architect can create technical spec for file ownership implementation
+- US-039 Phase 2: architect can create technical spec for CFR enforcement
+- US-040 Phase 2: architect can create technical spec for planner mode
+- All future user stories requiring technical specifications
+
+### Success Metrics
+
+- **Agent Availability**: architect appears in available agents list
+- **Successful Invocations**: Can invoke architect via Task tool (0 errors)
+- **Spec Creation**: architect can create technical specifications in docs/architecture/specs/
+- **Delegation Success**: project_manager → architect → code_developer workflow works
+- **Ownership Enforcement**: architect cannot violate file ownership boundaries
+- **Unblock Downstream**: US-038, US-039, US-040 can proceed with technical specs
+
+### Notes
+
+**Why US-034 Was Prematurely Marked Complete**:
+- US-034 created excellent documentation (659 lines in `.claude/agents/architect.md`)
+- US-034 created directory structure (docs/architecture/)
+- US-034 created templates (ADR, spec, guideline templates)
+- BUT: US-034 did NOT register architect as operational subagent
+- This is a critical gap that blocks the entire workflow
+
+**US-041 vs US-034**:
+- US-034: Create architect DOCUMENTATION (✅ COMPLETE)
+- US-041: Make architect OPERATIONAL (📝 NOT COMPLETE - THIS US)
+
+**Relationship to US-038**:
+- US-038 Phase 1: FileOwnership includes architect (✅ COMPLETE)
+- US-041: architect becomes operational (this US)
+- US-038 Phase 2: architect creates technical spec for ownership implementation (BLOCKED on US-041)
+
+**Priority Justification**:
+- VERY HIGH PRIORITY because:
+  - Blocks US-038, US-039, US-040 (all high-priority work)
+  - Current workflow violates best practices
+  - Quick to implement (mostly configuration)
+  - High impact (unblocks entire team)
+
+---
+
+---
