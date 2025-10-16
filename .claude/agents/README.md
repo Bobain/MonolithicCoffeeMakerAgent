@@ -100,11 +100,11 @@ Each agent has been configured to read specific critical documents at startup. T
 #### code-developer - Startup Documents
 
 **READ AT STARTUP (MANDATORY)**:
-1. 🔴 `docs/ROADMAP.md` - Task list (read FIRST)
+1. 🔴 `docs/roadmap/ROADMAP.md` - Task list (read FIRST)
 2. 🔴 `.claude/CLAUDE.md` - Project instructions (read SECOND)
 
 **READ AS NEEDED**:
-- `docs/PRIORITY_*_TECHNICAL_SPEC.md` - Technical specs for complex priorities
+- `docs/roadmap/PRIORITY_*_TECHNICAL_SPEC.md` - Technical specs for complex priorities
 - `.claude/commands/PROMPTS_INDEX.md` - Available prompts
 - `.claude/commands/implement-feature.md` - Implementation guide
 - `.claude/commands/verify-dod-puppeteer.md` - DoD verification guide
@@ -112,11 +112,11 @@ Each agent has been configured to read specific critical documents at startup. T
 #### project-manager - Startup Documents
 
 **READ AT STARTUP (MANDATORY)**:
-1. 🔴 `docs/ROADMAP.md` - Project status (read FIRST)
+1. 🔴 `docs/roadmap/ROADMAP.md` - Project status (read FIRST)
 2. 🔴 `.claude/CLAUDE.md` - Project context (read SECOND)
 
 **READ AS NEEDED**:
-- `docs/PRIORITY_*_TECHNICAL_SPEC.md` - Priority details
+- `docs/roadmap/PRIORITY_*_TECHNICAL_SPEC.md` - Priority details
 - `.claude/commands/PROMPTS_INDEX.md` - System capabilities
 - `.claude/commands/verify-dod-puppeteer.md` - DoD verification
 
@@ -124,12 +124,12 @@ Each agent has been configured to read specific critical documents at startup. T
 
 **READ AT STARTUP (MANDATORY)**:
 1. 🔴 `.claude/CLAUDE.md` - Project overview (read FIRST)
-2. 🔴 `docs/ROADMAP.md` - Current work (read SECOND)
+2. 🔴 `docs/roadmap/ROADMAP.md` - Current work (read SECOND)
 
 **READ AS NEEDED**:
 - `.claude/commands/PROMPTS_INDEX.md` - Prompt documentation
 - Relevant code files (via Grep/Glob)
-- `docs/PRIORITY_*_TECHNICAL_SPEC.md` - Feature details
+- `docs/roadmap/PRIORITY_*_TECHNICAL_SPEC.md` - Feature details
 - `README.md` - Project overview
 
 ---
@@ -177,4 +177,4 @@ All agents equipped with:
 - **Prompts**: `.claude/commands/` - All agent prompts
 - **Prompt Index**: `.claude/commands/PROMPTS_INDEX.md` - Prompt documentation
 - **Project Instructions**: `.claude/CLAUDE.md` - How to work with this project
-- **ROADMAP**: `docs/ROADMAP.md` - Current priorities and status
+- **ROADMAP**: `docs/roadmap/ROADMAP.md` - Current priorities and status

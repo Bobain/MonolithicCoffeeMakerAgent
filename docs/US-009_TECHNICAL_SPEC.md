@@ -273,7 +273,7 @@ class ProcessManager:
         try:
             from coffee_maker.cli.roadmap_editor import RoadmapEditor
 
-            editor = RoadmapEditor("docs/ROADMAP.md")
+            editor = RoadmapEditor("docs/roadmap/ROADMAP.md")
             priorities = editor.list_priorities()
 
             for p in priorities:

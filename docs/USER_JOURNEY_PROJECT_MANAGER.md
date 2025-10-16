@@ -126,7 +126,7 @@ Coffee Maker Agent - ROADMAP
 ```
 
 **What just happened?**
-- ✅ Project Manager read `docs/ROADMAP.md`
+- ✅ Project Manager read `docs/roadmap/ROADMAP.md`
 - ✅ Formatted it for terminal display
 - ✅ Showed first 100 lines (tip shown for full view)
 
@@ -231,7 +231,7 @@ git log --since="24 hours ago" --oneline
 **Manual (Current):**
 ```bash
 # 1. Edit ROADMAP.md
-vim docs/ROADMAP.md
+vim docs/roadmap/ROADMAP.md
 
 # 2. Add new priority section
 ### PRIORITY 10: New Feature
@@ -239,7 +239,7 @@ vim docs/ROADMAP.md
 **Description**: ...
 
 # 3. Commit
-git add docs/ROADMAP.md
+git add docs/roadmap/ROADMAP.md
 git commit -m "Add PRIORITY 10: New Feature"
 
 # 4. Daemon will pick it up automatically
@@ -283,7 +283,7 @@ $ project-manager notifications
       3. Clarify the deliverables to make them more concrete
 
 # Fix: Edit ROADMAP to add concrete deliverables
-vim docs/ROADMAP.md
+vim docs/roadmap/ROADMAP.md
 
 # Add specific files to create:
 #### Deliverables
@@ -321,7 +321,7 @@ pkill -f run_daemon.py
 
 **2. ROADMAP.md Not Found**
 ```bash
-❌ ROADMAP not found: /path/to/docs/ROADMAP.md
+❌ ROADMAP not found: /path/to/docs/roadmap/ROADMAP.md
 
 Solution:
 # Make sure you're in project root
@@ -373,7 +373,7 @@ Extract specific sections programmatically:
 ```python
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 
-parser = RoadmapParser("docs/ROADMAP.md")
+parser = RoadmapParser("docs/roadmap/ROADMAP.md")
 next_priority = parser.get_next_planned_priority()
 print(f"Next task: {next_priority['name']}")
 ```
@@ -522,7 +522,7 @@ See ROADMAP.md lines 5044-5330 for complete Phase 2 specification.
 - **Documentation**: Browse `docs/` folder
 - **Issues**: Report bugs at https://github.com/Bobain/MonolithicCoffeeMakerAgent/issues
 - **Discussions**: Ask questions in GitHub Discussions
-- **Roadmap**: Check planned features in `docs/ROADMAP.md`
+- **Roadmap**: Check planned features in `docs/roadmap/ROADMAP.md`
 
 ## Feedback
 

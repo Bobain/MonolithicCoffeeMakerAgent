@@ -81,7 +81,7 @@ This comes later
         2. Daemon should create notification
         3. Daemon should move to next priority (not loop)
         """
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md")
         daemon.max_retries = 3
 
         # Simulate 3 failed attempts
@@ -256,7 +256,7 @@ Custom location test
         4. Daemon moves to PRIORITY 3
         5. Overall workflow continues
         """
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md")
 
         # Simulate a failed priority
         daemon.attempted_priorities["PRIORITY 2"] = 3  # Max retries
@@ -287,7 +287,7 @@ class TestCommonUserErrors:
     def test_user_error_claude_cli_not_installed(self):
         """User tries CLI mode without installing Claude CLI."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md",
+            roadmap_path="docs/roadmap/ROADMAP.md",
             use_claude_cli=True,
             claude_cli_path="/usr/local/bin/claude",  # Common but might not exist
         )
@@ -302,7 +302,7 @@ class TestCommonUserErrors:
         # Remove API key
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", use_claude_cli=False)
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False)
 
         # Should fail prerequisite check
         assert not daemon._check_prerequisites()

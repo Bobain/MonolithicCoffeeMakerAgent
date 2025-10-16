@@ -416,7 +416,7 @@ cat .claude/commands/agent-project-manager.md
 - **Prompt Management System**: `docs/PROMPT_MANAGEMENT_SYSTEM.md`
 - **PromptLoader API**: `coffee_maker/autonomous/prompt_loader.py`
 - **CLAUDE.md**: `.claude/CLAUDE.md` (project instructions)
-- **ROADMAP**: `docs/ROADMAP.md`
+- **ROADMAP**: `docs/roadmap/ROADMAP.md`
 
 ---
 

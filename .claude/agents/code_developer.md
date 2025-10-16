@@ -34,7 +34,7 @@ You operate autonomously with minimal human intervention.
 
 **MANDATORY - Read these BEFORE doing ANYTHING**:
 
-1. **`docs/ROADMAP.md`** 🔴 REQUIRED
+1. **`docs/roadmap/ROADMAP.md`** 🔴 REQUIRED
    - This is your TASK LIST
    - Find the next "📝 Planned" priority
    - Check current "🔄 In Progress" items
@@ -61,7 +61,7 @@ You operate autonomously with minimal human intervention.
    - WHY: Ensures architectural consistency and best practices
    - **ACTION**: Follow architect's guidelines during implementation
 
-5. **`docs/PRIORITY_X_TECHNICAL_SPEC.md`** (project_manager's strategic specs)
+5. **`docs/roadmap/PRIORITY_X_TECHNICAL_SPEC.md`** (project_manager's strategic specs)
    - WHEN: Implementing priorities with strategic context
    - WHY: Contains business requirements and high-level design
    - **ACTION**: Read for context, but architect's specs are more detailed
@@ -84,14 +84,14 @@ You operate autonomously with minimal human intervention.
 ### ⚡ Startup Checklist
 
 Every time you start work:
-- [ ] Read `docs/ROADMAP.md` → Find next priority
+- [ ] Read `docs/roadmap/ROADMAP.md` → Find next priority
 - [ ] Read `.claude/CLAUDE.md` → Understand project context
-- [ ] Check if priority needs technical spec → Read `docs/PRIORITY_*_TECHNICAL_SPEC.md`
+- [ ] Check if priority needs technical spec → Read `docs/roadmap/PRIORITY_*_TECHNICAL_SPEC.md`
 - [ ] Select appropriate prompt from `.claude/commands/`
 - [ ] Begin implementation
 
 **Quick Reference**:
-- 🎯 What to do: `docs/ROADMAP.md`
+- 🎯 What to do: `docs/roadmap/ROADMAP.md`
 - 📖 How to do it: `.claude/CLAUDE.md`
 - 🛠️ Implementation guide: `.claude/commands/implement-feature.md`
 - ✅ Verification guide: `.claude/commands/verify-dod-puppeteer.md`
@@ -190,9 +190,9 @@ For web-based priorities:
 ## Context Files
 
 **Must Read**:
-- `docs/ROADMAP.md` - Your task list
+- `docs/roadmap/ROADMAP.md` - Your task list
 - `.claude/CLAUDE.md` - Project instructions
-- `docs/PRIORITY_*_TECHNICAL_SPEC.md` - Technical specs for complex priorities
+- `docs/roadmap/PRIORITY_*_TECHNICAL_SPEC.md` - Technical specs for complex priorities
 
 **Reference**:
 - `.claude/commands/PROMPTS_INDEX.md` - All available prompts
@@ -213,7 +213,7 @@ For web-based priorities:
 
 ## Success Metrics
 
-- **Priorities Completed**: Track in `docs/ROADMAP.md`
+- **Priorities Completed**: Track in `docs/roadmap/ROADMAP.md`
 - **Test Coverage**: Maintain high test coverage
 - **PR Quality**: Clean, reviewable PRs
 - **DoD Verification**: All web features verified with Puppeteer
@@ -239,7 +239,7 @@ You communicate through:
 [Start]
 1. Read ROADMAP.md → Find "PRIORITY 5: Analytics Dashboard"
 2. Check complexity → Complex, needs spec
-3. Use create-technical-spec.md → Generate docs/PRIORITY_5_TECHNICAL_SPEC.md
+3. Use create-technical-spec.md → Generate docs/roadmap/PRIORITY_5_STRATEGIC_SPEC.md
 4. Use implement-feature.md → Implement dashboard
 5. Use verify-dod-puppeteer.md → Test at http://localhost:8501
    - Navigate to dashboard

@@ -51,7 +51,7 @@ resource "google_cloud_run_v2_service" "code_developer" {
 
       env {
         name  = "ROADMAP_PATH"
-        value = "/workspace/docs/ROADMAP.md"
+        value = "/workspace/docs/roadmap/ROADMAP.md"
       }
 
       env {

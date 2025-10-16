@@ -20,7 +20,7 @@ class FileContent(BaseModel):
 @router.get("/roadmap")
 async def get_roadmap() -> Dict[str, str]:
     """Get ROADMAP.md content."""
-    roadmap_path = Path("/workspace/docs/ROADMAP.md")
+    roadmap_path = Path("/workspace/docs/roadmap/ROADMAP.md")
 
     if not roadmap_path.exists():
         raise HTTPException(status_code=404, detail="ROADMAP.md not found")
@@ -32,7 +32,7 @@ async def get_roadmap() -> Dict[str, str]:
 @router.put("/roadmap")
 async def update_roadmap(file: FileContent) -> Dict[str, str]:
     """Update ROADMAP.md content."""
-    roadmap_path = Path("/workspace/docs/ROADMAP.md")
+    roadmap_path = Path("/workspace/docs/roadmap/ROADMAP.md")
 
     try:
         roadmap_path.write_text(file.content)

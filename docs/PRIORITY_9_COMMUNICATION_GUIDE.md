@@ -1159,7 +1159,7 @@ CREATE INDEX idx_activities_priority ON activities(priority_number);
 
 ### API Reference
 
-See `docs/PRIORITY_9_TECHNICAL_SPEC.md` for complete API reference including:
+See `docs/roadmap/PRIORITY_9_STRATEGIC_SPEC.md` for complete API reference including:
 - Full method signatures
 - Parameter descriptions
 - Return types
@@ -1389,9 +1389,9 @@ poetry run project-manager developer-status  # Check current status
 ```
 
 **Learn More:**
-- Technical Spec: `docs/PRIORITY_9_TECHNICAL_SPEC.md`
+- Technical Spec: `docs/roadmap/PRIORITY_9_STRATEGIC_SPEC.md`
 - Implementation: `coffee_maker/autonomous/developer_status.py`
-- Roadmap: `docs/ROADMAP.md` (PRIORITY 9 section)
+- Roadmap: `docs/roadmap/ROADMAP.md` (PRIORITY 9 section)
 
 ---
 

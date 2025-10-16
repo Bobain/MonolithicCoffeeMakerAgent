@@ -57,10 +57,14 @@ MonolithicCoffeeMakerAgent/
 │   └── settings.local.json
 │
 ├── docs/
-│   ├── ROADMAP.md                   # Master task list
-│   ├── PROMPT_MANAGEMENT_SYSTEM.md  # Prompt system docs ⭐
-│   ├── PRIORITY_4_1_TECHNICAL_SPEC.md # Puppeteer MCP ⭐
-│   └── PRIORITY_*_TECHNICAL_SPEC.md # Feature specs
+│   ├── roadmap/                     # Project planning ⭐
+│   │   ├── ROADMAP.md               # Master task list
+│   │   └── PRIORITY_*_STRATEGIC_SPEC.md # Strategic specs (project_manager)
+│   ├── architecture/                # Technical design ⭐
+│   │   ├── specs/                   # Technical specifications (architect)
+│   │   ├── decisions/               # ADRs (architect)
+│   │   └── guidelines/              # Implementation guidelines (architect)
+│   └── PROMPT_MANAGEMENT_SYSTEM.md  # Prompt system docs
 │
 ├── coffee_maker/
 │   ├── autonomous/
@@ -163,7 +167,7 @@ prompt = load_prompt(PromptNames.CREATE_TECHNICAL_SPEC, {
 
 ```bash
 # 1. Check ROADMAP
-cat docs/ROADMAP.md
+cat docs/roadmap/ROADMAP.md
 
 # 2. Create technical spec (if needed)
 # Daemon uses: .claude/commands/create-technical-spec.md
@@ -304,7 +308,7 @@ poetry run project-manager /status
 | **docs/architecture/specs/** | architect | YES - Technical specifications | All others: READ-ONLY |
 | **docs/architecture/decisions/** | architect | YES - ADRs (Architectural Decision Records) | All others: READ-ONLY |
 | **docs/architecture/guidelines/** | architect | YES - Implementation guidelines | All others: READ-ONLY |
-| **docs/PRIORITY_*_TECHNICAL_SPEC.md** | project_manager | YES - Creates strategic specs | All others: READ-ONLY |
+| **docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md** | project_manager | YES - Creates strategic specs | All others: READ-ONLY |
 | **docs/generator/** | generator | YES - Execution traces | All others: READ-ONLY |
 | **docs/reflector/** | reflector | YES - Delta items (insights) | All others: READ-ONLY |
 | **docs/curator/** | curator | YES - Playbooks and curation | All others: READ-ONLY |
@@ -385,7 +389,7 @@ poetry run project-manager /status
 
 3. **project_manager owns STRATEGIC DOCUMENTATION**
    - **ONLY agent that modifies docs/roadmap/ directory**
-   - Creates and updates strategic specs (docs/PRIORITY_*_TECHNICAL_SPEC.md)
+   - Creates and updates strategic specs (docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md)
    - Makes strategic ROADMAP decisions (priorities, planning)
    - Monitors GitHub (PRs, issues, CI)
    - Verifies completed work (post-implementation, when user requests)
@@ -518,11 +522,12 @@ code_developer tries to monitor all PRs
 ## Special Instructions for Claude
 
 ### When Implementing Features
-1. **Always check ROADMAP** first: `docs/ROADMAP.md`
-2. **Look for technical specs**: `docs/PRIORITY_*_TECHNICAL_SPEC.md`
-3. **Use centralized prompts**: Load from `.claude/commands/`
-4. **Update status**: Use DeveloperStatus class for progress tracking
-5. **Follow mixins pattern**: Don't create monolithic files
+1. **Always check ROADMAP** first: `docs/roadmap/ROADMAP.md`
+2. **Look for strategic specs**: `docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md`
+3. **Look for technical specs**: `docs/architecture/specs/SPEC-*-*.md`
+4. **Use centralized prompts**: Load from `.claude/commands/`
+5. **Update status**: Use DeveloperStatus class for progress tracking
+6. **Follow mixins pattern**: Don't create monolithic files
 
 ### When Creating Prompts
 1. **Save to**: `.claude/commands/`
@@ -602,7 +607,7 @@ Langfuse (execution metrics)
 → Use Claude Desktop with MCP configured (already done), or implement Python client (future)
 
 ### "Where's the ROADMAP?"
-→ `docs/ROADMAP.md`
+→ `docs/roadmap/ROADMAP.md`
 
 ### "How do I check daemon status?"
 → `poetry run project-manager developer-status`

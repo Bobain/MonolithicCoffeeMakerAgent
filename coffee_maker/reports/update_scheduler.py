@@ -105,7 +105,7 @@ class UpdateScheduler:
 
     def __init__(
         self,
-        roadmap_path: str = "docs/ROADMAP.md",
+        roadmap_path: str = "docs/roadmap/ROADMAP.md",
         update_interval_days: int = 3,
         estimate_change_threshold: float = 1.0,
     ):

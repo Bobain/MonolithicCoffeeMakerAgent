@@ -21,7 +21,7 @@ def temp_docs(tmp_path):
     """Create temporary document structure for testing.
 
     Creates realistic document structure:
-    - docs/ROADMAP.md with existing US entries
+    - docs/roadmap/ROADMAP.md with existing US entries
     - docs/COLLABORATION_METHODOLOGY.md with sections
     - .claude/CLAUDE.md with instructions
     """
@@ -127,7 +127,7 @@ def updater(temp_docs, monkeypatch):
     updater = DocumentUpdater(project_root=temp_docs)
 
     # Update paths to use temp directories
-    monkeypatch.setattr(updater, "ROADMAP_PATH", Path("docs/ROADMAP.md"))
+    monkeypatch.setattr(updater, "ROADMAP_PATH", Path("docs/roadmap/ROADMAP.md"))
     monkeypatch.setattr(
         updater,
         "COLLABORATION_PATH",
@@ -161,7 +161,7 @@ class TestRoadmapUpdates:
         result = updater.update_documents(
             request_type=RequestType.FEATURE_REQUEST,
             content="I want to add Slack notifications",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={
                 "title": "Slack Notifications",
                 "business_value": "Improve team communication",
@@ -169,10 +169,10 @@ class TestRoadmapUpdates:
             },
         )
 
-        assert result["docs/ROADMAP.md"] is True
+        assert result["docs/roadmap/ROADMAP.md"] is True
 
         # Verify content was added
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
         content = roadmap_path.read_text()
 
         assert "US-003" in content  # Next US number after US-002
@@ -183,7 +183,7 @@ class TestRoadmapUpdates:
 
     def test_roadmap_gets_next_us_number(self, updater):
         """Test that _get_next_us_number() works correctly."""
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
         lines = roadmap_path.read_text().splitlines(keepends=True)
 
         next_num = updater._get_next_us_number(lines)
@@ -191,7 +191,7 @@ class TestRoadmapUpdates:
 
     def test_roadmap_insertion_point(self, updater):
         """Test finding correct insertion point in ROADMAP."""
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
         lines = roadmap_path.read_text().splitlines(keepends=True)
 
         insert_idx = updater._find_roadmap_insertion_point(lines)
@@ -205,7 +205,7 @@ class TestRoadmapUpdates:
         updater.update_documents(
             request_type=RequestType.FEATURE_REQUEST,
             content="Feature 1",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Feature 1"},
         )
 
@@ -213,11 +213,11 @@ class TestRoadmapUpdates:
         updater.update_documents(
             request_type=RequestType.FEATURE_REQUEST,
             content="Feature 2",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Feature 2"},
         )
 
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
         content = roadmap_path.read_text()
 
         assert "US-003" in content  # First new feature
@@ -230,7 +230,7 @@ class TestRoadmapUpdates:
         updater.update_documents(
             request_type=RequestType.FEATURE_REQUEST,
             content="Test feature",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={
                 "title": "Test Feature",
                 "acceptance_criteria": [
@@ -241,7 +241,7 @@ class TestRoadmapUpdates:
             },
         )
 
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
         content = roadmap_path.read_text()
 
         assert "- [ ] Criterion 1" in content
@@ -344,7 +344,7 @@ class TestBackupRestore:
         updater.update_documents(
             request_type=RequestType.FEATURE_REQUEST,
             content="Test",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Test"},
         )
 
@@ -355,7 +355,7 @@ class TestBackupRestore:
     def test_restore_on_error(self, updater, monkeypatch):
         """Test backup is restored when update fails."""
         # Save original content
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
         original_content = roadmap_path.read_text()
 
         # Force an error during update
@@ -369,7 +369,7 @@ class TestBackupRestore:
             updater.update_documents(
                 request_type=RequestType.FEATURE_REQUEST,
                 content="Test",
-                target_documents=["docs/ROADMAP.md"],
+                target_documents=["docs/roadmap/ROADMAP.md"],
                 metadata={"title": "Test"},
             )
 
@@ -379,7 +379,7 @@ class TestBackupRestore:
 
     def test_backup_preserves_file_metadata(self, updater):
         """Test that backup preserves file metadata (timestamps, etc)."""
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
 
         # Get original modification time
         roadmap_path.stat().st_mtime
@@ -405,7 +405,7 @@ class TestHybridRequests:
             request_type=RequestType.HYBRID,
             content="Implement code review bot and require 2 approvals",
             target_documents=[
-                "docs/ROADMAP.md",
+                "docs/roadmap/ROADMAP.md",
                 "docs/COLLABORATION_METHODOLOGY.md",
             ],
             metadata={
@@ -415,11 +415,11 @@ class TestHybridRequests:
             },
         )
 
-        assert result["docs/ROADMAP.md"] is True
+        assert result["docs/roadmap/ROADMAP.md"] is True
         assert result["docs/COLLABORATION_METHODOLOGY.md"] is True
 
         # Verify ROADMAP updated
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
         roadmap_content = roadmap_path.read_text()
         assert "Code Review Process" in roadmap_content
 
@@ -437,17 +437,17 @@ class TestVerification:
         updater.update_documents(
             request_type=RequestType.FEATURE_REQUEST,
             content="Test feature",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Test Feature"},
         )
 
         # Verify the update
-        assert updater.verify_update("docs/ROADMAP.md", "Test Feature") is True
-        assert updater.verify_update("docs/ROADMAP.md", "Test feature") is True
+        assert updater.verify_update("docs/roadmap/ROADMAP.md", "Test Feature") is True
+        assert updater.verify_update("docs/roadmap/ROADMAP.md", "Test feature") is True
 
     def test_verify_update_not_found(self, updater):
         """Test verification fails when content not found."""
-        assert updater.verify_update("docs/ROADMAP.md", "NonExistent Content") is False
+        assert updater.verify_update("docs/roadmap/ROADMAP.md", "NonExistent Content") is False
 
     def test_verify_nonexistent_document(self, updater):
         """Test verification fails for nonexistent document."""
@@ -474,14 +474,14 @@ class TestErrorHandling:
         result = updater.update_documents(
             request_type=RequestType.FEATURE_REQUEST,
             content="Test feature",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={},  # Empty metadata
         )
 
-        assert result["docs/ROADMAP.md"] is True
+        assert result["docs/roadmap/ROADMAP.md"] is True
 
         # Verify it used defaults
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
         content = roadmap_path.read_text()
         assert "TBD" in content  # Default values used
 
@@ -494,11 +494,11 @@ class TestEdgeCases:
         updater.update_documents(
             request_type=RequestType.FEATURE_REQUEST,
             content="Feature with $pecial ch@racters & symbols!",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Special Characters Test"},
         )
 
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
         content = roadmap_path.read_text()
         assert "$pecial ch@racters & symbols!" in content
 
@@ -513,11 +513,11 @@ class TestEdgeCases:
         updater.update_documents(
             request_type=RequestType.FEATURE_REQUEST,
             content=multiline_content,
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Multiline Test"},
         )
 
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
         content = roadmap_path.read_text()
         assert "spans multiple lines" in content
         assert "preserve formatting" in content
@@ -529,11 +529,11 @@ class TestEdgeCases:
         updater.update_documents(
             request_type=RequestType.FEATURE_REQUEST,
             content="Test",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": long_title},
         )
 
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
         content = roadmap_path.read_text()
         assert long_title in content
 
@@ -544,11 +544,11 @@ class TestEdgeCases:
             updater.update_documents(
                 request_type=RequestType.FEATURE_REQUEST,
                 content=f"Feature {i}",
-                target_documents=["docs/ROADMAP.md"],
+                target_documents=["docs/roadmap/ROADMAP.md"],
                 metadata={"title": f"Feature {i}"},
             )
 
-        roadmap_path = updater.project_root / "docs/ROADMAP.md"
+        roadmap_path = updater.project_root / "docs/roadmap/ROADMAP.md"
         content = roadmap_path.read_text()
 
         # All features should be present

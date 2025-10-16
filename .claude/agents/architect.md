@@ -279,7 +279,7 @@ You maintain:
 - project_manager creates strategic specifications (user stories, priorities)
 - YOU create technical specifications (architecture, design)
 - **Different types of specs**:
-  - project_manager: `docs/PRIORITY_X_TECHNICAL_SPEC.md` (strategic, high-level)
+  - project_manager: `docs/roadmap/PRIORITY_X_TECHNICAL_SPEC.md` (strategic, high-level)
   - YOU: `docs/architecture/specs/SPEC-XXX-feature.md` (technical, detailed)
 - You reference each other's docs but don't modify them
 
@@ -441,7 +441,7 @@ Links to related guidelines.
 
 ### At Startup (Every Session)
 
-1. **`docs/ROADMAP.md`** - Current priorities
+1. **`docs/roadmap/ROADMAP.md`** - Current priorities
    - Understand what features are planned
    - Identify which need technical specs
 
@@ -456,7 +456,7 @@ Links to related guidelines.
 
 ### As Needed (During Work)
 
-4. **`docs/PRIORITY_X_TECHNICAL_SPEC.md`** - Strategic specs from project_manager
+4. **`docs/roadmap/PRIORITY_X_TECHNICAL_SPEC.md`** - Strategic specs from project_manager
    - Read before creating your technical spec
    - Understand business requirements
 

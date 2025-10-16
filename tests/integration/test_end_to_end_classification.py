@@ -89,7 +89,7 @@ def classifier():
 def updater(temp_project_root, monkeypatch):
     """Create DocumentUpdater with temp paths."""
     updater = DocumentUpdater(project_root=temp_project_root)
-    monkeypatch.setattr(updater, "ROADMAP_PATH", Path("docs/ROADMAP.md"))
+    monkeypatch.setattr(updater, "ROADMAP_PATH", Path("docs/roadmap/ROADMAP.md"))
     monkeypatch.setattr(updater, "COLLABORATION_PATH", Path("docs/COLLABORATION_METHODOLOGY.md"))
     monkeypatch.setattr(updater, "CLAUDE_PATH", Path(".claude/CLAUDE.md"))
     return updater
@@ -108,7 +108,7 @@ class TestFeatureRequestWorkflow:
 
         assert classification.request_type == RequestType.FEATURE_REQUEST
         assert classification.confidence > 0.5
-        assert "docs/ROADMAP.md" in classification.target_documents
+        assert "docs/roadmap/ROADMAP.md" in classification.target_documents
 
         # 3. Update documents
         metadata = {
@@ -125,10 +125,10 @@ class TestFeatureRequestWorkflow:
         )
 
         # 4. Verify update
-        assert result["docs/ROADMAP.md"] is True
+        assert result["docs/roadmap/ROADMAP.md"] is True
 
         # 5. Check ROADMAP content
-        roadmap_path = temp_project_root / "docs/ROADMAP.md"
+        roadmap_path = temp_project_root / "docs/roadmap/ROADMAP.md"
         roadmap_content = roadmap_path.read_text()
 
         assert "US-002" in roadmap_content  # Next US after US-001
@@ -157,7 +157,7 @@ class TestFeatureRequestWorkflow:
 
                 # Patch document updater to use temp directory
                 service.document_updater = DocumentUpdater(project_root=temp_project_root)
-                monkeypatch.setattr(service.document_updater, "ROADMAP_PATH", Path("docs/ROADMAP.md"))
+                monkeypatch.setattr(service.document_updater, "ROADMAP_PATH", Path("docs/roadmap/ROADMAP.md"))
                 monkeypatch.setattr(
                     service.document_updater,
                     "COLLABORATION_PATH",
@@ -184,10 +184,10 @@ class TestFeatureRequestWorkflow:
 
                 # Verify document was updated
                 assert "document_updates" in response.metadata
-                assert response.metadata["document_updates"]["docs/ROADMAP.md"] is True
+                assert response.metadata["document_updates"]["docs/roadmap/ROADMAP.md"] is True
 
                 # Verify ROADMAP content
-                roadmap_path = temp_project_root / "docs/ROADMAP.md"
+                roadmap_path = temp_project_root / "docs/roadmap/ROADMAP.md"
                 roadmap_content = roadmap_path.read_text()
                 assert "Slack notifications" in roadmap_content
 
@@ -248,7 +248,7 @@ class TestHybridRequestWorkflow:
         assert classification.request_type == RequestType.HYBRID
         assert classification.confidence > 0.5
         assert len(classification.target_documents) == 2
-        assert "docs/ROADMAP.md" in classification.target_documents
+        assert "docs/roadmap/ROADMAP.md" in classification.target_documents
         assert "docs/COLLABORATION_METHODOLOGY.md" in classification.target_documents
 
         # 3. Update documents
@@ -266,11 +266,11 @@ class TestHybridRequestWorkflow:
         )
 
         # 4. Verify both updates
-        assert result["docs/ROADMAP.md"] is True
+        assert result["docs/roadmap/ROADMAP.md"] is True
         assert result["docs/COLLABORATION_METHODOLOGY.md"] is True
 
         # 5. Check both documents
-        roadmap_path = temp_project_root / "docs/ROADMAP.md"
+        roadmap_path = temp_project_root / "docs/roadmap/ROADMAP.md"
         roadmap_content = roadmap_path.read_text()
         assert "Code Review Process" in roadmap_content
 
@@ -328,7 +328,7 @@ class TestBackupAndRecovery:
         classification = classifier.classify(user_input)
 
         # Save original ROADMAP content
-        roadmap_path = temp_project_root / "docs/ROADMAP.md"
+        roadmap_path = temp_project_root / "docs/roadmap/ROADMAP.md"
         original_content = roadmap_path.read_text()
 
         # Simulate error in update
@@ -377,7 +377,7 @@ class TestMultipleSequentialUpdates:
             )
 
         # Verify all features were added
-        roadmap_path = temp_project_root / "docs/ROADMAP.md"
+        roadmap_path = temp_project_root / "docs/roadmap/ROADMAP.md"
         roadmap_content = roadmap_path.read_text()
 
         assert "US-002" in roadmap_content
@@ -428,7 +428,7 @@ class TestMetadataExtraction:
                     feature_indicators=["keyword: add"],
                     methodology_indicators=[],
                     suggested_questions=[],
-                    target_documents=["docs/ROADMAP.md"],
+                    target_documents=["docs/roadmap/ROADMAP.md"],
                 )
 
                 metadata = service._extract_metadata_from_response(
@@ -461,8 +461,8 @@ class TestVerification:
         )
 
         # Verify using updater's verification method
-        assert updater.verify_update("docs/ROADMAP.md", "REST API Endpoints")
-        assert updater.verify_update("docs/ROADMAP.md", "US-002")
+        assert updater.verify_update("docs/roadmap/ROADMAP.md", "REST API Endpoints")
+        assert updater.verify_update("docs/roadmap/ROADMAP.md", "US-002")
 
     def test_verify_methodology_added_to_collaboration(self, classifier, updater, temp_project_root):
         """Test verifying that methodology was added to COLLABORATION."""

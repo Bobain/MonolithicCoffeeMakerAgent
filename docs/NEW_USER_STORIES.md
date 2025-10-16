@@ -212,7 +212,7 @@ Ensure the transparent assistant (integrated in PRIORITY 2.9.5) automatically re
 **Auto-Refresh Feature**:
 - [ ] Assistant automatically refreshes documentation every 30 minutes
 - [ ] Refreshes these documents:
-  - [ ] `docs/ROADMAP.md`
+  - [ ] `docs/roadmap/ROADMAP.md`
   - [ ] `docs/COLLABORATION_METHODOLOGY.md`
   - [ ] `docs/DOCUMENTATION_INDEX.md`
   - [ ] `docs/TUTORIALS.md`

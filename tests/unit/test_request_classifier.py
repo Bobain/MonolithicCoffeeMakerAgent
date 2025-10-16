@@ -33,7 +33,7 @@ def test_clear_feature_request(classifier):
     result = classifier.classify("I want to add email notifications when the daemon completes a task")
     assert result.request_type == RequestType.FEATURE_REQUEST
     assert result.confidence > 0.5
-    assert "docs/ROADMAP.md" in result.target_documents
+    assert "docs/roadmap/ROADMAP.md" in result.target_documents
     assert len(result.feature_indicators) > 0
 
 
@@ -42,7 +42,7 @@ def test_user_story_format(classifier):
     result = classifier.classify("As a user, I want to receive Slack notifications so that I stay informed")
     assert result.request_type == RequestType.FEATURE_REQUEST
     assert result.confidence > 0.5
-    assert "docs/ROADMAP.md" in result.target_documents
+    assert "docs/roadmap/ROADMAP.md" in result.target_documents
 
 
 def test_implement_feature_request(classifier):
@@ -122,7 +122,7 @@ def test_hybrid_request(classifier):
         "and we should implement a bot to enforce this policy"
     )
     assert result.request_type == RequestType.HYBRID
-    assert "docs/ROADMAP.md" in result.target_documents
+    assert "docs/roadmap/ROADMAP.md" in result.target_documents
     assert "docs/COLLABORATION_METHODOLOGY.md" in result.target_documents
     assert len(result.feature_indicators) > 0
     assert len(result.methodology_indicators) > 0
@@ -321,7 +321,7 @@ def test_feature_targets_roadmap(classifier):
     """Test that feature requests target ROADMAP."""
     result = classifier.classify("I want to add a new notification system")
     assert result.request_type == RequestType.FEATURE_REQUEST
-    assert "docs/ROADMAP.md" in result.target_documents
+    assert "docs/roadmap/ROADMAP.md" in result.target_documents
 
 
 def test_methodology_targets_collaboration(classifier):
@@ -337,7 +337,7 @@ def test_hybrid_targets_both_documents(classifier):
     result = classifier.classify("Build a review system and implement a policy that requires approval")
     if result.request_type == RequestType.HYBRID:
         assert len(result.target_documents) == 2
-        assert "docs/ROADMAP.md" in result.target_documents
+        assert "docs/roadmap/ROADMAP.md" in result.target_documents
         assert "docs/COLLABORATION_METHODOLOGY.md" in result.target_documents
 
 

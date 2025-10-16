@@ -8,7 +8,7 @@ Example:
     >>>
     >>> api = ClaudeAPI()
     >>> result = api.execute_prompt(
-    ...     "Read docs/ROADMAP.md and implement PRIORITY 2"
+    ...     "Read docs/roadmap/ROADMAP.md and implement PRIORITY 2"
     ... )
     >>> print(result.content)
 """
@@ -124,7 +124,7 @@ class ClaudeAPI:
         Example:
             >>> api = ClaudeAPI()
             >>> result = api.execute_prompt(
-            ...     "Read docs/ROADMAP.md and implement PRIORITY 2"
+            ...     "Read docs/roadmap/ROADMAP.md and implement PRIORITY 2"
             ... )
             >>> if result.success:
             ...     print("Implementation complete")

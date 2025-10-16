@@ -115,10 +115,10 @@ All prompts are stored as Markdown files with `$VARIABLE_NAME` placeholders:
 ```markdown
 Create a detailed technical specification for implementing $PRIORITY_NAME.
 
-Read the user story from docs/ROADMAP.md and create a comprehensive technical spec.
+Read the user story from docs/roadmap/ROADMAP.md and create a comprehensive technical spec.
 
 **Your Task:**
-1. Read docs/ROADMAP.md to understand $PRIORITY_NAME
+1. Read docs/roadmap/ROADMAP.md to understand $PRIORITY_NAME
 2. Create docs/$SPEC_FILENAME with detailed technical specification
 3. Include:
    - Prerequisites & Dependencies

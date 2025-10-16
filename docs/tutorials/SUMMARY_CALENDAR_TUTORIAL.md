@@ -53,7 +53,7 @@ NotificationDispatcher (multi-channel delivery)
 from coffee_maker.reports.status_report_generator import StatusReportGenerator
 
 # Initialize generator
-generator = StatusReportGenerator("docs/ROADMAP.md")
+generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
 
 # Get recent completions
 completions = generator.get_recent_completions(days=14)
@@ -123,7 +123,7 @@ from coffee_maker.reports.status_tracking_updater import update_status_tracking
 
 # Update document automatically
 success = update_status_tracking(
-    roadmap_path="docs/ROADMAP.md",
+    roadmap_path="docs/roadmap/ROADMAP.md",
     output_path="docs/STATUS_TRACKING.md",
     days=14,
     upcoming_count=5
@@ -282,7 +282,7 @@ dispatcher.update_config(
 from coffee_maker.reports.status_report_generator import StatusReportGenerator
 
 # Generate summary for last 30 days
-generator = StatusReportGenerator("docs/ROADMAP.md")
+generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
 completions = generator.get_recent_completions(days=30)
 
 print(f"✅ {len(completions)} stories completed in last 30 days")
@@ -297,7 +297,7 @@ from coffee_maker.reports.notification_dispatcher import NotificationDispatcher
 from coffee_maker.reports.status_report_generator import StatusReportGenerator
 
 # Generate data
-generator = StatusReportGenerator("docs/ROADMAP.md")
+generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
 completions = generator.get_recent_completions(days=14)
 
 # Dispatch to Slack
@@ -323,7 +323,7 @@ dispatcher.update_config(
 
 # Update with notifications
 success = update_status_tracking(
-    roadmap_path="docs/ROADMAP.md",
+    roadmap_path="docs/roadmap/ROADMAP.md",
     output_path="docs/STATUS_TRACKING.md",
     days=14,
     upcoming_count=5,
@@ -339,7 +339,7 @@ print(f"Update: {'✓' if success else '✗'}")
 ```python
 from coffee_maker.reports.update_scheduler import UpdateScheduler
 
-scheduler = UpdateScheduler(roadmap_path="docs/ROADMAP.md")
+scheduler = UpdateScheduler(roadmap_path="docs/roadmap/ROADMAP.md")
 
 # Check if update needed
 should_update = scheduler.should_update()
@@ -356,7 +356,7 @@ if time_since:
 ```python
 from coffee_maker.reports.status_report_generator import StatusReportGenerator
 
-generator = StatusReportGenerator("docs/ROADMAP.md")
+generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
 completions = generator.get_recent_completions(days=30)
 
 # Calculate metrics
@@ -466,7 +466,7 @@ results = dispatcher.dispatch_summary(completions, period_days=14)
 **Initialization**:
 ```python
 generator = StatusReportGenerator(
-    roadmap_path="docs/ROADMAP.md",
+    roadmap_path="docs/roadmap/ROADMAP.md",
     velocity_days_per_story=3.5  # Average days per story
 )
 ```
@@ -675,7 +675,7 @@ logging.getLogger('coffee_maker.reports').setLevel(logging.INFO)
 
 **See Also**:
 - `docs/US-017_TECHNICAL_SPEC.md` - Technical specification
-- `docs/ROADMAP.md` - Project roadmap
+- `docs/roadmap/ROADMAP.md` - Project roadmap
 - `coffee_maker/reports/` - Source code
 
 ---

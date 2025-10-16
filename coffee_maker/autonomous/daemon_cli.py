@@ -84,8 +84,8 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
 
     parser.add_argument(
         "--roadmap",
-        default="docs/ROADMAP.md",
-        help="Path to ROADMAP.md (default: docs/ROADMAP.md)",
+        default="docs/roadmap/ROADMAP.md",
+        help="Path to ROADMAP.md (default: docs/roadmap/ROADMAP.md)",
     )
 
     parser.add_argument(

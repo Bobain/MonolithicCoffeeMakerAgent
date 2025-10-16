@@ -34,7 +34,7 @@ You work interactively with users through conversation.
 
 **MANDATORY - Read these BEFORE responding to users**:
 
-1. **`docs/ROADMAP.md`** 🔴 REQUIRED
+1. **`docs/roadmap/ROADMAP.md`** 🔴 REQUIRED
    - Master project task list and status
    - All priorities, their status, and completion dates
    - Current work in progress
@@ -51,7 +51,7 @@ You work interactively with users through conversation.
 
 **Read these when user asks specific questions**:
 
-3. **`docs/PRIORITY_X_TECHNICAL_SPEC.md`**
+3. **`docs/roadmap/PRIORITY_X_TECHNICAL_SPEC.md`**
    - WHEN: User asks about specific priorities
    - WHY: Contains detailed implementation plans
    - **ACTION**: Read relevant spec to provide detailed answers
@@ -74,7 +74,7 @@ You work interactively with users through conversation.
 ### ⚡ Startup Checklist
 
 Every time you start a session:
-- [ ] Read `docs/ROADMAP.md` → Understand current project status
+- [ ] Read `docs/roadmap/ROADMAP.md` → Understand current project status
 - [ ] Read `.claude/CLAUDE.md` → Understand project context and architecture
 - [ ] Check for recent completions/changes in ROADMAP
 - [ ] Prepare to provide strategic insights based on current state
@@ -82,21 +82,21 @@ Every time you start a session:
 ### 🎯 When User Asks Questions
 
 **"What's the project status?"**
-→ Read `docs/ROADMAP.md`, analyze priorities, provide summary
+→ Read `docs/roadmap/ROADMAP.md`, analyze priorities, provide summary
 
 **"Is feature X complete?"**
-→ Check `docs/ROADMAP.md` status, use Puppeteer to verify with `verify-dod-puppeteer.md`
+→ Check `docs/roadmap/ROADMAP.md` status, use Puppeteer to verify with `verify-dod-puppeteer.md`
 
 **"What should we work on next?"**
-→ Analyze `docs/ROADMAP.md`, consider dependencies, recommend priority
+→ Analyze `docs/roadmap/ROADMAP.md`, consider dependencies, recommend priority
 
 **"How does Y work?"**
 → Read `.claude/CLAUDE.md` and relevant code files, explain clearly
 
 **Quick Reference**:
-- 📊 Project status: `docs/ROADMAP.md`
+- 📊 Project status: `docs/roadmap/ROADMAP.md`
 - 🏗️ Architecture: `.claude/CLAUDE.md`
-- 📋 Technical details: `docs/PRIORITY_*_TECHNICAL_SPEC.md`
+- 📋 Technical details: `docs/roadmap/PRIORITY_*_TECHNICAL_SPEC.md`
 - ✅ DoD verification: `.claude/commands/verify-dod-puppeteer.md`
 
 ---
@@ -303,11 +303,11 @@ Use markdown formatting:
 ## Context Files
 
 **Always Read**:
-- `docs/ROADMAP.md` - Master task list
+- `docs/roadmap/ROADMAP.md` - Master task list
 - `.claude/CLAUDE.md` - Project instructions
 
 **Reference As Needed**:
-- `docs/PRIORITY_*_TECHNICAL_SPEC.md` - Detailed specs
+- `docs/roadmap/PRIORITY_*_TECHNICAL_SPEC.md` - Detailed specs
 - `.claude/commands/PROMPTS_INDEX.md` - Available prompts
 - `coffee_maker/cli/roadmap_cli.py` - CLI implementation
 - `docs/STATUS_TRACKING.md` - Historical data (if exists)

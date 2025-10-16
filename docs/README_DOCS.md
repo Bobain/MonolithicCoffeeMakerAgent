@@ -8,7 +8,7 @@
 
 ### 📋 **ROADMAP.md** - THE ONE AND ONLY ROADMAP
 
-**Location**: `docs/ROADMAP.md`
+**Location**: `docs/roadmap/ROADMAP.md`
 
 **Purpose**: The **SINGLE SOURCE OF TRUTH** for all project priorities, features, and planning.
 
@@ -32,15 +32,15 @@ ROADMAP_LOCK = "/tmp/roadmap.lock"
 
 with FileLock(ROADMAP_LOCK, timeout=10):
     # Edit ROADMAP.md safely
-    content = Path("docs/ROADMAP.md").read_text()
+    content = Path("docs/roadmap/ROADMAP.md").read_text()
     # ... modify content ...
-    Path("docs/ROADMAP.md").write_text(new_content)
+    Path("docs/roadmap/ROADMAP.md").write_text(new_content)
 ```
 
 **Docker Volume**: Daemon shares the SAME file via Docker volume:
 ```yaml
 volumes:
-  - ./docs/ROADMAP.md:/project/docs/ROADMAP.md:rw  # SAME FILE!
+  - ./docs/roadmap/ROADMAP.md:/project/docs/roadmap/ROADMAP.md:rw  # SAME FILE!
 ```
 
 ---
@@ -132,18 +132,18 @@ If it's a summary of decisions → Create:
 ```markdown
 # In ROADMAP.md
 ### 🔴 PRIORITY 3: Feature X
-**Reference**: `docs/PRIORITY_3_DETAILED_DESIGN.md`
+**Reference**: `docs/roadmap/PRIORITY_3_DETAILED_DESIGN.md`
 
 # Create separate file with details
-docs/PRIORITY_3_DETAILED_DESIGN.md
+docs/roadmap/PRIORITY_3_DETAILED_DESIGN.md
 ```
 
 ---
 
 ## 🔍 How to Find Information
 
-**Looking for current priorities?** → `docs/ROADMAP.md`
-**Looking for implementation details?** → `docs/PRIORITY_X_*_DESIGN.md`
+**Looking for current priorities?** → `docs/roadmap/ROADMAP.md`
+**Looking for implementation details?** → `docs/roadmap/PRIORITY_X_*_DESIGN.md`
 **Looking for decisions made?** → `docs/CHANGELOG_*.md`
 **Looking for historical work?** → `docs/*_summary.md`
 
@@ -155,7 +155,7 @@ docs/PRIORITY_3_DETAILED_DESIGN.md
 
 ```python
 # CORRECT
-ROADMAP_PATH = "docs/ROADMAP.md"  # Hardcode this path
+ROADMAP_PATH = "docs/roadmap/ROADMAP.md"  # Hardcode this path
 
 # WRONG
 ROADMAP_PATH = find_roadmap_file()  # Don't search for it
@@ -168,7 +168,7 @@ ROADMAP_PATH = "docs/ROADMAP_v2.md"  # Don't use alternative files
 from filelock import FileLock
 from pathlib import Path
 
-ROADMAP_PATH = Path("docs/ROADMAP.md")
+ROADMAP_PATH = Path("docs/roadmap/ROADMAP.md")
 ROADMAP_LOCK = FileLock("/tmp/roadmap.lock")
 
 def update_roadmap(changes):
@@ -222,7 +222,7 @@ docs/
 roadmap_files=$(find docs -name "*oadmap*.md" -not -name "ROADMAP.md" | wc -l)
 if [ $roadmap_files -gt 0 ]; then
     echo "ERROR: Found multiple roadmap files!"
-    echo "Only docs/ROADMAP.md is allowed."
+    echo "Only docs/roadmap/ROADMAP.md is allowed."
     find docs -name "*oadmap*.md" -not -name "ROADMAP.md"
     exit 1
 fi
@@ -244,7 +244,7 @@ fi
 
 ## 🎯 Key Takeaways
 
-1. ✅ **docs/ROADMAP.md** is the ONLY roadmap file
+1. ✅ **docs/roadmap/ROADMAP.md** is the ONLY roadmap file
 2. ✅ All tools read/write to this ONE file
 3. ✅ Use filelock to prevent concurrent edits
 4. ✅ Use Docker volume to share SAME file with daemon
@@ -256,4 +256,4 @@ fi
 
 **Last Updated**: 2025-10-09
 **Maintainer**: Human + Autonomous Daemon
-**Source of Truth**: `docs/ROADMAP.md`
+**Source of Truth**: `docs/roadmap/ROADMAP.md`

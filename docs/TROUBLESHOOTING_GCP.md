@@ -193,7 +193,7 @@ echo -n "NEW_API_KEY" | gcloud secrets versions add anthropic-api-key --data-fil
 # (requires git clone in entrypoint script)
 
 # Option 2: Use Cloud Storage
-gsutil cp docs/ROADMAP.md gs://${GCP_PROJECT_ID}-code-developer/ROADMAP.md
+gsutil cp docs/roadmap/ROADMAP.md gs://${GCP_PROJECT_ID}-code-developer/ROADMAP.md
 
 # Update environment variable
 gcloud run services update code-developer \
@@ -867,7 +867,7 @@ gcloud sql backups restore $BACKUP_ID \
   --backup-id=$BACKUP_ID
 
 # 3. Restore ROADMAP.md from Git history
-git checkout origin/roadmap -- docs/ROADMAP.md
+git checkout origin/roadmap -- docs/roadmap/ROADMAP.md
 
 # 4. Verify data integrity
 gcloud sql connect code-developer-db --user=coffee_maker

@@ -24,7 +24,7 @@ class TestRoadmapParserIntegration:
 
     def test_parse_real_roadmap(self):
         """Test parsing the actual ROADMAP.md file."""
-        roadmap_path = Path("docs/ROADMAP.md")
+        roadmap_path = Path("docs/roadmap/ROADMAP.md")
         if not roadmap_path.exists():
             pytest.skip("ROADMAP.md not found")
 
@@ -47,7 +47,7 @@ class TestRoadmapParserIntegration:
 
     def test_get_next_planned_priority_real(self):
         """Test finding next planned priority in real ROADMAP."""
-        roadmap_path = Path("docs/ROADMAP.md")
+        roadmap_path = Path("docs/roadmap/ROADMAP.md")
         if not roadmap_path.exists():
             pytest.skip("ROADMAP.md not found")
 
@@ -61,7 +61,7 @@ class TestRoadmapParserIntegration:
 
     def test_get_in_progress_priorities_real(self):
         """Test finding in-progress priorities in real ROADMAP."""
-        roadmap_path = Path("docs/ROADMAP.md")
+        roadmap_path = Path("docs/roadmap/ROADMAP.md")
         if not roadmap_path.exists():
             pytest.skip("ROADMAP.md not found")
 
@@ -77,7 +77,7 @@ class TestRoadmapParserIntegration:
 
     def test_extract_deliverables_real(self):
         """Test extracting deliverables from real ROADMAP."""
-        roadmap_path = Path("docs/ROADMAP.md")
+        roadmap_path = Path("docs/roadmap/ROADMAP.md")
         if not roadmap_path.exists():
             pytest.skip("ROADMAP.md not found")
 
@@ -172,7 +172,7 @@ class TestDaemonComponentsIntegration:
 
     def test_roadmap_to_git_workflow(self):
         """Test workflow: parse roadmap → create branch → commit."""
-        roadmap_path = Path("docs/ROADMAP.md")
+        roadmap_path = Path("docs/roadmap/ROADMAP.md")
         if not roadmap_path.exists():
             pytest.skip("ROADMAP.md not found")
 
@@ -191,7 +191,7 @@ class TestDaemonComponentsIntegration:
 
     def test_all_components_initialize(self):
         """Test that all daemon components can be initialized."""
-        roadmap_path = Path("docs/ROADMAP.md")
+        roadmap_path = Path("docs/roadmap/ROADMAP.md")
         if not roadmap_path.exists():
             pytest.skip("ROADMAP.md not found")
 

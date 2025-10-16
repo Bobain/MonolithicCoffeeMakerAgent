@@ -220,7 +220,7 @@ class TestUserApprovalWorkflow:
                 metadata=metadata,
             )
 
-            assert update_results["docs/ROADMAP.md"] is True
+            assert update_results["docs/roadmap/ROADMAP.md"] is True
 
         # Verify document was updated
         roadmap_path = temp_project_root / "docs" / "ROADMAP.md"
@@ -261,7 +261,7 @@ class TestUserApprovalWorkflow:
                 target_documents=classification.target_documents,
                 metadata=metadata,
             )
-            assert update_results["docs/ROADMAP.md"] is True
+            assert update_results["docs/roadmap/ROADMAP.md"] is True
 
         # Verify
         roadmap_path = temp_project_root / "docs" / "ROADMAP.md"
@@ -574,7 +574,7 @@ class TestAutoApproveFlag:
             metadata=metadata,
         )
 
-        assert update_results["docs/ROADMAP.md"] is True
+        assert update_results["docs/roadmap/ROADMAP.md"] is True
 
         # Verify updated
         roadmap_path = temp_project_root / "docs" / "ROADMAP.md"
@@ -649,7 +649,7 @@ class TestCompleteE2EWorkflow:
         classification = classifier.classify(user_input)
 
         assert classification.request_type == RequestType.FEATURE_REQUEST
-        assert "docs/ROADMAP.md" in classification.target_documents
+        assert "docs/roadmap/ROADMAP.md" in classification.target_documents
 
         # Phase 4: Metadata Extraction
         extractor = MetadataExtractor()
@@ -695,7 +695,7 @@ class TestCompleteE2EWorkflow:
             metadata=metadata,
         )
 
-        assert update_results["docs/ROADMAP.md"] is True
+        assert update_results["docs/roadmap/ROADMAP.md"] is True
 
         # Verification
         roadmap_path = temp_project_root / "docs" / "ROADMAP.md"

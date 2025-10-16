@@ -21,7 +21,7 @@ class TestDaemonNonRegression:
 
     def test_daemon_initializes_correctly(self):
         """Verify daemon can be initialized with default params."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md")
         assert daemon is not None
         assert daemon.roadmap_path.exists()
         assert daemon.roadmap_path.name == "ROADMAP.md"
@@ -29,7 +29,7 @@ class TestDaemonNonRegression:
     def test_daemon_accepts_all_parameters(self):
         """Verify daemon accepts all configuration parameters."""
         daemon = DevDaemon(
-            roadmap_path="docs/ROADMAP.md",
+            roadmap_path="docs/roadmap/ROADMAP.md",
             auto_approve=True,
             create_prs=False,
             use_claude_cli=True,
@@ -45,7 +45,7 @@ class TestDaemonNonRegression:
 
     def test_roadmap_parser_finds_priorities(self):
         """Verify roadmap parser can find planned priorities."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         priorities = parser.get_all_priorities()
         assert len(priorities) > 0
         # Each priority should have required fields
@@ -119,7 +119,7 @@ Later
 
     def test_daemon_skips_after_max_retries(self):
         """Verify daemon tracks and respects max retries."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md", max_retries=3)
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", max_retries=3)
 
         # Simulate failed attempts
         daemon.attempted_priorities["PRIORITY_TEST"] = 3
@@ -129,7 +129,7 @@ Later
 
     def test_daemon_has_required_methods(self):
         """Verify daemon has all required methods."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md")
 
         # Check critical methods exist
         assert hasattr(daemon, "run")
@@ -191,7 +191,7 @@ class TestDaemonIntegrationNonRegression:
 
     def test_daemon_prerequisite_check_comprehensive(self):
         """Test prerequisite check covers all requirements."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md")
 
         # Should check and return boolean
         result = daemon._check_prerequisites()
@@ -267,22 +267,22 @@ class TestBackwardCompatibility:
     def test_daemon_accepts_old_initialization(self):
         """Verify daemon works with minimal initialization."""
         # Old-style initialization with just roadmap path
-        daemon = DevDaemon("docs/ROADMAP.md")
+        daemon = DevDaemon("docs/roadmap/ROADMAP.md")
         assert daemon is not None
 
     def test_parser_accepts_string_path(self):
         """Verify parser accepts string paths (not just Path objects)."""
         # String path
-        parser1 = RoadmapParser("docs/ROADMAP.md")
+        parser1 = RoadmapParser("docs/roadmap/ROADMAP.md")
         assert parser1.roadmap_path.exists()
 
         # Path object
-        parser2 = RoadmapParser(Path("docs/ROADMAP.md"))
+        parser2 = RoadmapParser(Path("docs/roadmap/ROADMAP.md"))
         assert parser2.roadmap_path.exists()
 
     def test_daemon_defaults_are_sensible(self):
         """Verify default values are sensible and unchanged."""
-        daemon = DevDaemon(roadmap_path="docs/ROADMAP.md")
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md")
 
         # Check defaults haven't changed
         assert daemon.auto_approve is False  # Safe default

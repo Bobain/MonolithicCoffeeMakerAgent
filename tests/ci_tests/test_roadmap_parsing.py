@@ -12,21 +12,21 @@ class TestRoadmapParserBasics:
 
     def test_parser_loads_real_roadmap(self):
         """Verify parser can load the actual project ROADMAP."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         assert parser.roadmap_path.exists()
         content = parser.roadmap_path.read_text()
         assert len(content) > 0
 
     def test_parser_extracts_priorities(self):
         """Verify parser can extract all priorities from ROADMAP."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         priorities = parser.get_priorities()
         assert len(priorities) > 0
         assert all(isinstance(p, dict) for p in priorities)
 
     def test_parser_priority_has_required_fields(self):
         """Verify each priority has name, title, status, content."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         priorities = parser.get_priorities()
 
         for priority in priorities:
@@ -37,7 +37,7 @@ class TestRoadmapParserBasics:
 
     def test_parser_finds_next_planned_priority(self):
         """Verify parser can find next planned priority."""
-        parser = RoadmapParser("docs/ROADMAP.md")
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
         next_priority = parser.get_next_planned_priority()
         # May be None if all complete, otherwise should be dict
         assert next_priority is None or isinstance(next_priority, dict)

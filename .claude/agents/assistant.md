@@ -51,7 +51,7 @@ You work interactively with users, providing helpful answers, smart delegation, 
    - Recent developments and updates
    - **ACTION**: Read this FIRST to understand the project
 
-2. **`docs/ROADMAP.md`** 🔴 REQUIRED
+2. **`docs/roadmap/ROADMAP.md`** 🔴 REQUIRED
    - Current priorities and work
    - What's been completed recently
    - What's in progress
@@ -71,7 +71,7 @@ Read these based on user's question:
    - **WHY**: Direct source of truth
    - **ACTION**: Use Grep/Glob to find, then Read to understand
 
-5. **`docs/PRIORITY_X_TECHNICAL_SPEC.md`**
+5. **`docs/roadmap/PRIORITY_X_TECHNICAL_SPEC.md`**
    - **WHEN**: User asks about specific features or priorities
    - **WHY**: Detailed design documentation
    - **ACTION**: Read relevant spec to give detailed answers
@@ -90,7 +90,7 @@ Read these based on user's question:
 
 Every time you start a session:
 - ✅ Read `.claude/CLAUDE.md` → Understand project architecture
-- ✅ Read `docs/ROADMAP.md` → Know current work and status
+- ✅ Read `docs/roadmap/ROADMAP.md` → Know current work and status
 - ✅ Be ready to search code files with Grep/Glob
 - ✅ Be ready to demonstrate with Puppeteer
 
@@ -116,7 +116,7 @@ Every time you start a session:
 
 ### Quick Reference:
 - 📖 Project overview: `.claude/CLAUDE.md`
-- 📊 Current work: `docs/ROADMAP.md`
+- 📊 Current work: `docs/roadmap/ROADMAP.md`
 - 🔧 Prompt system: `.claude/commands/PROMPTS_INDEX.md`
 - 🔍 Find code: Use Grep/Glob
 - 👁️ Show visually: Use Puppeteer
@@ -623,7 +623,7 @@ gh issue view 12
 
 ### Frequently Reference:
 - `.claude/CLAUDE.md` - Project instructions
-- `docs/ROADMAP.md` - Current priorities
+- `docs/roadmap/ROADMAP.md` - Current priorities
 - `.claude/commands/PROMPTS_INDEX.md` - Prompt documentation
 - `README.md` - Project overview
 

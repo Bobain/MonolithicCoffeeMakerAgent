@@ -10,7 +10,7 @@ Example:
     >>>
     >>> # Update after story completion (with notifications)
     >>> update_status_tracking(
-    ...     roadmap_path="docs/ROADMAP.md",
+    ...     roadmap_path="docs/roadmap/ROADMAP.md",
     ...     output_path="docs/STATUS_TRACKING.md",
     ...     send_notifications=True
     ... )
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 def update_status_tracking(
-    roadmap_path: str = "docs/ROADMAP.md",
+    roadmap_path: str = "docs/roadmap/ROADMAP.md",
     output_path: str = "docs/STATUS_TRACKING.md",
     days: int = 14,
     upcoming_count: int = 5,
@@ -115,7 +115,7 @@ def update_status_tracking(
         return False
 
 
-def on_story_started(story_id: str, roadmap_path: str = "docs/ROADMAP.md") -> None:
+def on_story_started(story_id: str, roadmap_path: str = "docs/roadmap/ROADMAP.md") -> None:
     """Hook called when a story starts (status → In Progress).
 
     Args:
@@ -129,7 +129,7 @@ def on_story_started(story_id: str, roadmap_path: str = "docs/ROADMAP.md") -> No
     update_status_tracking(roadmap_path=roadmap_path)
 
 
-def on_story_completed(story_id: str, roadmap_path: str = "docs/ROADMAP.md") -> None:
+def on_story_completed(story_id: str, roadmap_path: str = "docs/roadmap/ROADMAP.md") -> None:
     """Hook called when a story completes (status → Complete).
 
     Args:
@@ -143,7 +143,7 @@ def on_story_completed(story_id: str, roadmap_path: str = "docs/ROADMAP.md") -> 
     update_status_tracking(roadmap_path=roadmap_path)
 
 
-def on_progress_update(story_id: str, progress_pct: int, roadmap_path: str = "docs/ROADMAP.md") -> None:
+def on_progress_update(story_id: str, progress_pct: int, roadmap_path: str = "docs/roadmap/ROADMAP.md") -> None:
     """Hook called when story progress updates.
 
     Args:
@@ -177,7 +177,7 @@ def schedule_auto_update(interval_days: int = 3) -> None:
 
 
 def check_and_update_if_needed(
-    roadmap_path: str = "docs/ROADMAP.md",
+    roadmap_path: str = "docs/roadmap/ROADMAP.md",
     output_path: str = "docs/STATUS_TRACKING.md",
     force: bool = False,
 ) -> dict:

@@ -517,7 +517,7 @@ If denied:
 - [ ] Update `.claude/agents/user_listener.md` (route architectural requests)
 - [ ] Update `.claude/agents/project_manager.md` (clarify strategic vs technical)
 - [ ] Update `.claude/CLAUDE.md` (add architect to agent list)
-- [ ] Update `docs/ROADMAP.md` (mark US-034 complete)
+- [ ] Update `docs/roadmap/ROADMAP.md` (mark US-034 complete)
 
 **Success Criteria**:
 - All agents aware of architect

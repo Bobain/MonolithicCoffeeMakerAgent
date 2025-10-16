@@ -43,7 +43,7 @@ class SpecManagerMixin:
     Example:
         >>> class DevDaemon(SpecManagerMixin):
         ...     def __init__(self):
-        ...         self.roadmap_path = Path("docs/ROADMAP.md")
+        ...         self.roadmap_path = Path("docs/roadmap/ROADMAP.md")
         ...         self.claude = ClaudeAPI()
         ...         self.git = GitManager()
         >>> daemon = DevDaemon()
@@ -81,7 +81,7 @@ class SpecManagerMixin:
         if priority_name.startswith("US-"):
             spec_filename = f"{priority_name}_TECHNICAL_SPEC.md"
         elif priority_name.startswith("PRIORITY"):
-            # PRIORITY 2.6 -> PRIORITY_2_6_TECHNICAL_SPEC.md
+            # PRIORITY 2.6 -> PRIORITY_2_6_STRATEGIC_SPEC.md
             spec_name = priority_name.replace(" ", "_").replace(".", "_")
             spec_filename = f"{spec_name}_TECHNICAL_SPEC.md"
         else:

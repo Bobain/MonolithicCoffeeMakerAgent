@@ -392,7 +392,7 @@ COFFEE_MAKER_MODE=daemon
 COFFEE_MAKER_LOG_LEVEL=INFO
 COFFEE_MAKER_AUTO_APPROVE=true
 COFFEE_MAKER_CREATE_PRS=true
-ROADMAP_PATH=/workspace/docs/ROADMAP.md
+ROADMAP_PATH=/workspace/docs/roadmap/ROADMAP.md
 
 # Database (for local testing)
 DATABASE_URL=postgresql://coffee_maker:coffee_maker@localhost:5432/coffee_maker
@@ -433,7 +433,7 @@ gcp:
 # Local mode configuration (current)
 local:
   enabled: true
-  roadmap_path: $(pwd)/docs/ROADMAP.md
+  roadmap_path: $(pwd)/docs/roadmap/ROADMAP.md
   database_path: ~/.coffee_maker/notifications.db
 EOF
 

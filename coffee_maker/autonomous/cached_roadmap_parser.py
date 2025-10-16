@@ -12,7 +12,7 @@ US-021 Phase 4: Performance Optimization
 Example:
     >>> from coffee_maker.autonomous.cached_roadmap_parser import CachedRoadmapParser
     >>>
-    >>> parser = CachedRoadmapParser("docs/ROADMAP.md")
+    >>> parser = CachedRoadmapParser("docs/roadmap/ROADMAP.md")
     >>> priorities = parser.get_priorities()  # Parses file
     >>> priorities = parser.get_priorities()  # Returns cached (fast!)
     >>>
@@ -44,7 +44,7 @@ class CachedRoadmapParser:
         _pattern: Pre-compiled regex pattern for priority headers
 
     Example:
-        >>> parser = CachedRoadmapParser("docs/ROADMAP.md")
+        >>> parser = CachedRoadmapParser("docs/roadmap/ROADMAP.md")
         >>> priorities = parser.get_priorities()  # First call: parses
         >>> priorities = parser.get_priorities()  # Second call: cached!
     """
@@ -152,7 +152,7 @@ class CachedRoadmapParser:
                 - content: Full section content
 
         Example:
-            >>> parser = CachedRoadmapParser("docs/ROADMAP.md")
+            >>> parser = CachedRoadmapParser("docs/roadmap/ROADMAP.md")
             >>> priorities = parser.get_priorities()
             >>> len(priorities)
             7
@@ -223,7 +223,7 @@ class CachedRoadmapParser:
             Priority dict or None if no planned priorities
 
         Example:
-            >>> parser = CachedRoadmapParser("docs/ROADMAP.md")
+            >>> parser = CachedRoadmapParser("docs/roadmap/ROADMAP.md")
             >>> next_task = parser.get_next_planned_priority()
             >>> if next_task:
             ...     print(f"Implement: {next_task['title']}")
@@ -246,7 +246,7 @@ class CachedRoadmapParser:
             List of priority dictionaries
 
         Example:
-            >>> parser = CachedRoadmapParser("docs/ROADMAP.md")
+            >>> parser = CachedRoadmapParser("docs/roadmap/ROADMAP.md")
             >>> in_progress = parser.get_in_progress_priorities()
             >>> for p in in_progress:
             ...     print(f"Working on: {p['title']}")
@@ -268,7 +268,7 @@ class CachedRoadmapParser:
             List of deliverable descriptions
 
         Example:
-            >>> parser = CachedRoadmapParser("docs/ROADMAP.md")
+            >>> parser = CachedRoadmapParser("docs/roadmap/ROADMAP.md")
             >>> deliverables = parser.extract_deliverables("PRIORITY 2")
             >>> for d in deliverables:
             ...     print(f"- {d}")
@@ -315,7 +315,7 @@ class CachedRoadmapParser:
             True if complete, False otherwise
 
         Example:
-            >>> parser = CachedRoadmapParser("docs/ROADMAP.md")
+            >>> parser = CachedRoadmapParser("docs/roadmap/ROADMAP.md")
             >>> if parser.is_priority_complete("PRIORITY 1"):
             ...     print("PRIORITY 1 is done!")
         """
@@ -347,7 +347,7 @@ class CachedRoadmapParser:
                 - file_size: File size in bytes
 
         Example:
-            >>> parser = CachedRoadmapParser("docs/ROADMAP.md")
+            >>> parser = CachedRoadmapParser("docs/roadmap/ROADMAP.md")
             >>> stats = parser.get_cache_stats()
             >>> print(f"Cache active: {stats['cached']}")
         """

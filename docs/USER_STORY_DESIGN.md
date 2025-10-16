@@ -635,7 +635,7 @@ class UserStoryCommand(BaseCommand):
 - [ ] End-to-end test: Natural language → User Story → Priority assignment
 - [ ] Update CLI help text
 - [ ] Add examples to ROADMAP.md
-- [ ] Update PRIORITY_2_TECHNICAL_SPEC.md
+- [ ] Update PRIORITY_2_STRATEGIC_SPEC.md
 
 **Total Estimated Time**: 18-25 hours (2.5-3 days)
 
@@ -863,7 +863,7 @@ docs/
 - **User Story Format**: https://www.mountaingoatsoftware.com/agile/user-stories
 - **INVEST Criteria**: Independent, Negotiable, Valuable, Estimable, Small, Testable
 - **Story Mapping**: https://www.jpattonassociates.com/user-story-mapping/
-- **PRIORITY 2 Technical Spec**: docs/PRIORITY_2_TECHNICAL_SPEC.md (current implementation base)
+- **PRIORITY 2 Technical Spec**: docs/roadmap/PRIORITY_2_STRATEGIC_SPEC.md (current implementation base)
 
 ---
 

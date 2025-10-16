@@ -96,7 +96,7 @@
   - 4 architectural options analyzed
   - Implementation guidelines
 
-- **[PRIORITY_2_TECHNICAL_SPEC.md](PRIORITY_2_TECHNICAL_SPEC.md)**
+- **[PRIORITY_2_STRATEGIC_SPEC.md](PRIORITY_2_STRATEGIC_SPEC.md)**
   - Project Manager CLI detailed spec
   - Notification system design
 

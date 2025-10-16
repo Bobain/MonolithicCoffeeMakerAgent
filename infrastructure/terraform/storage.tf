@@ -182,7 +182,7 @@ resource "google_storage_bucket_object" "workspace_readme" {
     This directory contains the working copy of project files.
 
     ## Structure
-    - `docs/ROADMAP.md` - Project roadmap (synced from GitHub)
+    - `docs/roadmap/ROADMAP.md` - Project roadmap (synced from GitHub)
     - `coffee_maker/` - Application source code
     - `data/` - Daemon state and checkpoints
 

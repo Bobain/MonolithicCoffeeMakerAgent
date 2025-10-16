@@ -723,7 +723,7 @@ If your estimate depends on something:
 
 ### After Creating Spec
 
-- [ ] Spec saved to docs/PRIORITY_X_TECHNICAL_SPEC.md
+- [ ] Spec saved to docs/roadmap/PRIORITY_X_TECHNICAL_SPEC.md
 - [ ] Referenced in ROADMAP.md
 - [ ] Estimate communicated to user
 - [ ] User approved the estimate

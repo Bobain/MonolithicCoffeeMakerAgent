@@ -844,7 +844,7 @@ Update ROADMAP.md:
 Start using daemon for real work:
 ```bash
 python run_daemon.py \
-    --roadmap docs/ROADMAP.md \
+    --roadmap docs/roadmap/ROADMAP.md \
     --sleep 30 \
     --model claude-sonnet-4
 ```

@@ -195,7 +195,7 @@ class RequestClassifier:
             # Both types present - hybrid request
             request_type = RequestType.HYBRID
             confidence = min(feature_score, methodology_score)
-            target_docs = ["docs/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"]
+            target_docs = ["docs/roadmap/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"]
             questions = [
                 "I see you're requesting both a feature and a methodology change. Should I:",
                 "A) Focus on the feature first, then update methodology?",
@@ -209,7 +209,7 @@ class RequestClassifier:
                 # Has at least 1 indicator - classify as feature
                 request_type = RequestType.FEATURE_REQUEST
                 confidence = feature_score
-                target_docs = ["docs/ROADMAP.md"]
+                target_docs = ["docs/roadmap/ROADMAP.md"]
                 questions = []
             else:
                 # No clear indicators

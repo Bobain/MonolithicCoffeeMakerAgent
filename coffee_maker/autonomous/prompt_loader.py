@@ -46,7 +46,7 @@ class PromptLoader:
         ...     "PRIORITY_TITLE": "Refactoring"
         ... })
         >>> print(prompt)
-        "Read docs/ROADMAP.md and implement US-021: Refactoring..."
+        "Read docs/roadmap/ROADMAP.md and implement US-021: Refactoring..."
     """
 
     def __init__(self, prompts_dir: Optional[Path] = None):

@@ -86,8 +86,8 @@ Note: This is a temporary script. After PRIORITY 3 is complete,
 
     parser.add_argument(
         "--roadmap",
-        default="docs/ROADMAP.md",
-        help="Path to ROADMAP.md (default: docs/ROADMAP.md)",
+        default="docs/roadmap/ROADMAP.md",
+        help="Path to ROADMAP.md (default: docs/roadmap/ROADMAP.md)",
     )
 
     parser.add_argument(

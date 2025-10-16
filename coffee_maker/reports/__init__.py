@@ -8,7 +8,7 @@ This module provides functionality for generating various reports including:
 Example:
     >>> from coffee_maker.reports.status_report_generator import StatusReportGenerator
     >>>
-    >>> generator = StatusReportGenerator("docs/ROADMAP.md")
+    >>> generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
     >>> summary = generator.format_delivery_summary()
     >>> print(summary)
 """

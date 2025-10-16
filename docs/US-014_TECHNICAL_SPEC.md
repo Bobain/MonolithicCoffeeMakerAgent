@@ -732,7 +732,7 @@ User: "I want email notifications. Also, PM should always ask before updating do
    - Verify format preservation
 
 3. Documentation
-   - Update `docs/ROADMAP.md` to mark US-014 complete
+   - Update `docs/roadmap/ROADMAP.md` to mark US-014 complete
    - Update `docs/COLLABORATION_METHODOLOGY.md` Section 3.2.1 with implementation details
    - Add examples to `docs/TUTORIALS.md`
    - Update `docs/PROJECT_MANAGER_FEATURES.md`
@@ -754,7 +754,7 @@ User: "I want email notifications. Also, PM should always ask before updating do
 - `tests/test_e2e_request_classification.py` (~150 lines)
 
 **Files Modified**:
-- `docs/ROADMAP.md` (mark US-014 complete)
+- `docs/roadmap/ROADMAP.md` (mark US-014 complete)
 - `docs/COLLABORATION_METHODOLOGY.md` (implementation notes)
 - `docs/TUTORIALS.md` (add examples)
 - `docs/PROJECT_MANAGER_FEATURES.md` (document feature)

@@ -8,7 +8,7 @@
 
 **Last Updated**: YYYY-MM-DD
 
-**Related**: [Link to project_manager's strategic spec (docs/PRIORITY_*_TECHNICAL_SPEC.md) if exists]
+**Related**: [Link to project_manager's strategic spec (docs/roadmap/PRIORITY_*_TECHNICAL_SPEC.md) if exists]
 
 **Related ADRs**: [Link to relevant ADRs]
 

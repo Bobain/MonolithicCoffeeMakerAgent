@@ -163,7 +163,7 @@ class ClaudeCLIInterface:
         Example:
             >>> cli = ClaudeCLIInterface()
             >>> result = cli.execute_prompt(
-            ...     "Read docs/ROADMAP.md and implement PRIORITY 2"
+            ...     "Read docs/roadmap/ROADMAP.md and implement PRIORITY 2"
             ... )
             >>> if result.success:
             ...     print("Implementation complete")

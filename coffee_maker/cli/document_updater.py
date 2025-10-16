@@ -23,11 +23,11 @@ Example:
     >>> result = updater.update_documents(
     ...     request_type=RequestType.FEATURE_REQUEST,
     ...     content="I want to add email notifications",
-    ...     target_documents=["docs/ROADMAP.md"],
+    ...     target_documents=["docs/roadmap/ROADMAP.md"],
     ...     metadata={'title': 'Email Notifications', 'business_value': 'High'}
     ... )
     >>> print(result)
-    {'docs/ROADMAP.md': True}
+    {'docs/roadmap/ROADMAP.md': True}
 """
 
 import logging
@@ -76,7 +76,7 @@ class DocumentUpdater:
         >>> updater.update_documents(
         ...     request_type=RequestType.FEATURE_REQUEST,
         ...     content="Add Slack integration",
-        ...     target_documents=["docs/ROADMAP.md"],
+        ...     target_documents=["docs/roadmap/ROADMAP.md"],
         ...     metadata={'title': 'Slack Integration'}
         ... )
         >>>
@@ -90,7 +90,7 @@ class DocumentUpdater:
     """
 
     # Document paths (relative to project root)
-    ROADMAP_PATH = Path("docs/ROADMAP.md")
+    ROADMAP_PATH = Path("docs/roadmap/ROADMAP.md")
     COLLABORATION_PATH = Path("docs/COLLABORATION_METHODOLOGY.md")
     CLAUDE_PATH = Path(".claude/CLAUDE.md")
 
@@ -137,7 +137,7 @@ class DocumentUpdater:
             >>> preview = updater.preview_updates(
             ...     request_type=RequestType.FEATURE_REQUEST,
             ...     content="Add email notifications",
-            ...     target_documents=["docs/ROADMAP.md"],
+            ...     target_documents=["docs/roadmap/ROADMAP.md"],
             ...     metadata={'title': 'Email Notifications'}
             ... )
             >>> print(preview.summary)
@@ -151,7 +151,7 @@ class DocumentUpdater:
             metadata = metadata or {}
             if "us_number" not in metadata and "ROADMAP" in str(target_documents):
                 # Get next US number
-                roadmap_path = self.project_root / "docs/ROADMAP.md"
+                roadmap_path = self.project_root / "docs/roadmap/ROADMAP.md"
                 if roadmap_path.exists():
                     with open(roadmap_path, "r") as f:
                         lines = f.readlines()
@@ -201,7 +201,7 @@ class DocumentUpdater:
             >>> validation = updater.validate_update(
             ...     request_type=RequestType.FEATURE_REQUEST,
             ...     content="Add email notifications",
-            ...     target_documents=["docs/ROADMAP.md"],
+            ...     target_documents=["docs/roadmap/ROADMAP.md"],
             ...     metadata={'title': 'Email Notifications'}
             ... )
             >>> if validation['errors']:
@@ -227,7 +227,7 @@ class DocumentUpdater:
 
             # Validate ROADMAP updates
             if any("ROADMAP" in doc for doc in target_documents):
-                roadmap_path = self.project_root / "docs/ROADMAP.md"
+                roadmap_path = self.project_root / "docs/roadmap/ROADMAP.md"
                 if roadmap_path.exists():
                     with open(roadmap_path, "r") as f:
                         roadmap_content = f.read()
@@ -299,7 +299,7 @@ class DocumentUpdater:
 
         Returns:
             Dict mapping document paths to success status
-            Example: {'docs/ROADMAP.md': True, '.claude/CLAUDE.md': False}
+            Example: {'docs/roadmap/ROADMAP.md': True, '.claude/CLAUDE.md': False}
 
         Raises:
             DocumentUpdateError: If update fails (after restoring backups)
@@ -309,7 +309,7 @@ class DocumentUpdater:
             >>> result = updater.update_documents(
             ...     request_type=RequestType.FEATURE_REQUEST,
             ...     content="Add GraphQL API support",
-            ...     target_documents=["docs/ROADMAP.md"],
+            ...     target_documents=["docs/roadmap/ROADMAP.md"],
             ...     metadata={
             ...         'title': 'GraphQL API',
             ...         'business_value': 'Enable modern API access patterns',
@@ -704,7 +704,7 @@ class DocumentUpdater:
 
         Example:
             >>> updater = DocumentUpdater()
-            >>> updater.verify_update("docs/ROADMAP.md", "Email Notifications")
+            >>> updater.verify_update("docs/roadmap/ROADMAP.md", "Email Notifications")
             True
         """
         full_path = self.project_root / doc_path

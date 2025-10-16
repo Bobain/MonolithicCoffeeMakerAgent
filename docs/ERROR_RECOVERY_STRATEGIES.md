@@ -936,4 +936,4 @@ class ResilientDaemon:
 - `coffee_maker/exceptions.py` - Exception hierarchy
 - `coffee_maker/utils/logging_utils.py` - Logging utilities
 - `config/ai_providers_config.yaml` - Provider configuration
-- `docs/ROADMAP.md` - US-021 Architecture Improvements
+- `docs/roadmap/ROADMAP.md` - US-021 Architecture Improvements

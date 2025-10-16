@@ -33,7 +33,7 @@
 | File | Lines Added | Status |
 |------|-------------|--------|
 | `docs/PROJECT_MANAGER_CLI_USAGE.md` | 917 | New file |
-| `docs/ROADMAP.md` | 16 (net) | Updated |
+| `docs/roadmap/ROADMAP.md` | 16 (net) | Updated |
 
 **Total Changes**: +933 insertions, -9 deletions
 

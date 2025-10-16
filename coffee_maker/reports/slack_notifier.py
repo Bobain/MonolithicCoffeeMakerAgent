@@ -10,7 +10,7 @@ Example:
     >>> from coffee_maker.reports.status_report_generator import StatusReportGenerator
     >>>
     >>> # Generate report data
-    >>> generator = StatusReportGenerator("docs/ROADMAP.md")
+    >>> generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
     >>> completions = generator.get_recent_completions(days=14)
     >>> deliverables = generator.get_upcoming_deliverables(limit=5)
     >>>

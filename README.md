@@ -33,7 +33,7 @@ project-manager notifications
 
 ## 📋 Project Roadmap - Single Source of Truth
 
-**THE ONE AND ONLY ROADMAP**: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+**THE ONE AND ONLY ROADMAP**: [`docs/roadmap/ROADMAP.md`](docs/roadmap/ROADMAP.md)
 
 This file is the **SINGLE SOURCE OF TRUTH** for:
 - All project priorities and features
@@ -48,7 +48,7 @@ This file is the **SINGLE SOURCE OF TRUTH** for:
 
 **Documentation Structure**: See [`docs/README_DOCS.md`](docs/README_DOCS.md) for complete documentation organization.
 
-⚠️ **IMPORTANT**: Never create alternative roadmap files. Always edit `docs/ROADMAP.md` directly.
+⚠️ **IMPORTANT**: Never create alternative roadmap files. Always edit `docs/roadmap/ROADMAP.md` directly.
 
 ---
 
@@ -140,7 +140,7 @@ coffee_maker/
 
 ## 📚 Documentation
 
-- **[ROADMAP.md](docs/ROADMAP.md)**: Complete project roadmap (single source of truth)
+- **[ROADMAP.md](docs/roadmap/ROADMAP.md)**: Complete project roadmap (single source of truth)
 - **[DAEMON_USAGE.md](docs/DAEMON_USAGE.md)**: Daemon usage guide (540 lines)
 - **[ADR_001](docs/ADR_001_DATABASE_SYNC_STRATEGY.md)**: Database sync architecture decision
 - **[README_DOCS.md](docs/README_DOCS.md)**: Documentation organization

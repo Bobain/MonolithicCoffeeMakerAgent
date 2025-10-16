@@ -162,7 +162,7 @@ gh api repos/YOUR_REPO/commits --jq '.[0:5] | .[] | {sha:.sha[0:7], message:.com
 
 # 4. Review ROADMAP.md progress
 git pull origin roadmap
-less docs/ROADMAP.md
+less docs/roadmap/ROADMAP.md
 # Check for status changes (📝 → 🔄 → ✅)
 ```
 
@@ -511,7 +511,7 @@ gcloud sql instances delete code-developer-db-test --quiet
 
 # 4. Backup ROADMAP.md to Cloud Storage
 git pull origin roadmap
-gsutil cp docs/ROADMAP.md gs://${GCP_PROJECT_ID}-code-developer/backups/ROADMAP-$(date +%Y-%m-%d).md
+gsutil cp docs/roadmap/ROADMAP.md gs://${GCP_PROJECT_ID}-code-developer/backups/ROADMAP-$(date +%Y-%m-%d).md
 
 # 5. Document backup metrics
 echo "Backup Report - $(date +%Y-%m)" > backup-report.txt

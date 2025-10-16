@@ -63,7 +63,7 @@ class TestFeatureRequestPreviews:
         result = preview_generator.generate_preview(
             request_type=RequestType.FEATURE_REQUEST,
             content="I want to add email notifications for completed tasks",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={
                 "title": "Email Notifications",
                 "business_value": "Keep users informed",
@@ -78,7 +78,7 @@ class TestFeatureRequestPreviews:
         assert result.requires_confirmation is True
 
         preview = result.previews[0]
-        assert preview.document_path == "docs/ROADMAP.md"
+        assert preview.document_path == "docs/roadmap/ROADMAP.md"
         assert "US-3" in preview.preview_text or "US-003" in preview.preview_text  # Either format
         assert "Email Notifications" in preview.preview_text
         assert "Keep users informed" in preview.preview_text
@@ -88,7 +88,7 @@ class TestFeatureRequestPreviews:
         result = preview_generator.generate_preview(
             request_type=RequestType.FEATURE_REQUEST,
             content="Add Slack integration",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Slack Integration", "us_number": 3},
         )
 
@@ -104,7 +104,7 @@ class TestFeatureRequestPreviews:
         result = preview_generator.generate_preview(
             request_type=RequestType.FEATURE_REQUEST,
             content="Add analytics",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Analytics", "us_number": 3},
         )
 
@@ -123,12 +123,12 @@ class TestFeatureRequestPreviews:
         result = preview_generator.generate_preview(
             request_type=RequestType.HYBRID,
             content="Add code review bot and 2 PR approvals required",
-            target_documents=["docs/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"],
+            target_documents=["docs/roadmap/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"],
             metadata={"title": "Code Review Bot", "rationale": "Improve quality"},
         )
 
         assert len(result.previews) == 2
-        assert result.previews[0].document_path == "docs/ROADMAP.md"
+        assert result.previews[0].document_path == "docs/roadmap/ROADMAP.md"
         assert result.previews[1].document_path == "docs/COLLABORATION_METHODOLOGY.md"
 
 
@@ -178,7 +178,7 @@ class TestPreviewValidation:
         result = preview_generator.generate_preview(
             request_type=RequestType.FEATURE_REQUEST,
             content="Duplicate feature",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Duplicate", "us_number": 1},  # US-001 already exists
         )
 
@@ -191,7 +191,7 @@ class TestPreviewValidation:
         result = preview_generator.generate_preview(
             request_type=RequestType.FEATURE_REQUEST,
             content="Add feature",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={
                 "title": "First Feature",
                 "us_number": 3,
@@ -210,7 +210,7 @@ class TestPreviewSummary:
         result = preview_generator.generate_preview(
             request_type=RequestType.FEATURE_REQUEST,
             content="Add feature",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Feature", "us_number": 3},
         )
 
@@ -225,7 +225,7 @@ class TestPreviewSummary:
         result = preview_generator.generate_preview(
             request_type=RequestType.HYBRID,
             content="Hybrid request",
-            target_documents=["docs/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"],
+            target_documents=["docs/roadmap/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"],
             metadata={"title": "Hybrid"},
         )
 
@@ -236,7 +236,7 @@ class TestPreviewSummary:
         result = preview_generator.generate_preview(
             request_type=RequestType.FEATURE_REQUEST,
             content="Add feature",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Feature", "us_number": 3},
         )
 
@@ -252,7 +252,7 @@ class TestConfirmationPrompt:
         result = preview_generator.generate_preview(
             request_type=RequestType.FEATURE_REQUEST,
             content="Add feature",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Feature", "us_number": 3},
         )
 
@@ -293,7 +293,7 @@ class TestEdgeCases:
         result = preview_generator.generate_preview(
             request_type=RequestType.FEATURE_REQUEST,
             content="",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={"title": "Empty", "us_number": 3},
         )
 
@@ -305,7 +305,7 @@ class TestEdgeCases:
         result = preview_generator.generate_preview(
             request_type=RequestType.FEATURE_REQUEST,
             content="Add feature",
-            target_documents=["docs/ROADMAP.md"],
+            target_documents=["docs/roadmap/ROADMAP.md"],
             metadata={},  # No metadata
         )
 

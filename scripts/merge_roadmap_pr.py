@@ -4,7 +4,7 @@
 This script automates the creation and merging of Pull Requests for
 roadmap and documentation updates to the 'roadmap' branch on GitHub.
 
-⚠️ IMPORTANT: Only use this for docs/ROADMAP.md and docs/*.md updates!
+⚠️ IMPORTANT: Only use this for docs/roadmap/ROADMAP.md and docs/*.md updates!
 
 Usage:
     python scripts/merge_roadmap_pr.py <branch-name> [--base roadmap|main]

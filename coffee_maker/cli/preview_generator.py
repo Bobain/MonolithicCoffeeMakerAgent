@@ -27,7 +27,7 @@ Example:
     >>> preview = generator.generate_preview(
     ...     request_type=RequestType.FEATURE_REQUEST,
     ...     content="I want to add email notifications",
-    ...     target_documents=["docs/ROADMAP.md"],
+    ...     target_documents=["docs/roadmap/ROADMAP.md"],
     ...     metadata={'title': 'Email Notifications'}
     ... )
     >>> print(preview)
@@ -95,7 +95,7 @@ class PreviewGenerator:
         >>> result = generator.generate_preview(
         ...     request_type=RequestType.FEATURE_REQUEST,
         ...     content="Add Slack integration",
-        ...     target_documents=["docs/ROADMAP.md"],
+        ...     target_documents=["docs/roadmap/ROADMAP.md"],
         ...     metadata={'title': 'Slack Integration', 'estimated_effort': '2-3 days'}
         ... )
         >>>
@@ -138,7 +138,7 @@ class PreviewGenerator:
             >>> result = generator.generate_preview(
             ...     request_type=RequestType.FEATURE_REQUEST,
             ...     content="Add email notifications",
-            ...     target_documents=["docs/ROADMAP.md"],
+            ...     target_documents=["docs/roadmap/ROADMAP.md"],
             ...     metadata={'title': 'Email Notifications'}
             ... )
             >>> print(result.summary)
@@ -288,7 +288,7 @@ class PreviewGenerator:
 
         # Format as preview text
         preview_text = self._format_preview_with_colors(
-            document="docs/ROADMAP.md",
+            document="docs/roadmap/ROADMAP.md",
             location=estimated_location,
             additions=preview_lines,
             will_add_lines=len(preview_lines),

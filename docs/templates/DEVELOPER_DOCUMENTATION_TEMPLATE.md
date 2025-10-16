@@ -381,7 +381,7 @@ If none of these solutions work:
 
 ## 5. Updated Technical Spec
 
-**File**: Update `docs/US-XXX_TECHNICAL_SPEC.md` or `docs/PRIORITY_X_TECHNICAL_SPEC.md`
+**File**: Update `docs/US-XXX_TECHNICAL_SPEC.md` or `docs/roadmap/PRIORITY_X_TECHNICAL_SPEC.md`
 
 **Add this section AFTER implementation**:
 

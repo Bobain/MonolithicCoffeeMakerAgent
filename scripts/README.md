@@ -408,7 +408,7 @@ fi
 - **Agent Management Guide**: `docs/AGENT_MANAGEMENT.md`
 - **Agent Definitions**: `.claude/agents/*.md`
 - **Project Instructions**: `.claude/CLAUDE.md`
-- **ROADMAP**: `docs/ROADMAP.md`
+- **ROADMAP**: `docs/roadmap/ROADMAP.md`
 
 ---
 

@@ -348,7 +348,7 @@ All specs use the template in `.claude/commands/generate-technical-spec.md`. You
 - **SpecGenerator Internals**: See `coffee_maker/autonomous/spec_generator.py`
 - **TaskEstimator Details**: See `coffee_maker/utils/task_estimator.py`
 - **Metrics Integration**: See `docs/US-015_TECHNICAL_SPEC.md`
-- **ROADMAP Format**: See `docs/ROADMAP.md`
+- **ROADMAP Format**: See `docs/roadmap/ROADMAP.md`
 
 ---
 

@@ -9,7 +9,7 @@ This module provides functionality to:
 Example:
     >>> from coffee_maker.reports.status_report_generator import StatusReportGenerator
     >>>
-    >>> generator = StatusReportGenerator("docs/ROADMAP.md")
+    >>> generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
     >>> completions = generator.get_recent_completions(days=14)
     >>> summary = generator.format_delivery_summary(completions)
     >>> print(summary)
@@ -107,7 +107,7 @@ class StatusReportGenerator:
         velocity_days_per_story: Average days per story (for calendar estimates)
 
     Example:
-        >>> generator = StatusReportGenerator("docs/ROADMAP.md")
+        >>> generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
         >>> completions = generator.get_recent_completions(days=14)
         >>> print(f"Found {len(completions)} recent completions")
         >>> summary = generator.format_delivery_summary(completions)
@@ -149,7 +149,7 @@ class StatusReportGenerator:
             List of StoryCompletion objects, sorted by completion_date (newest first)
 
         Example:
-            >>> generator = StatusReportGenerator("docs/ROADMAP.md")
+            >>> generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
             >>> completions = generator.get_recent_completions(days=7)
             >>> for completion in completions:
             ...     print(f"{completion.story_id}: {completion.title}")
@@ -275,7 +275,7 @@ class StatusReportGenerator:
             List of UpcomingStory objects with estimated completion dates
 
         Example:
-            >>> generator = StatusReportGenerator("docs/ROADMAP.md")
+            >>> generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
             >>> upcoming = generator.get_upcoming_deliverables(limit=3)
             >>> for story in upcoming:
             ...     print(f"{story.story_id}: {story.estimated_min_days}-{story.estimated_max_days} days")
@@ -390,7 +390,7 @@ class StatusReportGenerator:
             Formatted summary string (markdown format)
 
         Example:
-            >>> generator = StatusReportGenerator("docs/ROADMAP.md")
+            >>> generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
             >>> completions = generator.get_recent_completions(days=14)
             >>> summary = generator.format_delivery_summary(completions)
             >>> print(summary)
@@ -462,7 +462,7 @@ class StatusReportGenerator:
             Formatted calendar report string
 
         Example:
-            >>> generator = StatusReportGenerator("docs/ROADMAP.md")
+            >>> generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
             >>> upcoming = generator.get_upcoming_deliverables(limit=3)
             >>> calendar = generator.format_calendar_report(upcoming)
             >>> print(calendar)
@@ -801,7 +801,7 @@ class StatusReportGenerator:
             Formatted STATUS_TRACKING.md content (markdown)
 
         Example:
-            >>> generator = StatusReportGenerator("docs/ROADMAP.md")
+            >>> generator = StatusReportGenerator("docs/roadmap/ROADMAP.md")
             >>> document = generator.generate_status_tracking_document()
             >>> Path("docs/STATUS_TRACKING.md").write_text(document)
         """

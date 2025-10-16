@@ -554,7 +554,7 @@ But you've added priorities to the ROADMAP.
 **Solution**:
 ```bash
 # 1. Check ROADMAP format
-cat docs/ROADMAP.md | grep "📝 Planned"
+cat docs/roadmap/ROADMAP.md | grep "📝 Planned"
 
 # Should see priorities with this status
 
@@ -987,7 +987,7 @@ gh pr merge 123 --squash
 
 ```bash
 # Check that ROADMAP was updated
-cat docs/ROADMAP.md | grep "US-011"
+cat docs/roadmap/ROADMAP.md | grep "US-011"
 ```
 
 Should show:

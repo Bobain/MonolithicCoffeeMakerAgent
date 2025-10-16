@@ -320,7 +320,7 @@ echo "API Key: $API_KEY"
 export BUCKET_NAME=$(terraform output -raw storage_bucket_name)
 
 # Sync ROADMAP.md
-gsutil cp docs/ROADMAP.md gs://${BUCKET_NAME}/workspace/docs/
+gsutil cp docs/roadmap/ROADMAP.md gs://${BUCKET_NAME}/workspace/docs/
 
 # Sync entire project (optional)
 gsutil -m rsync -r -x '.git|__pycache__|*.pyc|venv' \

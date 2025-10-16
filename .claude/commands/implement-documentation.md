@@ -1,4 +1,4 @@
-Read docs/ROADMAP.md and implement $PRIORITY_NAME: $PRIORITY_TITLE.
+Read docs/roadmap/ROADMAP.md and implement $PRIORITY_NAME: $PRIORITY_TITLE.
 
 ⚠️  THIS IS A DOCUMENTATION PRIORITY - You MUST CREATE FILES ⚠️
 

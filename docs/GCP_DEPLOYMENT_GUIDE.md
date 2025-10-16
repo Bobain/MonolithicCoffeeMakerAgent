@@ -501,7 +501,7 @@ The daemon is configured via environment variables set in Cloud Run:
 | `COFFEE_MAKER_LOG_LEVEL` | Logging verbosity | `INFO` (DEBUG for troubleshooting) |
 | `COFFEE_MAKER_AUTO_APPROVE` | Auto-approve priorities | `true` (fully autonomous) |
 | `COFFEE_MAKER_CREATE_PRS` | Auto-create PRs | `true` |
-| `ROADMAP_PATH` | Path to roadmap | `/workspace/docs/ROADMAP.md` |
+| `ROADMAP_PATH` | Path to roadmap | `/workspace/docs/roadmap/ROADMAP.md` |
 | `GCS_BUCKET_NAME` | Cloud Storage bucket | `${GCP_PROJECT_ID}-code-developer` |
 
 ### Local project_manager Configuration
@@ -795,7 +795,7 @@ gcloud billing budgets create \
 
 **1. Update ROADMAP.md**:
 ```bash
-# Mark PRIORITY 6.5 as complete in docs/ROADMAP.md
+# Mark PRIORITY 6.5 as complete in docs/roadmap/ROADMAP.md
 ```
 
 **2. Configure Continuous Deployment** (Optional):
@@ -807,7 +807,7 @@ gcloud billing budgets create \
 **3. Enable Streamlit Dashboard** (PRIORITY 5, 5.5, 6):
 ```bash
 # Deploy Streamlit apps to Cloud Run for web-based monitoring
-# See: docs/PRIORITY_5_TECHNICAL_SPEC.md
+# See: docs/roadmap/PRIORITY_5_STRATEGIC_SPEC.md
 ```
 
 **4. Set Up Team Access** (Optional):
@@ -829,7 +829,7 @@ For common issues and solutions, see:
 
 - **GitHub Issues**: [MonolithicCoffeeMakerAgent/issues](https://github.com/Bobain/MonolithicCoffeeMakerAgent/issues)
 - **Documentation**: [docs/](https://github.com/Bobain/MonolithicCoffeeMakerAgent/tree/main/docs)
-- **ROADMAP**: [docs/ROADMAP.md](./ROADMAP.md)
+- **ROADMAP**: [docs/roadmap/ROADMAP.md](./ROADMAP.md)
 
 ---
 
