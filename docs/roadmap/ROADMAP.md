@@ -26286,3 +26286,482 @@ The project architecture in CLAUDE.md clearly defines `user_listener` as the "PR
 This priority addresses the architectural mismatch between documentation (user_listener as PRIMARY UI) and implementation (project-manager chat). Creating a dedicated user-listener command will improve code clarity, maintain architectural consistency, and provide a better foundation for future UI enhancements.
 
 ---
+
+### US-047: Enforce CFR-008 Architect-Only Spec Creation
+
+**Status**: 📝 Planned - CRITICAL (Role Boundaries)
+
+**Created**: 2025-10-16
+
+**Estimated Effort**: 2-3 days
+
+**User Story**:
+As the architect agent, I want to be the ONLY agent that creates technical specifications, and I want to do this proactively for ALL ROADMAP priorities, so that we have consistent architectural design, optimal reuse opportunities, and cross-feature integration.
+
+**Problem Statement**:
+Currently, there is inconsistency in role boundaries:
+- **code_developer sometimes creates specs**: This violates separation of concerns and leads to suboptimal architectural decisions
+- **Specs created reactively**: Only when code_developer encounters a priority, missing big-picture optimization
+- **No cross-feature planning**: Each priority designed in isolation without considering dependencies and reuse
+- **Architectural debt accumulates**: Without proactive design, implementation complexity grows unnecessarily
+
+This is a **Critical Functional Requirement** (CFR-008) that must be enforced system-wide.
+
+**Description**:
+Implement strict role boundary enforcement where ONLY the architect agent creates technical specifications, and architect does this proactively for the FULL ROADMAP (not reactively per priority).
+
+**Requirements**:
+
+1. **Remove Spec Creation from code_developer**:
+   - Remove all spec creation logic from `daemon.py`
+   - Remove `_ensure_technical_spec()` method
+   - Remove template-based fallback spec generation
+   - code_developer ONLY reads specs created by architect
+
+2. **Architect Proactive Spec Creation**:
+   - architect reviews FULL ROADMAP regularly
+   - Creates specs for ALL priorities requiring design
+   - Considers cross-feature dependencies
+   - Identifies reuse opportunities across priorities
+   - Optimizes for simplification (ADR-003)
+
+3. **Spec Readiness Verification**:
+   - code_developer checks if spec exists before starting work
+   - If no spec exists, code_developer BLOCKS and notifies project_manager
+   - project_manager alerts user: "Priority X blocked - needs architect spec"
+   - User can then invoke architect to create spec
+
+4. **Automated Enforcement**:
+   - Add validation in daemon startup
+   - Check that all Planned priorities have specs (or are marked as "No spec needed")
+   - Warn if specs are missing
+   - Prevent code_developer from creating specs
+
+5. **Documentation Updates**:
+   - Update CFR-008 in CRITICAL_FUNCTIONAL_REQUIREMENTS.md (already done)
+   - Update CLAUDE.md with enforced workflow
+   - Update architect.md with proactive responsibilities
+   - Update code_developer.md to remove spec creation
+
+6. **Monitoring & Metrics**:
+   - Track: % of priorities with specs before implementation
+   - Track: Spec creation lead time (how far ahead architect works)
+   - Track: Architectural reuse rate (% of specs using shared components)
+   - Alert if code_developer attempts spec creation
+
+**Acceptance Criteria**:
+
+- [ ] code_developer CANNOT create specs (logic removed from daemon.py)
+- [ ] code_developer BLOCKS on missing spec (notifies project_manager)
+- [ ] architect creates specs proactively for FULL ROADMAP
+- [ ] Specs exist BEFORE code_developer starts work (not during)
+- [ ] Validation enforces spec presence for complex priorities
+- [ ] Documentation updated (CLAUDE.md, architect.md, code_developer.md)
+- [ ] CFR-008 fully enforced system-wide
+- [ ] Monitoring tracks spec readiness metrics
+- [ ] All tests pass with new workflow
+- [ ] User receives clear notifications when specs are missing
+
+**Correct Flow (After Implementation)**:
+```
+architect (proactively):
+  → Reviews FULL ROADMAP
+  → Creates ALL needed specs
+  → Ensures architectural consistency
+  → Considers cross-feature dependencies
+  → Optimizes for simplification and reuse
+  → Commits specs to docs/architecture/specs/
+
+code_developer:
+  → Reads spec created by architect
+  → Implements exactly what spec describes
+  → NEVER creates specs
+  → NEVER modifies specs
+  → BLOCKS if spec missing (notifies project_manager)
+
+project_manager:
+  → Monitors spec readiness
+  → Alerts user if priorities blocked by missing specs
+  → Tracks metrics on spec creation lead time
+```
+
+**Incorrect Flow (Current - To Be Eliminated)**:
+```
+code_developer:
+  → Encounters priority without spec
+  → Creates spec using template fallback ❌ WRONG
+  → Implements based on self-created spec ❌ WRONG
+  → No cross-feature optimization ❌ WRONG
+```
+
+**Estimated Effort**: 2-3 days
+
+**Day 1: Remove Spec Creation from code_developer** (4-6 hours)
+- Remove spec creation logic from daemon.py
+- Add blocking logic when spec missing
+- Add notification to project_manager
+- Update code_developer.md documentation
+
+**Day 2: Architect Proactive Workflow** (4-6 hours)
+- Implement architect's ROADMAP review process
+- Add automated spec readiness checks
+- Create monitoring and metrics
+- Update architect.md documentation
+
+**Day 3: Testing & Documentation** (2-4 hours)
+- Write integration tests for enforcement
+- Update CLAUDE.md with new workflow
+- Test full cycle: architect creates spec → code_developer implements
+- Verify blocking works correctly
+
+**Dependencies**: None (CFR-008 already documented)
+
+**Technical Specification Required**: Yes
+
+**Delegation to architect**: This priority requires architectural design for:
+- Spec readiness validation mechanism
+- Blocking and notification system
+- Monitoring and metrics collection
+- Integration with existing daemon workflow
+
+**Priority Level**: CRITICAL
+
+**Rationale**:
+- **Separation of Concerns**: architect designs, code_developer implements
+- **Architectural Consistency**: Single authority for technical decisions
+- **Optimization**: architect sees full ROADMAP, identifies reuse opportunities
+- **Quality**: Proactive design reduces implementation complexity by 30-87% (per ADR-003)
+- **CFR Compliance**: Enforces Critical Functional Requirement system-wide
+
+**Related Documents**:
+- `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` - CFR-008
+- `docs/architecture/decisions/ADR-003-simplification-first-approach.md` - Simplification principles
+- `.claude/agents/architect.md` - Architect role definition
+- `.claude/agents/code_developer.md` - code_developer role definition
+
+**Unblocks**: All future priorities (ensures specs exist before implementation)
+
+**Blocked By**: None
+
+**Notes**:
+This is a **Critical Functional Requirement** that must be enforced to maintain architectural quality and prevent suboptimal implementations. The architect agent has the big-picture view needed to make optimal design decisions across the full ROADMAP.
+
+---
+
+### US-048: Enforce CFR-009 Silent Background Agents
+
+**Status**: 📝 Planned - HIGH PRIORITY (User Experience)
+
+**Created**: 2025-10-16
+
+**Estimated Effort**: 4-6 hours
+
+**User Story**:
+As a user, I want ONLY the user_listener agent to play sound notifications, so that background agents (code_developer, project_manager, etc.) work silently without interrupting me.
+
+**Problem Statement**:
+Currently, background agents play sound notifications:
+- **code_developer plays sounds**: "Max Retries Reached" interrupts user
+- **Confusing UX**: User doesn't know which agent is notifying them
+- **Noise pollution**: Multiple background agents creating sounds
+- **User expectation violated**: Background work should be silent
+
+This is a **Critical Functional Requirement** (CFR-009) that must be enforced system-wide.
+
+**Description**:
+Implement strict enforcement where ONLY the user_listener agent can play sound notifications. All background agents (code_developer, project_manager, architect, assistant, etc.) MUST use `sound=False` in all notification calls.
+
+**Requirements**:
+
+1. **Update NotificationDB API**:
+   - Add `allow_sound` parameter to `create()` method
+   - Default `allow_sound=True` for user_listener
+   - Default `allow_sound=False` for all other agents
+   - Enforce in notification creation logic
+
+2. **Update All Background Agents**:
+   - code_developer: Set `sound=False` in ALL notification calls
+   - project_manager: Set `sound=False` in ALL notification calls
+   - architect: Set `sound=False` in ALL notification calls (future)
+   - assistant: Set `sound=False` in ALL notification calls (future)
+   - Any other background agents: Set `sound=False`
+
+3. **Automated Enforcement**:
+   - Add validation in NotificationDB.create()
+   - Check caller identity (which agent is calling)
+   - Raise error if background agent tries `sound=True`
+   - Allow only user_listener to use `sound=True`
+
+4. **Agent Identity Tracking**:
+   - Add `agent_id` parameter to NotificationDB.create()
+   - Pass agent type (from AgentRegistry) with each call
+   - Use for validation and auditing
+   - Log violations for debugging
+
+5. **Documentation Updates**:
+   - Update CFR-009 in CRITICAL_FUNCTIONAL_REQUIREMENTS.md (already done)
+   - Update CLAUDE.md with sound notification rules
+   - Update each agent's .md with sound=False requirement
+   - Add examples in agent documentation
+
+6. **Audit Existing Code**:
+   - Search codebase for all `notifications.create()` calls
+   - Update ALL calls from background agents to `sound=False`
+   - Verify user_listener uses `sound=True` appropriately
+   - Add tests to prevent regressions
+
+**Acceptance Criteria**:
+
+- [ ] ONLY user_listener can play sound notifications
+- [ ] ALL background agents use `sound=False`
+- [ ] NotificationDB enforces sound permission by agent identity
+- [ ] Validation raises clear error if violation attempted
+- [ ] All existing notification calls updated (code_developer, project_manager)
+- [ ] Future agents default to `sound=False`
+- [ ] Documentation updated (CFR-009, CLAUDE.md, agent .md files)
+- [ ] Tests verify enforcement works
+- [ ] Audit log captures any violations
+- [ ] User experience is silent for background work
+
+**Correct Usage (After Implementation)**:
+```python
+# ✅ CORRECT (code_developer, project_manager, architect, assistant - background agents)
+self.notifications.create(
+    title="Task Complete",
+    message="PRIORITY 9 implemented successfully",
+    level="info",
+    sound=False,  # Silent for background work
+    agent_id=AgentType.CODE_DEVELOPER
+)
+
+# ✅ CORRECT (user_listener only - UI agent)
+self.notifications.create(
+    title="User Action Required",
+    message="Please review PR #123",
+    level="high",
+    sound=True,  # Sound allowed for user interaction
+    agent_id=AgentType.USER_LISTENER
+)
+
+# ❌ INCORRECT (background agent trying to play sound)
+self.notifications.create(
+    title="Error Occurred",
+    message="Max retries reached",
+    level="error",
+    sound=True,  # ❌ RAISES ERROR - only user_listener can use sound=True
+    agent_id=AgentType.CODE_DEVELOPER
+)
+```
+
+**Estimated Effort**: 4-6 hours
+
+**Phase 1: Enforcement Mechanism** (2-3 hours)
+- Update NotificationDB.create() with agent_id parameter
+- Add validation logic for sound permission
+- Implement error raising for violations
+- Add audit logging
+
+**Phase 2: Update All Agents** (1-2 hours)
+- Audit all `notifications.create()` calls in codebase
+- Update code_developer to use `sound=False`
+- Update project_manager to use `sound=False`
+- Add agent_id to all calls
+
+**Phase 3: Testing & Documentation** (1-2 hours)
+- Write unit tests for enforcement
+- Write integration tests for each agent
+- Update CLAUDE.md and agent .md files
+- Verify no violations remain
+
+**Dependencies**: None (can start immediately)
+
+**Technical Specification Required**: No (straightforward implementation)
+
+**Priority Level**: HIGH
+
+**Rationale**:
+- **User Experience**: Background agents should not interrupt users
+- **Clarity**: Only UI agent (user_listener) should play sounds
+- **Noise Reduction**: Prevents notification fatigue
+- **CFR Compliance**: Enforces Critical Functional Requirement
+
+**Related Documents**:
+- `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` - CFR-009
+- `coffee_maker/cli/notifications.py` - NotificationDB implementation
+- `.claude/agents/user_listener.md` - user_listener role (sound allowed)
+- `.claude/agents/code_developer.md` - code_developer role (silent)
+
+**Unblocks**: None
+
+**Blocked By**: None
+
+**Notes**:
+This is a quick win that significantly improves user experience. Background agents should work silently, with only the user_listener agent playing sounds for user-facing interactions.
+
+---
+
+### US-049: Architect Continuous Spec Improvement Loop (CFR-010)
+
+**Status**: 📝 Planned - HIGH PRIORITY (Quality & Efficiency)
+
+**Created**: 2025-10-16
+
+**Estimated Effort**: 1-2 days
+
+**User Story**:
+As the architect agent, I want to continuously review and improve all technical specifications on a regular basis, so that we reduce implementation complexity, increase code reuse, and maintain architectural quality over time.
+
+**Problem Statement**:
+Currently, specs are created once and never revisited:
+- **One-and-done mentality**: Specs created, implemented, forgotten
+- **No continuous improvement**: Lessons learned from implementation not fed back
+- **Complexity accumulates**: Each new spec designed in isolation
+- **Missed reuse opportunities**: Shared patterns not identified across priorities
+- **Architectural drift**: No regular review to maintain consistency
+
+This is a **Critical Functional Requirement** (CFR-010) that ensures architect thinks ahead about complexities and continuously reduces them to the minimum.
+
+**Description**:
+Implement a continuous improvement loop where architect regularly reviews ALL specs and the FULL ROADMAP to identify simplification opportunities, reuse patterns, and architectural improvements.
+
+**Requirements**:
+
+1. **Regular Review Schedule**:
+   - **Daily**: Quick review of ROADMAP changes (5-10 minutes)
+   - **Weekly**: Deep review of all active specs (1-2 hours)
+   - **Before Each New Spec**: Review existing specs for patterns and reuse
+   - **After Implementation**: Review spec based on what was actually built
+
+2. **Review Deliverables**:
+   - **Weekly Improvement Report**: `docs/architecture/WEEKLY_SPEC_REVIEW_[date].md`
+   - **Updated Specs**: Simpler implementations, better examples, clearer guidance
+   - **New ADRs**: Document significant architectural improvements
+   - **Reuse Catalog**: Shared components, patterns, utilities identified
+
+3. **Metrics to Track**:
+   - **Simplification Rate**: % reduction in implementation complexity
+   - **Reuse Rate**: % of new specs using shared components
+   - **Effort Saved**: Hours saved by spec improvements
+   - **Implementation Accuracy**: How closely implementations match specs
+   - **Architectural Consistency**: Adherence to established patterns
+
+4. **Automated Triggers**:
+   - ROADMAP changes trigger daily review
+   - New priority added triggers spec creation evaluation
+   - Implementation completion triggers post-implementation review
+   - Weekly cron job triggers deep review (future)
+
+5. **Review Process**:
+   - **Read FULL ROADMAP**: Understand all priorities and dependencies
+   - **Read ALL Specs**: Review existing technical specifications
+   - **Identify Patterns**: Find common components across priorities
+   - **Simplify**: Apply ADR-003 principles to reduce complexity
+   - **Document**: Create weekly report with findings and improvements
+
+6. **Integration with Workflow**:
+   - architect proactively performs reviews (no user request needed)
+   - project_manager monitors review frequency (alerts if skipped)
+   - code_developer benefits from improved specs (easier implementation)
+   - Weekly reports visible to user in notifications
+
+**Acceptance Criteria**:
+
+- [ ] architect performs daily quick reviews of ROADMAP changes
+- [ ] architect performs weekly deep reviews of all specs
+- [ ] Weekly improvement reports created in `docs/architecture/WEEKLY_SPEC_REVIEW_[date].md`
+- [ ] Metrics tracked for simplification rate, reuse rate, effort saved
+- [ ] Updated specs reflect continuous improvements
+- [ ] New ADRs document significant architectural decisions
+- [ ] Reuse catalog maintained and updated
+- [ ] Automated triggers invoke architect reviews
+- [ ] project_manager monitors review frequency
+- [ ] Documentation updated (CFR-010, architect.md, CLAUDE.md)
+- [ ] All tests pass with new workflow
+
+**Review Deliverable Format**:
+```markdown
+# Weekly Spec Review - 2025-10-16
+
+## Summary
+Reviewed 8 specs, identified 3 reuse opportunities, simplified 2 implementations.
+
+## Metrics
+- **Simplification Rate**: 60% (12 hours → 5 hours average)
+- **Reuse Rate**: 37.5% (3/8 specs using shared components)
+- **Effort Saved**: 14 hours this week
+- **Architectural Consistency**: 100% (all specs follow ADR-003)
+
+## Improvements Made
+1. **SPEC-009**: Reduced complexity by 87.5% (reusing DeveloperStatus)
+2. **SPEC-010**: Identified shared notification component (3 specs can reuse)
+3. **SPEC-011**: Simplified from 5 modules to 2 modules
+
+## Reuse Opportunities Identified
+- NotificationDB: Used by 4 priorities
+- DeveloperStatus: Used by 3 priorities
+- AgentRegistry: Used by 5 priorities
+
+## Recommendations
+1. Create shared utility for JSON file operations (used in 6 specs)
+2. Extract common validation logic into reusable module
+3. Consider creating shared testing utilities
+
+## Next Week Focus
+- Review new priorities 11-15
+- Create shared utilities module
+- Update older specs with new patterns
+```
+
+**Estimated Effort**: 1-2 days (initial implementation)
+
+**Day 1: Review Process Implementation** (4-6 hours)
+- Create review process workflow
+- Implement metrics tracking
+- Create first weekly review report template
+- Document process in architect.md
+
+**Day 2: Automation & Integration** (4-6 hours)
+- Add automated triggers for reviews
+- Integrate with project_manager monitoring
+- Create notification system for review completion
+- Write tests for review workflow
+
+**Ongoing**: 1-2 hours per week for reviews
+
+**Dependencies**:
+- US-047 (architect must create all specs before reviewing them)
+
+**Technical Specification Required**: Yes
+
+**Delegation to architect**: This priority requires architectural design for:
+- Review workflow and automation
+- Metrics collection and tracking
+- Integration with existing daemon workflow
+- Report generation and storage
+
+**Priority Level**: HIGH
+
+**Rationale**:
+- **Continuous Improvement**: Specs get better over time, not worse
+- **Complexity Reduction**: Proactive simplification before implementation
+- **Code Reuse**: Identify shared patterns across priorities
+- **Quality**: Maintain architectural consistency
+- **Efficiency**: Reduce implementation time by 30-87% (per ADR-003)
+- **CFR Compliance**: Enforces Critical Functional Requirement
+
+**Related Documents**:
+- `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` - CFR-010
+- `docs/architecture/decisions/ADR-003-simplification-first-approach.md` - Simplification principles
+- `.claude/agents/architect.md` - Architect role definition
+- `docs/architecture/WEEKLY_SPEC_REVIEW_2025-10-16.md` - First review example
+
+**Unblocks**: All future priorities (improved specs = easier implementation)
+
+**Blocked By**: US-047 (architect must create specs before reviewing them)
+
+**Notes**:
+This is the **continuous improvement loop** that ensures architectural quality doesn't degrade over time. The first weekly review (2025-10-16) already shows 12-16 hours of effort savings - this demonstrates the value of regular spec review and improvement.
+
+**Example Success**: The first review identified that SPEC-009 could be simplified by 87.5% (2 weeks → 2 days) by reusing existing infrastructure. This is exactly the kind of improvement that continuous review enables.
+
+---
