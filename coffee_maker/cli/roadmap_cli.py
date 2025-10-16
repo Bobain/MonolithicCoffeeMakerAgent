@@ -132,6 +132,7 @@ import argparse
 import logging
 import sys
 
+from coffee_maker.autonomous.agent_registry import AgentAlreadyRunningError, AgentRegistry, AgentType
 from coffee_maker.cli.console_ui import (
     console,
     create_table,
@@ -1383,6 +1384,8 @@ def cmd_chat(args):
 def main() -> int:
     """Main CLI entry point.
 
+    US-035: Registers project_manager in singleton registry to prevent duplicate instances.
+
     Returns:
         0 on success, 1 on error
     """
@@ -1530,50 +1533,59 @@ Use 'project-manager chat' for the best experience!
         logger.info("No command provided - defaulting to chat interface (US-030)")
         args.command = "chat"
 
-    # PRIORITY 5: Initialize and start AssistantManager if chat features available
-    if CHAT_AVAILABLE:
-        try:
-            assistant_manager = AssistantManager()
-            assistant_manager.start_auto_refresh()
+    # US-035: Register project_manager in singleton registry
+    try:
+        with AgentRegistry.register(AgentType.PROJECT_MANAGER):
+            logger.info("✅ Agent registered in singleton registry")
 
-            # Make manager available to command handlers via function attributes
-            cmd_assistant_status.manager = assistant_manager
-            cmd_assistant_refresh.manager = assistant_manager
+            # PRIORITY 5: Initialize and start AssistantManager if chat features available
+            if CHAT_AVAILABLE:
+                try:
+                    assistant_manager = AssistantManager()
+                    assistant_manager.start_auto_refresh()
 
-            logger.info("Assistant manager initialized and auto-refresh started")
-        except Exception as e:
-            logger.warning(f"Failed to initialize assistant manager: {e}")
+                    # Make manager available to command handlers via function attributes
+                    cmd_assistant_status.manager = assistant_manager
+                    cmd_assistant_refresh.manager = assistant_manager
 
-    # Route to command handler
-    commands = {
-        "view": cmd_view,
-        "status": cmd_status,
-        "developer-status": cmd_developer_status,  # PRIORITY 4
-        "notifications": cmd_notifications,
-        "respond": cmd_respond,
-        "sync": cmd_sync,
-        "spec": cmd_spec,  # US-016 Phase 5
-        "chat": cmd_chat,  # Phase 2
-        "assistant-status": cmd_assistant_status,  # PRIORITY 5
-        "assistant-refresh": cmd_assistant_refresh,  # PRIORITY 5
-        "metrics": cmd_metrics,  # US-015
-        "summary": cmd_summary,  # US-017 Phase 2
-        "calendar": cmd_calendar,  # US-017 Phase 2
-    }
+                    logger.info("Assistant manager initialized and auto-refresh started")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize assistant manager: {e}")
 
-    handler = commands.get(args.command)
-    if handler:
-        try:
-            return handler(args)
-        except Exception as e:
-            logger.error(f"Command failed: {e}")
-            import traceback
+            # Route to command handler
+            commands = {
+                "view": cmd_view,
+                "status": cmd_status,
+                "developer-status": cmd_developer_status,  # PRIORITY 4
+                "notifications": cmd_notifications,
+                "respond": cmd_respond,
+                "sync": cmd_sync,
+                "spec": cmd_spec,  # US-016 Phase 5
+                "chat": cmd_chat,  # Phase 2
+                "assistant-status": cmd_assistant_status,  # PRIORITY 5
+                "assistant-refresh": cmd_assistant_refresh,  # PRIORITY 5
+                "metrics": cmd_metrics,  # US-015
+                "summary": cmd_summary,  # US-017 Phase 2
+                "calendar": cmd_calendar,  # US-017 Phase 2
+            }
 
-            traceback.print_exc()
-            return 1
-    else:
-        print(f"❌ Unknown command: {args.command}")
-        parser.print_help()
+            handler = commands.get(args.command)
+            if handler:
+                try:
+                    return handler(args)
+                except Exception as e:
+                    logger.error(f"Command failed: {e}")
+                    import traceback
+
+                    traceback.print_exc()
+                    return 1
+            else:
+                print(f"❌ Unknown command: {args.command}")
+                parser.print_help()
+                return 1
+
+    except AgentAlreadyRunningError as e:
+        print(f"\n[red]Error: {e}[/]\n")
         return 1
 
 
