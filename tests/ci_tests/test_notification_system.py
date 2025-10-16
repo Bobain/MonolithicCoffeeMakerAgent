@@ -11,14 +11,14 @@ class TestNotificationSystem:
 
     def test_notification_db_creation(self, test_db):
         """Verify notification database can be created."""
-        from coffee_maker.cli.notification_db import NotificationDB
+        from coffee_maker.cli.notifications import NotificationDB
 
         NotificationDB(str(test_db))
         assert test_db.exists()
 
     def test_create_notification(self, test_db):
         """Verify can create a notification."""
-        from coffee_maker.cli.notification_db import NotificationDB
+        from coffee_maker.cli.notifications import NotificationDB
 
         db = NotificationDB(str(test_db))
         notif_id = db.create_notification(
@@ -30,7 +30,7 @@ class TestNotificationSystem:
 
     def test_retrieve_notification(self, test_db):
         """Verify can retrieve created notification."""
-        from coffee_maker.cli.notification_db import NotificationDB
+        from coffee_maker.cli.notifications import NotificationDB
 
         db = NotificationDB(str(test_db))
         notif_id = db.create_notification(
@@ -44,7 +44,7 @@ class TestNotificationSystem:
 
     def test_list_pending_notifications(self, test_db):
         """Verify can list pending notifications."""
-        from coffee_maker.cli.notification_db import NotificationDB
+        from coffee_maker.cli.notifications import NotificationDB
 
         db = NotificationDB(str(test_db))
 

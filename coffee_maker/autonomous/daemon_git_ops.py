@@ -212,6 +212,8 @@ Steps to resolve:
 
 Until resolved, project_manager cannot see latest progress.
 """,
+                    sound=False,
+                    agent_id="code_developer",
                 )
 
                 logger.error(f"Merge conflict: {current_branch} → roadmap")

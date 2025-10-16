@@ -1381,14 +1381,66 @@ def cmd_chat(args):
         return 1
 
 
+def cmd_dev_report(args: argparse.Namespace) -> int:
+    """Show daily or weekly developer report.
+
+    PRIORITY 9: Enhanced code_developer Communication & Daily Standup
+
+    Displays report of code_developer's work since specified date range:
+    - Git commits
+    - Summary statistics (files, lines)
+    - Current task status
+    - Any blockers
+
+    Args:
+        args: Parsed arguments with optional --days flag
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager dev-report          # Yesterday's work
+        $ project-manager dev-report --days 7 # Last week
+    """
+    from coffee_maker.cli.daily_report_generator import DailyReportGenerator
+
+    try:
+        # Get days from args (default: 1 for yesterday)
+        days = args.days if hasattr(args, "days") else 1
+        since_date = datetime.now() - timedelta(days=days)
+
+        generator = DailyReportGenerator()
+        report = generator.generate_report(since_date=since_date)
+
+        # Display with rich
+        panel = Panel(
+            Markdown(report),
+            title="[bold cyan]📊 DEVELOPER REPORT[/bold cyan]",
+            style="cyan",
+        )
+        console.print(panel)
+        console.print()
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Failed to generate report: {e}")
+        error(f"Failed to generate report: {e}")
+        return 1
+
+
 def main() -> int:
     """Main CLI entry point.
 
     US-035: Registers project_manager in singleton registry to prevent duplicate instances.
+    PRIORITY 9: Shows daily report on first interaction of new day.
 
     Returns:
         0 on success, 1 on error
     """
+
+    from coffee_maker.cli.daily_report_generator import should_show_report, show_daily_report
+
     parser = argparse.ArgumentParser(
         prog="project-manager",
         description="Coffee Maker Agent - Project Manager CLI with AI (Phase 2)",
@@ -1526,6 +1578,15 @@ Use 'project-manager chat' for the best experience!
         help="Force regenerate STATUS_TRACKING.md (Phase 4)",
     )
 
+    # Dev-report command (PRIORITY 9)
+    dev_report_parser = subparsers.add_parser("dev-report", help="Show developer daily report (PRIORITY 9)")
+    dev_report_parser.add_argument(
+        "--days",
+        type=int,
+        default=1,
+        help="Days to look back (default: 1 for yesterday)",
+    )
+
     args = parser.parse_args()
 
     # US-030: Default to chat when no command provided
@@ -1567,7 +1628,12 @@ Use 'project-manager chat' for the best experience!
                 "metrics": cmd_metrics,  # US-015
                 "summary": cmd_summary,  # US-017 Phase 2
                 "calendar": cmd_calendar,  # US-017 Phase 2
+                "dev-report": cmd_dev_report,  # PRIORITY 9
             }
+
+            # PRIORITY 9: Show daily report on first interaction of new day
+            if should_show_report():
+                show_daily_report()
 
             handler = commands.get(args.command)
             if handler:

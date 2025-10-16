@@ -92,6 +92,8 @@ class ImplementationMixin:
                 "priority_name": priority["name"],
                 "priority_number": priority["number"],
             },
+            sound=False,
+            agent_id="code_developer",
         )
 
         logger.info(f"Created notification {notif_id} - waiting for response")
@@ -162,6 +164,8 @@ The daemon will skip this priority in future iterations.
                     "reason": "max_retries_reached",
                     "attempts": attempt_count,
                 },
+                sound=False,
+                agent_id="code_developer",
             )
 
             return False  # Return False so the daemon moves on
@@ -266,6 +270,8 @@ Status: Requires human decision
                     "priority_number": priority.get("number"),
                     "reason": "no_changes",
                 },
+                sound=False,
+                agent_id="code_developer",
             )
 
             logger.info("📧 Created notification for manual review")
@@ -362,6 +368,8 @@ Status: Requires human decision
                     message=f"Implementation complete!\n\nPR: {pr_url}\n\nPlease review and merge.",
                     priority=NOTIF_PRIORITY_HIGH,
                     context={"priority_name": priority_name, "pr_url": pr_url},
+                    sound=False,
+                    agent_id="code_developer",
                 )
             else:
                 self._update_subtask(

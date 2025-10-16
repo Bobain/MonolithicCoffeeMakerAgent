@@ -80,6 +80,16 @@ NOTIF_STATUS_RESPONDED = "responded"
 NOTIF_STATUS_DISMISSED = "dismissed"
 
 
+class CFR009ViolationError(Exception):
+    """Raised when non-UI agent tries to play sound notification.
+
+    CFR-009: ONLY user_listener can use sound notifications.
+    All other agents (code_developer, architect, project_manager, etc.)
+    must work silently in the background.
+    """
+
+
+
 def play_notification_sound(priority: str = "normal") -> bool:
     """Play system notification sound.
 
@@ -244,11 +254,13 @@ class NotificationDB:
         message: str,
         priority: str = NOTIF_PRIORITY_NORMAL,
         context: Optional[Dict] = None,
-        play_sound: bool = True,
+        sound: bool = False,
+        agent_id: Optional[str] = None,
     ) -> int:
-        """Create a new notification with optional sound alert.
+        """Create a new notification with CFR-009 sound enforcement.
 
         PRIORITY 2.9: Enhanced with sound notifications
+        CFR-009: ONLY user_listener can use sound notifications
 
         Args:
             type: Notification type (question, info, warning, error, completion)
@@ -256,22 +268,46 @@ class NotificationDB:
             message: Full message
             priority: Priority level (critical, high, normal, low)
             context: Optional context data (will be JSON serialized)
-            play_sound: Whether to play notification sound (default: True)
+            sound: Whether to play notification sound (default: False)
+                   CFR-009: ONLY user_listener can use sound=True
+            agent_id: Calling agent identifier for CFR-009 enforcement
+                      (e.g., "user_listener", "code_developer", "architect")
 
         Returns:
             Notification ID
 
+        Raises:
+            CFR009ViolationError: If non-UI agent tries sound=True
+
         Example:
             >>> db = NotificationDB()
+            >>> # user_listener CAN use sound
             >>> notif_id = db.create_notification(
             ...     type="question",
             ...     title="Dependency Approval",
             ...     message="Install pandas?",
             ...     priority="high",
             ...     context={"dependency": "pandas"},
-            ...     play_sound=True
+            ...     sound=True,
+            ...     agent_id="user_listener"
+            ... )
+            >>> # Background agents MUST use sound=False
+            >>> notif_id = db.create_notification(
+            ...     type="info",
+            ...     title="Task Complete",
+            ...     message="Implementation finished",
+            ...     sound=False,
+            ...     agent_id="code_developer"
             ... )
         """
+        # CFR-009: Validate sound usage
+        if sound and agent_id and agent_id != "user_listener":
+            raise CFR009ViolationError(
+                f"CFR-009 VIOLATION: Agent '{agent_id}' cannot use sound=True. "
+                f"ONLY user_listener can play sounds. "
+                f"Background agents must use sound=False."
+            )
+
         now = datetime.utcnow().isoformat()
         context_json = json.dumps(context) if context else None
 
@@ -299,7 +335,7 @@ class NotificationDB:
         logger.info(f"Created notification {notif_id}: {title}")
 
         # PRIORITY 2.9: Play notification sound based on priority
-        if play_sound:
+        if sound:
             sound_priority = "normal"
             if priority == NOTIF_PRIORITY_CRITICAL:
                 sound_priority = "critical"

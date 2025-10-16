@@ -73,6 +73,8 @@ class StatusMixin:
             title="🎉 All Priorities Complete!",
             message="The DevDaemon has completed all planned priorities in the ROADMAP!\n\nCheck your PRs for review.",
             priority=NOTIF_PRIORITY_HIGH,
+            sound=False,
+            agent_id="code_developer",
         )
 
     def _notify_persistent_failure(self, crash_info: dict):
@@ -144,6 +146,8 @@ The daemon will remain stopped until manually restarted.
                 "crash_history": self.crash_history,
                 "requires_manual_intervention": True,
             },
+            sound=False,
+            agent_id="code_developer",
         )
 
         logger.critical("Created critical notification for persistent failure")
