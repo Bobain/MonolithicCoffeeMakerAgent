@@ -245,6 +245,9 @@ prompt = load_prompt(PromptNames.MY_NEW_PROMPT, {
    - Full observability of all executions
    - Estimated: 10-14 hours to implement
 
+### Context Budget (CFR-007) ⭐ CRITICAL
+**Agent core materials must fit in ≤30% of context window.** This ensures agents have room to work (70% remaining for files, analysis, and responses). Core materials include: agent prompt, role, responsibilities, tools, and owned critical documents. See `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` CFR-007 for remediation strategies.
+
 ### Bug Fixes
 - **BUG-001**: Daemon stuck without `--auto-approve` → ✅ Fixed
 - **BUG-002**: Daemon crashes with missing priority content → ✅ Fixed
