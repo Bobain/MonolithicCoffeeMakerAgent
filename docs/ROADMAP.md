@@ -23494,12 +23494,22 @@ Create a comprehensive tutorial document demonstrating how to use the ACE (Agent
 
 ## US-038: Implement File Ownership Enforcement in generator Agent
 
-**Status**: 📝 PLANNED (CRITICAL - Architectural Requirement)
+**Status**: 📝 PLANNED - AWAITING ARCHITECT TECHNICAL SPEC
 **Type**: Architecture / Safety / ACE Framework
 **Complexity**: High
 **Priority**: CRITICAL
 **Created**: 2025-10-16
 **Depends On**: US-035 (Singleton enforcement must be complete first)
+
+**IMPORTANT - Ownership Violation Detected**:
+- ❌ docs/US_038_TECHNICAL_SPEC.md was created by project_manager (VIOLATION!)
+- ✅ CORRECT: architect creates technical specs in docs/architecture/user_stories/
+- 🔄 Action Required: architect needs to review and migrate this technical spec
+
+**Delegation Flow** (Strategic → Technical → Implementation):
+1. **project_manager (strategic)**: Defines WHAT and WHY (this ROADMAP entry)
+2. **architect (technical design)**: Creates HOW in docs/architecture/user_stories/US_038_TECHNICAL_SPEC.md
+3. **code_developer (implementation)**: Implements based on architect's technical spec
 
 ### User Story
 

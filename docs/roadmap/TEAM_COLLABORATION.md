@@ -21,7 +21,9 @@ This document defines how agents collaborate on the MonolithicCoffeeMakerAgent p
 
 **project_manager**
 - Strategic ROADMAP management
-- Creates technical specifications (docs/PRIORITY_*_TECHNICAL_SPEC.md)
+- Creates strategic specifications (docs/PRIORITY_*_TECHNICAL_SPEC.md - WHAT and WHY)
+- Does NOT create technical specifications (that's architect's job - HOW)
+- Delegates technical design to architect when needed
 - Monitors GitHub (PRs, issues, CI/CD)
 - Post-completion DoD verification (when user requests)
 - Receives bug reports from assistant
@@ -32,12 +34,23 @@ This document defines how agents collaborate on the MonolithicCoffeeMakerAgent p
 
 **architect**
 - Architectural design BEFORE implementation
-- Creates technical specifications (docs/architecture/specs/)
+- Creates technical specifications:
+  - General technical specs: docs/architecture/specs/SPEC-*.md
+  - User story technical specs: docs/architecture/user_stories/US_*_TECHNICAL_SPEC.md
 - Documents architectural decisions (ADRs in docs/architecture/decisions/)
 - Provides implementation guidelines (docs/architecture/guidelines/)
 - ONLY agent that manages dependencies (pyproject.toml, poetry.lock)
 - Asks user for approval on important decisions (especially dependencies)
 - Interacts with user through user_listener
+
+**Key Distinction - Strategic vs Technical Specs**:
+- **Strategic Specs** (project_manager): WHAT feature and WHY (business requirements)
+  - Example: docs/PRIORITY_*_TECHNICAL_SPEC.md (high-level strategic requirements)
+  - Owned by: project_manager (strategic planning)
+- **Technical Specs** (architect): HOW to implement technically (architecture, design, implementation details)
+  - Example: docs/architecture/user_stories/US_*_TECHNICAL_SPEC.md (detailed technical design)
+  - Owned by: architect (technical design)
+  - Created by: architect based on project_manager's strategic requirements
 
 ### Documentation & Demos
 
