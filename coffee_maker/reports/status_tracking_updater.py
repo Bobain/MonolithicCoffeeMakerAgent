@@ -3,19 +3,24 @@
 This module provides functionality to automatically update the STATUS_TRACKING.md
 document whenever story lifecycle events occur (start, complete, progress updates).
 
+US-017 Phase 5: Enhanced with multi-channel delivery (console, Slack, email).
+
 Example:
     >>> from coffee_maker.reports.status_tracking_updater import update_status_tracking
     >>>
-    >>> # Update after story completion
+    >>> # Update after story completion (with notifications)
     >>> update_status_tracking(
     ...     roadmap_path="docs/ROADMAP.md",
-    ...     output_path="docs/STATUS_TRACKING.md"
+    ...     output_path="docs/STATUS_TRACKING.md",
+    ...     send_notifications=True
     ... )
 """
 
 import logging
 from pathlib import Path
+from typing import Optional
 
+from coffee_maker.reports.notification_dispatcher import NotificationDispatcher
 from coffee_maker.reports.status_report_generator import StatusReportGenerator
 
 logger = logging.getLogger(__name__)
@@ -27,8 +32,12 @@ def update_status_tracking(
     days: int = 14,
     upcoming_count: int = 5,
     force: bool = False,
+    send_notifications: bool = False,
+    dispatcher: Optional[NotificationDispatcher] = None,
 ) -> bool:
     """Update STATUS_TRACKING.md document from ROADMAP data.
+
+    US-017 Phase 5: Enhanced with multi-channel notifications.
 
     This function should be called whenever:
     - A story starts (status → In Progress)
@@ -42,20 +51,23 @@ def update_status_tracking(
         days: Number of days to look back for completions (default: 14)
         upcoming_count: Number of upcoming items to show (default: 5)
         force: Force update even if file is recent (default: False)
+        send_notifications: Send notifications to enabled channels (default: False)
+        dispatcher: Optional NotificationDispatcher instance (creates new if None)
 
     Returns:
         True if update succeeded, False otherwise
 
     Example:
-        >>> # Update after story completion
+        >>> # Update after story completion (no notifications)
         >>> success = update_status_tracking()
         >>> print(f"Update {'succeeded' if success else 'failed'}")
 
-        >>> # Update with custom parameters
+        >>> # Update with notifications to all channels
         >>> success = update_status_tracking(
         ...     days=30,
         ...     upcoming_count=10,
-        ...     force=True
+        ...     force=True,
+        ...     send_notifications=True
         ... )
     """
     try:
@@ -75,6 +87,27 @@ def update_status_tracking(
         output_path_obj.write_text(document_content)
 
         logger.info(f"STATUS_TRACKING.md updated: {output_path}")
+
+        # Send notifications if requested
+        if send_notifications:
+            try:
+                if dispatcher is None:
+                    dispatcher = NotificationDispatcher()
+
+                # Get data for notifications
+                completions = generator.get_recent_completions(days=days)
+                deliverables = generator.get_upcoming_deliverables(limit=upcoming_count)
+
+                # Dispatch to all enabled channels
+                summary_results = dispatcher.dispatch_summary(completions, period_days=days)
+                calendar_results = dispatcher.dispatch_calendar(deliverables, limit=upcoming_count)
+
+                logger.info(f"Notifications sent - Summary: {summary_results}, Calendar: {calendar_results}")
+
+            except Exception as e:
+                logger.error(f"Failed to send notifications: {e}")
+                # Don't fail the update if notifications fail
+
         return True
 
     except Exception as e:
