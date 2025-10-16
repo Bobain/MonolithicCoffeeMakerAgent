@@ -1,7 +1,7 @@
 ---
 name: assistant
 description: Documentation expert, intelligent dispatcher, demo creator, and bug reporter. Creates visual demos with Puppeteer MCP, tests features, reports bugs to project_manager. Delegates complex tasks to specialized agents.
-model: sonnet
+model: haiku
 color: blue
 ---
 

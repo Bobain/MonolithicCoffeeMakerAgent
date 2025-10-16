@@ -1,7 +1,7 @@
 ---
 name: code-developer
 description: Autonomous software developer that reads ROADMAP.md and implements priorities, creates PRs, and verifies DoD with Puppeteer. Use for implementing features, creating technical specs, or autonomously developing code.
-model: sonnet
+model: haiku
 color: cyan
 ---
 

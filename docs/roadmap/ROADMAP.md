@@ -1,8 +1,8 @@
 # Coffee Maker Agent - Prioritized Roadmap
 
-**Last Updated**: 2025-10-11 🎉 **US-029 (CRITICAL) & US-030 IMPLEMENTED - VISIBILITY LOOP COMPLETE!**
+**Last Updated**: 2025-10-16 🎉 **US-033, US-034, US-038, US-042 COMPLETE! Multiple Priorities Ready!**
 **Current Branch**: `roadmap`
-**Status**: PRIORITY 1-4 ✅ COMPLETE | US-028/029/030 ✅ ADDED | **Next: 🚨 US-021 (Refactoring)**
+**Status**: PRIORITY 1-4 ✅ COMPLETE | US-033/034/038/042 ✅ COMPLETE | **Next: 🚨 US-041 (BLOCKING) + Multiple Parallel Work Items**
 **Quick-Start**: ⚡ CLI: `project-manager` (defaults to chat!) | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py`
 **Achievement**: 🎉 **VISIBILITY LOOP OPERATIONAL** - code_developer now merges to roadmap frequently, project_manager has real-time visibility!
 
@@ -101,7 +101,10 @@ PRIORITY 2: Project Manager with UI ← Current focus
 ### PRIORITY 6.5: GCP Deployment ✅ Complete (2025-10-12)
 ### PRIORITY 7: Professional Documentation ✅ Complete
 ### PRIORITY 8: Multi-AI Provider Support ✅ Complete
-### PRIORITY 9: Enhanced Communication 📝 Planned
+### PRIORITY 9: Enhanced Communication ⏸️ Blocked by US-045
+### PRIORITY 10: Standalone user-listener UI Command 📝 Planned
+
+**BLOCKING ISSUE**: Daemon cannot create technical specs (see US-045 for fix)
 ```
 
 **Remember**: The daemon trusts this roadmap completely. Keep it organized, prioritized, and up-to-date! 🎯
@@ -110,67 +113,41 @@ PRIORITY 2: Project Manager with UI ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
-**Next Priority**: 🚨 **US-021 - Code Refactoring & Technical Debt Reduction** (HIGHEST PRIORITY - User Requested)
+**CRITICAL UPDATE 2025-10-16**: US-041 COMPLETE! New blocker identified: daemon cannot delegate to architect
 
-**Current Focus**: Systematic refactoring to improve code quality, maintainability, and reduce technical debt across the entire codebase. This is the foundation for all future development.
+**🚨 CRITICAL BLOCKING PRIORITY (Must be completed IMMEDIATELY)**:
+- 🔥 **US-045: Fix Daemon to Delegate Spec Creation to architect** - CRITICAL
+  - Status: 📝 PLANNED
+  - Blocks: PRIORITY 9 and ALL subsequent daemon work
+  - Estimated: 6-8 hours
+  - **Issue**: daemon_spec_manager.py uses direct Claude CLI calls instead of delegating to architect
+  - **Impact**: Daemon stuck in infinite loop trying to create specs (10-min timeouts)
+  - **Root Cause**: Code written before architect was operational (architectural debt)
+  - **Solution**: Update daemon to delegate spec creation to architect agent via proper delegation mechanism
+  - **Acceptance Criteria**:
+    - daemon_spec_manager.py delegates to architect (no direct Claude calls)
+    - architect creates technical specs in docs/architecture/specs/
+    - Daemon successfully processes PRIORITY 9 without timeouts
+    - All unit tests pass
 
-**Status**: 📝 **READY TO IMPLEMENT** (Spec approved 2025-10-10)
+**RECENTLY COMPLETED**:
+- ✅ **US-041: architect as Operational Subagent** (2025-10-16)
+  - architect now registered in .claude/agents/README.md
+  - All 24 architect tests passing
+  - Unblocked US-038 Phase 3, US-039, US-044
 
-**Goal**: Build intelligent classification system that automatically detects whether user input is a feature request, methodology change, or both, and routes information to the correct documents
+**PARALLEL WORK AVAILABLE (After US-045)**:
+Once US-045 is complete, these can be worked on in parallel:
 
-**Why This Is Critical**:
-Currently PM doesn't consistently identify what type of information users are providing:
-- Feature requests may be documented as methodology changes (or vice versa)
-- Information gets lost or placed in wrong documents
-- No clear process for handling hybrid requests (both feature + methodology)
-- PM doesn't ask clarifying questions when ambiguous
+1. **US-035: Singleton Agent Enforcement** - CRITICAL (2-3 days)
+2. **US-036: Polish Console UI** - MEDIUM-HIGH (2-3 days)
+3. **US-037: ACE Console Demo Tutorial** - MEDIUM (1 day - documentation)
+4. **US-044: Regular Refactoring Workflow** - HIGH (2-3 days)
+5. **US-043: Parallel Agent Execution** - HIGH (2-3 days)
 
-**User Story**:
-> "As a project manager, I need to be able to interpret the user's context: what part of what he is saying are user stories, and what parts concerns the collaboration methodologies, or both. I can ask him to make sure I understood as I need to get sure which documents should be updated (roadmap, collaboration methodology, etc)"
+**Delegation Strategy**: User wants continuous progress across ROADMAP with multiple agents working in parallel where possible
 
-**Implementation Plan** (3-5 days):
-
-**Phase 1: Core Classification Engine** (Day 1 - 6 hours) ✅ COMPLETE (2025-10-15)
-- [x] Create `RequestClassifier` class with keyword matching
-- [x] Implement pattern detection (imperative vs prescriptive mood)
-- [x] Build confidence scoring algorithm
-- [x] Write comprehensive unit tests (90% coverage)
-- [x] Test 38+ classification scenarios (all passing)
-
-**Phase 2: AI Service Integration** (Day 2 - 4 hours) 🚧 READY
-- [x] Integration placeholder created in `ai_service.py` (classify_user_request method)
-- [ ] Full integration into process_request() workflow
-- [ ] Add clarification prompt generation (A/B/C format)
-- [ ] Implement routing logic based on classification
-- [ ] Add explicit document update statements
-- [ ] Write integration tests
-
-**Phase 3: Document Routing** (Day 3 - 6 hours)
-- [ ] Create `DocumentRouter` class
-- [ ] Implement ROADMAP.md update logic
-- [ ] Implement COLLABORATION_METHODOLOGY.md update logic
-- [ ] Add format validation
-- [ ] Handle hybrid requests (update both docs)
-
-**Phase 4: Testing & Documentation** (Day 4-5 - 8 hours)
-- [ ] End-to-end testing with real documents
-- [ ] Test all edge cases
-- [ ] Update documentation (4 docs)
-- [ ] User validation with 10+ test inputs
-- [ ] Mark US-014 complete
-
-**Success Criteria** (19 acceptance criteria from US-014):
-
-**Detection & Classification**:
-- [ ] PM analyzes user input to detect type: feature, methodology, or both
-- [ ] PM uses contextual clues (keywords, phrasing, intent) to classify
-- [ ] PM correctly identifies ambiguous requests requiring clarification
-
-**Clarifying Questions**:
-- [ ] When ambiguous, PM asks: "Is this a feature to build, or a process change?"
-- [ ] PM presents options clearly (A/B/C format)
-- [ ] PM explains why question matters (which docs get updated)
-- [ ] User can respond naturally, PM interprets the response
+---
 
 ## 🚨 US-021 - Code Refactoring & Technical Debt Reduction (HIGHEST PRIORITY)
 
@@ -24522,17 +24499,18 @@ def test_level_4_agent_self_check():
 
 ## US-041: Implement architect Agent as Operational Subagent
 
-**Status**: 📝 PLANNED - VERY HIGH PRIORITY - BLOCKING US-038, US-039
+**Status**: ✅ COMPLETE (2025-10-16)
 **Type**: Infrastructure / Agent Implementation
 **Complexity**: Medium
 **Priority**: VERY HIGH (blocks critical workflow)
 **Created**: 2025-10-16
-**Estimated Effort**: 1-2 days
+**Completed**: 2025-10-16
+**Actual Effort**: 2 hours
 
 **Delegation Flow** (Strategic → Technical → Implementation):
-1. **project_manager (strategic)**: Defines WHAT and WHY (this ROADMAP entry)
-2. **architect (technical design)**: BLOCKED - architect cannot create technical spec because architect is not operational
-3. **code_developer (implementation)**: Will implement once architect can provide technical spec
+1. **project_manager (strategic)**: ✅ Defined WHAT and WHY (this ROADMAP entry)
+2. **architect (technical design)**: ✅ NOW OPERATIONAL (registered in .claude/agents/README.md)
+3. **code_developer (implementation)**: ✅ Implemented registration in .claude/agents/README.md
 
 ### User Story
 
@@ -24789,6 +24767,204 @@ def test_level_4_agent_self_check():
   - Current workflow violates best practices
   - Quick to implement (mostly configuration)
   - High impact (unblocks entire team)
+
+---
+
+## US-045: Fix Daemon to Delegate Spec Creation to architect (CRITICAL)
+
+**Status**: 📝 PLANNED - 🚨 CRITICAL BLOCKING PRIORITY
+**Type**: Architectural Debt / Integration Fix
+**Complexity**: Medium
+**Priority**: CRITICAL (blocks ALL daemon work)
+**Created**: 2025-10-16
+**Estimated Effort**: 6-8 hours
+
+**Delegation Flow** (Strategic → Technical → Implementation):
+1. **project_manager (strategic)**: ✅ Defined WHAT and WHY (this ROADMAP entry)
+2. **architect (technical design)**: Will create technical spec for daemon-architect integration
+3. **code_developer (implementation)**: Will implement daemon delegation to architect
+
+### User Story
+
+> "As a daemon, I need to delegate technical spec creation to the architect agent instead of using direct Claude CLI calls, so that I can progress past PRIORITY 9 and follow proper architectural ownership boundaries."
+
+### Description
+
+**CRITICAL ISSUE DISCOVERED**: The code_developer daemon is stuck in an infinite loop trying to create technical specifications for PRIORITY 9. It times out after 10 minutes on every iteration.
+
+**Root Cause**:
+- `daemon_spec_manager.py` (lines 103-127) uses `self.claude.execute_prompt()` to create specs directly
+- This code was written before architect became operational (pre-US-041)
+- According to architecture ownership matrix (CLAUDE.md), **architect** should create technical specifications
+- Daemon should delegate to architect agent, not execute Claude CLI directly
+
+**Current Broken Workflow**:
+```
+Iteration N:
+1. Daemon finds PRIORITY 9 needs technical spec
+2. daemon_spec_manager._ensure_technical_spec() called
+3. Builds prompt using load_prompt(PromptNames.CREATE_TECHNICAL_SPEC)
+4. Calls self.claude.execute_prompt(spec_prompt, timeout=600)
+5. Claude CLI executes for 10 minutes
+6. Times out or completes without creating file
+7. ERROR: "Claude completed but spec file was not created"
+8. Daemon skips PRIORITY 9, waits 30 seconds
+9. Repeats iteration N+1 (infinite loop)
+```
+
+**Desired Workflow** (after US-045):
+```
+Iteration N:
+1. Daemon finds PRIORITY 9 needs technical spec
+2. daemon_spec_manager._ensure_technical_spec() called
+3. Delegates to architect: "Create technical spec for PRIORITY 9"
+4. architect analyzes requirements from ROADMAP.md
+5. architect creates docs/architecture/specs/SPEC-009-enhanced-communication.md
+6. architect returns spec location to daemon
+7. Daemon reads technical spec
+8. Daemon proceeds with implementation of PRIORITY 9
+```
+
+**Impact**:
+- **Blocking**: Daemon cannot progress past PRIORITY 9
+- **Infinite Loop**: Daemon stuck repeating same failed operation
+- **Resource Waste**: 10-minute timeouts consume time and API quota
+- **Architecture Violation**: daemon bypasses architect ownership boundaries
+- **User Experience**: Appears broken/stuck to users
+
+### Requirements
+
+**Functional Requirements**:
+
+1. **Remove Direct Claude CLI Calls from Spec Creation**:
+   - Remove `self.claude.execute_prompt()` from `daemon_spec_manager.py`
+   - Daemon should NOT create specs itself
+   - All spec creation must go through architect
+
+2. **Implement Delegation to architect**:
+   - Use proper agent delegation mechanism (Task tool or equivalent)
+   - Pass priority information to architect
+   - Receive spec location from architect
+   - Handle architect failures gracefully
+
+3. **Update Spec Location Strategy**:
+   - **Current**: daemon creates `docs/PRIORITY_X_TECHNICAL_SPEC.md` (strategic spec location)
+   - **New**: architect creates `docs/architecture/specs/SPEC-XXX-feature-name.md` (technical spec location)
+   - Daemon must look in correct location after architect creates spec
+
+4. **Error Handling**:
+   - If architect unavailable: Daemon BLOCKS and notifies user (do NOT fall back to direct Claude)
+   - If architect fails: Daemon logs error, notifies user, moves to next priority
+   - No silent failures, no infinite loops
+
+5. **Fallback Strategy**:
+   - **NO fallback to old direct-Claude approach** (prevents regression)
+   - If architect fails, daemon should notify user and BLOCK
+   - This ensures architect issues are caught early
+
+### Acceptance Criteria
+
+**Delegation Working**:
+- [ ] `daemon_spec_manager._ensure_technical_spec()` delegates to architect
+- [ ] No direct `self.claude.execute_prompt()` calls in spec creation flow
+- [ ] architect receives priority info and creates spec in `docs/architecture/specs/`
+- [ ] Daemon successfully reads architect-created spec
+
+**PRIORITY 9 Unblocked**:
+- [ ] Daemon processes PRIORITY 9 without timeouts
+- [ ] Technical spec created in correct location
+- [ ] Daemon moves to implementation phase
+- [ ] No "Claude completed but spec file was not created" errors
+
+**Error Handling**:
+- [ ] architect failures logged clearly
+- [ ] User notified when architect unavailable
+- [ ] Daemon does NOT enter infinite loops on failures
+- [ ] Graceful degradation (skip priority, notify user)
+
+**Testing**:
+- [ ] Unit tests for daemon-architect delegation
+- [ ] Integration test: Full workflow from PRIORITY detection → spec creation → implementation
+- [ ] Test error cases (architect unavailable, architect fails, timeout)
+- [ ] All existing daemon tests still pass
+
+**Documentation**:
+- [ ] Update `daemon_spec_manager.py` docstrings
+- [ ] Document new delegation workflow in comments
+- [ ] Update relevant ADRs (if needed)
+- [ ] Update CLAUDE.md if workflow changes significantly
+
+### Implementation Plan
+
+**Phase 1: Design** (1-2 hours):
+- [ ] architect creates technical spec for daemon-architect integration
+- [ ] Define delegation interface
+- [ ] Define spec location mapping (PRIORITY X → SPEC-XXX-name.md)
+- [ ] Design error handling strategy
+
+**Phase 2: Implementation** (3-4 hours):
+- [ ] Update `daemon_spec_manager._ensure_technical_spec()`:
+  - Remove `self.claude.execute_prompt()` call
+  - Add delegation to architect
+  - Update spec path logic (look in docs/architecture/specs/)
+- [ ] Add error handling for architect failures
+- [ ] Add logging and user notifications
+- [ ] Update related methods if needed
+
+**Phase 3: Testing** (1-2 hours):
+- [ ] Unit tests for delegation mechanism
+- [ ] Integration test with real PRIORITY 9
+- [ ] Test error cases
+- [ ] Verify all existing tests pass
+
+**Phase 4: Verification** (1 hour):
+- [ ] Restart daemon, verify PRIORITY 9 processed successfully
+- [ ] Check no timeouts or infinite loops
+- [ ] Verify spec created in correct location
+- [ ] Monitor for any issues
+
+### Dependencies
+
+**Completed**:
+- ✅ US-041: architect operational (architect registered in .claude/agents/README.md)
+- ✅ architect can be invoked via Task tool
+- ✅ architect has write access to docs/architecture/specs/
+
+**Required**:
+- architect agent fully operational
+- Task tool or equivalent delegation mechanism
+- daemon has access to invoke agents
+
+**Unblocks**:
+- PRIORITY 9: Enhanced code_developer Communication & Daily Standup
+- All future PRIORITYs requiring technical specs
+- Daemon autonomous operation resumes
+
+### Success Metrics
+
+- **Daemon Progress**: Daemon successfully processes PRIORITY 9
+- **No Timeouts**: Zero 10-minute timeout errors
+- **No Infinite Loops**: Daemon progresses through priorities
+- **Spec Creation**: architect creates specs in correct location
+- **Architecture Compliance**: Daemon respects architect ownership boundaries
+
+### Notes
+
+**Why This Is CRITICAL**:
+- Daemon is completely blocked (cannot progress)
+- Infinite loop wastes resources
+- Violates architectural ownership boundaries
+- Quick to fix (6-8 hours) with high impact
+
+**Relationship to Other US**:
+- **US-041**: Made architect operational (✅ COMPLETE)
+- **US-045**: Integrates daemon with architect (this US - BLOCKING)
+- **PRIORITY 9**: Blocked by daemon-architect integration issue
+
+**Historical Context**:
+- daemon_spec_manager.py written before architect was operational
+- Architectural debt accumulated as system evolved
+- Now that architect exists, daemon must be updated to use it
 
 ---
 
@@ -25986,5 +26162,127 @@ Infrastructure is now ready for architect to create refactoring plans and for co
 - code_developer refactoring execution workflow
 - ROADMAP integration (REFACTOR-XXX priorities)
 - architect review process automation
+
+---
+
+## PRIORITY 10: Standalone user-listener UI Command
+
+**Status**: 📝 **PLANNED**
+
+**User Story**: [US-046] Create Standalone user-listener UI Command
+
+**What**: Create a dedicated `user-listener` command that serves as the unified UI interface and primary entry point for all user interactions with the autonomous agent system.
+
+**Why**:
+- **Architectural Alignment**: Matches documented architecture in CLAUDE.md where `user_listener` is defined as the PRIMARY USER INTERFACE
+- **Clear Separation of Concerns**: Establishes clear boundary between UI (user_listener) and backend agents (project_manager, architect, code-searcher, etc.)
+- **Full Agent Delegation**: Enables proper delegation to all specialized agents through a single, consistent interface
+- **User Experience**: Provides a unified, intuitive command for all user interactions instead of using `project-manager chat`
+
+**Current State**:
+- `project-manager chat` currently provides UI functionality
+- Architecture documentation refers to `user_listener` as PRIMARY USER INTERFACE
+- Mismatch between implementation and documented architecture
+
+**Context**:
+The project architecture in CLAUDE.md clearly defines `user_listener` as the "PRIMARY USER INTERFACE - Interprets user intent and delegates to team (ONLY agent with UI)". However, the current implementation uses `project-manager chat` for UI interactions. This priority will align the implementation with the documented architecture by creating a proper standalone `user-listener` command.
+
+**Deliverables**:
+
+1. **Core Implementation**:
+   - Create `coffee_maker/cli/user_listener.py` with ChatSession implementation
+   - Implement interactive chat interface with rich terminal UI
+   - Markdown rendering, syntax highlighting, streaming responses
+   - Multi-line input, command history, auto-completion
+
+2. **Agent Delegation System**:
+   - Delegate strategic tasks to project_manager (ROADMAP updates, GitHub monitoring, status reports)
+   - Delegate architectural decisions to architect (technical specs, ADRs, dependencies)
+   - Delegate code analysis to code-searcher (deep codebase analysis, forensics)
+   - Delegate demos and bug reports to assistant (Puppeteer demos, comprehensive bug analysis)
+   - Delegate design decisions to ux-design-expert (UI/UX, Tailwind CSS)
+
+3. **Command Registration**:
+   - Register `user-listener` command in pyproject.toml
+   - Add command to main CLI entry points
+
+4. **Singleton Enforcement**:
+   - Add AgentType.USER_LISTENER to AgentRegistry
+   - Enforce only one UI session at a time
+   - Proper cleanup on exit
+
+5. **Agent Configuration**:
+   - Create `.claude/agents/user_listener.md` with agent definition
+   - Document role, responsibilities, delegation rules
+   - Define communication protocols
+
+6. **Documentation Updates**:
+   - Update CLAUDE.md with new command usage
+   - Update README.md with user-listener command examples
+   - Document delegation workflow
+   - Add troubleshooting guide
+
+**Acceptance Criteria**:
+
+- [ ] `poetry run user-listener` starts interactive UI successfully
+- [ ] Command provides rich terminal experience (markdown, syntax highlighting, streaming)
+- [ ] Delegates to project_manager for strategic tasks (ROADMAP, GitHub, status)
+- [ ] Delegates to architect for architectural decisions (specs, ADRs, dependencies)
+- [ ] Delegates to code-searcher for code analysis (deep analysis, patterns)
+- [ ] Delegates to assistant for demos and bug reports (Puppeteer, comprehensive QA)
+- [ ] Delegates to ux-design-expert for design decisions (UI/UX, Tailwind)
+- [ ] AgentRegistry enforces singleton (only one UI session at time)
+- [ ] All existing unit tests pass
+- [ ] New integration tests for user_listener added
+- [ ] Documentation updated in CLAUDE.md and README.md
+- [ ] Agent configuration exists in `.claude/agents/user_listener.md`
+
+**Estimated Effort**: 4-6 hours
+
+**Day 1: Core Implementation** (2-3 hours)
+- Create `coffee_maker/cli/user_listener.py`
+- Implement ChatSession with rich terminal UI
+- Add basic agent delegation framework
+- Register command in pyproject.toml
+
+**Day 2: Delegation & Testing** (2-3 hours)
+- Implement full agent delegation system
+- Add AgentRegistry singleton enforcement
+- Create agent configuration in `.claude/agents/user_listener.md`
+- Write integration tests
+- Update documentation (CLAUDE.md, README.md)
+
+**Dependencies**: None (can start immediately)
+
+**Technical Specification Required**: Yes
+
+**Delegation to architect**: This priority requires architectural design before implementation. The technical specification should be created by the architect agent and should include:
+- Detailed class design for user_listener
+- Agent delegation mechanism and protocols
+- Integration with existing ChatSession infrastructure
+- Singleton enforcement strategy
+- Error handling and edge cases
+- Testing strategy
+
+**Priority Level**: MEDIUM-HIGH
+
+**Rationale**:
+- Aligns implementation with documented architecture
+- Improves separation of concerns
+- Enables proper agent delegation patterns
+- Better user experience with unified interface
+
+**Related Documents**:
+- `.claude/CLAUDE.md` - Agent ownership matrix and architecture
+- `.claude/agents/README.md` - Agent registry
+- `docs/roadmap/TEAM_COLLABORATION.md` - Agent collaboration guidelines
+- `coffee_maker/cli/roadmap_cli.py` - Current chat implementation reference
+
+**Unblocks**: None
+
+**Blocked By**: None
+
+**Notes**:
+This priority addresses the architectural mismatch between documentation (user_listener as PRIMARY UI) and implementation (project-manager chat). Creating a dedicated user-listener command will improve code clarity, maintain architectural consistency, and provide a better foundation for future UI enhancements.
 
 ---

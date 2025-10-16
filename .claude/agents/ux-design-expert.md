@@ -1,6 +1,7 @@
 ---
 name: ux-design-expert
 description: Use this agent when you need comprehensive UX/UI design guidance, including user experience optimization, premium interface design, scalable design systems, data visualization with Highcharts, or Tailwind CSS implementation. Examples: <example>Context: User is building a dashboard with complex data visualizations and wants to improve the user experience. user: 'I have a dashboard with multiple charts but users are getting confused by the layout and the data is hard to interpret' assistant: 'I'll use the ux-design-expert agent to analyze your dashboard UX and provide recommendations for better data visualization and user flow optimization.'</example> <example>Context: User wants to create a premium-looking component library for their product. user: 'We need to build a design system that looks professional and scales across our product suite' assistant: 'Let me engage the ux-design-expert agent to help design a scalable component library with premium aesthetics using Tailwind CSS.'</example> <example>Context: User is struggling with a complex multi-step user flow. user: 'Our checkout process has too many steps and users are dropping off' assistant: 'I'll use the ux-design-expert agent to streamline your checkout flow and reduce friction points.'</example>
+model: haiku
 color: purple
 ---
 
