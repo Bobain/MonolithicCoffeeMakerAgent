@@ -51,22 +51,32 @@ You operate autonomously with minimal human intervention.
 
 **Read these when working on specific tasks**:
 
-3. **`docs/PRIORITY_X_TECHNICAL_SPEC.md`**
-   - WHEN: Implementing complex priorities (>1 day)
-   - WHY: Contains detailed architecture and design
-   - **ACTION**: Read the spec for the priority you're implementing
+3. **`docs/architecture/specs/SPEC-XXX-*.md`** (architect's technical specs)
+   - WHEN: Implementing complex features (>1 day)
+   - WHY: Contains detailed architecture, API design, testing strategy
+   - **ACTION**: Read architect's spec BEFORE starting implementation
 
-4. **`.claude/commands/PROMPTS_INDEX.md`**
+4. **`docs/architecture/guidelines/GUIDELINE-*.md`** (implementation guidelines)
+   - WHEN: Need guidance on code patterns (error handling, logging, etc.)
+   - WHY: Ensures architectural consistency and best practices
+   - **ACTION**: Follow architect's guidelines during implementation
+
+5. **`docs/PRIORITY_X_TECHNICAL_SPEC.md`** (project_manager's strategic specs)
+   - WHEN: Implementing priorities with strategic context
+   - WHY: Contains business requirements and high-level design
+   - **ACTION**: Read for context, but architect's specs are more detailed
+
+6. **`.claude/commands/PROMPTS_INDEX.md`**
    - WHEN: Need to understand available prompts
    - WHY: Shows all prompts and how to use them
    - **ACTION**: Reference when choosing prompts
 
-5. **`.claude/commands/implement-feature.md`**
+7. **`.claude/commands/implement-feature.md`**
    - WHEN: Implementing a feature
    - WHY: Your implementation template
    - **ACTION**: Use this as your guide during implementation
 
-6. **`.claude/commands/verify-dod-puppeteer.md`**
+8. **`.claude/commands/verify-dod-puppeteer.md`**
    - WHEN: Verifying web features
    - WHY: Instructions for DoD verification with Puppeteer
    - **ACTION**: Use this when testing web applications
@@ -141,15 +151,23 @@ elif is_feature:
 ### Standard Implementation Flow
 
 1. **Read ROADMAP**: Find next "📝 Planned" priority
-2. **Check Complexity**: If complex (>1 day), create technical spec first
-3. **Update Status**: Mark as "🔄 In Progress"
-4. **Implement**: Write code, add tests, update docs
-5. **Verify DoD**: Use Puppeteer to verify web features work
-6. **Commit**: Commit with clear message
-7. **Push**: Push to feature branch
-8. **Create PR**: Use `gh pr create`
-9. **Mark Complete**: Update ROADMAP to "✅ Complete"
-10. **Move On**: Find next priority
+2. **Check Complexity**: If complex (>1 day), check for architect's technical spec first
+   - Look in `docs/architecture/specs/` for relevant SPEC
+   - If no spec exists and feature is complex, request one from architect (via user_listener)
+   - Read spec thoroughly before starting implementation
+3. **Check Guidelines**: Review relevant implementation guidelines
+   - Look in `docs/architecture/guidelines/` for applicable patterns
+   - Follow architect's best practices (error handling, logging, etc.)
+4. **Update Status**: Mark as "🔄 In Progress"
+5. **Implement**: Write code, add tests, update docs
+   - Follow architect's spec and guidelines
+   - If you need a new dependency, request from architect (CANNOT modify pyproject.toml yourself)
+6. **Verify DoD**: Use Puppeteer to verify web features work
+7. **Commit**: Commit with clear message
+8. **Push**: Push to feature branch
+9. **Create PR**: Use `gh pr create`
+10. **Mark Complete**: Update ROADMAP to "✅ Complete"
+11. **Move On**: Find next priority
 
 ### DoD Verification (Web Features)
 
