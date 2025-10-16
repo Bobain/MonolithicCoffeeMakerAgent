@@ -13,12 +13,13 @@
 ### Core Components
 
 1. **Autonomous Agents**
+   - `user_listener`: **PRIMARY USER INTERFACE** - Interprets user intent and delegates to team (ONLY agent with UI)
+   - `architect`: Architectural design and technical specifications (interacts through user_listener)
    - `code_developer`: Autonomous implementation of priorities from ROADMAP
-   - `project_manager`: Project coordination, notifications, status tracking, GitHub monitoring
-   - `assistant`: User interaction, triage, and delegation to specialized agents
+   - `project_manager`: Project coordination, notifications, status tracking, GitHub monitoring (backend only)
+   - `assistant`: Documentation expert and intelligent dispatcher
    - `code-searcher`: Deep codebase analysis and forensic examination
    - `ux-design-expert`: UI/UX design guidance and Tailwind CSS
-   - `memory-bank-synchronizer`: Documentation synchronization with code reality
 
 2. **Prompt Management System** ⭐ NEW
    - **Local Store**: `.claude/commands/` (centralized prompt templates)
@@ -267,7 +268,6 @@ poetry run project-manager /status
 | **Code search (complex)** | code-searcher | Deep analysis, patterns, forensics | - |
 | **ROADMAP updates** | project_manager (full), code_developer (status only) | Strategic vs. execution updates | assistant READ-ONLY |
 | **Design decisions** | ux-design-expert | All UI/UX, Tailwind, charts | Others delegate |
-| **Doc sync** | memory-bank-synchronizer | Keep CLAUDE.md files current | - |
 
 ### Key Principles
 
@@ -293,19 +293,20 @@ poetry run project-manager /status
 4. **Specialized agents own their domain**
    - code-searcher: Code analysis
    - ux-design-expert: Design
-   - memory-bank-synchronizer: Documentation
+   - architect: Technical specifications and dependency management
 
 ### When in Doubt
 
 ```
 "Who should handle X?"
     ↓
+Does user need a UI? → user_listener (ONLY agent with UI)
+Is it architectural design? → architect
 Is it a quick question? → assistant
 Is it about code internals? → code-searcher
 Is it about project status? → project_manager
 Is it about design? → ux-design-expert
 Is it implementation? → code_developer
-Is it doc sync? → memory-bank-synchronizer
 ```
 
 ### Examples
