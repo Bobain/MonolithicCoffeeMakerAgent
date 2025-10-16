@@ -22596,6 +22596,34 @@ Use mixins pattern to compose daemon functionality.
 
 Implement singleton enforcement for all agents to prevent multiple instances of the same agent type from running simultaneously. This is a fundamental architectural requirement that was identified as missing during system analysis.
 
+**Critical Context**: This US implements part of CFR-000 (Prevent File Conflicts).
+
+**Singleton Rule**:
+- Agents that OWN files: MUST be singleton (prevent same-agent conflicts)
+- Agents that own NO files: Can have multiple instances (safe - no conflicts)
+
+**File-Owning Agents** (MUST be singleton):
+- code_developer (owns .claude/, coffee_maker/, tests/)
+- project_manager (owns docs/roadmap/)
+- architect (owns docs/architecture/)
+- generator (owns docs/generator/)
+- reflector (owns docs/reflector/)
+- curator (owns docs/curator/)
+
+**Non-File-Owning Agents** (multiple instances OK):
+- assistant (READ-ONLY, only reads and delegates)
+- user_listener (delegation-only, no writes)
+- code-searcher (READ-ONLY, only analyzes)
+- ux-design-expert (provides specs, doesn't write)
+
+**Exception Logic**:
+```python
+if agent.owns_files():
+    enforce_singleton()  # Prevent file conflicts
+else:
+    allow_multiple_instances()  # Safe, no file ownership
+```
+
 **Why This Is Critical**:
 - Multiple instances could conflict (writing same files simultaneously)
 - Duplicate work wastes resources and causes race conditions
@@ -23519,6 +23547,15 @@ Create a comprehensive tutorial document demonstrating how to use the ACE (Agent
 
 Enhance the generator agent to act as the central enforcement point for file ownership rules. Since generator ALWAYS intercepts all agent actions as part of the ACE framework, it's the perfect place to check ownership and automatically delegate operations to the correct owner when violations are detected.
 
+**Critical Context**: This US implements part of CFR-000 (Prevent File Conflicts).
+
+generator enforces file ownership to prevent two different agents from writing to the same file simultaneously.
+
+**Integration with US-035**:
+- US-035 prevents multiple instances of same agent (same-agent conflicts)
+- US-038 prevents different agents writing same file (cross-agent conflicts)
+- Together: Complete file conflict prevention
+
 **Why This Is Critical**:
 - Prevents agents from accidentally modifying files they don't own
 - Centralizes enforcement at the orchestration layer (generator)
@@ -23876,10 +23913,24 @@ def test_delegation_trace_capture():
 ### Description
 
 Implement comprehensive enforcement of Critical Functional Requirements (CFRs) at ALL levels of the system. CFRs are system invariants that define:
+- Prevent file conflicts at all costs (CFR-000 - MASTER REQUIREMENT)
 - Document ownership boundaries (CFR-001)
 - Agent role boundaries (CFR-002)
 - No overlaps in owned documents (CFR-003)
 - No overlaps in agent responsibilities (CFR-004)
+
+**Critical Context**: This US implements comprehensive enforcement of CFR-000 (Prevent File Conflicts).
+
+Provides multiple validation levels to catch any scenario that could lead to file conflicts:
+- Level 2: Validates user stories won't create conflict opportunities
+- Level 3: Validates user requests won't violate conflict prevention
+- Level 4: Agent self-check before work to prevent conflicts
+
+**Integration**:
+- US-035: Singleton enforcement (same-agent conflict prevention)
+- US-038: Ownership enforcement (cross-agent conflict prevention)
+- US-039: Comprehensive validation (catches all other scenarios)
+- Together: Complete CFR-000 implementation
 
 **Why This Is Critical**:
 - Prevents system from breaking itself through boundary violations

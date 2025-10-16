@@ -22,7 +22,144 @@ These are CRITICAL system rules that MUST be enforced at ALL times:
 
 ---
 
+## Master Requirement: CFR-000
+
+### CFR-000: PREVENT FILE CONFLICTS AT ALL COSTS
+
+**Rule**: The system MUST NEVER allow file conflicts, inconsistencies, or corruption.
+
+**Core Principle**:
+AT ANY GIVEN MOMENT, for ANY file in the system:
+- EXACTLY ZERO or ONE agent is writing to that file
+- NEVER two or more agents writing to the same file
+- NEVER two instances of same agent writing to same file
+
+**Why This Is Critical**:
+
+File conflicts cause:
+1. **Data Corruption**: Two agents writing simultaneously → corrupted file
+2. **Inconsistencies**: Partial writes from different sources → inconsistent state
+3. **Lost Work**: One agent's changes overwrite another's → work lost
+4. **Merge Conflicts**: Git conflicts that block progress
+5. **System Failure**: Corrupted config files → system unusable
+
+**Real-World Example**:
+```
+Time: 10:00:00.000
+- code_developer instance 1: Writes line 10 of daemon.py
+- code_developer instance 2: Writes line 10 of daemon.py (different content)
+→ Result: daemon.py line 10 is corrupted (mixed content or overwritten)
+→ Consequence: daemon.py won't run, syntax errors, system failure
+```
+
+**Prevention Mechanisms**:
+
+All other CFRs exist to prevent this master requirement from being violated:
+
+1. **CFR-001: Document Ownership Boundaries**
+   - Ensures only ONE agent can modify any given file
+   - If code_developer owns coffee_maker/, ONLY code_developer can write there
+   - Other agents MUST delegate to code_developer for changes
+   - **Prevents**: Two different agents writing to same file
+
+2. **US-035: Singleton Agent Enforcement**
+   - Ensures only ONE instance of each agent type runs at a time
+   - If code_developer is running, no second code_developer instance can start
+   - **Exception**: Agents that own NO files (assistant) can have multiple instances
+   - **Prevents**: Two instances of same agent writing to same file
+
+3. **US-038: File Ownership Enforcement (generator)**
+   - generator checks ownership BEFORE any write operation
+   - Blocks writes if violating ownership
+   - Auto-delegates to correct owner
+   - **Prevents**: Any agent accidentally writing to file it doesn't own
+
+4. **US-039: Comprehensive CFR Enforcement**
+   - Level 2, 3, 4 validation before actions
+   - User notification when violations detected
+   - Safe alternatives provided
+   - **Prevents**: Any action that could lead to file conflicts
+
+**Enforcement Strategy**:
+
+```
+Before ANY write operation:
+    ↓
+1. Check Singleton (US-035): Is another instance of this agent running?
+   - If YES and agent owns files: BLOCK (prevent same-agent conflict)
+   - If YES and agent owns NO files: ALLOW (safe - no conflicts possible)
+   - If NO: Continue
+    ↓
+2. Check Ownership (US-038): Does this agent own this file?
+   - If YES: Continue
+   - If NO: BLOCK, auto-delegate to owner
+    ↓
+3. Check CFRs (US-039): Does this action violate any CFR?
+   - If YES: BLOCK, expose to user with alternatives
+   - If NO: Continue
+    ↓
+4. ALLOW write operation
+```
+
+**Singleton Exception - Agents That Own No Files**:
+
+Some agents are READ-ONLY or delegation-only and own NO files:
+
+| Agent | Owns Files? | Multiple Instances OK? | Why? |
+|-------|-------------|------------------------|------|
+| assistant | NO (only reads/delegates) | YES | Cannot cause file conflicts |
+| user_listener | NO (only delegates) | YES | Cannot cause file conflicts |
+| code-searcher | NO (only reads) | YES | Cannot cause file conflicts |
+| code_developer | YES (.claude/, coffee_maker/, tests/) | NO | Could cause conflicts |
+| project_manager | YES (docs/roadmap/) | NO | Could cause conflicts |
+| architect | YES (docs/architecture/) | NO | Could cause conflicts |
+
+**Rule**:
+- If agent owns files: ENFORCE singleton (US-035)
+- If agent owns NO files: Multiple instances OK (no conflict risk)
+
+**Verification**:
+
+Before allowing any agent to start:
+```python
+if agent.owns_files():
+    # Enforce singleton - prevent file conflicts
+    if AgentRegistry.is_registered(agent.type):
+        raise AgentAlreadyRunningError(
+            f"Agent '{agent.type}' already running. "
+            f"Cannot start second instance - would risk file conflicts. "
+            f"Stop existing instance first."
+        )
+else:
+    # Agent owns no files, multiple instances safe
+    # No singleton enforcement needed
+    pass
+```
+
+**Monitoring**:
+
+The system MUST monitor for file conflicts:
+- Git detects uncommitted changes before pull
+- File system watchers detect concurrent writes
+- Lock files for critical operations
+- Atomic operations where possible
+
+**Recovery**:
+
+If file conflict detected despite all safeguards:
+1. STOP all agent operations immediately
+2. Alert user to conflict
+3. Provide conflict resolution tools
+4. Log incident for reflector analysis
+5. Update CFR enforcement to prevent recurrence
+
+---
+
 ## CFR-001: Document Ownership Boundaries
+
+**Purpose**: Implements CFR-000 by ensuring only ONE agent can modify any file.
+
+**This CFR prevents**: Two different agents writing to the same file.
 
 **Rule**: Each directory/file has EXACTLY ONE owner agent. Only the owner can modify.
 
@@ -88,6 +225,10 @@ assistant delegates to code_developer for code changes
 
 ## CFR-002: Agent Role Boundaries
 
+**Purpose**: Implements CFR-000 by ensuring clear ownership and preventing confusion.
+
+**This CFR prevents**: Role confusion leading to concurrent modifications.
+
 **Rule**: Each agent has EXACTLY ONE primary role. NO overlaps allowed.
 
 ### Role Matrix
@@ -135,6 +276,10 @@ architect requests approval → user approves → code_developer adds dependency
 
 ## CFR-003: No Overlap - Documents
 
+**Purpose**: Implements CFR-000 by ensuring no shared ownership creates conflict opportunities.
+
+**This CFR prevents**: Ambiguous ownership leading to concurrent modifications.
+
 **Rule**: No two agents can own the same directory/file. Ownership must be exclusive.
 
 ### Current Ownership (No Overlaps)
@@ -177,6 +322,10 @@ architect requests approval → user approves → code_developer adds dependency
 ---
 
 ## CFR-004: No Overlap - Responsibilities
+
+**Purpose**: Implements CFR-000 by ensuring clear role boundaries.
+
+**This CFR prevents**: Responsibility confusion leading to concurrent work.
 
 **Rule**: No two agents can have overlapping primary responsibilities.
 
@@ -1094,6 +1243,21 @@ When in doubt:
 
 ---
 
+## Quick Reference: Master Rule
+
+**MASTER RULE: CFR-000 - NEVER ALLOW FILE CONFLICTS**
+
+Before ANY write operation, verify:
+- No other instance of this agent running (US-035) - IF agent owns files
+- This agent owns the file being written (US-038)
+- No CFR violations would occur (US-039)
+
+If ANY check fails: STOP, delegate, or escalate.
+
+**Why This Matters**: File conflicts cause corruption, data loss, system failure.
+
+---
+
 ## Quick Reference: What to Do When...
 
 ### I need another agent to do work
@@ -1148,10 +1312,15 @@ When in doubt:
 
 **Remember**: These CFRs exist to prevent the system from breaking itself. They are not optional. They are not suggestions. They are CRITICAL FUNCTIONAL REQUIREMENTS.
 
-**Version**: 1.1
+**Version**: 1.2
 **Last Updated**: 2025-10-16
 **Next Review**: After US-038 and US-039 implementation
 
 **Changelog**:
+- **v1.2** (2025-10-16): Added CFR-000 (MASTER REQUIREMENT) - Prevent File Conflicts At All Costs
+  - All other CFRs now explicitly derive from CFR-000
+  - Documented singleton exception for agents that own no files
+  - Added enforcement strategy with 4-level checks
+  - Updated Quick Reference with master rule
 - **v1.1** (2025-10-16): Added Task Delegation Tool, Complexity Escalation Workflow, Enhanced Quick Reference
 - **v1.0** (2025-10-16): Initial creation with CFR-001 through CFR-004, enforcement mechanisms
