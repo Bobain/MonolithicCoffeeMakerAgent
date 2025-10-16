@@ -173,6 +173,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from coffee_maker.autonomous.activity_logger import ActivityLogger
 from coffee_maker.autonomous.agent_registry import AgentRegistry, AgentType
 from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
 from coffee_maker.autonomous.daemon_git_ops import GitOpsMixin
@@ -285,6 +286,9 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
         # Task metrics database for performance tracking
         self.metrics_db = TaskMetricsDB()
+
+        # PRIORITY 9: Activity logging for daily standup generation
+        self.activity_logger = ActivityLogger()
 
         # State
         self.running = False
@@ -453,6 +457,11 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                     current_step="Starting implementation",
                 )
 
+                # PRIORITY 9: Log priority start for daily standup
+                priority_number = next_priority.get("number", "")
+                priority_name = next_priority.get("name", "Unknown")
+                self.activity_logger.start_priority(str(priority_number), priority_name)
+
                 # Execute implementation
                 success = self._implement_priority(next_priority)
 
@@ -464,6 +473,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                     self.iterations_since_compact += 1
                     # PRIORITY 2.8: Write status after completion
                     self._write_status(priority=next_priority)
+
+                    # PRIORITY 9: Log priority completion for daily standup
+                    priority_number = next_priority.get("number", "")
+                    self.activity_logger.complete_priority(str(priority_number), success=True)
 
                     # US-029: CRITICAL - Merge to roadmap after successful implementation
                     logger.info(f"📤 Merging {next_priority['name']} to roadmap for project_manager visibility...")
@@ -482,6 +495,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                         f"Implementation failed for {next_priority['name']}",
                         details={"priority": next_priority["name"]},
                     )
+
+                    # PRIORITY 9: Log failure for daily standup
+                    priority_number = next_priority.get("number", "")
+                    self.activity_logger.complete_priority(str(priority_number), success=False)
 
                 # US-029: CRITICAL - Merge to roadmap before sleep so project_manager has visibility
                 logger.info("📤 Merging progress to roadmap before sleep...")
