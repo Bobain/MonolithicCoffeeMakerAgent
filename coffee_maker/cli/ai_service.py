@@ -100,7 +100,7 @@ class AIService:
 
     def __init__(
         self,
-        model: str = "claude-sonnet-4-20250514",
+        model: str = "claude-3-5-haiku-20241022",
         max_tokens: int = 4000,
         use_claude_cli: bool = False,
         claude_cli_path: str = "/opt/homebrew/bin/claude",
@@ -108,7 +108,7 @@ class AIService:
         """Initialize AI service.
 
         Args:
-            model: Claude model to use
+            model: Claude model to use (default: Haiku 4.5 for cost efficiency)
             max_tokens: Maximum tokens per response
             use_claude_cli: If True, use Claude CLI instead of API (default: False)
             claude_cli_path: Path to claude CLI executable (default: /opt/homebrew/bin/claude)

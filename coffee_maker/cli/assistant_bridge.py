@@ -114,13 +114,15 @@ Question: {input}
     def _get_llm(self):
         """Get LLM for agent (tries multiple providers).
 
+        Uses Haiku 4.5 for cost efficiency on assistant tasks.
+
         Returns:
             LLM instance or None if no provider available
         """
-        # Try Anthropic first
+        # Try Anthropic first (using Haiku 4.5 for cost efficiency)
         if ConfigManager.has_anthropic_api_key():
             try:
-                return ChatAnthropic(model="claude-3-5-sonnet-20241022", temperature=0)
+                return ChatAnthropic(model="claude-3-5-haiku-20241022", temperature=0)
             except Exception as e:
                 logger.warning(f"Failed to initialize Anthropic LLM: {e}")
 
