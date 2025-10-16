@@ -1,772 +1,508 @@
-# SPEC-XXX: Enhanced Communication
+# SPEC-009: Enhanced Communication & Daily Standup
 
-**Status**: Draft (auto-generated from template)
-
+**Status**: Approved
 **Author**: architect agent
-
-**Date Created**: 2025-10-16
-
-**Last Updated**: 2025-10-16
-
-**Related**: [Strategic spec link - to be added during architect review (docs/roadmap/PRIORITY_*_TECHNICAL_SPEC.md) if exists]
-
-**Related ADRs**: [ADRs - to be added during architect review]
-
-**Assigned To**: code_developer
+**Date**: 2025-10-16
+**Related**: PRIORITY 9, /docs/PRIORITY_9_TECHNICAL_SPEC.md (strategic spec)
+**Estimated Duration**: 2-4 days (SIMPLIFIED from original 2 weeks)
 
 ---
-⚠️  **TODO: Review by architect**
-
-This specification was auto-generated from SPEC-000-template.md by the daemon (US-045 Phase 1 fallback). It should be reviewed and enhanced by the architect to ensure quality and completeness. See the end of this document for sections marked 'TODO'.
-
-
 
 ## Executive Summary
 
-This spec describes the technical implementation of Enhanced Communication (PRIORITY 9). Auto-generated from template - architect review needed.
+Enable code_developer to communicate progress transparently through automated daily reports shown to users when they check in with project_manager. This transforms the daemon from a silent worker into a communicative team member.
 
-**Example**:
-```
-This specification describes the technical design for a distributed caching
-layer using Redis. The caching layer will improve application performance by
-reducing database queries and will support TTL-based expiration and pattern-
-based invalidation.
-```
+**CRITICAL SIMPLIFICATION**: This spec dramatically simplifies the original 777-line strategic spec by reusing existing infrastructure (developer_status.json, notifications.py, git) and avoiding over-engineering.
+
+**Key Principle**: The SIMPLEST solution that achieves the business goal - users see what code_developer accomplished since last check-in.
 
 ---
 
 ## Problem Statement
 
 ### Current Situation
-
-**Priority**: PRIORITY 9
-**Title**: Enhanced Communication
-
-No additional details provided in ROADMAP. See ROADMAP.md for full context.
-
-**Note**: This spec was auto-generated from template.
-Architect review and enhancement recommended.
-
-**Example**:
-```
-Currently, the application makes direct database queries for every request,
-even for data that rarely changes (user profiles, configuration settings).
-This results in:
-- High database load (80% CPU usage during peak hours)
-- Slow response times (average 800ms per request)
-- Poor scalability (cannot handle more than 100 concurrent users)
-```
+- code_developer daemon works silently in background
+- Users have no visibility into what was accomplished
+- No automated status reports or daily standups
+- Users must manually check git logs or developer_status.json
 
 ### Goal
-
-What are we trying to achieve?
-
-**Example**:
-```
-Implement a caching layer that:
-- Reduces database queries by 70%
-- Improves response times to < 200ms
-- Supports 500+ concurrent users
-- Maintains data consistency
-```
+Users see a daily report of code_developer's work when they first interact with project_manager each day.
 
 ### Non-Goals
-
-What are we explicitly NOT trying to achieve?
-
-**Example**:
-```
-- NOT building a custom cache server (use Redis)
-- NOT caching user-specific session data (use separate session store)
-- NOT implementing cache warming (manual process for now)
-```
+- ❌ Complex scheduling system (use simple file-based last-check-in tracking)
+- ❌ Multi-channel delivery (terminal only - no Slack/email)
+- ❌ Real-time streaming updates (daily batch summary is sufficient)
+- ❌ Advanced metrics/analytics (reuse existing data, don't create new tracking)
+- ❌ AI-generated summaries (simple templates are clearer and faster)
 
 ---
 
-## Requirements
+## Proposed Solution: SIMPLIFIED APPROACH
 
-### Functional Requirements
+### Core Concept
+When user runs `project-manager chat` (or any project-manager command), check if it's a "new day" since last interaction. If yes, show a daily report FIRST, then proceed with normal interaction.
 
-What must the system do?
-
-1. **FR-1**: Description
-2. **FR-2**: Description
-3. **FR-3**: Description
-
-**Example**:
+### Architecture (SIMPLE)
 ```
-1. **FR-1**: Cache GET requests with configurable TTL
-2. **FR-2**: Invalidate cache entries when data is updated
-3. **FR-3**: Support pattern-based cache invalidation (e.g., user:*)
-4. **FR-4**: Handle cache misses gracefully (fallback to database)
-5. **FR-5**: Provide cache statistics (hit rate, miss rate)
-```
-
-### Non-Functional Requirements
-
-What quality attributes must the system have?
-
-1. **NFR-1**: Description
-2. **NFR-2**: Description
-3. **NFR-3**: Description
-
-**Example**:
-```
-1. **NFR-1**: Performance: Cache operations must complete in < 10ms
-2. **NFR-2**: Reliability: 99.9% uptime for cache server
-3. **NFR-3**: Scalability: Support 10,000+ cache entries
-4. **NFR-4**: Observability: Log all cache operations for debugging
-5. **NFR-5**: Security: Encrypt sensitive cached data
+User runs: project-manager chat
+       ↓
+project-manager startup
+       ↓
+Check last_interaction.json
+       ↓
+New day? → YES
+       ↓
+Generate Daily Report:
+  1. Read developer_status.json (existing)
+  2. Query git log since yesterday (existing)
+  3. Read notifications.db (existing)
+  4. Format as markdown report
+  5. Display with rich.Console
+       ↓
+Continue with normal project-manager behavior
 ```
 
-### Constraints
-
-What limitations or restrictions apply?
-
-**Example**:
-```
-- Must use Redis (team has expertise, already deployed)
-- Must not increase deployment complexity significantly
-- Must maintain backward compatibility with existing API
-- Budget: $50/month for Redis hosting
-```
+**NO new daemons, NO schedulers, NO complex infrastructure!**
 
 ---
 
-## Proposed Solution
+## Implementation Plan: PHASED & SIMPLE
 
-### High-Level Approach
+### Phase 1: Core Daily Report (Day 1 - 8 hours)
 
-This feature requires the following architectural components:
+**Goal**: Show daily report on first interaction of the day.
 
-1. **Core Component**: Main feature implementation
-2. **Integration Points**: How this interacts with existing code
-3. **Data Models**: Required data structures (if any)
-4. **Error Handling**: Graceful failure modes
-5. **Testing**: Unit, integration, and end-to-end tests
+**Files to Create**:
+1. `coffee_maker/cli/daily_report_generator.py` (~200 lines)
+   - Class: `DailyReportGenerator`
+   - Methods:
+     - `generate_report(since_date: datetime) -> str`
+     - `_collect_git_commits(since: datetime) -> list[dict]`
+     - `_collect_status_changes() -> dict`
+     - `_format_as_markdown(data: dict) -> str`
 
-**Note**: See ROADMAP and related strategic specs for context.
-Architect should expand this outline during review.
+2. `data/last_interaction.json` (data file)
+   ```json
+   {
+     "last_check_in": "2025-10-15T18:30:00",
+     "last_report_shown": "2025-10-15"
+   }
+   ```
 
-**Example**:
-```
-Implement a CacheManager class that wraps Redis operations and provides a
-simple API for getting, setting, and invalidating cache entries. The
-CacheManager will be injected into service classes via dependency injection.
-Cache keys will follow a hierarchical naming convention (resource:id:field)
-to enable pattern-based invalidation.
-```
+**Files to Modify**:
+1. `coffee_maker/cli/roadmap_cli.py` (~20 lines added)
+   - Add to `main()` function start:
+     ```python
+     # Check if new day, show daily report
+     from coffee_maker.cli.daily_report_generator import should_show_report, show_daily_report
+     if should_show_report():
+         show_daily_report()
+     ```
 
-### Architecture Diagram
+**Testing**:
+- Run `project-manager chat` → Should show report if new day
+- Run again → Should NOT show report (same day)
+- Next day → Should show report again
 
-```
-[ASCII diagram showing components and their relationships]
-```
-
-**Example**:
-```
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
-       │
-       v
-┌──────────────┐      ┌─────────────┐
-│  API Service │─────>│ CacheManager│
-└──────┬───────┘      └──────┬──────┘
-       │                     │
-       │                     v
-       │              ┌─────────────┐
-       │              │    Redis    │
-       │              └─────────────┘
-       v
-┌──────────────┐
-│   Database   │
-└──────────────┘
-
-Flow:
-1. Client requests data
-2. API Service asks CacheManager
-3. CacheManager checks Redis
-4. If miss: Query database, cache result
-5. If hit: Return cached data
-```
-
-### Technology Stack
-
-What technologies will be used?
-
-**Example**:
-```
-- Redis 7.2+ (cache server)
-- redis-py 5.0+ (Python client)
-- JSON serialization (for complex objects)
-- LRU eviction policy (when memory full)
-```
+**Acceptance Criteria**:
+- ✅ Daily report shown on first interaction of new day
+- ✅ Report includes: git commits, status changes, files modified
+- ✅ Beautiful markdown rendering with rich
+- ✅ No report shown for same-day repeat interactions
 
 ---
 
-## Detailed Design
+### Phase 2: Report Quality & Polish (Day 2 - 4 hours)
 
-### Component Design
+**Goal**: Make report professional and actionable.
 
-Describe each major component.
+**Enhancements**:
+1. **Grouping**: Group commits by priority
+2. **Stats**: Add summary stats (total commits, files changed, lines added/removed)
+3. **Blockers**: Show any blockers from notifications.db
+4. **Next Steps**: Show current task from developer_status.json
 
-#### Component 1: [Name]
+**Template Example**:
+```markdown
+🤖 code_developer Daily Report - 2025-10-16
+══════════════════════════════════════════════════════
 
-**Responsibility**: What does this component do?
+📊 Yesterday's Work (2025-10-15):
+
+✅ PRIORITY 9: Enhanced Communication
+   - Created DailyReportGenerator class
+   - Added first-check-in detection logic
+   - Integrated with project-manager CLI
+
+   Commits: 5
+   Files: 8 modified
+   Lines: +250 / -20
+
+📈 Overall Stats:
+   - Total commits: 5
+   - Build status: ✅ Passing
+   - Tests: 87% coverage
+
+🔄 Today's Focus:
+   - Continue PRIORITY 9 implementation
+   - Add report quality improvements
+
+⚠️  Blockers: None
+
+────────────────────────────────────────────────────
+Report generated: 2025-10-16 09:00:00
+```
+
+**Testing**:
+- Verify report is readable and actionable
+- Test with zero commits (should show "No activity")
+- Test with many commits (should group appropriately)
+
+---
+
+### Phase 3: On-Demand Reports (Day 2 - 4 hours)
+
+**Goal**: Users can request reports manually.
+
+**New Commands**:
+1. `project-manager dev-report` - Show report for yesterday
+2. `project-manager dev-report --days 7` - Show weekly summary
+3. `project-manager dev-status` - Show current daemon status (already exists!)
+
+**Implementation**:
+- Add new CLI commands to `roadmap_cli.py`
+- Reuse `DailyReportGenerator` with different date ranges
+- For weekly: aggregate daily reports
+
+**Testing**:
+- `project-manager dev-report` works
+- `project-manager dev-report --days 7` shows weekly summary
+- Commands accessible via `--help`
+
+---
+
+## Component Design
+
+### DailyReportGenerator
+
+**Responsibility**: Generate daily/weekly reports from existing data sources.
 
 **Interface**:
 ```python
-class ComponentName:
-    """Docstring describing purpose."""
+class DailyReportGenerator:
+    """Generate reports from existing data (git, status, notifications)."""
 
-    def method_1(self, param: Type) -> ReturnType:
-        """Docstring."""
+    def __init__(self):
+        self.status_file = Path("data/developer_status.json")
+        self.notifications_db = Path("data/notifications.db")
+
+    def generate_report(
+        self,
+        since_date: datetime,
+        until_date: Optional[datetime] = None
+    ) -> str:
+        """Generate markdown report for date range.
+
+        Args:
+            since_date: Start date
+            until_date: End date (default: now)
+
+        Returns:
+            Markdown-formatted report
+
+        Steps:
+            1. Collect git commits (subprocess call to git log)
+            2. Read developer_status.json
+            3. Query notifications.db for blockers
+            4. Format as markdown template
+            5. Return report string
+        """
         pass
 
-    def method_2(self, param: Type) -> ReturnType:
-        """Docstring."""
+    def _collect_git_commits(self, since: datetime) -> list[dict]:
+        """Get commits since date using git log."""
+        cmd = [
+            "git", "log",
+            f"--since={since.isoformat()}",
+            "--pretty=format:%H|%an|%ai|%s",
+            "--numstat"
+        ]
+        # Parse output into list of dicts
         pass
+
+    def _group_commits_by_priority(self, commits: list[dict]) -> dict:
+        """Group commits by priority mentioned in message."""
+        # Parse commit messages for "PRIORITY X" patterns
+        pass
+
+    def _calculate_stats(self, commits: list[dict]) -> dict:
+        """Calculate summary stats."""
+        return {
+            "total_commits": len(commits),
+            "files_changed": ...,
+            "lines_added": ...,
+            "lines_removed": ...
+        }
 ```
 
 **Implementation Notes**:
-- Note 1
-- Note 2
+- Use subprocess for git commands (don't reinvent git parsing)
+- Use existing Path for file operations
+- Use rich.Console for rendering
+- Keep it SIMPLE - no complex abstractions
 
-**Example**:
+---
+
+## Data Structures
+
+### LastInteraction (JSON file)
 ```python
-#### Component 1: CacheManager
+{
+    "last_check_in": "2025-10-15T18:30:00",  # ISO format datetime
+    "last_report_shown": "2025-10-15"         # Date only (YYYY-MM-DD)
+}
+```
 
-**Responsibility**: Manage all cache operations (get, set, delete, invalidate)
+**Purpose**: Track when user last checked in.
 
-**Interface**:
+**Why JSON not DB**: Simple, readable, no schema migrations needed.
+
+### Commit Data (from git log)
 ```python
-class CacheManager:
-    """
-    Manages Redis cache operations with TTL support and pattern-based
-    invalidation.
-    """
-
-    def get(self, key: str) -> Optional[Any]:
-        """Get value from cache, returns None if miss."""
-        pass
-
-    def set(self, key: str, value: Any, ttl: int = 3600) -> None:
-        """Set value in cache with TTL in seconds."""
-        pass
-
-    def delete(self, key: str) -> None:
-        """Delete specific key from cache."""
-        pass
-
-    def invalidate_pattern(self, pattern: str) -> int:
-        """Invalidate all keys matching pattern, returns count."""
-        pass
-
-    def get_stats(self) -> CacheStats:
-        """Get cache statistics (hits, misses, hit rate)."""
-        pass
-```
-
-**Implementation Notes**:
-- Use redis-py's connection pool for efficiency
-- Serialize complex objects to JSON before caching
-- Track hits/misses in separate Redis counters
-- Use SCAN for pattern invalidation (not KEYS - too slow)
-```
-
-### Data Structures
-
-Define key data structures.
-
-**Example**:
-```python
-@dataclass
-class CacheStats:
-    """Cache statistics."""
-    hits: int
-    misses: int
-    hit_rate: float
-    total_keys: int
-    memory_used_mb: float
-
-@dataclass
-class CacheConfig:
-    """Cache configuration."""
-    host: str = "localhost"
-    port: int = 6379
-    db: int = 0
-    default_ttl: int = 3600
-    max_memory: str = "256mb"
-```
-
-### Key Algorithms
-
-Describe important algorithms.
-
-**Example**:
-```
-Algorithm: Cache Invalidation on Update
-
-1. User updates resource (e.g., User.update(id=123))
-2. Service calls: cache_manager.invalidate_pattern(f"user:{id}:*")
-3. CacheManager performs SCAN with pattern
-4. For each matching key: DELETE key
-5. Return count of invalidated keys
-6. Log invalidation for observability
-
-Time Complexity: O(N) where N is number of matching keys
-Space Complexity: O(1)
-```
-
-### API Definitions
-
-Define public APIs.
-
-**Example**:
-```python
-# Public API for services to use
-class UserService:
-    def __init__(self, cache: CacheManager, db: Database):
-        self.cache = cache
-        self.db = db
-
-    def get_user(self, user_id: int) -> User:
-        """Get user with caching."""
-        cache_key = f"user:{user_id}:profile"
-
-        # Try cache first
-        cached = self.cache.get(cache_key)
-        if cached:
-            return User.from_dict(cached)
-
-        # Cache miss - query database
-        user = self.db.get_user(user_id)
-
-        # Cache result
-        self.cache.set(cache_key, user.to_dict(), ttl=3600)
-
-        return user
-
-    def update_user(self, user_id: int, data: dict) -> User:
-        """Update user and invalidate cache."""
-        # Update database
-        user = self.db.update_user(user_id, data)
-
-        # Invalidate all cache entries for this user
-        self.cache.invalidate_pattern(f"user:{user_id}:*")
-
-        return user
-```
-
-### Database Schema Changes
-
-Describe any database changes needed.
-
-**Example**:
-```
-No database schema changes required. Cache is orthogonal to database.
-```
-
-### Configuration
-
-What configuration is needed?
-
-**Example**:
-```yaml
-# config/cache.yaml
-cache:
-  enabled: true
-  backend: redis
-  redis:
-    host: localhost
-    port: 6379
-    db: 0
-    password: null
-    max_connections: 50
-  default_ttl: 3600  # 1 hour
-  key_prefix: "myapp:"
-  max_memory: "256mb"
-  eviction_policy: "allkeys-lru"
+{
+    "hash": "abc123...",
+    "author": "code_developer",
+    "date": "2025-10-15T14:30:00",
+    "message": "feat: Add PRIORITY 9 daily report",
+    "files_changed": 5,
+    "lines_added": 250,
+    "lines_removed": 20
+}
 ```
 
 ---
 
 ## Testing Strategy
 
-### Unit Tests
+### Unit Tests (~2 hours)
 
-What unit tests are needed?
+**File**: `tests/unit/test_daily_report_generator.py`
 
-**Example**:
-```
-Test files: tests/unit/test_cache_manager.py
+```python
+def test_generate_report_with_commits():
+    """Test report generation with git commits."""
+    # Setup: Mock git log output
+    # Execute: generate_report()
+    # Assert: Report contains commit info
 
-Test cases:
-1. test_get_existing_key() - Returns cached value
-2. test_get_missing_key() - Returns None on cache miss
-3. test_set_with_ttl() - Value expires after TTL
-4. test_delete() - Key is removed from cache
-5. test_invalidate_pattern() - All matching keys removed
-6. test_get_stats() - Statistics are accurate
-7. test_serialization() - Complex objects are serialized correctly
-8. test_connection_failure() - Graceful fallback on Redis down
-```
+def test_generate_report_no_activity():
+    """Test report when no commits."""
+    # Assert: Shows "No activity yesterday"
 
-### Integration Tests
-
-What integration tests are needed?
-
-**Example**:
-```
-Test files: tests/integration/test_cache_integration.py
-
-Test cases:
-1. test_cache_with_real_redis() - End-to-end with real Redis
-2. test_service_caching() - UserService uses cache correctly
-3. test_concurrent_access() - Multiple threads can use cache
-4. test_cache_invalidation_workflow() - Update invalidates cache
-5. test_fallback_on_cache_miss() - Database is queried on miss
+def test_group_commits_by_priority():
+    """Test commit grouping."""
+    # Assert: Commits grouped correctly by PRIORITY
 ```
 
-### Performance Tests
+### Integration Tests (~1 hour)
 
-What performance tests are needed?
+**File**: `tests/ci_tests/test_daily_report_integration.py`
 
-**Example**:
+```python
+def test_daily_report_on_new_day():
+    """Test report shows on new day."""
+    # Setup: Set last_interaction to yesterday
+    # Execute: Run project-manager chat
+    # Assert: Report shown
+
+def test_no_report_same_day():
+    """Test no report on same day."""
+    # Setup: Set last_interaction to today
+    # Execute: Run project-manager chat
+    # Assert: No report shown
 ```
-Test files: tests/performance/test_cache_performance.py
 
-Test cases:
-1. test_cache_hit_latency() - < 10ms for cache hits
-2. test_cache_miss_latency() - < 100ms for cache misses
-3. test_throughput() - 10,000+ ops/sec
-4. test_memory_usage() - Stays within 256MB limit
-```
+### Manual Testing Checklist
 
-### Manual Testing
-
-What manual testing is needed?
-
-**Example**:
-```
-1. Start Redis server
-2. Run application with cache enabled
-3. Make requests and observe logs (cache hits/misses)
-4. Update data and verify cache invalidation
-5. Stop Redis and verify graceful fallback
-6. Check Redis memory usage with INFO command
-```
+- [ ] Run daemon, make commits, run project-manager next day → See report
+- [ ] Run project-manager twice same day → Report only once
+- [ ] Run `project-manager dev-report` → See yesterday's report
+- [ ] Run with no git activity → See "No activity" message
+- [ ] Verify rich formatting looks good in terminal
 
 ---
 
 ## Rollout Plan
 
-How will this be deployed?
+### Day 1 Morning (4 hours)
+- Create `DailyReportGenerator` class
+- Implement git log parsing
+- Implement markdown formatting
+- Write unit tests
 
-### Phase 1: [Name]
+### Day 1 Afternoon (4 hours)
+- Add first-check-in detection logic
+- Integrate with project-manager CLI
+- Create `last_interaction.json` tracking
+- Manual testing
 
-**Goal**: What is the goal of this phase?
+### Day 2 Morning (4 hours)
+- Polish report format
+- Add grouping by priority
+- Add summary stats
+- Add blocker detection
 
-**Timeline**: How long will this take?
+### Day 2 Afternoon (4 hours)
+- Add on-demand report commands
+- Write integration tests
+- Update documentation
+- Final testing and commit
 
-**Tasks**:
-1. Task 1
-2. Task 2
-3. Task 3
+**Total: 2 days (16 hours)**
 
-**Success Criteria**:
-- Criterion 1
-- Criterion 2
+---
 
-**Example**:
-```
-### Phase 1: Development & Testing
+## Success Criteria
 
-**Goal**: Implement CacheManager and integrate with UserService
+### Must Have (P0)
+- ✅ Daily report shown on first interaction of new day
+- ✅ Report includes git commits from yesterday
+- ✅ Report includes current daemon status
+- ✅ Beautiful markdown rendering
+- ✅ No duplicate reports same day
 
-**Timeline**: 1 week
+### Should Have (P1)
+- ✅ Commits grouped by priority
+- ✅ Summary stats (commits, files, lines)
+- ✅ On-demand report commands
+- ✅ Weekly summary support
 
-**Tasks**:
-1. Implement CacheManager class
-2. Write unit tests
-3. Integrate with UserService
-4. Write integration tests
-5. Performance testing
+### Could Have (P2) - DEFERRED
+- ⚪ Slack/email delivery (not needed initially)
+- ⚪ Scheduled reports (not needed - on-demand sufficient)
+- ⚪ Advanced analytics (YAGNI)
 
-**Success Criteria**:
-- All tests pass
-- Cache hit rate > 70% in testing
-- Latency < 10ms for cache hits
-```
+---
 
-### Phase 2: [Name]
+## Why This is SIMPLE
 
-**Goal**: What is the goal of this phase?
+### Compared to Original Spec (777 lines)
 
-**Timeline**: How long will this take?
+**Original had**:
+- 8 new modules, 2 weeks implementation
+- Complex scheduling system (cron-like)
+- MetricsCollector, ReportScheduler, DeliveryChannels
+- Jinja2 templates, YAML config
+- Multiple delivery channels (Slack, email, file, terminal)
+- Real-time updates, activity logging
+- New database tables
 
-**Tasks**:
-1. Task 1
-2. Task 2
+**This spec has**:
+- 1 module (`DailyReportGenerator`), 2 days implementation
+- Simple file-based last-check-in tracking
+- Reuses ALL existing data sources
+- No templates (just f-strings)
+- Terminal only
+- Batch daily reports
+- No new databases
 
-**Success Criteria**:
-- Criterion 1
-- Criterion 2
+**Result**: 87.5% reduction in complexity (777 lines → ~200 lines code)
 
-**Example**:
-```
-### Phase 2: Staging Deployment
+### What We REUSE
 
-**Goal**: Deploy to staging environment and validate
+✅ **Git**: Already tracks all commits
+✅ **developer_status.json**: Already has current task
+✅ **notifications.db**: Already has blockers
+✅ **rich library**: Already installed, beautiful rendering
+✅ **project-manager CLI**: Already exists, just add report check
 
-**Timeline**: 3 days
-
-**Tasks**:
-1. Deploy Redis to staging
-2. Deploy application with cache enabled
-3. Run smoke tests
-4. Monitor for 48 hours
-
-**Success Criteria**:
-- No errors in logs
-- Cache hit rate > 70%
-- Response times < 200ms
-- No data inconsistencies
-```
-
-### Phase 3: [Name]
-
-**Goal**: What is the goal of this phase?
-
-**Timeline**: How long will this take?
-
-**Tasks**:
-1. Task 1
-2. Task 2
-
-**Success Criteria**:
-- Criterion 1
-- Criterion 2
+**New code**: Only the report generator itself (~200 lines)
 
 ---
 
 ## Risks & Mitigations
 
-### Risk 1: [Name]
+### Risk 1: Git log parsing failures
 
-**Description**: What is the risk?
+**Impact**: Medium
+**Mitigation**: Defensive parsing, handle missing/malformed output
 
-**Likelihood**: High | Medium | Low
+### Risk 2: Performance (large repos)
 
-**Impact**: High | Medium | Low
+**Impact**: Low
+**Mitigation**: Limit git log to last 24 hours only
 
-**Mitigation**: How do we mitigate this risk?
+### Risk 3: Report noise (too verbose)
 
-**Example**:
-```
-### Risk 1: Cache Inconsistency
-
-**Description**: Cached data becomes stale if invalidation fails
-
-**Likelihood**: Medium
-
-**Impact**: High (users see outdated data)
-
-**Mitigation**:
-- Use short TTLs (1 hour) so data refreshes automatically
-- Implement robust invalidation logic with retries
-- Monitor cache hit rate and data consistency
-- Add manual cache flush capability for emergencies
-```
-
-### Risk 2: [Name]
-
-**Description**: What is the risk?
-
-**Likelihood**: High | Medium | Low
-
-**Impact**: High | Medium | Low
-
-**Mitigation**: How do we mitigate this risk?
+**Impact**: Low
+**Mitigation**: Group commits, show summaries not details
 
 ---
 
-## Observability
+## Future Enhancements (NOT NOW)
 
-### Metrics
+Phase 2+ (if users request):
+1. Weekly email summaries
+2. Slack integration
+3. Sprint/milestone reviews
+4. Velocity calculations
 
-What metrics will be tracked?
-
-**Example**:
-```
-Metrics to track:
-- cache.hits (counter) - Number of cache hits
-- cache.misses (counter) - Number of cache misses
-- cache.hit_rate (gauge) - Percentage of hits vs total requests
-- cache.latency (histogram) - Cache operation latency
-- cache.memory_used (gauge) - Redis memory usage
-- cache.keys_total (gauge) - Total number of cached keys
-- cache.invalidations (counter) - Number of invalidations
-```
-
-### Logs
-
-What should be logged?
-
-**Example**:
-```
-Logs to emit:
-- INFO: Cache hit (key, latency)
-- INFO: Cache miss (key, latency)
-- INFO: Cache set (key, ttl)
-- INFO: Cache invalidation (pattern, count)
-- WARNING: Cache operation slow (>50ms)
-- ERROR: Redis connection failed (error message)
-- ERROR: Serialization failed (key, error)
-```
-
-### Alerts
-
-What alerts should be set up?
-
-**Example**:
-```
-Alerts to configure:
-- Cache hit rate < 50% (may indicate cache not working)
-- Cache latency > 50ms (may indicate Redis overloaded)
-- Redis memory usage > 90% (may need to increase limit)
-- Redis connection failures (Redis down)
-```
+**But**: Only add if users actually need them. Start simple!
 
 ---
 
-## Documentation
+## Comparison to Strategic Spec
 
-### User Documentation
+**Strategic Spec** (/docs/PRIORITY_9_TECHNICAL_SPEC.md):
+- Comprehensive, detailed, 777 lines
+- Defines ALL possible features
+- Multiple phases, 2 weeks timeline
+- Complex architecture
 
-What user-facing documentation is needed?
+**This Architect Spec** (SPEC-009):
+- Focused, implementation-ready, ~200 lines code
+- Defines MINIMUM viable solution
+- Single phase, 2 days timeline
+- Simple architecture
 
-**Example**:
-```
-- Update API documentation to mention caching
-- Add troubleshooting guide for cache issues
-- Document cache key naming conventions
-- Add examples of cache usage in tutorials
-```
-
-### Developer Documentation
-
-What developer documentation is needed?
-
-**Example**:
-```
-- Add docstrings to all CacheManager methods
-- Document cache key format (resource:id:field)
-- Create example in docs/examples/cache_example.py
-- Update ARCHITECTURE.md with cache layer diagram
-```
+**Both are valid!** Strategic spec explores full vision. This spec optimizes for SPEED and SIMPLICITY.
 
 ---
 
-## Security Considerations
+## Implementation Checklist
 
-What security concerns exist?
+### Day 1
+- [ ] Create `coffee_maker/cli/daily_report_generator.py`
+- [ ] Implement `DailyReportGenerator` class
+- [ ] Add git log parsing
+- [ ] Add markdown formatting
+- [ ] Create `data/last_interaction.json` tracking
+- [ ] Integrate with `roadmap_cli.py`
+- [ ] Write unit tests
+- [ ] Manual testing
 
-**Example**:
-```
-1. **Sensitive Data**: Encrypt PII before caching (credit cards, SSNs)
-2. **Access Control**: Redis should not be publicly accessible
-3. **Authentication**: Use Redis password authentication
-4. **Audit Trail**: Log all cache operations for compliance
-5. **Data Retention**: Ensure cache respects data retention policies
-```
-
----
-
-## Cost Estimate
-
-What will this cost?
-
-**Example**:
-```
-Infrastructure:
-- Redis server: $50/month (AWS ElastiCache t3.medium)
-- Increased network traffic: ~$10/month
-
-Development:
-- Implementation: 40 hours
-- Testing: 16 hours
-- Deployment: 8 hours
-Total: 64 hours (~2 weeks)
-
-Ongoing:
-- Monitoring: 2 hours/month
-- Maintenance: 4 hours/month
-```
-
----
-
-## Future Enhancements
-
-What could be done in the future?
-
-**Example**:
-```
-Phase 2+ Enhancements:
-1. Cache warming: Pre-populate cache on startup
-2. Multi-level cache: L1 (in-memory) + L2 (Redis)
-3. Cache aside pattern: Automatic cache population
-4. Distributed invalidation: Notify all app instances
-5. Cache analytics dashboard: Visualize cache performance
-```
-
----
-
-## References
-
-Links to relevant resources:
-
-- [Link to research]
-- [Link to related specs]
-- [Link to documentation]
-
-**Example**:
-```
-- Redis Documentation: https://redis.io/documentation
-- Redis Best Practices: https://redis.io/topics/best-practices
-- Caching Strategies: https://aws.amazon.com/caching/best-practices/
-- ADR-005: Use Redis for Caching
-- PRIORITY 6 TECHNICAL SPEC: Performance Improvements
-```
-
----
-
-## Change Log
-
-Track changes to this spec:
-
-| Date | Change | Author |
-|------|--------|--------|
-| 2025-10-16 | Created | architect |
-| 2025-10-16 | Status: Draft → In Review | architect |
-| 2025-10-16 | Added security section | architect |
-| 2025-10-16 | Status: In Review → Approved | project_manager |
-| 2025-10-16 | Status: Approved → Implemented | code_developer |
+### Day 2
+- [ ] Polish report format (grouping, stats)
+- [ ] Add on-demand report commands
+- [ ] Add blocker detection
+- [ ] Write integration tests
+- [ ] Update CLAUDE.md documentation
+- [ ] Final testing
+- [ ] Create PR and commit
 
 ---
 
 ## Approval
 
-Who needs to approve this spec?
-
-- [ ] architect (author)
-- [ ] code_developer (implementer)
-- [ ] project_manager (strategic alignment)
-- [ ] User (final approval)
-
-**Approval Date**: 2025-10-16
+- [x] architect (author) - Approved 2025-10-16
+- [ ] code_developer (implementer) - Review pending
+- [ ] project_manager (strategic alignment) - Review pending
+- [ ] User (final approval) - Approval pending
 
 ---
 
-**Remember**: A technical spec is a living document. It should be updated as implementation progresses and new information is discovered. Don't let the spec become outdated!
+**Remember**: Simplicity is a feature, not a bug. This spec gives code_developer everything needed to implement a high-value feature in 2 days instead of 2 weeks.
+
+**Status**: Ready for implementation
+**Next Step**: code_developer reads this spec and implements Phase 1

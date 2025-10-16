@@ -2169,6 +2169,74 @@ project_manager verifies (no recurrence)
 
 ---
 
+## CFR-009: ONLY user_listener Uses Sound Notifications
+
+**Rule**: ONLY the user_listener agent can use sound notifications. All other agents (code_developer, architect, project_manager, etc.) MUST use silent notifications only.
+
+**Why This Is Critical**:
+
+1. **User Experience**: Only user-facing interactions should make sound
+2. **Background Work**: Autonomous agents work silently in background
+3. **Role Clarity**: user_listener is the ONLY UI agent - only it should alert user with sound
+4. **Noise Prevention**: Prevents notification spam from multiple agents
+
+**Allowed**:
+```
+user_listener:
+  → Play sound for user interactions
+  → Use NotificationDB with sound=True
+  → Alert user with audio feedback
+```
+
+**NOT Allowed**:
+```
+code_developer, architect, project_manager, assistant, etc:
+  → NEVER play sounds
+  → Use NotificationDB with sound=False
+  → Silent notifications only
+  → User checks notifications when convenient
+```
+
+**Implementation**:
+
+In NotificationDB calls:
+```python
+# ✅ CORRECT (code_developer, background agents)
+self.notifications.create(
+    title="Task Complete",
+    message="PRIORITY 9 done",
+    level="info",
+    sound=False  # Silent for background work
+)
+
+# ✅ CORRECT (user_listener only)
+self.notifications.create(
+    title="User Action Required",
+    message="Please review PR #123",
+    level="high",
+    sound=True  # Sound for user interaction
+)
+
+# ❌ WRONG (code_developer playing sound)
+self.notifications.create(
+    title="Implementation failed",
+    level="high",
+    sound=True  # CFR-009 VIOLATION!
+)
+```
+
+**Current Violation**:
+The daemon is currently playing sounds for "Max Retries Reached" - this violates CFR-009.
+
+**Remediation**:
+1. Update daemon to use sound=False for all notifications
+2. Only user_listener plays sounds
+3. User checks silent notifications when convenient
+
+**User Story**: US-048: Enforce CFR-009 Silent Background Agents
+
+---
+
 ## CFR-008: Architect Creates ALL Specs - code_developer NEVER Creates Specs
 
 **Rule**: ONLY the architect agent creates technical specifications. The code_developer agent MUST NEVER create specs.
