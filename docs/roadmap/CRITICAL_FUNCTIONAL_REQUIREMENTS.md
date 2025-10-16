@@ -1,6 +1,6 @@
 # Critical Functional Requirements - System Invariants
 
-**Version**: 1.7
+**Version**: 1.8
 **Date**: 2025-10-16
 **Status**: Active
 **Owner**: project_manager
@@ -2166,6 +2166,85 @@ project_manager verifies (no recurrence)
 - User sees continuous improvement
 - Trust builds ("they learn and adapt")
 - System becomes smarter over time
+
+---
+
+## CFR-008: Architect Creates ALL Specs - code_developer NEVER Creates Specs
+
+**Rule**: ONLY the architect agent creates technical specifications. The code_developer agent MUST NEVER create specs.
+
+**Why This Is Critical**:
+
+1. **Big Picture Architecture**: architect needs to see the FULL ROADMAP to make optimal architectural decisions
+2. **Consistency**: One architect ensures consistent architectural patterns across all features
+3. **Role Clarity**: Violating this boundary causes infinite loops and stuck agents
+4. **Proactive Planning**: architect should create ALL specs proactively, not reactively
+
+**Correct Flow**:
+```
+architect (proactively):
+  → Reviews FULL ROADMAP
+  → Creates ALL needed specs
+  → Ensures architectural consistency
+  → Considers cross-feature dependencies
+  → Optimizes for simplification and reuse
+
+code_developer:
+  → Reads spec created by architect
+  → Implements exactly what spec describes
+  → NEVER creates specs
+  → NEVER modifies specs
+```
+
+**Violation Example** (WRONG):
+```
+code_developer: "I need a spec for PRIORITY 9"
+code_developer: Tries to create spec from template
+→ WRONG! This violates CFR-008
+```
+
+**Correct Example**:
+```
+architect: "Let me review the full ROADMAP"
+architect: Creates specs for PRIORITY 9, 10, 11, 12 proactively
+architect: Ensures they work together architecturally
+code_developer: Reads PRIORITY 9 spec
+code_developer: Implements it
+```
+
+**Remediation** (when violation detected):
+
+1. **Stop**: Halt code_developer immediately
+2. **Notify**: Alert user that architect needs to create specs
+3. **Delegate**: Pass spec creation to architect
+4. **Wait**: code_developer waits for architect to finish
+5. **Resume**: code_developer implements using architect's spec
+
+**Implementation**:
+
+In daemon.py `_ensure_technical_spec()`:
+```python
+def _ensure_technical_spec(self, priority: dict) -> bool:
+    """Check if technical spec exists.
+
+    CFR-008: code_developer NEVER creates specs.
+    If spec missing, notify user and delegate to architect.
+    """
+    if spec_exists:
+        return True
+
+    # CFR-008: Do NOT create spec - that's architect's job
+    logger.error("❌ CFR-008 VIOLATION PREVENTED")
+    logger.error("Spec missing for {priority}")
+    logger.error("code_developer CANNOT create specs")
+    logger.error("→ Delegating to architect")
+
+    # Mark as blocked, notify user
+    self.notify_user_spec_needed(priority)
+    return False  # Block until architect creates spec
+```
+
+**User Story**: US-047: Enforce CFR-008 Architect-Only Spec Creation
 
 ---
 
