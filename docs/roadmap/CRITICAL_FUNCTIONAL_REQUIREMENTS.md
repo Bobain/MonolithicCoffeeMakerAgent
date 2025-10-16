@@ -1,6 +1,6 @@
 # Critical Functional Requirements - System Invariants
 
-**Version**: 1.6
+**Version**: 1.7
 **Date**: 2025-10-16
 **Status**: Active
 **Owner**: project_manager
@@ -170,6 +170,7 @@ If file conflict detected despite all safeguards:
 | **User Interface** | user_listener | ONLY UI for all user interactions | N/A (no files owned) | All others: NO UI (backend only) |
 | **docs/*.md** | project_manager | YES - Top-level files ONLY (not subdirectories) | Keep current, remove obsolete, simplify | All others: READ-ONLY |
 | **docs/roadmap/** | project_manager | YES - Strategic planning ONLY | Archive completed work, consolidate specs, keep ROADMAP organized | All others: READ-ONLY |
+| **docs/roadmap/learnings/** | project_manager | YES - Capture all lessons | Maintenance: Create monthly summaries, archive old lessons, update agent definitions | All others: READ-ONLY |
 | **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Strategic, code_developer: Status only | Archive old priorities, simplify structure | All others: READ-ONLY |
 | **docs/PRIORITY_*_STRATEGIC_SPEC.md** | project_manager | YES - Creates strategic specs | Remove obsolete specs, consolidate duplicates | All others: READ-ONLY |
 | **docs/architecture/** | architect | YES - Technical specs, ADRs, guidelines | Archive old ADRs, update specs, organize directories, monitor code quality weekly | All others: READ-ONLY |
@@ -1773,6 +1774,265 @@ RESULT:
 
 ---
 
+## CFR-006: Lessons Learned Must Be Captured and Applied
+
+**Rule**: All failures, mistakes, and key lessons MUST be documented, owned, and actively used to prevent recurrence.
+
+**Core Principle**:
+The system must LEARN from mistakes. Lessons that aren't captured and applied lead to repeated errors and user frustration.
+
+**Ownership**: **project_manager** owns docs/roadmap/learnings/
+
+**Why project_manager**:
+- Strategic visibility into project patterns
+- Owns ROADMAP (sees what goes wrong during execution)
+- Coordinates between all agents
+- Best positioned to identify recurring patterns
+- Can escalate lessons to CRITICAL_FUNCTIONAL_REQUIREMENTS when needed
+
+### Lessons Learned Directory
+
+**Location**: `docs/roadmap/learnings/`
+
+**Owner**: project_manager (exclusive ownership)
+
+**File Types**:
+1. **Workflow Failures**: `WORKFLOW_FAILURE_*.md`
+   - Process breakdowns
+   - Agent coordination failures
+   - Missing safeguards
+
+2. **Technical Failures**: `TECHNICAL_FAILURE_*.md`
+   - Architecture mistakes
+   - Implementation errors that caused issues
+   - Design flaws
+
+3. **User Frustration**: `USER_FRUSTRATION_*.md`
+   - Issues that frustrated user
+   - Gaps in user experience
+   - Communication failures
+
+4. **Success Patterns**: `SUCCESS_PATTERN_*.md`
+   - What worked well
+   - Effective workflows
+   - Best practices discovered
+
+5. **Monthly Summaries**: `LESSONS_YYYY_MM.md`
+   - Monthly rollup of all lessons
+   - Patterns identified
+   - Actions taken
+
+### Lesson Capture Workflow
+
+**When to Capture**:
+- ❌ Any failure (workflow, technical, process)
+- 😤 User expresses frustration
+- 🔄 Same mistake happens twice
+- ✅ Significant success worth replicating
+- 💡 Key insight discovered
+
+**Who Captures**:
+1. **Any agent** can identify a lesson
+2. **Agent delegates to project_manager**: "Capture lesson: [description]"
+3. **project_manager** creates lesson document in docs/roadmap/learnings/
+4. **project_manager** updates relevant documents (CFRs, ROADMAP, workflows)
+
+**Lesson Document Template**:
+```markdown
+# [Lesson Type]: [Brief Title]
+
+**Date**: YYYY-MM-DD
+**Severity**: [CRITICAL/HIGH/MEDIUM/LOW]
+**Category**: [Workflow/Technical/User Experience/Success]
+**Reported By**: [agent_name or user]
+
+## What Happened
+
+[Clear description of the event/failure/success]
+
+## Root Cause
+
+[Why it happened - be specific]
+
+## Impact
+
+- User frustration level: [High/Medium/Low]
+- Time wasted: [estimate]
+- Trust impact: [description]
+- System integrity: [description]
+
+## Lesson Learned
+
+[The key takeaway - what we learned]
+
+## Prevention / Replication
+
+[How to prevent if failure, or replicate if success]
+
+**Specific Actions**:
+1. [Action 1]
+2. [Action 2]
+3. [Action 3]
+
+**Update Required Documents**:
+- [ ] CRITICAL_FUNCTIONAL_REQUIREMENTS.md (if fundamental)
+- [ ] TEAM_COLLABORATION.md (if workflow-related)
+- [ ] Relevant agent definitions (if agent-specific)
+- [ ] US-039 validation rules (if validation-related)
+
+## Status
+
+- [ ] Lesson documented
+- [ ] Documents updated
+- [ ] Agents notified
+- [ ] Preventive measures implemented
+- [ ] Verified resolved (no recurrence)
+```
+
+### Using Lessons to Prevent Recurrence
+
+**Required Reading**:
+All agents MUST read docs/roadmap/learnings/ periodically:
+- **Weekly**: Recent lessons (last 7 days)
+- **Monthly**: All lessons from current month
+- **Quarterly**: Full directory review
+
+**Integration Points**:
+
+1. **agent role definitions** (.claude/agents/*.md):
+   - Add "Common Mistakes to Avoid" section
+   - Reference specific lesson documents
+   - Update based on learnings
+
+2. **CRITICAL_FUNCTIONAL_REQUIREMENTS.md**:
+   - Promote frequent/critical lessons to CFRs
+   - Example: US-040 failure → CFR-006
+
+3. **US-039 validation**:
+   - Check against known failure patterns
+   - Reference lessons in validation logic
+
+4. **reflector analysis**:
+   - Analyzes lesson documents
+   - Identifies recurring patterns
+   - Suggests systemic improvements
+
+5. **curator playbook**:
+   - Incorporates lessons into agent playbooks
+   - Creates avoidance patterns
+   - Updates effectiveness metrics
+
+### Examples of Lessons
+
+**Already Captured**:
+- ✅ WORKFLOW_FAILURE_US_040.md (user story without CFR validation)
+- ✅ OWNERSHIP_VIOLATION_US_038.md (file ownership violation patterns)
+
+**Should Be Captured** (from recent sessions):
+- File searching wasteful → US-042 created
+- architect agent not operational → US-041 created
+- Parallel execution needed → US-043 created
+- Refactoring workflow missing → US-044 created
+- Ownership includes maintenance → CFR-005 created
+
+### Maintenance Responsibility (CFR-005 Applied)
+
+**project_manager maintains docs/roadmap/learnings/**:
+
+**Monthly** (first week of month):
+- Create LESSONS_YYYY_MM.md summary
+- Identify patterns across lessons
+- Promote critical lessons to CFRs if needed
+- Archive old lessons (>6 months to archive/ subdirectory)
+- Update agent definitions with new avoidance patterns
+
+**Quarterly** (Q1, Q2, Q3, Q4):
+- Review all lessons for recurring themes
+- Escalate systemic issues to architect
+- Update TEAM_COLLABORATION.md with workflow improvements
+- Report lessons summary to user
+
+**Metrics to Track**:
+- Total lessons captured
+- Lessons by severity
+- Lessons by category
+- Recurrence rate (same lesson multiple times = problem)
+- Time to resolution (how long to implement prevention)
+- Effectiveness (did prevention work?)
+
+### Escalation
+
+**When to Escalate**:
+- Same lesson captured 3+ times (systemic issue)
+- CRITICAL severity lesson
+- Lesson requires architecture change
+- User explicitly requests escalation
+
+**Escalation Path**:
+```
+project_manager identifies pattern
+    ↓
+Escalate to architect (technical solution needed?)
+    ↓
+architect designs systemic fix
+    ↓
+code_developer implements
+    ↓
+project_manager verifies (no recurrence)
+```
+
+### Integration with ACE Framework
+
+**generator**:
+- Reads lessons before routing tasks
+- Avoids known failure patterns
+- Logs new failure patterns for lessons capture
+
+**reflector**:
+- Analyzes lesson documents
+- Extracts patterns across multiple lessons
+- Suggests root cause categories
+
+**curator**:
+- Incorporates lessons into agent playbooks
+- Creates "never do this" patterns
+- Updates avoidance strategies
+
+### Success Criteria for CFR-006
+
+**Healthy Lessons System**:
+- ✅ All failures documented within 24 hours
+- ✅ Monthly summaries created consistently
+- ✅ No recurring lessons (same mistake <2 times)
+- ✅ Documents updated within 1 week of lesson
+- ✅ Agents reference lessons when working
+- ✅ User sees improving system (fewer repeated mistakes)
+
+**Unhealthy Lessons System**:
+- ❌ Failures not documented
+- ❌ Same mistakes repeated 3+ times
+- ❌ Lessons documents ignored
+- ❌ No updates to agent behaviors
+- ❌ User frustrated by recurring issues
+
+### Why This CFR Is Critical
+
+**Without Lessons System**:
+- Same mistakes repeated endlessly
+- User wastes time on known issues
+- Trust degrades ("they never learn")
+- System appears unintelligent
+- No improvement over time
+
+**With Lessons System**:
+- Mistakes learned from immediately
+- Prevention implemented proactively
+- User sees continuous improvement
+- Trust builds ("they learn and adapt")
+- System becomes smarter over time
+
+---
+
 ## Conclusion
 
 These Critical Functional Requirements are SYSTEM INVARIANTS:
@@ -2124,11 +2384,25 @@ This means US-043 (Parallel Execution) can be implemented safely thanks to CFR e
 
 **Remember**: These CFRs exist to prevent the system from breaking itself. They are not optional. They are not suggestions. They are CRITICAL FUNCTIONAL REQUIREMENTS.
 
-**Version**: 1.6
+**Version**: 1.7
 **Last Updated**: 2025-10-16
 **Next Review**: After US-038, US-039, US-043, and US-044 implementation
 
 **Changelog**:
+- **v1.7** (2025-10-16): Added CFR-006 (Lessons Learned Must Be Captured and Applied)
+  - New CFR-006: All failures, mistakes, and key lessons MUST be documented, owned, and actively used
+  - project_manager owns docs/roadmap/learnings/ (exclusive ownership)
+  - Lesson types: Workflow failures, technical failures, user frustration, success patterns, monthly summaries
+  - Lesson capture workflow: Any agent identifies → delegates to project_manager → creates lesson document
+  - Lesson document template with severity, category, root cause, impact, prevention
+  - Required reading schedule: Weekly (last 7 days), Monthly (current month), Quarterly (full review)
+  - Integration points: agent definitions, CFRs, US-039 validation, reflector, curator
+  - Maintenance: Monthly summaries, quarterly reviews, archive old lessons
+  - Escalation path for recurring patterns
+  - Success criteria: All failures documented <24h, no recurring mistakes, continuous improvement
+  - Why critical: Without lessons system, same mistakes repeat endlessly and user trust degrades
+  - Updated ownership matrix with docs/roadmap/learnings/ (project_manager)
+  - Examples: WORKFLOW_FAILURE_US_040.md, OWNERSHIP_VIOLATION_US_038.md already captured
 - **v1.6** (2025-10-16): Added CFR-005 (Ownership Includes Maintenance Responsibility) and US-044 Integration
   - New CFR-005: Ownership means proactive maintenance (cleaning, simplifying, updating, organizing)
   - Updated ownership matrix (CFR-001) with maintenance duties column

@@ -24142,10 +24142,18 @@ Result: Ownership respected, work completed correctly
 - [ ] **Document validation**: Log all validation checks and results for reflector analysis
 - [ ] **Example failure case**: US-040 should have been blocked (see docs/roadmap/learnings/WORKFLOW_FAILURE_US_040.md)
 
+**Lessons Integration** (CFR-006):
+- [ ] Read docs/roadmap/learnings/ before validation
+- [ ] Check against known failure patterns
+- [ ] Reference specific lessons in error messages
+- [ ] Log new failures for lesson capture
+- [ ] Trigger lesson capture on validation failures (delegate to project_manager)
+- [ ] Example: Reference WORKFLOW_FAILURE_US_040.md when blocking similar patterns
+
 **Level 3: User Request Validation**:
 - [ ] Analyze user request intent
 - [ ] Identify required actions and agents
-- [ ] Check against all CFR rules (001-004)
+- [ ] Check against all CFR rules (001-006)
 - [ ] Expose violations with clear explanations
 - [ ] Offer safe alternatives (delegation paths)
 - [ ] Wait for user decision
