@@ -972,6 +972,7 @@ def cmd_summary(args: argparse.Namespace) -> int:
     """Show delivery summary for recently completed stories.
 
     US-017 Phase 2: CLI Integration - /summary command
+    US-017 Phase 4: Manual update trigger - /summary --update
 
     Displays executive-style summary of recent deliveries including:
     - Story ID and title
@@ -981,7 +982,7 @@ def cmd_summary(args: argparse.Namespace) -> int:
     - Estimation accuracy
 
     Args:
-        args: Parsed command-line arguments with optional --days and --format
+        args: Parsed command-line arguments with optional --days, --format, --update
 
     Returns:
         0 on success, 1 on error
@@ -990,10 +991,40 @@ def cmd_summary(args: argparse.Namespace) -> int:
         $ project-manager summary
         $ project-manager summary --days 7
         $ project-manager summary --days 30 --format text
+        $ project-manager summary --update  # Force update STATUS_TRACKING.md
     """
     from coffee_maker.reports.status_report_generator import StatusReportGenerator
+    from coffee_maker.reports.status_tracking_updater import check_and_update_if_needed
 
     try:
+        # Check if update flag is set (Phase 4)
+        force_update = args.update if hasattr(args, "update") else False
+
+        if force_update:
+            print("\n" + "=" * 80)
+            print("🔄 FORCING STATUS_TRACKING.md UPDATE")
+            print("=" * 80 + "\n")
+
+            result = check_and_update_if_needed(force=True)
+
+            if result["updated"]:
+                print(f"✅ STATUS_TRACKING.md updated successfully!")
+                print(f"   Reason: {result['reason']}")
+                print()
+            else:
+                print(f"⚠️  Update skipped: {result['reason']}")
+                print()
+        else:
+            # Auto-check if update is needed (3-day schedule or estimate changes)
+            result = check_and_update_if_needed(force=False)
+
+            if result["updated"]:
+                print("\n" + "=" * 80)
+                print("✅ STATUS_TRACKING.md AUTO-UPDATE")
+                print("=" * 80)
+                print(f"Reason: {result['reason']}")
+                print()
+
         # Get parameters from args
         days = args.days if hasattr(args, "days") else 14
         output_format = args.format if hasattr(args, "format") else "markdown"
@@ -1036,6 +1067,7 @@ def cmd_summary(args: argparse.Namespace) -> int:
         # Footer
         print()
         print(f"💡 TIP: Use 'project-manager summary --days N' to change time period")
+        print(f"   Use 'project-manager summary --update' to force STATUS_TRACKING.md update")
         print(f"   Use 'project-manager calendar' to see upcoming deliverables")
         print()
 
@@ -1054,6 +1086,7 @@ def cmd_calendar(args: argparse.Namespace) -> int:
     """Show calendar of upcoming deliverables with estimated completion dates.
 
     US-017 Phase 2: CLI Integration - /calendar command
+    US-017 Phase 4: Manual update trigger - /calendar --update
 
     Displays upcoming priorities/stories with:
     - Priority order (1, 2, 3...)
@@ -1062,7 +1095,7 @@ def cmd_calendar(args: argparse.Namespace) -> int:
     - Impact statement
 
     Args:
-        args: Parsed command-line arguments with optional --limit and --format
+        args: Parsed command-line arguments with optional --limit, --format, --update
 
     Returns:
         0 on success, 1 on error
@@ -1071,10 +1104,40 @@ def cmd_calendar(args: argparse.Namespace) -> int:
         $ project-manager calendar
         $ project-manager calendar --limit 5
         $ project-manager calendar --limit 10 --format text
+        $ project-manager calendar --update  # Force update STATUS_TRACKING.md
     """
     from coffee_maker.reports.status_report_generator import StatusReportGenerator
+    from coffee_maker.reports.status_tracking_updater import check_and_update_if_needed
 
     try:
+        # Check if update flag is set (Phase 4)
+        force_update = args.update if hasattr(args, "update") else False
+
+        if force_update:
+            print("\n" + "=" * 80)
+            print("🔄 FORCING STATUS_TRACKING.md UPDATE")
+            print("=" * 80 + "\n")
+
+            result = check_and_update_if_needed(force=True)
+
+            if result["updated"]:
+                print(f"✅ STATUS_TRACKING.md updated successfully!")
+                print(f"   Reason: {result['reason']}")
+                print()
+            else:
+                print(f"⚠️  Update skipped: {result['reason']}")
+                print()
+        else:
+            # Auto-check if update is needed (3-day schedule or estimate changes)
+            result = check_and_update_if_needed(force=False)
+
+            if result["updated"]:
+                print("\n" + "=" * 80)
+                print("✅ STATUS_TRACKING.md AUTO-UPDATE")
+                print("=" * 80)
+                print(f"Reason: {result['reason']}")
+                print()
+
         # Get parameters from args
         limit = args.limit if hasattr(args, "limit") else 3
         output_format = args.format if hasattr(args, "format") else "markdown"
@@ -1118,6 +1181,7 @@ def cmd_calendar(args: argparse.Namespace) -> int:
         # Footer
         print()
         print(f"💡 TIP: Use 'project-manager calendar --limit N' to see more/fewer items")
+        print(f"   Use 'project-manager calendar --update' to force STATUS_TRACKING.md update")
         print(f"   Use 'project-manager summary' to see recent deliveries")
         print()
 
@@ -1364,18 +1428,28 @@ Use 'project-manager chat' for the best experience!
         "--period", type=int, default=7, help="Period in days for velocity calculation (default: 7)"
     )
 
-    # Summary command (US-017 Phase 2)
+    # Summary command (US-017 Phase 2 + Phase 4)
     summary_parser = subparsers.add_parser("summary", help="Show delivery summary for recent completions (US-017)")
     summary_parser.add_argument("--days", type=int, default=14, help="Number of days to look back (default: 14)")
     summary_parser.add_argument(
         "--format", type=str, default="markdown", choices=["text", "markdown"], help="Output format (default: markdown)"
     )
+    summary_parser.add_argument(
+        "--update",
+        action="store_true",
+        help="Force regenerate STATUS_TRACKING.md (Phase 4)",
+    )
 
-    # Calendar command (US-017 Phase 2)
+    # Calendar command (US-017 Phase 2 + Phase 4)
     calendar_parser = subparsers.add_parser("calendar", help="Show calendar of upcoming deliverables (US-017)")
     calendar_parser.add_argument("--limit", type=int, default=3, help="Number of upcoming items to show (default: 3)")
     calendar_parser.add_argument(
         "--format", type=str, default="markdown", choices=["text", "markdown"], help="Output format (default: markdown)"
+    )
+    calendar_parser.add_argument(
+        "--update",
+        action="store_true",
+        help="Force regenerate STATUS_TRACKING.md (Phase 4)",
     )
 
     args = parser.parse_args()

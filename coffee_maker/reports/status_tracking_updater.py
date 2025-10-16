@@ -141,3 +141,87 @@ def schedule_auto_update(interval_days: int = 3) -> None:
     # TODO: Implement scheduler integration
     # This would integrate with daemon or cron for automatic updates
     logger.info(f"Auto-update scheduled: every {interval_days} days")
+
+
+def check_and_update_if_needed(
+    roadmap_path: str = "docs/ROADMAP.md",
+    output_path: str = "docs/STATUS_TRACKING.md",
+    force: bool = False,
+) -> dict:
+    """Check if update is needed and perform it if necessary.
+
+    This function:
+    1. Checks if automatic update is needed (3-day interval)
+    2. Checks for significant estimate changes (>1 day)
+    3. Performs update if needed
+    4. Records update timestamp
+
+    Args:
+        roadmap_path: Path to ROADMAP.md file
+        output_path: Path to STATUS_TRACKING.md output file
+        force: Force update regardless of schedule (default: False)
+
+    Returns:
+        Dictionary with update result:
+        - updated: Whether update was performed
+        - reason: Reason for update (or why skipped)
+        - timestamp: Update timestamp (if performed)
+
+    Example:
+        >>> result = check_and_update_if_needed()
+        >>> if result['updated']:
+        ...     print(f"Updated: {result['reason']}")
+        ... else:
+        ...     print(f"Skipped: {result['reason']}")
+    """
+    from coffee_maker.reports.update_scheduler import UpdateScheduler
+
+    try:
+        scheduler = UpdateScheduler(roadmap_path=roadmap_path)
+
+        # Check if update is needed
+        if not scheduler.should_update(force=force):
+            time_since = scheduler.get_time_since_last_update()
+            days_ago = time_since.days if time_since else 0
+
+            return {
+                "updated": False,
+                "reason": f"No update needed (last updated {days_ago} days ago)",
+                "timestamp": None,
+            }
+
+        # Determine update reason
+        if force:
+            reason = "Manual update (forced)"
+        elif scheduler._should_update_by_time():
+            reason = f"{scheduler.update_interval_days}-day interval elapsed"
+        else:
+            changes = scheduler.check_estimate_changes()
+            reason = f"{len(changes)} significant estimate change(s) detected"
+
+        # Perform update
+        success = update_status_tracking(roadmap_path=roadmap_path, output_path=output_path)
+
+        if success:
+            # Record update
+            scheduler.record_update(manual=force)
+
+            return {
+                "updated": True,
+                "reason": reason,
+                "timestamp": scheduler.get_time_since_last_update(),
+            }
+        else:
+            return {
+                "updated": False,
+                "reason": "Update failed",
+                "timestamp": None,
+            }
+
+    except Exception as e:
+        logger.error(f"Failed to check and update: {e}")
+        return {
+            "updated": False,
+            "reason": f"Error: {e}",
+            "timestamp": None,
+        }
