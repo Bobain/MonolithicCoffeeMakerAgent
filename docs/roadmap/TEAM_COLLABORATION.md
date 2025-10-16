@@ -1235,6 +1235,133 @@ Each level provides increasing authority and decision-making power to resolve co
 
 ---
 
+## Project Planner Mode
+
+**Purpose**: Enable parallel planning and implementation without conflicts.
+
+**When to Use**:
+- User wants to plan future priorities while code_developer implements current priorities
+- Need to do strategic planning without interrupting autonomous work
+- Want to experiment with different priority orderings
+
+### Workflow
+
+```
+User → Start Planner Mode
+    ↓
+1. code_developer pauses gracefully (finishes current iteration)
+2. System creates planning branch: planning/user-session-YYYY-MM-DD-HHMMSS
+3. System switches to planning branch
+4. Status: "PLANNER MODE ACTIVE 🎨"
+    ↓
+User edits docs/roadmap/ on planning branch
+    ↓
+User commits planning changes
+    ↓
+User → Stop Planner Mode
+    ↓
+1. System merges planning branch → roadmap branch
+2. System switches back to roadmap branch
+3. code_developer resumes
+4. Status: "code_developer WORKING 🤖"
+```
+
+### Commands
+
+```bash
+# Start planner mode
+poetry run project-manager planner-mode start
+
+# Check status
+poetry run project-manager planner-mode status
+
+# Stop planner mode (merge changes)
+poetry run project-manager planner-mode stop
+
+# Abort planner mode (discard changes)
+poetry run project-manager planner-mode abort
+```
+
+### Example Session
+
+```bash
+# User wants to plan PRIORITY 50-60
+poetry run project-manager planner-mode start
+
+📋 PLANNER MODE ACTIVATED
+
+✓ code_developer daemon paused (graceful shutdown)
+✓ Created planning branch: planning/user-session-2025-10-16-143022
+✓ Switched to planning branch
+✓ Ready for planning work
+
+You can now safely edit:
+  - docs/roadmap/ROADMAP.md
+  - docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md
+
+When done: poetry run project-manager planner-mode stop
+
+# User does planning
+vim docs/roadmap/ROADMAP.md
+# ... add PRIORITY 50-60 ...
+
+git add docs/roadmap/
+git commit -m "plan: Add PRIORITY 50-60 for Q2 2025"
+
+# User finishes planning
+poetry run project-manager planner-mode stop
+
+📋 PLANNER MODE DEACTIVATED
+
+✓ Committed pending changes
+✓ Merged planning/user-session-2025-10-16-143022 → roadmap
+✓ Switched back to roadmap branch
+✓ Resuming code_developer daemon...
+✓ code_developer is now working on PRIORITY 35
+
+Planning complete! code_developer will see new priorities when ready.
+```
+
+### Benefits
+
+- No file conflicts (code_developer paused during planning)
+- Clean git history (planning branch → merge)
+- Parallel work enabled (plan future while implementing current)
+- Easy to abort if needed (discard planning changes)
+- Respects CFR-000 (Prevent File Conflicts)
+
+### Integration with CFRs
+
+**CFR-000 (Prevent File Conflicts)**:
+- Pausing code_developer prevents concurrent edits
+- User works in isolation on planning branch
+- Merges cleanly when planning complete
+
+**CFR-001 (Document Ownership)**:
+- User edits docs/roadmap/ (project_manager's domain)
+- Ownership boundaries respected during planning
+
+**US-035 (Singleton Enforcement)**:
+- code_developer paused = no multiple instances
+- Clean state transitions (pause → planning → resume)
+
+### Edge Cases
+
+**Merge Conflicts**:
+- System detects conflicts when merging planning → roadmap
+- Provides clear resolution guidance
+- User resolves manually or chooses strategy (ours/theirs)
+
+**code_developer Not Running**:
+- Planner mode works regardless of daemon status
+- Skip pause step if daemon not running
+
+**Session Recovery**:
+- System recovers interrupted planning sessions
+- User can resume, merge, or abort on restart
+
+---
+
 ## Key Principles
 
 ### 1. Single Responsibility
@@ -1333,6 +1460,15 @@ Agents NEVER do another agent's work:
 ---
 
 ## Version History
+
+**Version**: 1.4
+**Date**: 2025-10-16
+**Changes**:
+- Added Project Planner Mode section (US-040)
+- Documented parallel planning and implementation workflow
+- Added planner mode commands and example session
+- Documented CFR integration (CFR-000, CFR-001, US-035)
+- Added edge cases (merge conflicts, recovery, daemon not running)
 
 **Version**: 1.3
 **Date**: 2025-10-16

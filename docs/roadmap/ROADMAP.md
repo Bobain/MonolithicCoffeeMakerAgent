@@ -24497,3 +24497,604 @@ def test_level_4_agent_self_check():
 - **Foundation for autonomous operation**: Agents can safely delegate without violating boundaries
 
 ---
+
+## US-040: Project Planner Mode - Parallel Planning and Implementation
+
+**Status**: 📝 PLANNED - HIGH PRIORITY (enables parallel workflows)
+**Type**: Feature / Workflow Enhancement
+**Complexity**: Medium
+**Priority**: HIGH (enables strategic planning without blocking implementation)
+**Created**: 2025-10-16
+**Estimated Effort**: 2-3 days
+**Depends On**: GitStrategy (coffee_maker/autonomous/git_strategy.py)
+**Related**: CFR-000 (Prevent File Conflicts), US-035 (Singleton Enforcement)
+
+**Delegation Flow** (Strategic → Technical → Implementation):
+1. **project_manager (strategic)**: Defines WHAT and WHY (this ROADMAP entry)
+2. **architect (technical design)**: Creates HOW in docs/architecture/user_stories/US_040_TECHNICAL_SPEC.md
+3. **code_developer (implementation)**: Implements based on architect's technical spec
+
+### User Story
+
+> "As a User, I want to be able to switch to a 'Project Planner Mode' in which code_developer will not work, so that I can do project planning in a directory while code_developer is working in another directory implementing what is already planned, with easy merging."
+
+### Description
+
+Implement a "Project Planner Mode" that enables users to perform strategic planning activities (adding future priorities, designing roadmaps, etc.) in parallel with code_developer's autonomous implementation work, without causing file conflicts or disrupting the daemon.
+
+**Use Case**:
+- User wants to plan future priorities (PRIORITY 50-60)
+- code_developer is currently implementing PRIORITY 35-40
+- Both activities happen simultaneously without conflicts
+- Changes merge cleanly when planning is complete
+
+**Why This Is Critical**:
+- Currently, users cannot safely edit docs/roadmap/ while code_developer is running
+- code_developer may commit changes that conflict with user's planning edits
+- No safe mechanism for parallel strategic planning + autonomous implementation
+- Respects CFR-000 (Prevent File Conflicts) by pausing code_developer during planning
+
+**Current State**:
+- code_developer runs autonomously on `roadmap` branch
+- No mechanism to pause code_developer safely
+- User edits to ROADMAP.md conflict with code_developer commits
+- Only option: Stop daemon completely (loses context, slow restart)
+
+**Target State**:
+- User can enter "planner mode" via CLI command
+- code_developer pauses gracefully (finishes current iteration, commits work)
+- System creates planning branch: `planning/user-session-YYYY-MM-DD`
+- User edits docs/roadmap/ on planning branch safely
+- code_developer remains paused on roadmap branch (no conflicts)
+- User exits planner mode when done
+- System merges planning branch → roadmap branch cleanly
+- code_developer resumes from where it left off with new priorities visible
+
+### Workflow
+
+**Entering Planner Mode**:
+```bash
+# User command
+poetry run project-manager planner-mode start
+
+# System executes:
+1. Check if code_developer daemon is running (via AgentRegistry)
+2. If running:
+   a. Send graceful shutdown signal to code_developer
+   b. Wait for code_developer to finish current iteration and commit
+   c. Verify code_developer stopped successfully
+3. Create planning branch: planning/user-session-YYYY-MM-DD-HHMMSS
+4. Switch to planning branch
+5. Display status: "PLANNER MODE ACTIVE 🎨"
+6. Show user what they can safely edit:
+   - docs/roadmap/ROADMAP.md
+   - docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md
+   - docs/roadmap/TEAM_COLLABORATION.md
+   - docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md
+
+# User feedback:
+📋 PLANNER MODE ACTIVATED
+
+✓ code_developer daemon paused (graceful shutdown)
+✓ Created planning branch: planning/user-session-2025-10-16-143022
+✓ Switched to planning branch
+✓ Ready for planning work
+
+You can now safely edit:
+  - docs/roadmap/ROADMAP.md
+  - docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md
+  - docs/roadmap/*.md
+
+When done: poetry run project-manager planner-mode stop
+```
+
+**During Planner Mode**:
+```bash
+# User works freely on planning branch
+vim docs/roadmap/ROADMAP.md
+# ... add PRIORITY 50-60 ...
+
+git add docs/roadmap/
+git commit -m "plan: Add PRIORITY 50-60 for Q2 2025 initiatives"
+
+# Status check
+poetry run project-manager planner-mode status
+
+📋 PLANNER MODE ACTIVE (started 14:30:22)
+
+Current branch: planning/user-session-2025-10-16-143022
+Time in planner mode: 23 minutes
+Commits made: 3
+Files modified: 2 (ROADMAP.md, US_050_STRATEGIC_SPEC.md)
+
+code_developer status: PAUSED (will resume when you exit planner mode)
+
+Commands:
+  - Exit and merge: poetry run project-manager planner-mode stop
+  - Discard changes: poetry run project-manager planner-mode abort
+```
+
+**Exiting Planner Mode**:
+```bash
+# User command
+poetry run project-manager planner-mode stop
+
+# System executes:
+1. Commit any uncommitted changes on planning branch
+2. Switch back to roadmap branch
+3. Merge planning branch → roadmap branch:
+   a. Attempt automatic merge (git merge planning/user-session-*)
+   b. If conflicts detected:
+      - Display conflict details to user
+      - Provide resolution guidance
+      - Wait for user to resolve manually
+   c. If merge successful:
+      - Commit merge
+      - Delete planning branch (optional)
+4. Resume code_developer daemon
+5. Display status: "code_developer WORKING 🤖"
+
+# User feedback (success case):
+📋 PLANNER MODE DEACTIVATED
+
+✓ Committed pending changes (1 file)
+✓ Merged planning/user-session-2025-10-16-143022 → roadmap
+✓ Switched back to roadmap branch
+✓ Resuming code_developer daemon...
+✓ code_developer is now working on PRIORITY 35
+
+Planning complete! code_developer can see new priorities (50-60) when ready.
+
+# User feedback (conflict case):
+📋 MERGE CONFLICT DETECTED
+
+⚠️ Planning branch conflicts with roadmap branch
+
+Conflicting files:
+  - docs/roadmap/ROADMAP.md (lines 234-256)
+
+Resolution options:
+1. Resolve manually: git mergetool
+2. Accept yours: poetry run project-manager planner-mode resolve --ours
+3. Accept theirs: poetry run project-manager planner-mode resolve --theirs
+4. Abort planning: poetry run project-manager planner-mode abort
+
+Recommendation: Review conflicts with git mergetool, then:
+  git add docs/roadmap/ROADMAP.md
+  git commit
+  poetry run project-manager planner-mode stop
+```
+
+**Aborting Planner Mode**:
+```bash
+# User command (discard planning changes)
+poetry run project-manager planner-mode abort
+
+# System executes:
+1. Switch back to roadmap branch (discard planning branch)
+2. Delete planning branch (with all commits)
+3. Resume code_developer daemon if it was running
+
+# User feedback:
+📋 PLANNER MODE ABORTED
+
+✓ Discarded planning branch: planning/user-session-2025-10-16-143022
+✓ Switched back to roadmap branch
+✓ Resuming code_developer daemon...
+✓ code_developer is now working on PRIORITY 35
+
+All planning changes discarded. Original ROADMAP intact.
+```
+
+### Requirements
+
+**Functional Requirements**:
+1. **Mode Toggle**: CLI commands to start/stop planner mode
+2. **code_developer Pause**: Graceful shutdown when planner mode starts
+3. **Branch Management**: Create/switch planning branches automatically
+4. **File Safety**: Ensure no conflicts during planning (CFR-000)
+5. **Status Visibility**: Clear indication of which mode is active
+6. **Resume Capability**: code_developer resumes cleanly after planner mode exits
+7. **Conflict Resolution**: Handle merge conflicts gracefully with user guidance
+8. **Session Tracking**: Track planning sessions (start time, duration, commits)
+9. **Multi-Session Support**: Allow multiple planning sessions (different branches)
+10. **Abort Capability**: Discard planning changes if needed
+
+**Non-Functional Requirements**:
+1. **Performance**: code_developer pauses within 30 seconds
+2. **Reliability**: No data loss during mode transitions
+3. **Usability**: Clear CLI feedback at each step
+4. **Safety**: Respects CFR-000 (no file conflicts)
+5. **Recoverability**: Can recover from partial failures
+
+### Implementation Options
+
+**Option A: Branch-Based Separation (RECOMMENDED)**
+
+**Pros**:
+- Clean git history (planning work isolated)
+- Easy to merge or discard
+- Standard git workflow
+- code_developer remains on roadmap branch (no branch switching risk)
+- Clear separation visible in git log
+
+**Cons**:
+- Merge conflicts possible (but rare if code_developer only touches status fields)
+- Requires merge step when exiting planner mode
+
+**Implementation Details**:
+```python
+class PlannerMode:
+    def start(self):
+        """Enter planner mode."""
+        # 1. Pause code_developer
+        if AgentRegistry.is_agent_running(AgentType.CODE_DEVELOPER):
+            send_shutdown_signal()
+            wait_for_shutdown(timeout=30)
+
+        # 2. Create planning branch
+        branch_name = f"planning/user-session-{datetime.now().strftime('%Y-%m-%d-%H%M%S')}"
+        git_checkout_new_branch(branch_name)
+
+        # 3. Track session
+        session = PlanningSession(
+            branch=branch_name,
+            start_time=datetime.now(),
+            base_commit=get_current_commit()
+        )
+        save_session(session)
+
+        # 4. Display status
+        print_planner_mode_active(session)
+
+    def stop(self):
+        """Exit planner mode and merge."""
+        session = load_active_session()
+
+        # 1. Commit pending changes
+        if has_uncommitted_changes():
+            git_add_all()
+            git_commit("plan: Auto-commit before exiting planner mode")
+
+        # 2. Switch back to roadmap
+        git_checkout("roadmap")
+
+        # 3. Merge planning branch
+        try:
+            git_merge(session.branch)
+            print_merge_success()
+        except MergeConflictError as e:
+            print_merge_conflict_guidance(e)
+            return  # User must resolve manually
+
+        # 4. Resume code_developer
+        if session.code_developer_was_running:
+            start_code_developer_daemon()
+
+        # 5. Cleanup
+        delete_planning_branch(session.branch)
+        delete_session(session)
+        print_planner_mode_deactivated()
+```
+
+**Option B: Directory-Based Separation**
+
+**Pros**:
+- No branch switching required
+- No merge conflicts
+- Simpler git operations
+
+**Cons**:
+- Requires separate directory for planning (docs/roadmap/planning/)
+- Need to manually merge FUTURE_PRIORITIES.md → ROADMAP.md
+- More complex file structure
+- Harder to track what changed
+
+**Recommendation**: **Option A (Branch-Based)** is cleaner and more maintainable.
+
+### Acceptance Criteria
+
+**Core Functionality**:
+- [ ] CLI command: `poetry run project-manager planner-mode start`
+- [ ] CLI command: `poetry run project-manager planner-mode stop`
+- [ ] CLI command: `poetry run project-manager planner-mode status`
+- [ ] CLI command: `poetry run project-manager planner-mode abort`
+- [ ] code_developer daemon pauses gracefully when planner mode starts
+- [ ] System creates planning branch with timestamp: `planning/user-session-YYYY-MM-DD-HHMMSS`
+- [ ] User can edit docs/roadmap/ on planning branch without conflicts
+- [ ] System status clearly shows "PLANNER MODE ACTIVE 🎨" when active
+- [ ] Planning branch merges cleanly to roadmap branch (when no conflicts)
+- [ ] code_developer resumes after planner mode exits
+- [ ] code_developer sees newly planned priorities after merge
+
+**Session Management**:
+- [ ] User can list active planning sessions
+- [ ] User can check planner mode status (branch, time elapsed, commits)
+- [ ] System tracks planning session metadata (start time, duration, commits)
+- [ ] User can have multiple planning sessions (different branches)
+
+**Conflict Resolution**:
+- [ ] System detects merge conflicts when merging planning → roadmap
+- [ ] System provides clear conflict resolution guidance
+- [ ] User can choose resolution strategy (manual, ours, theirs)
+- [ ] System verifies conflict resolution before proceeding
+
+**Safety & Recovery**:
+- [ ] No file conflicts occur (CFR-000 respected)
+- [ ] User can abort planner mode (discard all planning changes)
+- [ ] System recovers gracefully from partial failures
+- [ ] code_developer does not start automatically if it was not running before
+- [ ] User cannot enter planner mode twice simultaneously
+
+**User Experience**:
+- [ ] Clear status messages at each step
+- [ ] Helpful error messages with actionable guidance
+- [ ] Visual indicators (emojis) for mode status
+- [ ] Command help text available: `poetry run project-manager planner-mode --help`
+
+**Documentation**:
+- [ ] User guide for planner mode workflow (docs/PLANNER_MODE_GUIDE.md or in TEAM_COLLABORATION.md)
+- [ ] Code documentation for PlannerMode class
+- [ ] Unit tests for mode transitions
+- [ ] Integration tests for full workflow
+
+### Edge Cases to Handle
+
+**1. code_developer Mid-Implementation**:
+- **Scenario**: User enters planner mode while code_developer is halfway through implementing a priority
+- **Solution**: code_developer finishes current iteration, commits work, then pauses
+- **Acceptance**: code_developer completes current iteration before pausing (no partial work)
+
+**2. Merge Conflicts**:
+- **Scenario**: Planning branch conflicts with roadmap branch (code_developer updated same lines)
+- **Solution**: Detect conflicts, provide resolution guidance, wait for user
+- **Acceptance**: User can resolve conflicts manually or choose resolution strategy
+
+**3. User Forgets to Exit Planner Mode**:
+- **Scenario**: User starts planner mode, forgets about it, leaves it active for days
+- **Solution**:
+  - Option 1: Auto-timeout after 4 hours (warning at 3:30)
+  - Option 2: Persist until explicit stop (recommended)
+- **Acceptance**: System persists planner mode state across sessions
+
+**4. Multiple Planner Sessions**:
+- **Scenario**: User starts planner mode, creates branch, then tries to start again
+- **Solution**: Detect active session, inform user, offer options:
+  - Continue existing session
+  - Abort existing and start new
+  - Create separate session (new branch)
+- **Acceptance**: User cannot have conflicting planner sessions
+
+**5. code_developer Not Running**:
+- **Scenario**: User enters planner mode when code_developer is not running
+- **Solution**: Skip pause step, proceed with branch creation
+- **Acceptance**: Planner mode works regardless of code_developer status
+
+**6. Git Operation Failures**:
+- **Scenario**: Branch creation fails, checkout fails, merge fails
+- **Solution**: Detect failure, roll back to safe state, inform user
+- **Acceptance**: System recovers to pre-planner-mode state on failures
+
+**7. Session Recovery**:
+- **Scenario**: System crashes while in planner mode
+- **Solution**: On restart, detect active planning branch, prompt user:
+  - Resume planning session
+  - Exit and merge
+  - Abort and discard
+- **Acceptance**: User can recover from interrupted planner mode
+
+### Integration with CFRs
+
+**CFR-000 (Prevent File Conflicts)**:
+- **How**: Pausing code_developer prevents concurrent edits to docs/roadmap/
+- **Result**: Zero file conflicts during planning
+
+**CFR-001 (Document Ownership)**:
+- **How**: User edits docs/roadmap/ (project_manager's domain) in isolation
+- **Result**: Ownership boundaries respected
+
+**US-035 (Singleton Enforcement)**:
+- **How**: code_developer paused = no multiple instances conflict
+- **Result**: Only one code_developer can be paused at a time
+
+**Benefits**:
+- User can plan future work without blocking current implementation
+- code_developer continues autonomous work when not in planner mode
+- Clean separation via git branches
+- Easy merge when planning complete
+- Respects all CFRs (especially CFR-000)
+- No risk of data loss or conflicts
+
+### Dependencies
+
+**Requires**:
+- `coffee_maker/autonomous/git_strategy.py` (git operations)
+- `coffee_maker/autonomous/agent_registry.py` (code_developer status check)
+- `coffee_maker/cli/roadmap_cli.py` (CLI integration)
+
+**Enhances**:
+- Strategic planning workflow
+- User productivity (parallel work)
+- CFR-000 enforcement (conflict prevention)
+
+### Risks & Mitigation
+
+**Risk 1: Merge Conflicts**:
+- **Likelihood**: Low (code_developer mainly updates status fields, user adds new priorities)
+- **Impact**: Medium (user must resolve manually)
+- **Mitigation**: Provide clear conflict resolution guidance, recommend conflict resolution tools
+
+**Risk 2: code_developer Pause Failure**:
+- **Likelihood**: Low (graceful shutdown is well-tested)
+- **Impact**: High (could corrupt files)
+- **Mitigation**: Timeout on shutdown wait (30s), verify shutdown before proceeding, rollback on failure
+
+**Risk 3: User Confusion**:
+- **Likelihood**: Medium (new workflow)
+- **Impact**: Low (just need clear documentation)
+- **Mitigation**: Clear CLI feedback, comprehensive documentation, examples in TEAM_COLLABORATION.md
+
+**Risk 4: Git Branch Management Complexity**:
+- **Likelihood**: Low (standard git operations)
+- **Impact**: Medium (could lose planning work)
+- **Mitigation**: Comprehensive testing, clear error messages, recovery mechanisms
+
+### Implementation Plan
+
+**Phase 1: Core PlannerMode Class (Day 1 - 4 hours)**:
+- Create `coffee_maker/cli/planner_mode.py`
+- Implement `start()`, `stop()`, `status()`, `abort()` methods
+- Add session tracking (PlanningSession model)
+- Write unit tests for each method
+
+**Phase 2: code_developer Integration (Day 1 - 2 hours)**:
+- Add graceful shutdown to code_developer daemon
+- Integrate with AgentRegistry for status checks
+- Test pause/resume functionality
+
+**Phase 3: Git Operations (Day 2 - 3 hours)**:
+- Extend GitStrategy with planning branch operations
+- Implement branch creation, switching, merging
+- Add conflict detection and resolution helpers
+- Test git operations with mock scenarios
+
+**Phase 4: CLI Integration (Day 2 - 2 hours)**:
+- Add planner-mode subcommands to roadmap_cli.py
+- Implement argument parsing (start, stop, status, abort)
+- Add help text and usage examples
+- Test CLI commands
+
+**Phase 5: Conflict Resolution (Day 3 - 3 hours)**:
+- Implement conflict detection
+- Add resolution strategies (manual, ours, theirs)
+- Provide user guidance on conflict resolution
+- Test with real merge conflicts
+
+**Phase 6: Testing & Documentation (Day 3 - 4 hours)**:
+- Write comprehensive test suite (20+ scenarios)
+- Test all edge cases
+- Update TEAM_COLLABORATION.md with planner mode section
+- Create user guide with examples
+- User validation with real planning workflows
+
+### Files to Create/Modify
+
+**New Files** (code_developer creates):
+- `coffee_maker/cli/planner_mode.py` - PlannerMode class
+- `coffee_maker/models/planning_session.py` - Session tracking model
+- `tests/unit/test_planner_mode.py` - Unit tests
+- `tests/integration/test_planner_mode_workflow.py` - Integration tests
+- `docs/architecture/user_stories/US_040_TECHNICAL_SPEC.md` - Technical spec (architect creates)
+
+**Modified Files** (code_developer modifies):
+- `coffee_maker/cli/roadmap_cli.py` - Add planner-mode subcommands
+- `coffee_maker/autonomous/git_strategy.py` - Add planning branch operations
+- `coffee_maker/autonomous/daemon.py` - Add graceful shutdown for planner mode
+- `coffee_maker/autonomous/agent_registry.py` - Add shutdown signal support (if needed)
+
+**Modified Files** (project_manager modifies):
+- `docs/roadmap/TEAM_COLLABORATION.md` - Add "Project Planner Mode" section
+- `docs/roadmap/ROADMAP.md` - This user story
+
+### Testing Strategy
+
+**Unit Tests** (20+ scenarios):
+```python
+def test_planner_mode_start():
+    """Test starting planner mode creates planning branch."""
+    planner = PlannerMode()
+    planner.start()
+
+    assert current_branch().startswith("planning/user-session-")
+    assert not AgentRegistry.is_agent_running(AgentType.CODE_DEVELOPER)
+    assert planner.is_active()
+
+def test_planner_mode_stop_no_conflicts():
+    """Test exiting planner mode merges cleanly."""
+    planner = PlannerMode()
+    planner.start()
+    # ... make planning changes ...
+    planner.stop()
+
+    assert current_branch() == "roadmap"
+    assert AgentRegistry.is_agent_running(AgentType.CODE_DEVELOPER)
+    assert not planner.is_active()
+
+def test_planner_mode_stop_with_conflicts():
+    """Test conflict detection and resolution guidance."""
+    planner = PlannerMode()
+    planner.start()
+    # ... create conflicting changes ...
+
+    with pytest.raises(MergeConflictError) as exc:
+        planner.stop()
+
+    assert "Conflicting files" in str(exc.value)
+    assert current_branch() != "roadmap"  # Stays on planning branch
+
+def test_planner_mode_abort():
+    """Test aborting planner mode discards changes."""
+    planner = PlannerMode()
+    planner.start()
+    # ... make planning changes ...
+    planner.abort()
+
+    assert current_branch() == "roadmap"
+    assert not branch_exists("planning/user-session-*")
+
+def test_planner_mode_status():
+    """Test status reporting during planner mode."""
+    planner = PlannerMode()
+    planner.start()
+    status = planner.status()
+
+    assert status.is_active
+    assert status.branch.startswith("planning/user-session-")
+    assert status.time_elapsed > 0
+
+def test_multiple_planner_sessions_prevented():
+    """Test cannot start planner mode twice."""
+    planner1 = PlannerMode()
+    planner1.start()
+
+    planner2 = PlannerMode()
+    with pytest.raises(PlannerModeActiveError):
+        planner2.start()
+
+def test_code_developer_not_running():
+    """Test planner mode works when code_developer is not running."""
+    # Stop code_developer if running
+    if AgentRegistry.is_agent_running(AgentType.CODE_DEVELOPER):
+        stop_code_developer()
+
+    planner = PlannerMode()
+    planner.start()  # Should not raise
+    assert planner.is_active()
+```
+
+**Integration Tests**:
+- Full workflow: start → plan → commit → stop
+- Conflict scenario: concurrent edits → merge conflict → manual resolution
+- Recovery scenario: crash during planner mode → recover session
+- Multi-session scenario: start → abort → start again
+
+### Success Metrics
+
+- **Zero Conflicts**: No file conflicts occur during planner mode usage
+- **Merge Success Rate**: >95% of planning sessions merge cleanly
+- **User Productivity**: Users report being able to plan while code_developer works
+- **code_developer Resume**: code_developer resumes within 10 seconds of planner mode exit
+- **Conflict Resolution**: Users can resolve conflicts within 5 minutes with guidance
+- **Session Recovery**: 100% of interrupted sessions recoverable
+
+### Notes
+
+- **Respects CFR-000**: Prevents file conflicts by pausing code_developer
+- **Parallel Workflows**: Enables strategic planning + autonomous implementation
+- **Git Best Practices**: Uses standard git branching workflow
+- **Clean History**: Planning work isolated in separate branches
+- **User Control**: User decides when to merge or discard planning work
+- **Recovery Mechanisms**: Handles edge cases and failures gracefully
+- **Documentation Priority**: Clear user guide essential for adoption
+
+---
