@@ -898,6 +898,343 @@ US-035 (Singleton) + US-038 (Ownership) + US-039 (Comprehensive CFR)
 
 ---
 
+## Task Delegation Tool Usage
+
+### Overview
+
+All agents use a centralized delegation tool instead of directly calling other agents. This ensures:
+- Centralized routing through generator (ACE framework)
+- Automatic CFR checking before delegation
+- Consistent delegation patterns
+- Traceability for learning
+
+### How It Works
+
+```
+Agent needs work outside boundaries
+    ↓
+Agent calls: delegate_task(task, context)
+    ↓
+Delegation tool → generator
+    ↓
+generator analyzes task, checks CFRs, decides routing
+    ↓
+generator delegates to appropriate agent(s)
+    ↓
+Result returns to requesting agent (transparent)
+```
+
+### Usage Examples
+
+**Example 1: project_manager delegates to code_developer**:
+```python
+# ❌ DON'T: Direct agent call
+result = code_developer.implement_feature(feature_spec)
+
+# ✅ DO: Use delegation tool
+result = delegate_task(
+    task="Implement authentication feature from US-032",
+    context={
+        "feature_spec": "docs/roadmap/PRIORITY_32_STRATEGIC_SPEC.md",
+        "priority": "high",
+        "acceptance_criteria": [...]
+    },
+    requesting_agent="project_manager"
+)
+# → generator routes to code_developer
+# → code_developer implements feature
+# → result returned to project_manager
+```
+
+**Example 2: assistant delegates code analysis to code-searcher**:
+```python
+# ❌ DON'T: Direct agent call
+analysis = code_searcher.analyze_security_vulnerabilities()
+
+# ✅ DO: Use delegation tool
+analysis = delegate_task(
+    task="Perform security audit on authentication module",
+    context={
+        "focus": "authentication",
+        "analysis_type": "security",
+        "output_format": "detailed_report"
+    },
+    requesting_agent="assistant"
+)
+# → generator routes to code-searcher
+# → code-searcher performs analysis
+# → assistant receives findings
+# → assistant delegates documentation to project_manager
+```
+
+**Example 3: code_developer delegates ROADMAP update**:
+```python
+# ❌ DON'T: Modify ROADMAP directly (violates CFR-001)
+# Edit(docs/roadmap/ROADMAP.md, ...)
+
+# ✅ DO: Use delegation tool
+result = delegate_task(
+    task="Mark US-040 complete in ROADMAP",
+    context={
+        "priority": "US-040",
+        "status": "complete",
+        "completion_date": "2025-10-16"
+    },
+    requesting_agent="code_developer"
+)
+# → generator routes to project_manager (owns docs/roadmap/)
+# → project_manager updates ROADMAP.md
+# → result returned to code_developer
+```
+
+### Benefits
+
+**For Agents**:
+- No need to know which agent handles what
+- Automatic ownership violation prevention
+- Transparent delegation (works like direct call)
+- Clear context passing
+
+**For System**:
+- Centralized routing through generator
+- All delegations respect CFRs automatically
+- Delegation traces captured for learning
+- Consistent patterns across all agents
+
+**For Debugging**:
+- Complete delegation trace available
+- Can analyze delegation patterns
+- Can optimize routing based on history
+- Can identify bottlenecks
+
+### Integration Points
+
+- **generator**: Central orchestrator, routes all delegations
+- **CFR Validator**: Checks ownership/role boundaries before delegation
+- **reflector**: Analyzes delegation traces for insights
+- **curator**: Learns optimal delegation patterns
+
+---
+
+## Complexity Escalation Workflow
+
+### Overview
+
+When an agent faces complexity that makes it hard to respect CFRs, they escalate through a defined chain for guidance and simplification.
+
+### Escalation Chain
+
+```
+Agent (complexity detected)
+    ↓
+    "I can't do this without violating CFRs"
+    ↓
+project_manager (strategic simplification)
+    ↓
+    Analyzes complexity, provides strategic guidance
+    ↓
+    If still complex → Escalate to architect
+    ↓
+architect (technical simplification)
+    ↓
+    Creates technical spec or guidelines
+    ↓
+    If still complex → Escalate to user
+    ↓
+User (final decision)
+    ↓
+    Reviews options, makes informed decision
+    ↓
+    Approves CFR change OR chooses alternative
+```
+
+### When to Escalate
+
+**✅ DO Escalate When**:
+- Cannot complete task without violating CFR
+- Multiple approaches all violate CFRs
+- Unclear which agent owns responsibility
+- Fundamental conflict between CFRs and requirements
+- Need architectural or strategic guidance
+
+**❌ DON'T Escalate When**:
+- Simply don't want to delegate (use delegation tool)
+- Solution is obvious (just needs proper delegation)
+- Haven't tried to find CFR-respecting approach
+- Trying to shortcut proper workflows
+
+### Escalation Examples
+
+**Example 1: code_developer escalates to project_manager**:
+```
+code_developer:
+"COMPLEXITY ESCALATION
+
+From: code_developer
+To: project_manager
+
+Task: Implementing US-040 requires updating ROADMAP.md to mark completion
+
+Complexity: ROADMAP.md owned by you (CFR-001), but I need synchronized updates
+
+CFRs Involved:
+- CFR-001: Document Ownership (I don't own docs/roadmap/)
+
+Options I've Considered:
+1. Modify ROADMAP directly - Violates CFR-001
+2. Delegate to you after implementation - Respects CFR-001 but adds delay
+3. Create separate status file - Adds complexity, duplicate tracking
+
+Request: How should I handle ROADMAP updates while respecting CFR-001?"
+
+project_manager response:
+"Use delegation approach (Option 2):
+1. Implement feature
+2. Commit code
+3. Delegate ROADMAP update to me
+4. I update ROADMAP.md
+5. I commit change
+
+This respects CFR-001 and is simple. Proceed with implementation."
+
+Result: ✅ Complexity resolved at project_manager level
+```
+
+**Example 2: project_manager escalates to architect**:
+```
+project_manager:
+"COMPLEXITY ESCALATION
+
+From: project_manager
+To: architect
+
+Task: US-041 (multi-tenant architecture) needs implementation guidance
+
+Complexity: code_developer unsure how to structure code while respecting role boundaries
+
+CFRs Involved:
+- CFR-002: Role Boundaries (implementation is their role, design is yours)
+
+Options I've Considered:
+1. I provide design guidance - Violates CFR-002 (not my role)
+2. code_developer guesses design - Risk of poor architecture
+3. You create technical spec - Respects CFR-002
+
+Request: Can you create technical spec with architectural design?"
+
+architect response:
+"I'll create docs/architecture/user_stories/US_041_TECHNICAL_SPEC.md with:
+- Clear architectural design (my role)
+- Implementation guidelines for code_developer
+- Respects CFR-002
+
+Spec ready in 2 hours."
+
+Result: ✅ Complexity resolved at architect level
+```
+
+**Example 3: architect escalates to user**:
+```
+architect:
+"COMPLEXITY ESCALATION
+
+From: architect
+To: user (via project_manager)
+
+Task: US-042 requires documentation spanning strategic and technical boundaries
+
+Complexity: Cannot avoid ownership overlap without fundamental changes
+
+CFRs Involved:
+- CFR-003: No Overlap - Documents (docs/roadmap/ vs docs/architecture/)
+
+Options I've Considered:
+1. Split docs across boundaries - Complex coordination, fragmented
+2. Create shared directory - VIOLATES CFR-003
+3. Assign all docs to one owner - One agent outside typical role
+4. Redesign feature - Major scope change
+
+Request: Which approach do you prefer?"
+
+User decision:
+"Choose Option 3: Assign to architect (primarily technical docs).
+Update CFR-001 ownership matrix accordingly."
+
+Result: ✅ Complexity resolved with user decision, CFRs maintained
+```
+
+### Escalation Message Format
+
+All escalations must follow this template:
+
+```
+COMPLEXITY ESCALATION
+
+From: [Agent Name]
+To: [project_manager or architect or user]
+
+Task: [Clear description of what you're trying to do]
+
+Complexity: [Why it's hard to respect CFRs]
+
+CFRs Involved: [Which CFRs are at risk - use CFR numbers]
+
+Options I've Considered:
+1. [Option 1] - [Why it violates or doesn't work]
+2. [Option 2] - [Why it violates or doesn't work]
+3. [Option 3] - [Why it violates or doesn't work]
+
+Request: [Specific guidance or decision needed]
+```
+
+### Benefits of Escalation Workflow
+
+**For Agents**:
+- Clear path when stuck
+- No need to violate CFRs
+- Expert guidance available at each level
+- Can focus on their role
+
+**For project_manager**:
+- Visibility into complexity issues
+- Opportunity to simplify strategically
+- Control over CFR exceptions
+- Can escalate further if needed
+
+**For architect**:
+- Can provide technical guidance
+- Ensures clean architectural decisions
+- Prevents technical debt from workarounds
+- Can escalate to user if fundamental
+
+**For Users**:
+- Only involved when truly needed
+- Clear options presented with pros/cons
+- Final authority on CFR changes
+- Informed decision making
+
+### Integration with CFR Enforcement
+
+The escalation workflow is part of the comprehensive CFR enforcement system:
+
+```
+Level 1: generator auto-delegation (US-038)
+    ↓
+Level 2: User story validation (US-039)
+    ↓
+Level 3: User request validation (US-039)
+    ↓
+Level 4: Agent self-check (US-039)
+    ↓
+Escalation: When complexity exceeds agent capability
+    ↓
+project_manager → architect → user
+```
+
+Each level provides increasing authority and decision-making power to resolve complexity while maintaining CFR integrity.
+
+---
+
 ## Key Principles
 
 ### 1. Single Responsibility
@@ -996,6 +1333,16 @@ Agents NEVER do another agent's work:
 ---
 
 ## Version History
+
+**Version**: 1.3
+**Date**: 2025-10-16
+**Changes**:
+- Added Task Delegation Tool Usage section with examples
+- Added Complexity Escalation Workflow section with detailed examples
+- Documented delegation tool integration with generator
+- Documented escalation chain (Agent → project_manager → architect → user)
+- Added escalation message format template
+- Enhanced collaboration patterns with delegation and escalation
 
 **Version**: 1.2
 **Date**: 2025-10-16

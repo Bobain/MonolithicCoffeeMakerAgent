@@ -24035,6 +24035,27 @@ Result: Ownership respected, work completed correctly
 - [ ] CFR violation detection for all 4 CFRs (001-004)
 - [ ] User notification system for violation exposure
 - [ ] Safe alternative suggestion system
+- [ ] Implement task delegation tool for agent-to-agent coordination
+- [ ] Implement complexity escalation workflow (Agent → project_manager → architect → user)
+
+**Task Delegation Tool**:
+- [ ] Create `delegate_task(task_description, context)` function in `coffee_maker/autonomous/ace/delegation_tool.py`
+- [ ] Integration with generator for centralized routing
+- [ ] Automatic CFR checking before delegation
+- [ ] Delegation trace capture for reflector analysis
+- [ ] Support for context passing between agents
+- [ ] Transparent result passing back to requesting agent
+- [ ] All agents have access to delegation tool
+
+**Complexity Escalation Workflow**:
+- [ ] Agent-level escalation: Detect when task violates CFRs
+- [ ] project_manager strategic simplification: Analyze complexity, provide guidance
+- [ ] architect technical simplification: Create specs/guidelines when needed
+- [ ] User escalation: Present options when neither PM nor architect can resolve
+- [ ] Escalation message format enforcement (standardized template)
+- [ ] Escalation tracking and logging for learning
+- [ ] Integration with warn_user() for critical escalations
+- [ ] Documentation of escalation patterns and resolutions
 
 **Level 2: User Story Validation**:
 - [ ] Parse user story requirements to identify involved agents
@@ -24088,10 +24109,15 @@ Result: Ownership respected, work completed correctly
 
 **Documentation**:
 - [ ] docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md already created ✅
+- [ ] CRITICAL_FUNCTIONAL_REQUIREMENTS.md updated with Task Delegation Tool ✅
+- [ ] CRITICAL_FUNCTIONAL_REQUIREMENTS.md updated with Complexity Escalation Workflow ✅
+- [ ] CRITICAL_FUNCTIONAL_REQUIREMENTS.md updated with Quick Reference guide ✅
 - [ ] architect creates docs/architecture/user_stories/US_039_TECHNICAL_SPEC.md
 - [ ] Document CFR validation API
 - [ ] Document violation detection algorithms
 - [ ] Document safe alternative patterns
+- [ ] Document task delegation tool API and usage
+- [ ] Document complexity escalation workflow and templates
 - [ ] Add troubleshooting guide for CFR violations
 
 ### Technical Design (High-Level)
