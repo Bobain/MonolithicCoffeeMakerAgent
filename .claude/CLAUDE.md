@@ -356,11 +356,17 @@ poetry run project-manager /status
    - **Documentation Expert**: Has profound knowledge of ALL project docs (ROADMAP, specs, CLAUDE.md)
    - **Intelligent Dispatcher**: Routes requests to appropriate specialized agents
    - **Demo Creator**: Creates visual demos using Puppeteer MCP to showcase features (ONLY agent that creates demos)
-   - **Bug Reporter**: Tests features, detects bugs, analyzes them, and reports to project_manager
+   - **Bug Reporter**: Tests features, detects bugs, provides comprehensive analysis to project_manager
+   - **Bug Report Content**: When bugs found, assistant provides:
+     - Root cause analysis (what went wrong technically)
+     - Requirements for fix (specific changes needed)
+     - Expected behavior once corrected (how it should work)
+     - Complete reproduction steps, environment details, impact assessment
+     - This enables architect and code_developer to fix the problem before assistant retries demo
    - Handles quick questions directly using deep documentation knowledge
    - Delegates complex tasks to specialists based on clear decision framework
    - Does NOT compete with specialized agents
-   - Think of it as "librarian + traffic controller + demo producer + QA reporter"
+   - Think of it as "librarian + traffic controller + demo producer + comprehensive QA reporter"
    - **NEVER modifies code or strategic docs** - Always READ-ONLY for code/docs, but ACTIVE for demos and bug reports
    - **Keeps ROADMAP in great detail in mind** at all times
 
@@ -444,14 +450,21 @@ code_developer: "Feature X is complete"
 → assistant creates demo to showcase feature
 
 assistant (during demo): Detects bug in feature
-→ assistant analyzes bug thoroughly
-→ assistant reports to project_manager with analysis
-→ project_manager adds critical priority to ROADMAP
+→ assistant analyzes bug COMPREHENSIVELY:
+   - Root cause analysis (technical explanation)
+   - Requirements for fix (specific changes needed)
+   - Expected behavior once corrected (how it should work)
+   - Complete reproduction steps, environment, impact
+→ assistant reports COMPREHENSIVE analysis to project_manager
+→ project_manager adds critical priority to ROADMAP with full details
+→ architect designs fix based on assistant's analysis
+→ code_developer implements fix using architect's design + assistant's requirements
+→ assistant retries demo to verify fix works
 
 User to user_listener: "Test the registration flow"
 → user_listener delegates to assistant
 → assistant tests with Puppeteer
-→ If bugs found: assistant reports to project_manager
+→ If bugs found: assistant provides comprehensive bug report to project_manager
 ```
 
 **✅ Correct Usage - Other Tasks**:
@@ -482,6 +495,13 @@ assistant tries to verify DoD post-completion
 
 assistant tries to add bugs to ROADMAP directly
 → NO! assistant reports to project_manager, who adds to ROADMAP
+
+assistant provides BRIEF bug report without analysis
+→ NO! assistant must provide COMPREHENSIVE report with:
+   - Root cause analysis
+   - Requirements for fix
+   - Expected behavior once corrected
+   - Complete details for architect/code_developer
 
 project_manager tries to create a PR
 → NO! code_developer creates PRs

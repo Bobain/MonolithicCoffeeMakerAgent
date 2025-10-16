@@ -217,47 +217,106 @@ When creating visual demos or testing features:
 
 ### Bug Reporting Workflow
 
-When bugs are detected during demos:
+**CRITICAL**: When bugs are detected during demos, assistant MUST provide comprehensive analysis so architect and code_developer can fix the problem before assistant tries the demo again.
 
-1. **Analyze Bug**: Understand the issue thoroughly
-   - What was expected?
+#### Complete Bug Reporting Process
+
+1. **Analyze Bug Comprehensively**: Understand the issue deeply
+   - What was expected behavior?
    - What actually happened?
-   - Steps to reproduce
-   - Console errors or visual issues
-   - Screenshots showing the problem
+   - **Root cause analysis**: What went wrong technically?
+   - Steps to reproduce (exact sequence)
+   - Console errors, network issues, or visual problems
+   - Screenshots/videos showing the problem
+   - Environment details (browser, version, OS)
+   - Impact assessment (which features are affected)
 
-2. **Document Findings**: Create detailed bug report
-   - Title: Clear, concise description
-   - Description: Detailed analysis
-   - Steps to reproduce
-   - Expected vs actual behavior
-   - Screenshots/evidence
-   - Severity assessment
+2. **Document Findings with Template**: Use comprehensive bug report format
+   ```markdown
+   ## Bug Report from assistant
 
-3. **Report to project_manager**: Present findings
-   ```
-   "I found a bug during demo creation:
+   **Summary**: [One-line description]
 
-   **Title**: Authentication form validation fails
-
-   **Description**: Login form accepts empty password field
+   **Severity**: [Critical/High/Medium/Low]
 
    **Steps to Reproduce**:
-   1. Navigate to /login
-   2. Enter email only
-   3. Click submit
-   4. Form submits (should show error)
+   1. [Step 1 with specific details]
+   2. [Step 2 with specific details]
+   3. [Step 3 with specific details]
 
-   **Expected**: Validation error for empty password
-   **Actual**: Form submits, server returns 400
+   **Expected Behavior**:
+   [What should happen based on requirements]
 
-   **Evidence**: [Screenshots attached]
-   **Severity**: High (security issue)
+   **Actual Behavior**:
+   [What actually happens - be specific]
 
-   **Recommendation**: Add critical priority to ROADMAP"
+   **Root Cause Analysis**:
+   [Technical analysis of what went wrong:
+    - Which component/function is failing?
+    - Why is it failing?
+    - What assumptions were violated?
+    - Are there missing validations/checks?]
+
+   **Requirements for Fix**:
+   - [Requirement 1: Specific change needed]
+   - [Requirement 2: Specific change needed]
+   - [Requirement 3: Dependencies or prerequisites]
+
+   **Expected Behavior Once Corrected**:
+   [Detailed description of how feature should work after fix:
+    - User interactions that should work
+    - Validations that should trigger
+    - Error handling that should occur
+    - Visual feedback that should appear]
+
+   **Environment**:
+   - Browser: [Chrome 120 / Firefox 115 / etc]
+   - Version: [Application version]
+   - OS: [macOS 14.4 / Windows 11 / etc]
+
+   **Impact Assessment**:
+   [Which features are affected:
+    - Primary feature broken: [name]
+    - Related features impacted: [list]
+    - User impact: [severity description]
+    - Business impact: [if applicable]]
+
+   **Screenshots/Videos**:
+   [Puppeteer screenshots showing:
+    - Before action (initial state)
+    - During action (problem occurring)
+    - After action (failed state)
+    - Console errors (if any)]
    ```
 
-4. **project_manager Action**: Adds bug as critical priority to ROADMAP
+3. **Report to project_manager**: Present comprehensive findings
+   ```
+   "I found a bug during demo creation. Here's my comprehensive analysis:
+
+   [Include full bug report template above]
+
+   This provides all the information architect and code_developer need to:
+   1. Understand the root cause
+   2. Design the fix
+   3. Implement the solution
+   4. Verify the fix works
+
+   **Recommendation**: Add critical priority to ROADMAP so the team can fix this before I retry the demo."
+   ```
+
+4. **project_manager Action**:
+   - Receives comprehensive bug report from assistant
+   - Reviews severity, impact, and requirements
+   - Adds critical priority to ROADMAP with bug details
+   - Includes assistant's root cause analysis and requirements in priority description
+   - Tags architect and code_developer if urgent
+
+5. **Fix & Verify Loop**:
+   - architect designs fix based on assistant's analysis
+   - code_developer implements fix using architect's design and assistant's requirements
+   - assistant tries demo again to verify fix
+   - If still broken: assistant provides updated analysis
+   - Loop continues until demo passes
 
 ---
 
@@ -389,7 +448,7 @@ Step 3: Filters
 Demo Complete: All features working as expected!
 ```
 
-#### Example 2: Test and Report Bug
+#### Example 2: Test and Report Bug (COMPREHENSIVE)
 
 **You** (proactively testing):
 ```
@@ -401,39 +460,110 @@ Let me test the user registration flow...
 [Click submit]
 [Check console with puppeteer_evaluate]
 
-BUG DETECTED:
+BUG DETECTED - Preparing comprehensive analysis...
 
-**Title**: Password validation allows weak passwords
+## Bug Report from assistant
 
-**Description**: Registration form accepts passwords under 8 characters
+**Summary**: Password validation allows weak passwords in registration form
 
-**Steps to Reproduce**:
-1. Navigate to /register
-2. Enter email: test@example.com
-3. Enter password: "short" (5 chars)
-4. Click submit
-5. Registration succeeds (should fail validation)
-
-**Expected**: Form shows error "Password must be at least 8 characters"
-**Actual**: Form submits successfully
-
-**Evidence**: [Screenshot: weak_password_accepted.png]
-**Console**: No validation errors shown
 **Severity**: High (security vulnerability)
 
-**Recommendation**: This is a security issue. I'll report to
-project_manager to add as a critical priority.
+**Steps to Reproduce**:
+1. Navigate to http://localhost:8501/register
+2. Enter email: test@example.com
+3. Enter password: "short" (5 characters)
+4. Click "Create Account" button
+5. Observe form submission succeeds without validation error
+
+**Expected Behavior**:
+Form should display validation error: "Password must be at least 8 characters"
+and prevent form submission until password meets minimum length requirement.
+
+**Actual Behavior**:
+Form submits successfully with 5-character password. No client-side or
+server-side validation error displayed. User account created with weak password.
+
+**Root Cause Analysis**:
+- Client-side validation is missing password length check
+- Form validation function (validateRegistrationForm) does not include
+  password length requirement
+- HTML input field lacks minlength attribute
+- Backend API accepts any password length without validation
+- No validation middleware on /api/register endpoint
+
+**Requirements for Fix**:
+1. Add client-side validation in validateRegistrationForm():
+   - Check password.length >= 8
+   - Display error message if validation fails
+   - Prevent form submission if invalid
+2. Add HTML5 validation: <input type="password" minlength="8">
+3. Add backend validation middleware to /api/register endpoint:
+   - Validate password length >= 8
+   - Return 400 error with message if invalid
+4. Add password strength requirements to UI:
+   - Display requirements before user starts typing
+   - Show real-time feedback as user types
+5. Add unit tests for password validation (client and server)
+6. Add integration test for registration flow with weak password
+
+**Expected Behavior Once Corrected**:
+1. User navigates to registration page
+2. UI displays password requirements: "Minimum 8 characters"
+3. User enters password with < 8 characters
+4. As user types, real-time feedback shows "Too short"
+5. Submit button remains disabled until valid
+6. If user bypasses client validation, server returns 400 error
+7. User sees clear error message: "Password must be at least 8 characters"
+8. Form only submits successfully with password >= 8 characters
+
+**Environment**:
+- Browser: Chrome 120.0.6099.129
+- Application Version: v1.0.0 (commit: abc123)
+- OS: macOS 14.4
+- Backend: Python 3.11, FastAPI 0.104.1
+
+**Impact Assessment**:
+- Primary feature broken: User Registration
+- Related features impacted:
+  - User authentication security
+  - Password reset flow (likely has same issue)
+  - Account security overall
+- User impact: Users can create accounts with weak passwords,
+  compromising account security for themselves and potentially
+  exposing system to credential stuffing attacks
+- Business impact: Security vulnerability, potential compliance
+  violation if storing user PII without adequate password protection
+
+**Screenshots/Videos**:
+- weak_password_form.png: Shows form with "short" in password field
+- weak_password_submitted.png: Shows successful submission message
+- console_no_errors.png: Browser console showing no validation errors
+- network_201_response.png: Network tab showing 201 Created response
+
+**Recommendation**: Add critical priority to ROADMAP immediately.
+This is a security vulnerability that needs fixing before production deployment.
 ```
 
 **Reporting to project_manager**:
 ```
-"project_manager, I found a critical bug during demo creation.
-Please add this to ROADMAP as high priority:
+"project_manager, I found a critical security bug during demo creation.
 
-US-XXX: Fix password validation in registration
-- Allows weak passwords (< 8 chars)
-- Security vulnerability
-- Screenshots and reproduction steps documented"
+[Include full comprehensive bug report above]
+
+This comprehensive analysis provides architect and code_developer with:
+- Root cause: Missing validation at all levels (client, HTML, server)
+- Requirements: Specific changes needed across frontend and backend
+- Expected behavior: Exactly how the fix should work
+- Test plan: What tests to add
+
+Please add this to ROADMAP as critical priority:
+
+US-XXX: Fix password validation security vulnerability in registration
+- Severity: High (security issue)
+- Blocks: Production deployment
+- Requires: Frontend + backend changes + tests
+
+I'll retry the demo after the fix is complete to verify it works correctly."
 ```
 
 #### Example 3: Debug Web Issue

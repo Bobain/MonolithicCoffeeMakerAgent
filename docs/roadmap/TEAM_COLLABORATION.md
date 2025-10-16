@@ -158,59 +158,116 @@ User Request → user_listener → assistant (creates demo)
 
 #### When Bug Detected During Demo
 
+**CRITICAL**: assistant must provide comprehensive bug reports with root cause analysis and requirements so architect and code_developer can fix the problem before assistant tries the demo again.
+
 **assistant responsibilities**:
 
-1. **Analyze Bug Thoroughly**
+1. **Analyze Bug Comprehensively**
    ```
-   What was expected?
+   What was expected behavior?
    What actually happened?
-   Steps to reproduce
-   Console errors or visual issues
-   Screenshots showing the problem
-   Severity assessment
+   ROOT CAUSE ANALYSIS: What went wrong technically?
+     - Which component/function is failing?
+     - Why is it failing?
+     - What assumptions were violated?
+     - Are there missing validations/checks?
+   Steps to reproduce (exact sequence)
+   Console errors, network issues, visual problems
+   Screenshots/videos showing the problem
+   Environment details (browser, version, OS)
+   Impact assessment (which features affected)
    ```
 
-2. **Document Findings**
-   ```
-   Title: Clear, concise description
-   Description: Detailed analysis
-   Steps to reproduce: Exact sequence
-   Expected vs actual behavior: Comparison
-   Evidence: Screenshots, console logs
-   Severity: Critical, High, Medium, Low
+2. **Document Findings Using Template**
+   ```markdown
+   ## Bug Report from assistant
+
+   **Summary**: [One-line description]
+
+   **Severity**: [Critical/High/Medium/Low]
+
+   **Steps to Reproduce**:
+   1. [Step 1 with specific details]
+   2. [Step 2 with specific details]
+   3. [Step 3 with specific details]
+
+   **Expected Behavior**:
+   [What should happen based on requirements]
+
+   **Actual Behavior**:
+   [What actually happens - be specific]
+
+   **Root Cause Analysis**:
+   [Technical analysis of what went wrong:
+    - Which component/function is failing?
+    - Why is it failing?
+    - What assumptions were violated?
+    - Are there missing validations/checks?]
+
+   **Requirements for Fix**:
+   - [Requirement 1: Specific change needed]
+   - [Requirement 2: Specific change needed]
+   - [Requirement 3: Dependencies or prerequisites]
+
+   **Expected Behavior Once Corrected**:
+   [Detailed description of how feature should work after fix:
+    - User interactions that should work
+    - Validations that should trigger
+    - Error handling that should occur
+    - Visual feedback that should appear]
+
+   **Environment**:
+   - Browser: [Chrome 120 / Firefox 115 / etc]
+   - Version: [Application version]
+   - OS: [macOS 14.4 / Windows 11 / etc]
+
+   **Impact Assessment**:
+   [Which features are affected:
+    - Primary feature broken: [name]
+    - Related features impacted: [list]
+    - User impact: [severity description]
+    - Business impact: [if applicable]]
+
+   **Screenshots/Videos**:
+   [Puppeteer screenshots showing:
+    - Before action (initial state)
+    - During action (problem occurring)
+    - After action (failed state)
+    - Console errors (if any)]
    ```
 
 3. **Report to project_manager**
    ```
-   Format:
-   "I found a bug during demo creation:
+   "I found a bug during demo creation. Here's my comprehensive analysis:
 
-   **Title**: [Clear bug description]
+   [Include full bug report template above]
 
-   **Description**: [Detailed analysis]
+   This provides all the information architect and code_developer need to:
+   1. Understand the root cause
+   2. Design the fix
+   3. Implement the solution
+   4. Verify the fix works
 
-   **Steps to Reproduce**:
-   1. [Step 1]
-   2. [Step 2]
-   3. [Step 3]
-
-   **Expected**: [What should happen]
-   **Actual**: [What actually happened]
-
-   **Evidence**: [Screenshots, console logs]
-   **Severity**: [Critical/High/Medium/Low]
-
-   **Recommendation**: [Suggested action]"
+   **Recommendation**: Add critical priority to ROADMAP so the team can
+   fix this before I retry the demo."
    ```
 
 4. **project_manager Action**
    ```
-   Receives bug report from assistant
-   Reviews severity and impact
-   Adds critical priority to ROADMAP
-   Updates format: US-XXX: Fix [bug description]
-   Assigns priority based on severity
-   Notifies code_developer if urgent
+   Receives comprehensive bug report from assistant
+   Reviews severity, impact, and requirements
+   Adds critical priority to ROADMAP with bug details
+   Includes assistant's root cause analysis and requirements in priority description
+   Tags architect and code_developer if urgent
+   ```
+
+5. **Fix & Verify Loop**
+   ```
+   architect designs fix based on assistant's analysis
+   code_developer implements fix using architect's design and assistant's requirements
+   assistant tries demo again to verify fix
+   If still broken: assistant provides updated analysis
+   Loop continues until demo passes
    ```
 
 #### Severity Guidelines
@@ -276,7 +333,7 @@ assistant:
 user_listener: "Here's the demo [shows to user]"
 ```
 
-### Example 3: Bug Found During Demo
+### Example 3: Bug Found During Demo (COMPREHENSIVE REPORT)
 
 **Flow**:
 ```
@@ -288,32 +345,124 @@ assistant:
   - Navigates to /register
   - Tests form validation
   - BUG DETECTED: Accepts weak passwords (< 8 chars)
-  - Analyzes bug thoroughly
-  - Documents with screenshots
+  - Analyzes bug comprehensively (root cause, requirements, impact)
+  - Documents with comprehensive template
   - Reports to project_manager:
 
-    "I found a critical bug during demo:
+    "I found a critical bug during demo. Here's my comprehensive analysis:
 
-    **Title**: Password validation allows weak passwords
-    **Description**: Registration accepts passwords under 8 characters
-    **Steps to Reproduce**: [detailed steps]
-    **Expected**: Validation error for weak password
-    **Actual**: Form submits successfully
-    **Evidence**: [screenshot: weak_password_accepted.png]
+    ## Bug Report from assistant
+
+    **Summary**: Password validation allows weak passwords in registration
+
     **Severity**: High (security vulnerability)
-    **Recommendation**: Add critical priority to ROADMAP"
+
+    **Steps to Reproduce**:
+    1. Navigate to http://localhost:8501/register
+    2. Enter email: test@example.com
+    3. Enter password: 'short' (5 characters)
+    4. Click 'Create Account' button
+    5. Observe form submission succeeds without validation error
+
+    **Expected Behavior**:
+    Form should display validation error: 'Password must be at least 8 characters'
+    and prevent form submission until password meets minimum length.
+
+    **Actual Behavior**:
+    Form submits successfully with 5-character password. No validation error
+    displayed. User account created with weak password.
+
+    **Root Cause Analysis**:
+    - Client-side validation missing password length check
+    - validateRegistrationForm() does not include length requirement
+    - HTML input lacks minlength attribute
+    - Backend API accepts any password length without validation
+    - No validation middleware on /api/register endpoint
+
+    **Requirements for Fix**:
+    1. Add client-side validation in validateRegistrationForm():
+       - Check password.length >= 8
+       - Display error message if validation fails
+       - Prevent form submission if invalid
+    2. Add HTML5 validation: <input type='password' minlength='8'>
+    3. Add backend validation middleware to /api/register:
+       - Validate password length >= 8
+       - Return 400 error with message if invalid
+    4. Add password requirements to UI with real-time feedback
+    5. Add unit tests for password validation (client and server)
+    6. Add integration test for registration with weak password
+
+    **Expected Behavior Once Corrected**:
+    1. User navigates to registration page
+    2. UI displays: 'Minimum 8 characters'
+    3. User enters < 8 characters
+    4. Real-time feedback shows 'Too short'
+    5. Submit button disabled until valid
+    6. If client validation bypassed, server returns 400 error
+    7. Clear error message displayed
+    8. Form only submits with password >= 8 characters
+
+    **Environment**:
+    - Browser: Chrome 120.0.6099.129
+    - Version: v1.0.0 (commit: abc123)
+    - OS: macOS 14.4
+    - Backend: Python 3.11, FastAPI 0.104.1
+
+    **Impact Assessment**:
+    - Primary feature broken: User Registration
+    - Related features impacted: Password reset flow, Account security
+    - User impact: Compromised account security, credential stuffing risk
+    - Business impact: Security vulnerability, potential compliance violation
+
+    **Screenshots/Videos**:
+    - weak_password_form.png
+    - weak_password_submitted.png
+    - console_no_errors.png
+    - network_201_response.png
+
+    This provides architect and code_developer with:
+    - Root cause: Missing validation at all levels
+    - Requirements: Specific changes needed
+    - Expected behavior: Exactly how fix should work
+    - Test plan: What tests to add
+
+    **Recommendation**: Add critical priority to ROADMAP immediately.
+    I'll retry the demo after the fix to verify it works correctly."
     ↓
 project_manager:
-  - Reviews bug report
+  - Reviews comprehensive bug report
   - Assesses impact (security issue = critical)
-  - Adds to ROADMAP:
-    "US-036: Fix password validation in registration
+  - Adds to ROADMAP with full details:
+    "US-036: Fix password validation security vulnerability in registration
      - Priority: Critical
-     - Allows weak passwords (< 8 chars)
-     - Security vulnerability"
-  - Notifies user via user_listener
+     - Root Cause: Missing validation at client/HTML/server levels
+     - Requirements: [includes assistant's 6 requirements]
+     - Expected Fix Behavior: [includes assistant's corrected flow]
+     - Blocks: Production deployment
+     - Assigned: architect (design) + code_developer (implement)"
+  - Tags architect and code_developer for urgent fix
     ↓
-user_listener: "Bug found and reported. project_manager added US-036 to ROADMAP as critical priority"
+architect:
+  - Reviews assistant's root cause analysis
+  - Designs fix based on assistant's requirements
+  - Creates technical specification for implementation
+  - Approves design with user (if needed)
+    ↓
+code_developer:
+  - Reviews architect's design and assistant's requirements
+  - Implements fix (client validation + HTML + backend + tests)
+  - Runs tests to verify fix
+  - Creates PR and marks US-036 complete
+    ↓
+user_listener: "US-036 fix is complete. assistant, please retry the demo."
+    ↓
+assistant:
+  - Retries registration flow demo
+  - Verifies weak password now rejected with clear error message
+  - Tests corrected behavior matches expected behavior from bug report
+  - Reports success: "Demo now passes! Password validation working correctly."
+    ↓
+user_listener: "Bug fixed and verified! Demo complete."
 ```
 
 ### Example 4: Code Developer Needs Demo Created
