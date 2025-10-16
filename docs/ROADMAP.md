@@ -22214,3 +22214,368 @@ user_listener: "✅ Added as US-034: Email Build Failure Notifications"
 - Confirmation dialog prevents unwanted additions
 
 ---
+
+## US-034: Create architect Agent for Technical Specifications and Dependency Management
+
+**Status**: 📝 PLANNED (HIGH PRIORITY)
+**Type**: Agent Creation / Architecture
+**Complexity**: High
+**Priority**: Critical
+**Created**: 2025-10-16
+
+### User Story
+
+> "As a development team, I want an architect agent that creates technical specifications before implementation, so that we have architectural consistency, proper dependency management, and clear technical guidelines."
+
+### Description
+
+Create a new architect agent that serves as the technical design authority for the system. The architect agent will:
+
+1. Create detailed technical specifications BEFORE code_developer implements features
+2. Document architectural decisions in ADRs (Architectural Decision Records)
+3. Manage dependencies with user approval (ONLY agent allowed to modify pyproject.toml)
+4. Provide implementation guidelines for code_developer to follow
+5. Ensure architectural consistency across the codebase
+6. Proactively ask users for approval on important architectural decisions
+
+The architect agent will be the bridge between strategic planning (project_manager) and implementation (code_developer), ensuring that technical decisions are well-documented and dependencies are managed safely.
+
+### Business Value
+
+**Architectural Consistency**: Prevents architectural drift by establishing clear patterns and guidelines before implementation begins.
+
+**Safe Dependency Management**: Centralizes dependency decisions in one agent that requires user approval, preventing uncontrolled dependency bloat.
+
+**Clear Technical Direction**: code_developer receives detailed specifications and guidelines, reducing ambiguity and implementation errors.
+
+**Documentation Quality**: ADRs provide historical context for why technical decisions were made, helping future developers understand the system.
+
+**Risk Reduction**: User approval for dependency changes prevents security vulnerabilities and licensing issues.
+
+### Estimated Effort
+
+2-3 days (16-24 hours)
+
+### What architect Will Own
+
+**Document Ownership**:
+- `docs/architecture/` - All technical architecture documentation
+  - `docs/architecture/specs/` - Technical specifications
+  - `docs/architecture/decisions/` - ADRs (Architectural Decision Records)
+  - `docs/architecture/guidelines/` - Implementation guidelines
+- `pyproject.toml` - ONLY agent allowed to modify dependencies
+- `poetry.lock` - Dependency lock file
+
+**Responsibilities**:
+1. Create technical specifications BEFORE implementation
+2. Document architectural decisions in ADRs
+3. Manage dependencies with user approval (ONLY agent that can run `poetry add`)
+4. Provide detailed implementation guidelines for code_developer
+5. Ensure architectural consistency across the codebase
+6. Proactively ask user for approval on important decisions
+7. Review code_developer implementations for architectural compliance (future)
+
+### Acceptance Criteria
+
+- [ ] architect agent definition created (`.claude/agents/architect.md`)
+- [ ] Directory structure created:
+  - [ ] `docs/architecture/specs/`
+  - [ ] `docs/architecture/decisions/`
+  - [ ] `docs/architecture/guidelines/`
+- [ ] ADR template created (`docs/architecture/decisions/ADR-000-template.md`)
+- [ ] Technical spec template created (`docs/architecture/specs/SPEC-template.md`)
+- [ ] Implementation guideline template created (`docs/architecture/guidelines/GUIDELINE-template.md`)
+- [ ] Dependency management workflow defined (requires user approval)
+- [ ] Integration with code_developer (architect creates specs → code_developer implements)
+- [ ] Integration with user_listener (user requests go through user_listener UI)
+- [ ] Documentation in CLAUDE.md updated to reflect architect ownership
+- [ ] File ownership matrix updated in DOCUMENT_OWNERSHIP_MATRIX.md
+- [ ] Comprehensive test coverage for architect workflows
+- [ ] Example ADR created demonstrating the format
+- [ ] Example technical spec created demonstrating the format
+
+### Technical Requirements
+
+**Core Components**:
+
+1. **Architect Agent Definition** (`.claude/agents/architect.md`):
+   - Clear role and responsibilities
+   - Document ownership boundaries
+   - Interaction patterns with other agents
+   - User approval workflow for dependencies
+   - Specification creation guidelines
+
+2. **Document Templates**:
+   - **ADR Template**: Standard format for architectural decisions
+     - Context, Decision, Consequences, Alternatives Considered
+     - Status (Proposed, Accepted, Deprecated, Superseded)
+     - Date and author information
+   - **Technical Spec Template**: Detailed implementation specifications
+     - Problem statement, proposed solution, technical details
+     - API definitions, data structures, algorithms
+     - Testing strategy, rollout plan
+   - **Implementation Guideline Template**: Code patterns and best practices
+     - When to use, how to implement, anti-patterns to avoid
+     - Code examples, testing approach
+
+3. **Directory Structure**:
+   ```
+   docs/architecture/
+   ├── decisions/
+   │   ├── ADR-000-template.md
+   │   ├── ADR-001-use-mixins-pattern.md
+   │   └── ADR-002-centralize-prompts.md
+   ├── specs/
+   │   ├── SPEC-template.md
+   │   └── SPEC-001-architect-agent.md
+   └── guidelines/
+       ├── GUIDELINE-template.md
+       └── GUIDELINE-001-error-handling.md
+   ```
+
+4. **Integration with code_developer**:
+   - architect creates specs in `docs/architecture/specs/`
+   - code_developer reads specs before implementation
+   - code_developer follows guidelines from `docs/architecture/guidelines/`
+   - code_developer references ADRs for context
+
+5. **Dependency Management Workflow**:
+   - ONLY architect can modify `pyproject.toml`
+   - architect MUST request user approval before adding dependencies
+   - User approval workflow:
+     1. architect identifies need for new dependency
+     2. architect creates proposal with justification
+     3. architect requests approval from user via user_listener
+     4. User approves/denies via user_listener UI
+     5. If approved, architect runs `poetry add <package>`
+     6. architect documents decision in ADR
+
+### Architect Workflow Examples
+
+**Example 1: Creating Technical Specification**
+
+```
+User (via user_listener): "Design the architecture for the new caching layer"
+     ↓
+user_listener delegates to architect
+     ↓
+architect:
+1. Analyzes requirements
+2. Creates SPEC-003-caching-layer.md in docs/architecture/specs/
+3. Defines:
+   - Cache storage mechanism (Redis vs in-memory)
+   - Cache invalidation strategy
+   - API design
+   - Performance requirements
+   - Testing strategy
+4. Returns spec location to user_listener
+     ↓
+user_listener presents to user: "Specification created at docs/architecture/specs/SPEC-003-caching-layer.md"
+     ↓
+User reviews and approves
+     ↓
+user_listener delegates to code_developer: "Implement SPEC-003"
+     ↓
+code_developer reads spec and implements
+```
+
+**Example 2: Managing Dependencies**
+
+```
+code_developer (internal thought): "I need the 'redis' package for caching"
+     ↓
+code_developer CANNOT modify pyproject.toml (not allowed)
+     ↓
+code_developer delegates to architect: "Need redis package for caching implementation"
+     ↓
+architect:
+1. Evaluates dependency (security, licensing, maintenance)
+2. Creates proposal with justification
+3. Requests approval from user via user_listener
+     ↓
+user_listener presents to user: "architect requests permission to add 'redis' package:
+- Purpose: Caching layer implementation
+- License: BSD-3-Clause (compatible)
+- Last updated: 2025-09 (actively maintained)
+- Security: No known vulnerabilities
+- Alternatives considered: in-memory cache (rejected: doesn't persist), memcached (rejected: less feature-rich)
+
+Approve? [y/n]"
+     ↓
+User: "y"
+     ↓
+architect runs: poetry add redis
+architect creates: ADR-005-use-redis-for-caching.md
+architect notifies code_developer: "redis package added, proceed with implementation"
+```
+
+**Example 3: Creating ADR**
+
+```
+architect (internal or user-triggered): "Document decision to use mixins pattern"
+     ↓
+architect creates ADR-001-use-mixins-pattern.md:
+
+# ADR-001: Use Mixins Pattern for Daemon Composition
+
+**Status**: Accepted
+**Date**: 2025-10-16
+**Author**: architect agent
+
+## Context
+The daemon.py file was becoming monolithic with multiple responsibilities.
+
+## Decision
+Use mixins pattern to compose daemon functionality.
+
+## Consequences
+**Positive**:
+- Better separation of concerns
+- Easier testing of individual components
+- More maintainable codebase
+
+**Negative**:
+- Slightly more complex file structure
+- Need to understand composition pattern
+
+## Alternatives Considered
+1. Inheritance hierarchy - Rejected: too rigid
+2. Separate service classes - Rejected: adds boilerplate
+```
+
+### Implementation Plan
+
+**Phase 1: Agent Definition & Structure (4 hours)**:
+- Create `.claude/agents/architect.md`
+- Create directory structure (`docs/architecture/`)
+- Define agent role and responsibilities
+- Document interaction patterns with other agents
+
+**Phase 2: Templates (4 hours)**:
+- Create ADR template
+- Create technical spec template
+- Create implementation guideline template
+- Add examples demonstrating each template
+
+**Phase 3: Dependency Management Workflow (6 hours)**:
+- Define user approval workflow
+- Document safety checks for dependencies
+- Create dependency evaluation criteria
+- Integrate with user_listener for approval requests
+- Test with example dependency addition
+
+**Phase 4: Integration (6 hours)**:
+- Update CLAUDE.md with architect information
+- Update DOCUMENT_OWNERSHIP_MATRIX.md
+- Update .claude/agents/code_developer.md (reads architect specs)
+- Update .claude/agents/user_listener.md (routes architectural requests)
+- Update .claude/agents/project_manager.md (distinguish strategic vs technical specs)
+
+**Phase 5: Documentation & Testing (4 hours)**:
+- Create example ADRs for existing decisions
+- Create example technical spec
+- Create example implementation guideline
+- Comprehensive testing
+- User acceptance testing
+
+### Files to Create/Modify
+
+**New Files**:
+- `.claude/agents/architect.md` - Agent definition
+- `docs/architecture/decisions/ADR-000-template.md` - ADR template
+- `docs/architecture/decisions/ADR-001-use-mixins-pattern.md` - Example ADR
+- `docs/architecture/specs/SPEC-template.md` - Technical spec template
+- `docs/architecture/specs/SPEC-001-architect-agent.md` - This spec (self-documenting)
+- `docs/architecture/guidelines/GUIDELINE-template.md` - Guideline template
+- `docs/architecture/guidelines/GUIDELINE-001-error-handling.md` - Example guideline
+- `tests/unit/test_architect_agent.py` - Unit tests
+
+**Modified Files**:
+- `.claude/CLAUDE.md` - Add architect to agent list, document ownership
+- `docs/DOCUMENT_OWNERSHIP_MATRIX.md` - Add architect ownership rows
+- `.claude/agents/code_developer.md` - Add spec reading workflow
+- `.claude/agents/user_listener.md` - Add architect delegation
+- `.claude/agents/project_manager.md` - Clarify strategic vs technical specs
+- `docs/ROADMAP.md` - This file (status updates)
+
+### Testing Strategy
+
+**Unit Tests** (10+ tests):
+- Test ADR creation
+- Test technical spec creation
+- Test dependency evaluation
+- Test approval workflow
+- Test integration with code_developer
+- Test integration with user_listener
+
+**Integration Tests** (8+ tests):
+- Test end-to-end spec creation workflow
+- Test dependency addition workflow
+- Test architect → code_developer handoff
+- Test user approval workflow
+
+**Manual Testing**:
+- Create real ADR for existing decision
+- Create real technical spec for future feature
+- Test dependency addition with user approval
+- Verify ownership boundaries are respected
+
+### Dependencies
+
+- user_listener agent (for user interactions)
+- code_developer agent (for implementation)
+- project_manager agent (for strategic coordination)
+- DOCUMENT_OWNERSHIP_MATRIX.md (for ownership rules)
+- CLAUDE.md (for system documentation)
+
+### Success Metrics
+
+- **Specification Quality**: Technical specs are clear and actionable
+- **ADR Usefulness**: Future developers reference ADRs for context
+- **Dependency Safety**: Zero unauthorized dependency additions
+- **User Approval Rate**: >90% approval rate for dependency requests
+- **Implementation Clarity**: code_developer requires <5% clarification requests
+- **Architectural Consistency**: Code reviews show consistent patterns
+
+### Ownership Boundaries
+
+**architect OWNS**:
+- `docs/architecture/` (all subdirectories)
+- `pyproject.toml` (dependency management only)
+- `poetry.lock` (managed via poetry commands)
+- Technical specifications for features
+- Architectural Decision Records (ADRs)
+- Implementation guidelines
+
+**architect DOES NOT OWN**:
+- `docs/roadmap/` (project_manager owns)
+- `docs/PRIORITY_*_TECHNICAL_SPEC.md` (project_manager owns - strategic specs)
+- `.claude/` (code_developer owns - technical configuration)
+- `coffee_maker/` (code_developer owns - implementation)
+- User interface (user_listener owns)
+
+**architect INTERACTS WITH**:
+- **user_listener**: Receives architectural requests, sends approval requests
+- **code_developer**: Provides specs and guidelines, receives implementation questions
+- **project_manager**: Coordinates on feature planning, distinguishes strategic vs technical specs
+
+### Future Enhancements
+
+1. **Automated Compliance Checking**: architect reviews PRs for architectural compliance
+2. **Pattern Library**: Maintain reusable architectural patterns
+3. **Dependency Scanning**: Automated security and license checks
+4. **Architecture Diagrams**: Generate visual architecture documentation
+5. **Refactoring Recommendations**: Proactively suggest architectural improvements
+6. **API Design Tools**: Specialized tools for API specification
+7. **Performance Modeling**: Model performance implications of architectural decisions
+
+### Notes
+
+- architect is a **technical authority**, not a strategic planner
+- architect **requires user approval** for dependency changes (safety-critical)
+- architect **creates specifications**, code_developer **implements** them
+- architect **interacts through user_listener** (no direct UI access)
+- architect **documents decisions**, providing historical context for future work
+- architect focuses on **HOW** (technical), project_manager focuses on **WHAT** (strategic)
+
+---
