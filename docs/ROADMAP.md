@@ -22579,3 +22579,915 @@ Use mixins pattern to compose daemon functionality.
 - architect focuses on **HOW** (technical), project_manager focuses on **WHAT** (strategic)
 
 ---
+
+## US-035: Implement Singleton Agent Enforcement
+
+**Status**: 📝 PLANNED (CRITICAL - Architectural Requirement)
+**Type**: Architecture / Safety
+**Complexity**: Medium
+**Priority**: CRITICAL
+**Created**: 2025-10-16
+
+### User Story
+
+> "As a system architect, I want to enforce that each agent type can only have ONE running instance at a time, so that we prevent resource conflicts, duplicate work, and ensure consistent state."
+
+### Description
+
+Implement singleton enforcement for all agents to prevent multiple instances of the same agent type from running simultaneously. This is a fundamental architectural requirement that was identified as missing during system analysis.
+
+**Why This Is Critical**:
+- Multiple instances could conflict (writing same files simultaneously)
+- Duplicate work wastes resources and causes race conditions
+- Inconsistent state between instances leads to bugs
+- File corruption risk when multiple agents write to same files
+- This is a fundamental architectural requirement that must be enforced
+
+Without singleton enforcement, we risk:
+- Two code_developer instances editing the same file
+- Multiple project_manager instances updating ROADMAP simultaneously
+- Race conditions in status tracking and notifications
+- Resource exhaustion from duplicate agent processes
+
+### Business Value
+
+**System Stability**: Prevents serious bugs caused by concurrent agent instances writing to the same resources.
+
+**Data Integrity**: Ensures consistent state across the system by preventing concurrent modifications.
+
+**Resource Efficiency**: Eliminates wasted resources from duplicate agent work.
+
+**Architectural Soundness**: Enforces a fundamental design principle that should have been in place from the start.
+
+### Estimated Effort
+
+2-3 days (6-8 hours)
+
+### Acceptance Criteria
+
+- [ ] Create `AgentRegistry` singleton class in `coffee_maker/autonomous/ace/agent_registry.py`
+- [ ] Registry tracks all running agent instances by type
+- [ ] Attempting to create duplicate agent raises `AgentAlreadyRunningError` with clear message
+- [ ] Add `@singleton` decorator for agent classes
+- [ ] Test singleton enforcement in `tests/unit/test_ace_singleton_agents.py` (20+ tests)
+- [ ] Document requirement in `docs/AGENT_SINGLETON_ARCHITECTURE.md`
+- [ ] Update `.claude/CLAUDE.md` with singleton requirement
+- [ ] Update all agent classes to use singleton pattern:
+  - [ ] code_developer
+  - [ ] project_manager
+  - [ ] user_listener
+  - [ ] architect
+  - [ ] assistant
+  - [ ] code-searcher
+  - [ ] ux-design-expert
+  - [ ] generator
+  - [ ] reflector
+  - [ ] curator
+- [ ] Add cleanup on agent shutdown (remove from registry)
+- [ ] Handle edge cases (crashed agents, stale registrations)
+- [ ] Thread-safe implementation with locks
+- [ ] Clear error messages when duplicate detected
+
+### Technical Design
+
+**AgentRegistry Class**:
+```python
+# coffee_maker/autonomous/ace/agent_registry.py
+
+from typing import Dict, Type, Optional
+import threading
+from datetime import datetime
+
+class AgentAlreadyRunningError(Exception):
+    """Raised when attempting to create a duplicate agent instance."""
+    pass
+
+class AgentRegistry:
+    """Singleton registry tracking all running agent instances."""
+
+    _instance = None
+    _lock = threading.Lock()
+
+    def __init__(self):
+        self._agents: Dict[str, tuple[object, datetime]] = {}
+        self._registry_lock = threading.Lock()
+
+    @classmethod
+    def get_instance(cls) -> 'AgentRegistry':
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = cls()
+        return cls._instance
+
+    def register_agent(self, agent_type: str, instance: object):
+        """Register an agent instance. Raises if duplicate exists."""
+        with self._registry_lock:
+            if agent_type in self._agents:
+                existing_instance, registered_at = self._agents[agent_type]
+                raise AgentAlreadyRunningError(
+                    f"Agent '{agent_type}' is already running "
+                    f"(registered at {registered_at}). "
+                    f"Only one instance per agent type is allowed."
+                )
+            self._agents[agent_type] = (instance, datetime.now())
+
+    def unregister_agent(self, agent_type: str):
+        """Unregister an agent instance."""
+        with self._registry_lock:
+            self._agents.pop(agent_type, None)
+
+    def is_registered(self, agent_type: str) -> bool:
+        """Check if an agent type is registered."""
+        with self._registry_lock:
+            return agent_type in self._agents
+
+    def get_registered_agents(self) -> Dict[str, datetime]:
+        """Get all registered agent types and their registration times."""
+        with self._registry_lock:
+            return {
+                agent_type: registered_at
+                for agent_type, (_, registered_at) in self._agents.items()
+            }
+
+    def cleanup_stale_agents(self, max_age_minutes: int = 60):
+        """Remove agents registered longer than max_age_minutes."""
+        with self._registry_lock:
+            now = datetime.now()
+            stale_agents = [
+                agent_type
+                for agent_type, (_, registered_at) in self._agents.items()
+                if (now - registered_at).total_seconds() > max_age_minutes * 60
+            ]
+            for agent_type in stale_agents:
+                self._agents.pop(agent_type)
+            return stale_agents
+```
+
+**Singleton Decorator**:
+```python
+def singleton(agent_type: str):
+    """Decorator to enforce singleton pattern for agent classes."""
+    def decorator(cls):
+        original_init = cls.__init__
+
+        def new_init(self, *args, **kwargs):
+            registry = AgentRegistry.get_instance()
+            registry.register_agent(agent_type, self)
+            try:
+                original_init(self, *args, **kwargs)
+            except Exception:
+                registry.unregister_agent(agent_type)
+                raise
+
+        cls.__init__ = new_init
+
+        # Add cleanup on delete
+        original_del = getattr(cls, '__del__', None)
+
+        def new_del(self):
+            registry = AgentRegistry.get_instance()
+            registry.unregister_agent(agent_type)
+            if original_del:
+                original_del(self)
+
+        cls.__del__ = new_del
+
+        return cls
+
+    return decorator
+```
+
+**Usage Example**:
+```python
+from coffee_maker.autonomous.ace.agent_registry import singleton
+
+@singleton("code_developer")
+class CodeDeveloper:
+    def __init__(self):
+        # If another CodeDeveloper instance exists,
+        # AgentAlreadyRunningError is raised here
+        pass
+
+# First instance succeeds
+dev1 = CodeDeveloper()
+
+# Second instance fails with clear error
+try:
+    dev2 = CodeDeveloper()  # Raises AgentAlreadyRunningError
+except AgentAlreadyRunningError as e:
+    print(e)  # "Agent 'code_developer' is already running..."
+```
+
+### Implementation Plan
+
+**Phase 1: Core Registry (3 hours)**:
+- Create `AgentRegistry` class
+- Implement singleton pattern for registry
+- Thread-safe registration/unregistration
+- Stale agent cleanup logic
+
+**Phase 2: Decorator & Integration (2 hours)**:
+- Create `@singleton` decorator
+- Add to all agent classes
+- Implement cleanup on agent shutdown
+- Error handling for edge cases
+
+**Phase 3: Testing (2 hours)**:
+- Unit tests for `AgentRegistry` (15+ tests)
+- Test singleton enforcement
+- Test thread safety
+- Test cleanup logic
+- Test error messages
+
+**Phase 4: Documentation (1 hour)**:
+- Create `docs/AGENT_SINGLETON_ARCHITECTURE.md`
+- Update `.claude/CLAUDE.md`
+- Document usage patterns
+- Add troubleshooting guide
+
+### Files to Create/Modify
+
+**New Files**:
+- `coffee_maker/autonomous/ace/agent_registry.py` - AgentRegistry singleton
+- `tests/unit/test_ace_singleton_agents.py` - Comprehensive tests (20+ tests)
+- `docs/AGENT_SINGLETON_ARCHITECTURE.md` - Architecture documentation
+
+**Modified Files**:
+- `.claude/CLAUDE.md` - Add singleton requirement to architecture section
+- `coffee_maker/autonomous/daemon.py` - Add @singleton decorator
+- `coffee_maker/cli/user_listener.py` - Add @singleton decorator
+- `coffee_maker/autonomous/agents/architect.py` - Add @singleton decorator
+- `coffee_maker/autonomous/ace/generator.py` - Add @singleton decorator
+- `coffee_maker/autonomous/ace/reflector.py` - Add @singleton decorator
+- `coffee_maker/autonomous/ace/curator.py` - Add @singleton decorator
+- All other agent files - Add @singleton decorator
+
+### Testing Strategy
+
+**Unit Tests** (20+ tests in `test_ace_singleton_agents.py`):
+- Test AgentRegistry singleton pattern
+- Test agent registration success
+- Test duplicate registration failure
+- Test agent unregistration
+- Test cleanup on agent shutdown
+- Test stale agent cleanup
+- Test thread safety (concurrent registrations)
+- Test error messages are clear
+- Test edge cases (crashed agents, null instances)
+- Test multiple agent types don't conflict
+- Test registry state after cleanup
+
+**Integration Tests** (5+ tests):
+- Test agent lifecycle with singleton enforcement
+- Test daemon startup with singleton agents
+- Test agent restart after crash
+- Test cleanup on process exit
+
+**Manual Testing**:
+- Attempt to start two code_developer instances manually
+- Verify clear error message
+- Test agent restart after clean shutdown
+- Test agent cleanup after crash
+
+### Dependencies
+
+- All agent classes (to add @singleton decorator)
+- Threading library (for locks)
+- Datetime library (for stale agent tracking)
+
+### Success Metrics
+
+- **Zero Duplicate Instances**: No agent can have multiple running instances
+- **Clear Error Messages**: Users understand why duplicate creation failed
+- **No False Positives**: Legitimate agent restarts work correctly
+- **Thread Safety**: Concurrent agent operations don't cause race conditions
+- **Stale Cleanup**: Crashed agents don't permanently block new instances
+
+### Edge Cases to Handle
+
+1. **Crashed Agent**: Agent crashes without cleanup → Stale cleanup handles it
+2. **Process Kill**: Process killed hard → Registry cleared on process restart
+3. **Concurrent Creation**: Two threads try to create same agent → First wins, second fails
+4. **Agent Restart**: Agent cleanly exits and restarts → Unregister then register succeeds
+5. **Stale Registry**: Agent registered but process is dead → Cleanup based on age
+
+### Future Enhancements
+
+1. **Distributed Registry**: Support agents across multiple processes/machines
+2. **Health Checks**: Ping agents to verify they're still alive
+3. **Automatic Recovery**: Detect crashed agents and restart them
+4. **Metrics**: Track agent uptime, restart frequency, failure rates
+5. **Audit Log**: Track all agent registrations/unregistrations
+
+### Notes
+
+- This is a **critical architectural gap** that was missed initially
+- Should be implemented BEFORE adding more features
+- Prevents serious bugs that could corrupt data
+- Relatively low effort for high value (critical safety feature)
+- Thread-safe implementation is essential
+- Clear error messages help debugging
+
+---
+
+## US-036: Polish Console UI to Claude-CLI Quality
+
+**Status**: 📝 PLANNED
+**Type**: User Experience / Polish
+**Complexity**: Medium
+**Priority**: MEDIUM-HIGH
+**Created**: 2025-10-16
+
+### User Story
+
+> "As a project manager user, I want project-manager chat to have polished console UI matching claude-cli quality, so that the user experience is professional, intuitive, and delightful."
+
+### Description
+
+Enhance the project-manager console UI to match the professional quality and smooth user experience of claude-cli. Currently, the UI works but lacks polish and professional feel. This US will bring it to production quality.
+
+**Current State**:
+- Basic UI exists and works functionally
+- Lacks polish and professional feel
+- Not as smooth as claude-cli
+- Limited visual feedback
+- Basic error handling
+
+**Target State**:
+- Professional, polished UI matching claude-cli quality
+- Smooth streaming responses (character-by-character)
+- Rich formatting and colors
+- Intuitive keyboard shortcuts
+- Clear progress indicators
+- Delightful user experience
+
+### Business Value
+
+**User Satisfaction**: Professional UI increases user confidence and satisfaction with the tool.
+
+**Productivity**: Smooth UX reduces friction and makes users more productive.
+
+**Adoption**: Polish encourages wider adoption across the team.
+
+**Professional Image**: Production-quality UI reflects well on the entire project.
+
+### Estimated Effort
+
+2-3 days (12-16 hours)
+
+### Acceptance Criteria
+
+**Core UI Polish**:
+- [ ] Smooth streaming responses (character-by-character like claude-cli)
+- [ ] Rich formatting using `rich` library (colors, bold, italic, tables)
+- [ ] Consistent color scheme (agent names, status, errors, warnings)
+- [ ] Progress indicators for long operations (spinners, progress bars)
+- [ ] Error messages clear, actionable, and nicely formatted
+- [ ] Clean, professional welcome screen with project info
+
+**Keyboard Shortcuts**:
+- [ ] Ctrl+C: Graceful exit with confirmation
+- [ ] Ctrl+D: Exit (standard Unix convention)
+- [ ] Ctrl+L: Clear screen
+- [ ] Up/Down arrows: Navigate command history
+- [ ] Tab: Command/argument autocomplete
+- [ ] Ctrl+R: Reverse search through history
+
+**Advanced Input**:
+- [ ] Autocomplete for commands (TAB completion)
+- [ ] Command history (up/down arrows)
+- [ ] Multi-line input support (for long prompts)
+- [ ] Syntax highlighting for code blocks in responses
+- [ ] Copy/paste support
+
+**Visual Feedback**:
+- [ ] Loading spinners for async operations (with descriptive text)
+- [ ] Progress bars for long-running tasks
+- [ ] Status indicators (✓ success, ✗ error, ⚠ warning, ℹ info)
+- [ ] Timestamps for messages (optional, configurable)
+- [ ] Agent name clearly visible (colored, bold)
+
+**Responsive Design**:
+- [ ] Handle terminal resize gracefully (no broken formatting)
+- [ ] Support both light and dark themes
+- [ ] Adapt to small terminal sizes (80x24 minimum)
+- [ ] Word wrapping for long lines
+
+**Error Handling**:
+- [ ] Graceful handling of network errors
+- [ ] Clear error messages with suggestions
+- [ ] Automatic retry on transient errors
+- [ ] Error log available for debugging
+
+### Technical Requirements
+
+**Dependencies**:
+- `rich`: Rich text formatting and console UI
+- `prompt_toolkit`: Advanced input handling (history, autocomplete)
+- `click`: CLI framework enhancements
+
+**Architecture**:
+```python
+# coffee_maker/cli/console_ui.py
+
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.table import Table
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.syntax import Syntax
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.completion import WordCompleter
+
+class PolishedConsoleUI:
+    """Professional console UI matching claude-cli quality."""
+
+    def __init__(self):
+        self.console = Console()
+        self.session = PromptSession(
+            history=FileHistory('.project_manager_history'),
+            auto_suggest=AutoSuggestFromHistory(),
+        )
+
+    def print_welcome(self):
+        """Print professional welcome screen."""
+        # Rich formatted welcome with project info
+        pass
+
+    def stream_response(self, text_generator):
+        """Stream response character-by-character."""
+        # Smooth streaming like claude-cli
+        pass
+
+    def show_progress(self, description: str):
+        """Show loading spinner with description."""
+        # Rich progress indicator
+        pass
+
+    def format_error(self, error: Exception):
+        """Format error message with suggestions."""
+        # Clear, actionable error messages
+        pass
+
+    def get_user_input(self, prompt: str = "> "):
+        """Get user input with autocomplete and history."""
+        # prompt_toolkit advanced input
+        pass
+```
+
+**Streaming Response Example**:
+```python
+def stream_response(self, text_generator):
+    """Stream response character-by-character like claude-cli."""
+    buffer = ""
+    for chunk in text_generator:
+        buffer += chunk
+        # Smooth streaming with markdown rendering
+        if buffer.endswith(('.', '!', '?', '\n')):
+            self.console.print(buffer, end='')
+            buffer = ""
+    if buffer:
+        self.console.print(buffer)
+```
+
+**Autocomplete Example**:
+```python
+commands = [
+    '/roadmap', '/status', '/notifications', '/verify-dod',
+    '/github-status', '/help', '/exit'
+]
+
+completer = WordCompleter(commands, ignore_case=True)
+
+text = self.session.prompt(
+    '> ',
+    completer=completer,
+    complete_while_typing=True
+)
+```
+
+### Implementation Plan
+
+**Phase 1: Rich Library Integration (4 hours)**:
+- Install and configure `rich`
+- Create `PolishedConsoleUI` class
+- Implement basic formatting (colors, bold, tables)
+- Design color scheme matching claude-cli
+
+**Phase 2: Streaming Responses (3 hours)**:
+- Implement character-by-character streaming
+- Add markdown rendering for responses
+- Smooth animation timing
+- Syntax highlighting for code blocks
+
+**Phase 3: Advanced Input (4 hours)**:
+- Install and configure `prompt_toolkit`
+- Implement command history (file-based)
+- Implement autocomplete (TAB completion)
+- Add keyboard shortcuts (Ctrl+C, Ctrl+D, Ctrl+L)
+- Multi-line input support
+
+**Phase 4: Visual Feedback (3 hours)**:
+- Loading spinners for async operations
+- Progress bars for long tasks
+- Status indicators (✓ ✗ ⚠ ℹ)
+- Timestamps (optional, configurable)
+
+**Phase 5: Error Handling & Polish (4 hours)**:
+- Graceful error formatting
+- Terminal resize handling
+- Light/dark theme support
+- Welcome screen design
+- Testing on various terminal sizes
+
+### Files to Create/Modify
+
+**New Files**:
+- `coffee_maker/cli/console_ui.py` - Polished console UI class
+- `coffee_maker/cli/ui_config.py` - UI configuration (colors, themes)
+- `tests/unit/test_console_ui.py` - Unit tests for UI components
+- `.project_manager_history` - Command history file (git-ignored)
+
+**Modified Files**:
+- `coffee_maker/cli/project_manager_cli.py` - Use PolishedConsoleUI
+- `pyproject.toml` - Add dependencies (rich, prompt_toolkit)
+- `.gitignore` - Ignore history file
+- `docs/USER_GUIDE.md` - Document keyboard shortcuts and UI features
+
+### Testing Strategy
+
+**Unit Tests** (10+ tests):
+- Test markdown rendering
+- Test streaming response
+- Test error formatting
+- Test autocomplete
+- Test keyboard shortcuts
+- Test theme switching
+
+**Integration Tests** (5+ tests):
+- Test full conversation flow
+- Test command history persistence
+- Test terminal resize handling
+- Test multi-line input
+
+**Manual Testing**:
+- Test on various terminal emulators (iTerm2, Terminal.app, VS Code terminal)
+- Test on different terminal sizes (80x24, 120x40, fullscreen)
+- Test light and dark themes
+- Test keyboard shortcuts
+- User acceptance testing with real users
+
+**Visual Testing**:
+- Screenshot comparisons with claude-cli
+- Animation smoothness testing
+- Color scheme consistency testing
+
+### Dependencies
+
+- `rich>=13.0.0` - Rich text formatting
+- `prompt_toolkit>=3.0.0` - Advanced input handling
+- `click>=8.0.0` - CLI framework (already used)
+- Existing project_manager CLI infrastructure
+
+### Success Metrics
+
+- **User Satisfaction**: Positive feedback from user testing (>8/10 rating)
+- **Smoothness**: Streaming feels as smooth as claude-cli
+- **Visual Quality**: Matches claude-cli professional appearance
+- **Keyboard Shortcuts**: All shortcuts work reliably
+- **Error Handling**: Users understand and recover from errors
+- **Adoption**: Increased usage of project-manager chat
+
+### Design Inspiration
+
+Study claude-cli for:
+- Streaming response animation
+- Color scheme and formatting
+- Error message presentation
+- Loading indicators
+- Keyboard shortcut patterns
+- Overall polish and feel
+
+### Future Enhancements
+
+1. **Custom Themes**: User-configurable color schemes
+2. **Plugin System**: Extend UI with custom components
+3. **Voice Input**: Optional voice command support
+4. **Keyboard Macro**: Record and replay command sequences
+5. **Split Panes**: Show status in sidebar while chatting
+6. **Search**: Search through conversation history
+7. **Export**: Export conversations to markdown/HTML
+
+### Notes
+
+- This is about **polish and UX**, not new features
+- Focus on matching claude-cli quality
+- Smooth animations are critical for professional feel
+- Keyboard shortcuts must be intuitive and consistent
+- Error messages should guide users to solutions
+- Test on multiple terminal emulators
+- User testing is essential for success
+
+---
+
+## US-037: Create ACE Console Demo Tutorial
+
+**Status**: 📝 PLANNED
+**Type**: Documentation / Onboarding
+**Complexity**: Low
+**Priority**: MEDIUM
+**Created**: 2025-10-16
+
+### User Story
+
+> "As a new user learning the ACE system, I want a comprehensive console UI demo tutorial, so that I can quickly learn how to use ACE agents via command line."
+
+### Description
+
+Create a comprehensive tutorial document demonstrating how to use the ACE (Agentic Context Engineering) framework via the console interface. This tutorial will help new users quickly understand and adopt the ACE system.
+
+**Current State**:
+- ACE framework is functional and powerful
+- Documentation exists but is scattered
+- No single tutorial demonstrating console usage
+- New users struggle to get started
+
+**Target State**:
+- Comprehensive tutorial document in `docs/`
+- Step-by-step examples with expected outputs
+- 5+ real-world scenarios
+- Screenshots/recordings of console interactions
+- Troubleshooting guide
+- FAQ for common questions
+
+### Business Value
+
+**Faster Onboarding**: New users can learn the system in 30 minutes instead of hours of trial and error.
+
+**Reduced Support Burden**: Self-service tutorial reduces questions to maintainers.
+
+**Increased Adoption**: Easy onboarding encourages more team members to use ACE.
+
+**Documentation Quality**: Sets standard for future documentation.
+
+### Estimated Effort
+
+1 day (4-6 hours)
+
+### Acceptance Criteria
+
+**Core Tutorial**:
+- [ ] Create `docs/ACE_CONSOLE_DEMO_TUTORIAL.md`
+- [ ] Cover all ACE agent invocations:
+  - [ ] generator (trace capture)
+  - [ ] reflector (insight extraction)
+  - [ ] curator (playbook maintenance)
+- [ ] Provide step-by-step examples with expected outputs
+- [ ] Include 5+ real-world scenarios
+- [ ] Add troubleshooting section (5+ common issues)
+- [ ] Include screenshots or recordings of console interactions
+
+**Documentation Quality**:
+- [ ] Clear, concise writing (>1000 words)
+- [ ] Code blocks with syntax highlighting
+- [ ] Consistent formatting throughout
+- [ ] Cross-references to other docs
+- [ ] Table of contents
+- [ ] Quick reference card
+
+**Integration**:
+- [ ] Link from `docs/TUTORIALS.md` main page
+- [ ] Link from README.md
+- [ ] Link from `.claude/CLAUDE.md`
+- [ ] Link from agent definitions
+
+**User Testing**:
+- [ ] Test tutorial with 3+ new users
+- [ ] Incorporate feedback and refine
+- [ ] Verify all examples work correctly
+- [ ] Confirm screenshots are clear and helpful
+
+### Content Outline
+
+**1. Introduction to ACE Framework** (200 words):
+- What is ACE?
+- Why use ACE agents?
+- Overview of generator, reflector, curator
+- When to use each agent
+
+**2. Prerequisites & Setup** (100 words):
+- Required installations
+- Environment variables
+- First-time configuration
+- Verification steps
+
+**3. Tutorial 1: Using Generator** (300 words):
+- What generator does (trace capture)
+- How to invoke generator
+- Example: Capture trace from code_developer
+- Interpreting the trace output
+- Where traces are stored
+
+**4. Tutorial 2: Using Reflector** (300 words):
+- What reflector does (insight extraction)
+- How to invoke reflector
+- Example: Extract insights from trace
+- Understanding delta items
+- Where insights are stored
+
+**5. Tutorial 3: Using Curator** (300 words):
+- What curator does (playbook maintenance)
+- How to invoke curator
+- Example: Update playbook with insights
+- Viewing the playbook
+- Understanding effectiveness scores
+
+**6. Tutorial 4: Complete ACE Workflow** (400 words):
+- End-to-end example: Implementing a feature
+- Step 1: Generate trace (generator)
+- Step 2: Extract insights (reflector)
+- Step 3: Update playbook (curator)
+- Step 4: Use playbook for next feature
+- Feedback loop demonstration
+
+**7. Real-World Scenarios** (500 words):
+
+**Scenario A**: Debugging a persistent bug
+- Use generator to capture debugging session
+- Reflector extracts debugging strategies
+- Curator adds to playbook for future bugs
+
+**Scenario B**: Optimizing code performance
+- Capture performance optimization trace
+- Extract performance insights
+- Build performance playbook
+
+**Scenario C**: Learning a new codebase
+- Capture exploration traces
+- Extract navigation strategies
+- Build codebase understanding playbook
+
+**Scenario D**: Implementing a complex feature
+- Multi-trace workflow
+- Iterative insight extraction
+- Playbook-guided implementation
+
+**Scenario E**: Code review process
+- Capture review traces
+- Extract review criteria
+- Build code review playbook
+
+**8. Troubleshooting Common Issues** (300 words):
+- Issue 1: Generator not capturing traces → Solution
+- Issue 2: Reflector producing low-quality insights → Solution
+- Issue 3: Curator playbook not updating → Solution
+- Issue 4: Traces too large → Solution
+- Issue 5: API errors with AI provider → Solution
+
+**9. FAQ** (400 words):
+- Q1: How often should I run reflector?
+- Q2: How do I view the playbook?
+- Q3: Can I edit insights manually?
+- Q4: How do I delete bad traces?
+- Q5: How do playbooks improve over time?
+- Q6: Can multiple users share a playbook?
+- Q7: How do I backup/restore playbooks?
+- Q8: What's the storage footprint?
+- Q9: How do I integrate with CI/CD?
+- Q10: Can I use ACE with other AI providers?
+
+**10. Advanced Tips & Tricks** (300 words):
+- Tip 1: Filtering traces for specific patterns
+- Tip 2: Combining insights from multiple traces
+- Tip 3: Exporting playbooks for sharing
+- Tip 4: Custom insight extraction prompts
+- Tip 5: Automated ACE workflows
+- Tip 6: Performance optimization
+- Tip 7: Integration with other tools
+
+**11. Next Steps** (100 words):
+- Links to advanced documentation
+- Community resources
+- Contributing to ACE framework
+- Getting help
+
+### Implementation Plan
+
+**Phase 1: Content Creation (3 hours)**:
+- Write tutorial content following outline
+- Create code examples
+- Write step-by-step instructions
+- Draft troubleshooting guide
+- Write FAQ
+
+**Phase 2: Screenshots & Recordings (1 hour)**:
+- Take screenshots of console interactions
+- Record terminal sessions (optional)
+- Annotate screenshots for clarity
+- Embed in document
+
+**Phase 3: User Testing (1 hour)**:
+- Find 3+ new users (internal or external)
+- Have them follow tutorial
+- Collect feedback on clarity, completeness
+- Identify missing sections or confusing parts
+
+**Phase 4: Refinement & Integration (1 hour)**:
+- Incorporate user feedback
+- Polish writing and formatting
+- Add cross-references
+- Link from main documentation
+- Final review and publication
+
+### Files to Create/Modify
+
+**New Files**:
+- `docs/ACE_CONSOLE_DEMO_TUTORIAL.md` - Main tutorial document (1000+ words)
+- `docs/images/ace_tutorial/` - Screenshots directory
+- `docs/ACE_QUICK_REFERENCE.md` - One-page quick reference card (optional)
+
+**Modified Files**:
+- `docs/TUTORIALS.md` - Add link to ACE tutorial
+- `README.md` - Add link to tutorials section
+- `.claude/CLAUDE.md` - Add link to ACE tutorial
+- `.claude/agents/generator.md` - Add link to tutorial
+- `.claude/agents/reflector.md` - Add link to tutorial
+- `.claude/agents/curator.md` - Add link to tutorial
+
+### Testing Strategy
+
+**User Testing** (3+ testers):
+- Recruit 3+ users unfamiliar with ACE
+- Have them complete tutorial start-to-finish
+- Collect feedback via questionnaire:
+  - Was the tutorial clear? (1-10 scale)
+  - Did you successfully complete all examples? (yes/no)
+  - What was confusing or unclear? (open-ended)
+  - What would you add or change? (open-ended)
+  - Would you recommend this tutorial? (yes/no)
+- Incorporate feedback into revisions
+
+**Technical Validation**:
+- Verify all code examples work correctly
+- Test on fresh installation (no prior setup)
+- Check all screenshots are up-to-date
+- Verify all links work correctly
+
+**Quality Checks**:
+- Spelling and grammar review
+- Consistent formatting throughout
+- Code syntax highlighting works
+- Screenshots render correctly
+- Cross-references resolve correctly
+
+### Success Metrics
+
+- **Completion Rate**: >90% of test users complete tutorial successfully
+- **Clarity Score**: Average clarity rating >8/10
+- **Time to Competency**: Users can invoke ACE agents within 30 minutes
+- **Support Reduction**: <5 questions per month about ACE basics
+- **Adoption**: 50% increase in ACE usage after tutorial publication
+- **Positive Feedback**: >90% would recommend tutorial to others
+
+### Visual Elements
+
+**Screenshots Needed**:
+1. Welcome screen showing ACE agents
+2. Generator invocation with trace output
+3. Reflector invocation with insights
+4. Curator invocation with playbook update
+5. Playbook viewing command
+6. Complete workflow diagram
+7. Error message examples (for troubleshooting)
+8. Success confirmation messages
+
+**Diagrams**:
+1. ACE Framework architecture
+2. Workflow diagram (generator → reflector → curator)
+3. Trace storage structure
+4. Playbook evolution over time
+
+### Future Enhancements
+
+1. **Video Tutorial**: Screencast of tutorial walkthrough (10-15 min)
+2. **Interactive Tutorial**: Web-based interactive version
+3. **Translation**: Translate tutorial to other languages
+4. **Advanced Tutorial**: Deep dive into each ACE agent
+5. **Integration Tutorial**: ACE with CI/CD, IDEs, etc.
+6. **Best Practices Guide**: Production usage patterns
+7. **Case Studies**: Real-world success stories
+
+### Notes
+
+- Keep tutorial **practical and hands-on** (learn by doing)
+- Use **real examples** from the MonolithicCoffeeMakerAgent project
+- **Screenshots are critical** for visual learners
+- Test with **actual new users** before finalizing
+- Link prominently from **README and main docs**
+- Consider recording a **screencast** as companion to written tutorial
+- Tutorial should be completable in **30 minutes** for quick onboarding
+- Focus on **console interface** (Streamlit app tutorial is separate)
+
+---
