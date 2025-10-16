@@ -1,16 +1,34 @@
-Read docs/roadmap/ROADMAP.md and implement $PRIORITY_NAME: $PRIORITY_TITLE.
+Implement $PRIORITY_NAME: $PRIORITY_TITLE.
 
-Follow the roadmap guidelines and deliverables. Update docs/roadmap/ROADMAP.md with your progress.
+## CRITICAL: Read Technical Spec FIRST!
+
+**BEFORE implementing, you MUST**:
+1. **Check for technical spec** in `docs/architecture/specs/SPEC-*.md`
+2. **Read the FULL spec** if it exists (contains architecture, design, implementation plan)
+3. **Follow the spec exactly** - it was designed by architect for optimal implementation
+4. **If spec missing**: This violates CFR-008 - STOP and notify user
+
+**How to find spec**:
+- Look for `docs/architecture/specs/SPEC-{number}-*.md` where {number} matches your priority
+- Example: PRIORITY 9 → Look for `docs/architecture/specs/SPEC-009-*.md`
+- Use Glob tool to find: `docs/architecture/specs/SPEC-*.md`
+
+**Why specs matter**:
+- architect has reviewed FULL ROADMAP and designed for reuse
+- Specs identify simplification opportunities you might miss
+- Following spec ensures architectural consistency
+- Specs target 2-4 day timelines (not weeks)
 
 ## Implementation Steps
 
-1. **Update Status**: Mark priority as "🔄 In Progress" in ROADMAP.md
-2. **Implement**: Write code following all coding standards
-3. **Test**: Add appropriate unit and integration tests
-4. **Document**: Update relevant documentation
-5. **Verify DoD**: Use Puppeteer to verify Definition of Done (if web-based)
-6. **Commit**: Commit with clear messages
-7. **Complete**: Update ROADMAP.md to "✅ Complete"
+1. **Read Technical Spec**: Find and read `docs/architecture/specs/SPEC-*.md` FIRST
+2. **Update Status**: Mark priority as "🔄 In Progress" in ROADMAP.md
+3. **Implement**: Follow spec's implementation plan exactly
+4. **Test**: Add tests as specified in spec's testing strategy
+5. **Document**: Update docs as specified in spec
+6. **Verify DoD**: Use Puppeteer to verify Definition of Done (if web-based)
+7. **Commit**: Commit with clear messages
+8. **Complete**: Update ROADMAP.md to "✅ Complete"
 
 ## Important Guidelines
 
