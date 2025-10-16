@@ -1776,10 +1776,10 @@ RESULT:
 
 ## CFR-006: Lessons Learned Must Be Captured and Applied
 
-**Rule**: All failures, mistakes, and key lessons MUST be documented, owned, and actively used to prevent recurrence.
+**Rule**: All key lessons (both failures and successes) MUST be documented, owned, and actively used.
 
 **Core Principle**:
-The system must LEARN from mistakes. Lessons that aren't captured and applied lead to repeated errors and user frustration.
+The system must LEARN from experience. Lessons that aren't captured and applied lead to repeated errors and missed opportunities.
 
 **Ownership**: **project_manager** owns docs/roadmap/learnings/
 
@@ -1812,7 +1812,7 @@ The system must LEARN from mistakes. Lessons that aren't captured and applied le
    - Gaps in user experience
    - Communication failures
 
-4. **Success Patterns**: `SUCCESS_PATTERN_*.md` ⭐ EQUALLY IMPORTANT AS FAILURES
+4. **Success Patterns**: `SUCCESS_PATTERN_*.md`
    - What worked well
    - Effective workflows
    - Best practices discovered
@@ -1822,47 +1822,41 @@ The system must LEARN from mistakes. Lessons that aren't captured and applied le
    - Patterns identified
    - Actions taken
 
-### Balance: Failures AND Successes
+### Capturing Both Failures and Successes
 
-**CRITICAL**: Lessons system must capture BOTH failures and successes equally.
+**Important**: Lessons system captures both failures and successes to learn key lessons.
+
+**Why Failures Matter**:
+- Identify what to avoid
+- Prevent recurrence of errors
+- Understand root causes
+- Improve system reliability
 
 **Why Successes Matter**:
-- Show what works (replicate effective patterns)
-- Build team morale (celebrate wins)
-- Guide future decisions (proven approaches)
-- Create best practices library
-- Demonstrate continuous improvement to user
-- Balance negativity (not just problems)
+- Identify what works well
+- Enable replication of effective patterns
+- Build best practices library
+- Guide future decisions
 
-**Capture Ratio Target**: At least 1 success for every 2 failures
-
-**Success Types**:
-1. **Workflow Success**: Process that worked exceptionally well
-2. **Technical Success**: Implementation that exceeded expectations
-3. **Performance Win**: Significant speedup or efficiency gain
-4. **User Delight**: Feature/approach that pleased user
-5. **Problem Solved Elegantly**: Creative solution to complex problem
-6. **Team Collaboration Win**: Agents worked together effectively
-
-**Success Pattern Examples**:
-- ✅ US-038 Phase 2 completed in 50 minutes (estimated 4-6 hours)
-- ✅ Context-upfront approach eliminated 80% of file searches
-- ✅ Parallel agent execution design (architect/project_manager collaboration)
-- ✅ Refactoring infrastructure setup (proactive quality management)
-- ✅ CFR-006 creation (learning from US-040 failure immediately)
+**Lesson Types**:
+1. **Workflow Lessons**: Process effectiveness (what worked/didn't work)
+2. **Technical Lessons**: Implementation outcomes (efficient/inefficient approaches)
+3. **Performance Lessons**: Speed and efficiency gains or issues
+4. **User Experience Lessons**: What pleased or frustrated users
+5. **Collaboration Lessons**: Effective or ineffective agent coordination
 
 ### Lesson Capture Workflow
 
 **When to Capture**:
-- ❌ Any failure (workflow, technical, process)
-- 😤 User expresses frustration
-- 🔄 Same mistake happens twice
-- ✅ Significant success worth replicating ⭐ EQUALLY IMPORTANT
-- 🎉 User expresses satisfaction/delight
-- ⚡ Performance significantly exceeds expectations
-- 🤝 Collaboration works exceptionally well
-- 💡 Key insight discovered
-- 🏆 Milestone achieved ahead of schedule
+- Any failure (workflow, technical, process)
+- User expresses frustration
+- Same mistake happens twice
+- Significant success worth replicating
+- User expresses satisfaction
+- Performance significantly exceeds or misses expectations
+- Collaboration works exceptionally well or poorly
+- Key insight discovered
+- Milestone achieved significantly ahead or behind schedule
 
 **Who Captures**:
 1. **Any agent** can identify a lesson
@@ -2046,17 +2040,14 @@ All agents MUST read docs/roadmap/learnings/ periodically:
 **Required Sections**:
 1. **Summary Statistics**:
    - Total lessons captured
-   - Failures: [count]
-   - Successes: [count] ⭐
-   - Balance ratio: [success:failure]
-   - Target: ≥1:2 (1 success per 2 failures)
+   - By category: Failures, Successes, etc.
 
-2. **Top Failures** (up to 5):
+2. **Key Failures** (up to 5):
    - Brief description
    - Impact
    - Status (prevented/recurring)
 
-3. **Top Successes** (up to 5): ⭐ EQUAL PROMINENCE
+3. **Key Successes** (up to 5):
    - Brief description
    - Impact
    - Replication status
@@ -2081,19 +2072,15 @@ All agents MUST read docs/roadmap/learnings/ periodically:
 **project_manager maintains docs/roadmap/learnings/**:
 
 **Weekly** (project_manager):
-- Review new lessons (failures AND successes)
-- **Ensure success capture**: Check if recent wins documented
+- Review new lessons
 - Update relevant documents
-- **Balance check**: Maintain ≥1:2 success:failure ratio
 
 **Monthly** (first week of month):
 - Create LESSONS_YYYY_MM.md summary
-- **Highlight top successes** prominently
 - Identify patterns across lessons
 - Promote critical lessons to CFRs if needed
 - Archive old lessons (>6 months to archive/ subdirectory)
-- Update agent definitions with new avoidance patterns
-- **Celebrate wins** with user in summary
+- Update agent definitions with lessons learned
 
 **Quarterly** (Q1, Q2, Q3, Q4):
 - Review all lessons for recurring themes
@@ -2104,11 +2091,10 @@ All agents MUST read docs/roadmap/learnings/ periodically:
 **Metrics to Track**:
 - Total lessons captured
 - Lessons by severity
-- Lessons by category
-- **Success:failure ratio** (target: ≥1:2)
+- Lessons by category (failures and successes)
 - Recurrence rate (same lesson multiple times = problem)
-- Time to resolution (how long to implement prevention)
-- Effectiveness (did prevention work?)
+- Time to resolution (how long to implement prevention/replication)
+- Effectiveness (did prevention/replication work?)
 
 ### Escalation
 
