@@ -22015,3 +22015,202 @@ gh pr checks  # Monitor CI/CD
 5. **CI/CD Integration**: Trigger Puppeteer tests in GitHub Actions
 
 ---
+
+## US-033: Automatic User Story Detection in user_listener
+
+**Status**: 📝 PLANNED
+**Type**: Agent Enhancement / User Experience
+**Complexity**: Medium
+**Priority**: High
+**Created**: 2025-10-16
+
+### User Story
+
+> "As a user, I want the user_listener to automatically detect when I'm describing a user story, so that it's automatically delegated to project_manager to add to ROADMAP."
+
+### Description
+
+Enhance user_listener with intelligent user story detection capabilities. When a user describes a feature request in natural language (either formal "As a X I want Y so that Z" format or informal "I want to..." format), user_listener should:
+
+1. Automatically detect the user story pattern
+2. Extract key components (actor, goal, benefit)
+3. Show a confirmation dialog with the extracted user story
+4. Delegate to project_manager to add to ROADMAP when user confirms
+5. Provide seamless UX without requiring explicit /US command
+
+### Business Value
+
+**Improved User Experience**: Users can describe features naturally without learning special commands or formats. The system understands intent and handles the mechanics of ROADMAP management automatically.
+
+**Reduced Friction**: Eliminates the need to use explicit /US commands or know the exact user story format.
+
+**Increased Adoption**: Makes the system more accessible to non-technical users who may not be familiar with agile user story syntax.
+
+### Estimated Effort
+
+2-3 days (16-24 hours)
+
+### Acceptance Criteria
+
+- [ ] Detects formal user story format: "As a [actor] I want [goal] so that [benefit]"
+- [ ] Detects informal formats: "I want to...", "We need...", "Can you add..."
+- [ ] Uses AI (Claude/Gemini) for pattern detection with confidence scoring
+- [ ] Triggers confirmation dialog when confidence > 70%
+- [ ] Confirmation workflow offers: [y]es / [n]o / [e]dit options
+- [ ] Successfully delegates to project_manager when user confirms
+- [ ] project_manager adds to ROADMAP with next available US-XXX ID
+- [ ] Works seamlessly in user_listener CLI interface
+- [ ] Provides clear feedback about what was detected and what will happen
+- [ ] Handles edge cases gracefully (ambiguous requests, false positives)
+- [ ] Includes comprehensive test coverage (25+ tests)
+
+### Technical Requirements
+
+**Core Components**:
+
+1. **UserStoryDetector Class** (`coffee_maker/cli/user_story_detector.py`):
+   - Pattern matching for formal and informal user stories
+   - AI-powered confidence scoring
+   - Component extraction (actor, goal, benefit)
+   - Support for multiple AI providers (Claude, Gemini, OpenAI)
+
+2. **Integration with user_listener**:
+   - Hook into message processing pipeline
+   - Pre-process user input before standard classification
+   - Show confirmation dialog when user story detected
+   - Delegate to project_manager on confirmation
+
+3. **Delegation Workflow**:
+   - Extract user story components
+   - Format as proper user story syntax
+   - Call project_manager to add to ROADMAP
+   - Return confirmation to user with US-XXX ID
+
+4. **RequestClassifier Enhancement** (if needed):
+   - Add `user_story` intent type
+   - Integrate UserStoryDetector as preprocessing step
+   - Maintain backward compatibility with existing intents
+
+**User Experience Flow**:
+
+```
+User: "I want to add email notifications when a build fails"
+     ↓
+[UserStoryDetector detects user story with 85% confidence]
+     ↓
+user_listener: "I detected a user story:
+
+    As a: Developer
+    I want: Email notifications when a build fails
+    So that: I can respond quickly to failures
+
+    Would you like me to add this to the ROADMAP? [y/n/e]"
+     ↓
+User: "y"
+     ↓
+[Delegates to project_manager]
+     ↓
+user_listener: "✅ Added as US-034: Email Build Failure Notifications"
+```
+
+### Implementation Plan
+
+**Phase 1: Core Detection (8 hours)**:
+- Create UserStoryDetector class
+- Implement formal pattern matching (regex-based)
+- Implement informal pattern detection (AI-based)
+- Add confidence scoring algorithm
+- Component extraction logic
+
+**Phase 2: user_listener Integration (6 hours)**:
+- Hook into message processing
+- Add confirmation dialog
+- Implement edit mode for user story refinement
+- Handle yes/no/edit user responses
+
+**Phase 3: project_manager Delegation (4 hours)**:
+- Create delegation interface
+- Implement ROADMAP addition logic
+- Generate US-XXX ID automatically
+- Return confirmation to user_listener
+
+**Phase 4: Testing & Refinement (6 hours)**:
+- Unit tests for UserStoryDetector (15+ tests)
+- Integration tests for user_listener (10+ tests)
+- End-to-end workflow tests
+- Edge case handling
+- False positive prevention
+- Documentation
+
+### Files to Create/Modify
+
+**New Files**:
+- `coffee_maker/cli/user_story_detector.py` - Core detection class
+- `tests/unit/test_user_story_detector.py` - Unit tests
+- `tests/integration/test_user_listener_user_story.py` - Integration tests
+- `docs/USER_STORY_DETECTION.md` - Documentation
+
+**Modified Files**:
+- `coffee_maker/cli/user_listener.py` - Add detection hook
+- `coffee_maker/cli/request_classifier.py` - Add user_story intent (if needed)
+- `.claude/agents/user_listener.md` - Update agent instructions
+- `.claude/agents/project_manager.md` - Add delegation handler
+- `docs/ROADMAP.md` - This file (status updates)
+
+### Testing Strategy
+
+**Unit Tests** (15+ tests):
+- Test formal user story detection
+- Test informal format detection
+- Test confidence scoring
+- Test component extraction
+- Test false positive handling
+- Test edge cases (empty input, gibberish, etc.)
+
+**Integration Tests** (10+ tests):
+- Test user_listener integration
+- Test confirmation dialog
+- Test edit mode
+- Test delegation to project_manager
+- Test ROADMAP addition
+- Test end-to-end workflow
+
+**Manual Testing**:
+- Test with various user story formats
+- Test with ambiguous requests
+- Test with non-user-story content
+- Verify UX is smooth and intuitive
+
+### Dependencies
+
+- user_listener agent must be operational
+- project_manager agent must be operational
+- AI provider (Claude/Gemini/OpenAI) access
+- ROADMAP.md must be accessible and writable
+
+### Success Metrics
+
+- **Detection Accuracy**: >90% for formal formats, >75% for informal
+- **False Positive Rate**: <5%
+- **User Satisfaction**: Positive feedback on UX
+- **Adoption**: Users use natural language instead of /US command
+- **Time Savings**: Reduced time to add user stories by 50%
+
+### Future Enhancements
+
+1. **Learning from Corrections**: Track user edits to improve detection
+2. **Multi-Turn Extraction**: Ask clarifying questions for ambiguous stories
+3. **Template Suggestions**: Offer common user story templates
+4. **Batch Detection**: Detect multiple user stories in one message
+5. **Priority Inference**: Suggest priority based on keywords (urgent, critical, etc.)
+6. **Related US Detection**: Identify similar existing user stories to avoid duplicates
+
+### Notes
+
+- This enhances user_listener WITHOUT changing core architecture
+- Follows proper ownership boundaries (user_listener detects, project_manager writes ROADMAP)
+- Maintains separation of concerns
+- AI detection provides flexibility for various formats
+- Confirmation dialog prevents unwanted additions
+
+---
