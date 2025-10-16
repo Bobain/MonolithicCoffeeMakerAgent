@@ -92,8 +92,46 @@ MonolithicCoffeeMakerAgent/
 
 ### Architecture Patterns
 - **Mixins**: Daemon uses composition with mixins (SpecManagerMixin, ImplementationMixin, etc.)
+- **Singletons**: Critical resources use singleton pattern (AgentRegistry, HTTPConnectionPool, GlobalRateTracker)
 - **Observability**: Use Langfuse decorators for tracking
 - **Error Handling**: Defensive programming, validate inputs, handle None gracefully
+
+### Singleton Pattern (US-035) ⭐ NEW
+**CRITICAL**: Only ONE instance of each agent type can run at a time.
+
+```python
+# ✅ RECOMMENDED: Use context manager for automatic cleanup
+from coffee_maker.autonomous.agent_registry import AgentRegistry, AgentType
+
+with AgentRegistry.register(AgentType.CODE_DEVELOPER):
+    # Agent work here
+    # Automatically unregistered on exit, even if exception occurs
+    pass
+
+# ✅ ALTERNATIVE: Manual registration
+registry = AgentRegistry()
+try:
+    registry.register_agent(AgentType.CODE_DEVELOPER)
+    # ... do work ...
+finally:
+    registry.unregister_agent(AgentType.CODE_DEVELOPER)
+
+# ❌ DON'T: Try to run multiple instances of same agent
+# This will raise AgentAlreadyRunningError:
+# "Agent 'code_developer' is already running! PID: 12345"
+```
+
+**Why Singleton Enforcement?**
+- Prevents file corruption from concurrent writes
+- Eliminates race conditions in daemon operations
+- Avoids duplicate work execution
+- Prevents resource conflicts
+
+**Pattern Details**:
+- `__new__` method ensures single registry instance
+- Thread-safe locking with `threading.Lock`
+- Context manager for automatic cleanup
+- Clear error messages with PID and timestamp
 
 ### Prompt Management ⭐
 **IMPORTANT**: All prompts MUST go in `.claude/commands/`

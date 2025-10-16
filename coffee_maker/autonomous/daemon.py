@@ -173,6 +173,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from coffee_maker.autonomous.agent_registry import AgentRegistry, AgentType
 from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
 from coffee_maker.autonomous.daemon_git_ops import GitOpsMixin
 from coffee_maker.autonomous.daemon_implementation import ImplementationMixin
@@ -329,6 +330,19 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             >>> daemon = DevDaemon()
             >>> daemon.run()  # Runs until complete
         """
+        # US-035: Register agent in singleton registry to prevent duplicate instances
+        # Using context manager ensures automatic cleanup even if exceptions occur
+        try:
+            with AgentRegistry.register(AgentType.CODE_DEVELOPER):
+                logger.info("✅ Agent registered in singleton registry")
+                self._run_daemon_loop()
+        except Exception as e:
+            logger.error(f"❌ Failed to register agent: {e}")
+            logger.error("Another code_developer instance is already running!")
+            return
+
+    def _run_daemon_loop(self):
+        """Internal daemon loop (extracted for cleaner agent registry management)."""
         self.running = True
         self.start_time = datetime.now()
         logger.info("🤖 DevDaemon starting...")
