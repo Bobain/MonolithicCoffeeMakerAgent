@@ -570,6 +570,334 @@ reflector analyzes delegation trace later:
 
 ---
 
+## Critical Functional Requirements (CFR) Enforcement
+
+### Overview
+
+The system enforces Critical Functional Requirements (CFRs) at ALL levels to prevent boundary violations. CFRs are system invariants documented in docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md.
+
+**Four CFRs**:
+- **CFR-001**: Document Ownership Boundaries (each file has EXACTLY ONE owner)
+- **CFR-002**: Agent Role Boundaries (each agent has EXACTLY ONE primary role)
+- **CFR-003**: No Overlap - Documents (no two agents own same file/directory)
+- **CFR-004**: No Overlap - Responsibilities (no two agents have overlapping primary roles)
+
+**Enforcement Levels**:
+- **Level 1**: generator auto-delegation for file operations (US-038)
+- **Level 2**: User story validation before ROADMAP addition (US-039)
+- **Level 3**: User request validation before execution (US-039)
+- **Level 4**: Agent self-check before planning work (US-039)
+
+### Level 1: generator Auto-Delegation (US-038)
+
+**Trigger**: Before ANY file operation (Edit, Write, NotebookEdit)
+
+**Process**:
+1. generator intercepts file operation tool call
+2. generator checks FileOwnership registry
+3. If requesting agent OWNS file: Execute directly
+4. If requesting agent does NOT own file: Auto-delegate to correct owner
+5. Capture delegation trace for reflector analysis
+6. Return result to requesting agent transparently
+
+**Example**:
+```
+project_manager attempts: Edit(.claude/CLAUDE.md)
+    ↓
+generator intercepts: Check ownership
+    ↓
+FileOwnership: .claude/ owned by code_developer (NOT project_manager)
+    ↓
+generator auto-delegates: Delegate to code_developer
+    ↓
+code_developer: Executes Edit on .claude/CLAUDE.md
+    ↓
+generator: Captures delegation trace
+    ↓
+generator: Returns success to project_manager
+    ✅ Violation prevented, work completed, ownership respected
+```
+
+**Why This Works**:
+- Automatic correction (not just blocking)
+- Transparent to requesting agent
+- Creates learning data for reflector
+- Zero ownership violations reach execution
+
+### Level 2: User Story Validation (US-039)
+
+**Trigger**: Before adding user story to ROADMAP
+
+**Process**:
+1. project_manager receives user story creation request
+2. CFRValidator.validate_user_story() checks:
+   - CFR-001: Do assigned agents own target files?
+   - CFR-002: Does work match assigned agents' roles?
+   - CFR-003: Any ownership overlaps proposed?
+   - CFR-004: Any role overlaps proposed?
+3. If violations detected:
+   - STOP user story creation
+   - Expose problem to user with clear explanation
+   - Provide 2-3 safe alternatives
+   - Wait for user decision
+4. If no violations: Proceed with adding to ROADMAP
+
+**Example**:
+```
+User proposes: "US-040: project_manager refactors CLI code"
+    ↓
+CFRValidator checks:
+  - CFR-001: coffee_maker/ owned by code_developer (NOT project_manager) ❌
+  - CFR-002: Implementation is code_developer's role (NOT project_manager) ❌
+    ↓
+project_manager warns user:
+  "⚠️ USER STORY VIOLATION DETECTED
+
+  US-040 proposes: project_manager refactors CLI code
+
+  Violations:
+  1. CFR-001: coffee_maker/ owned by code_developer
+  2. CFR-002: Implementation is code_developer's role
+
+  Safe Alternatives:
+  Option 1: project_manager defines requirements
+            → architect designs refactoring
+            → code_developer implements
+
+  Option 2: Rewrite US-040 to assign work correctly
+
+  Which approach do you prefer?"
+    ↓
+User chooses Option 1
+    ↓
+project_manager creates corrected user story with proper delegation
+    ✅ Violation prevented BEFORE addition to ROADMAP
+```
+
+**Why This Matters**:
+- Prevents bad user stories from being added
+- Educates user about boundaries
+- Ensures ROADMAP contains only valid work assignments
+
+### Level 3: User Request Validation (US-039)
+
+**Trigger**: When user makes request to any agent
+
+**Process**:
+1. Agent receives user request
+2. CFRValidator.validate_user_request() checks:
+   - What actions are required?
+   - Which agents would handle these actions?
+   - Do these match agent roles and ownerships?
+3. If violations detected:
+   - STOP execution
+   - Explain problem to user
+   - Offer safe alternatives (correct delegation paths)
+   - Wait for user decision
+4. If no violations: Proceed with delegation
+
+**Example**:
+```
+User to assistant: "Implement the new authentication feature"
+    ↓
+CFRValidator checks:
+  - Required action: Implementation
+  - assistant's role: Demos + Documentation + Dispatch
+  - CFR-002: assistant cannot implement code ❌
+    ↓
+assistant explains:
+  "I can't implement code directly (CFR-002: Role Boundaries).
+   I'll delegate to code_developer who handles implementation.
+
+   Would you like me to:
+   1. Delegate to code_developer to implement
+   2. Have project_manager create strategic spec first
+   3. Show you the current authentication system"
+    ↓
+User chooses Option 2
+    ↓
+assistant delegates:
+  assistant → project_manager (strategic spec)
+  → architect (technical spec)
+  → code_developer (implementation)
+    ✅ Violation prevented, user educated, correct workflow followed
+```
+
+**Why This Matters**:
+- Prevents users from accidentally asking wrong agent
+- Educates users about agent roles
+- Ensures correct delegation from the start
+
+### Level 4: Agent Self-Check (US-039)
+
+**Trigger**: Before agent plans work
+
+**Process**:
+1. Agent is about to plan work (modify files, execute tasks)
+2. Agent calls CFRValidator.agent_self_check():
+   - Do I own the target files? (CFR-001)
+   - Does this work match my primary role? (CFR-002)
+3. If violations detected:
+   - Do NOT execute work
+   - Delegate to correct agent instead
+   - Report to user if critical
+4. If no violations: Proceed with work
+
+**Example**:
+```
+assistant analyzes codebase and finds critical security bug
+    ↓
+assistant plans: Add bug to ROADMAP
+    ↓
+agent_self_check():
+  - Target file: docs/roadmap/ROADMAP.md
+  - CFR-001: docs/roadmap/ owned by project_manager (NOT assistant) ❌
+  - CFR-002: assistant's role is Demos + Documentation + Dispatch ❌
+    ↓
+assistant decision: Delegate instead of execute
+    ↓
+assistant action:
+  - Prepares comprehensive bug report (root cause, requirements, impact)
+  - Delegates to project_manager with full analysis
+    ↓
+project_manager:
+  - Receives bug report from assistant
+  - Adds critical priority to ROADMAP
+  - Tags architect and code_developer
+    ✅ Ownership respected, work completed correctly
+```
+
+**Why This Matters**:
+- Agents self-enforce boundaries
+- Prevents violations before they occur
+- Enables autonomous delegation
+
+### Violation Response Workflow
+
+**When CFR violation detected at ANY level**:
+
+1. **STOP** the violating action immediately
+2. **ANALYZE** the violation:
+   - What was attempted?
+   - Who attempted it?
+   - Which CFR was violated?
+   - Who should handle this instead?
+3. **CHOOSE** response path:
+   - **Auto-Delegate** (Level 1, Level 4): generator or agent automatically delegates
+   - **Expose to User** (Level 2, Level 3): Explain problem, offer alternatives
+4. **EXECUTE** safe alternative:
+   - Delegate to correct agent
+   - Follow multi-agent workflow
+   - Review CFRs and reconsider
+5. **LEARN** from violation:
+   - Capture delegation trace (Level 1)
+   - Track violation patterns (all levels)
+   - reflector analyzes for improvements
+
+### Safe Alternative Patterns
+
+**Pattern 1: Auto-Delegation** (Level 1, Level 4):
+```
+Agent A needs to modify file owned by Agent B
+    ↓
+generator or Agent A delegates to Agent B
+    ↓
+Agent B modifies file
+    ↓
+Result returned to Agent A
+    ✅ Transparent, automatic, respects ownership
+```
+
+**Pattern 2: Multi-Agent Workflow** (Level 2, Level 3):
+```
+User requests work that spans multiple agent roles
+    ↓
+Decompose into sub-tasks:
+  - project_manager: Strategic requirement (WHAT/WHY)
+  - architect: Technical design (HOW)
+  - code_developer: Implementation (DOING)
+    ↓
+Each agent handles their sub-task
+    ✅ Each agent in their role
+```
+
+**Pattern 3: Request Decomposition**:
+```
+User: "Implement feature X and update ROADMAP"
+    ↓
+Decompose:
+  1. code_developer: Implement feature
+  2. project_manager: Update ROADMAP
+    ↓
+Execute separately with correct owners
+    ✅ No violations
+```
+
+**Pattern 4: Cross-Agent Communication**:
+```
+Agent A has information for Agent B's files
+    ↓
+Agent A prepares content
+    ↓
+Agent A delegates to Agent B
+    ↓
+Agent B modifies their files with Agent A's input
+    ✅ Ownership respected
+```
+
+### Integration with US-035 and US-038
+
+**US-035: Singleton Enforcement**:
+- Ensures one instance per agent type
+- Prevents multiple instances competing
+- CFR-004 ensures each singleton has ONE role
+
+**US-038: File Ownership Enforcement**:
+- generator auto-delegates file operations
+- Level 1 enforcement (foundation)
+- CFR-001 and CFR-003 define ownership rules
+
+**US-039: Comprehensive CFR Enforcement**:
+- Adds Level 2, 3, 4 enforcement
+- Validates user stories and requests
+- Enables agent self-check
+- Completes CFR architecture
+
+**Together**:
+```
+US-035 (Singleton) + US-038 (Ownership) + US-039 (Comprehensive CFR)
+= Complete system integrity enforcement
+```
+
+### Benefits of CFR Enforcement
+
+**For Users**:
+- Transparent violations exposed before problems occur
+- Clear explanations with safe alternatives
+- Educated about agent boundaries
+- Confidence in system integrity
+
+**For Agents**:
+- Automatic correction of violations
+- Clear boundaries prevent confusion
+- Safe delegation patterns
+- Learning from violation patterns
+
+**For System**:
+- Cannot break itself through boundary violations
+- Architectural integrity maintained
+- Parallel agent operations safe
+- Foundation for autonomous operation
+
+### Reference Documents
+
+- **Complete CFR Documentation**: docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md
+- **User Story**: docs/roadmap/ROADMAP.md (US-039)
+- **Technical Spec**: docs/architecture/user_stories/US_039_TECHNICAL_SPEC.md (to be created by architect)
+- **Ownership Matrix**: .claude/CLAUDE.md (Agent Tool Ownership & Boundaries section)
+
+---
+
 ## Key Principles
 
 ### 1. Single Responsibility
@@ -668,6 +996,15 @@ Agents NEVER do another agent's work:
 ---
 
 ## Version History
+
+**Version**: 1.2
+**Date**: 2025-10-16
+**Changes**:
+- Added Critical Functional Requirements (CFR) Enforcement section
+- Documented 4 enforcement levels (generator auto-delegation, user story validation, user request validation, agent self-check)
+- Added violation response workflow and safe alternative patterns
+- Documented integration with US-035, US-038, US-039
+- Added reference to CRITICAL_FUNCTIONAL_REQUIREMENTS.md
 
 **Version**: 1.1
 **Date**: 2025-10-16

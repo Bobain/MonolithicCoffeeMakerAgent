@@ -23847,3 +23847,566 @@ def test_delegation_trace_capture():
 - **Critical for multi-agent safety**: Prevents file corruption and conflicts
 
 ---
+
+## US-039: Implement Critical Functional Requirements (CFR) Enforcement System
+
+**Status**: 📝 PLANNED - CRITICAL SYSTEM REQUIREMENT
+**Type**: Architecture / Safety / System Integrity
+**Complexity**: High
+**Priority**: CRITICAL (Same level as US-035, US-038)
+**Created**: 2025-10-16
+**Depends On**: US-038 (File ownership enforcement provides foundation)
+**Related**: US-035 (Singleton enforcement), US-038 (Ownership enforcement)
+
+**IMPORTANT - System Invariants**:
+- These are CRITICAL system rules that MUST be enforced at ALL times
+- Violations are NOT ALLOWED
+- When detected, system must STOP, EXPOSE problem to user, PROVIDE safe alternatives
+- See: docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md for complete documentation
+
+**Delegation Flow** (Strategic → Technical → Implementation):
+1. **project_manager (strategic)**: Defines WHAT and WHY (this ROADMAP entry + CRITICAL_FUNCTIONAL_REQUIREMENTS.md)
+2. **architect (technical design)**: Creates HOW in docs/architecture/user_stories/US_039_TECHNICAL_SPEC.md
+3. **code_developer (implementation)**: Implements based on architect's technical spec
+
+### User Story
+
+> "As the system orchestrator, I want all agents to enforce Critical Functional Requirements (CFRs) before ANY action, so that the system never violates its own ownership/role boundaries and always exposes violations to users with safe alternatives."
+
+### Description
+
+Implement comprehensive enforcement of Critical Functional Requirements (CFRs) at ALL levels of the system. CFRs are system invariants that define:
+- Document ownership boundaries (CFR-001)
+- Agent role boundaries (CFR-002)
+- No overlaps in owned documents (CFR-003)
+- No overlaps in agent responsibilities (CFR-004)
+
+**Why This Is Critical**:
+- Prevents system from breaking itself through boundary violations
+- Enforces architectural integrity at all decision points
+- Exposes problems to users BEFORE violations occur
+- Provides safe alternatives instead of just blocking
+- Creates learning opportunities from violation patterns
+
+**Current State**:
+- US-038 provides Level 1 enforcement (generator auto-delegation for file operations)
+- CFRs documented in CRITICAL_FUNCTIONAL_REQUIREMENTS.md
+- No validation at user story creation time
+- No validation at user request time
+- No validation at agent decision time
+- Violations can be proposed and require manual detection
+
+**Target State**:
+- Level 1: generator enforces ownership (US-038) ✅
+- Level 2: User story validation before ROADMAP addition
+- Level 3: User request validation before execution
+- Level 4: Agent self-check before planning work
+- All levels expose violations to users with safe alternatives
+- Comprehensive test coverage for all CFR enforcement paths
+
+### Workflow
+
+```
+User makes request →
+  Level 3: User request validation →
+    Check if request violates CFRs →
+      If NO violations:
+        Proceed with delegation
+      If violations detected:
+        STOP action
+        Expose problem to user
+        Provide safe alternatives
+        Wait for user decision
+
+Agent plans work →
+  Level 4: Agent self-check →
+    Check ownership matrix (CFR-001)
+    Check role matrix (CFR-002)
+      If agent OWNS files AND has appropriate ROLE:
+        Proceed with work
+      If violations:
+        Delegate to correct agent instead
+
+User story creation →
+  Level 2: User story validation →
+    Parse user story requirements
+    Check against CFR-001 (ownership)
+    Check against CFR-002 (roles)
+    Check against CFR-003 (no document overlap)
+    Check against CFR-004 (no role overlap)
+      If violations:
+        STOP user story creation
+        Expose problem to user
+        Suggest corrected version
+        Wait for user approval
+```
+
+### Example Scenarios
+
+**Scenario 1: User Story Violation Prevention**:
+```
+User proposes: "US-040: project_manager refactors CLI code"
+
+Level 2 validation detects:
+  - Violation 1: coffee_maker/ owned by code_developer (CFR-001)
+  - Violation 2: Implementation is code_developer's role (CFR-002)
+
+System response:
+  "⚠️ USER STORY VIOLATION DETECTED
+
+  US-040 proposes: project_manager refactors CLI code
+
+  Violations:
+  1. CFR-001: coffee_maker/ owned by code_developer
+  2. CFR-002: Implementation is code_developer's role
+
+  Safe Alternatives:
+  Option 1: project_manager defines requirements
+            → architect designs refactoring
+            → code_developer implements
+
+  Option 2: Rewrite US-040 to assign work correctly
+
+  Which approach do you prefer?"
+
+Result: Violation prevented BEFORE user story added to ROADMAP
+```
+
+**Scenario 2: User Request Violation Prevention**:
+```
+User to assistant: "Implement the new authentication feature"
+
+Level 3 validation detects:
+  - assistant's role: Demos + Documentation + Dispatch
+  - Required action: Implementation (code_developer's role)
+  - Violation: assistant cannot implement code (CFR-002)
+
+assistant response:
+  "I can't implement code directly (CFR-002: Role Boundaries).
+   I'll delegate to code_developer who handles implementation.
+
+   Would you like me to:
+   1. Delegate to code_developer to implement
+   2. Have project_manager create strategic spec first
+   3. Show you the current authentication system"
+
+Result: Violation prevented, user educated, correct delegation offered
+```
+
+**Scenario 3: Agent Self-Check Delegation**:
+```
+assistant analyzes codebase and finds critical security bug
+
+Level 4 self-check:
+  - assistant checks: Can I add to ROADMAP?
+  - CFR-001: docs/roadmap/ owned by project_manager
+  - CFR-002: assistant's role is Demos + Documentation + Dispatch
+  - Decision: Delegate to project_manager instead
+
+assistant action:
+  - Prepares comprehensive bug report
+  - Delegates to project_manager
+  - project_manager adds critical priority to ROADMAP
+
+Result: Ownership respected, work completed correctly
+```
+
+### Business Value
+
+**System Integrity**: Prevents system from violating its own architectural boundaries.
+
+**User Transparency**: All violations exposed to users with clear explanations and alternatives.
+
+**Learning Opportunity**: Violation patterns analyzed to improve agent coordination.
+
+**Developer Confidence**: System cannot break itself through ownership/role confusion.
+
+### Estimated Effort
+
+3-4 days (12-16 hours)
+
+### Acceptance Criteria
+
+**Core Implementation**:
+- [ ] Create CFR validation module in `coffee_maker/autonomous/ace/cfr_validator.py`
+- [ ] Implement Level 2: User story validation before ROADMAP addition
+- [ ] Implement Level 3: User request validation before execution
+- [ ] Implement Level 4: Agent self-check before work planning
+- [ ] CFR violation detection for all 4 CFRs (001-004)
+- [ ] User notification system for violation exposure
+- [ ] Safe alternative suggestion system
+
+**Level 2: User Story Validation**:
+- [ ] Parse user story requirements to identify involved agents
+- [ ] Check against ownership matrix (CFR-001)
+- [ ] Check against role matrix (CFR-002)
+- [ ] Verify no document overlap (CFR-003)
+- [ ] Verify no role overlap (CFR-004)
+- [ ] Generate clear violation messages with CFR references
+- [ ] Suggest safe alternatives that respect boundaries
+- [ ] Wait for user approval before proceeding
+
+**Level 3: User Request Validation**:
+- [ ] Analyze user request intent
+- [ ] Identify required actions and agents
+- [ ] Check against all CFR rules (001-004)
+- [ ] Expose violations with clear explanations
+- [ ] Offer safe alternatives (delegation paths)
+- [ ] Wait for user decision
+
+**Level 4: Agent Self-Check**:
+- [ ] Agents verify file ownership before planning work
+- [ ] Agents verify role appropriateness before planning work
+- [ ] Automatic delegation to correct agent if violations detected
+- [ ] Integration with existing agent workflows
+
+**Integration**:
+- [ ] Update user_listener to use Level 3 validation on all user requests
+- [ ] Update project_manager to use Level 2 validation on user story creation
+- [ ] Update all agents to use Level 4 self-check before work
+- [ ] Update generator to reference CFR enforcement (builds on US-038)
+- [ ] Update TEAM_COLLABORATION.md with CFR enforcement workflows
+- [ ] Update CLAUDE.md with CFR references
+
+**User Notification System**:
+- [ ] Create `warn_user()` function for CFR violations
+- [ ] Include violation type, involved files/agents, CFR number
+- [ ] Provide 2-3 safe alternatives
+- [ ] Link to CRITICAL_FUNCTIONAL_REQUIREMENTS.md for details
+- [ ] Priority levels: critical (blockers), high (important), normal (recommendations)
+
+**Testing**:
+- [ ] Create comprehensive test suite `tests/unit/test_cfr_enforcement.py`
+- [ ] Test Level 2 validation (user story scenarios)
+- [ ] Test Level 3 validation (user request scenarios)
+- [ ] Test Level 4 validation (agent self-check scenarios)
+- [ ] Test all 4 CFRs (CFR-001 through CFR-004)
+- [ ] Test safe alternative generation
+- [ ] Test user notification system
+- [ ] Integration tests with real agents (30+ scenarios)
+- [ ] Test violation patterns from CRITICAL_FUNCTIONAL_REQUIREMENTS.md examples
+
+**Documentation**:
+- [ ] docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md already created ✅
+- [ ] architect creates docs/architecture/user_stories/US_039_TECHNICAL_SPEC.md
+- [ ] Document CFR validation API
+- [ ] Document violation detection algorithms
+- [ ] Document safe alternative patterns
+- [ ] Add troubleshooting guide for CFR violations
+
+### Technical Design (High-Level)
+
+**1. CFR Validator Module**:
+```python
+class CFRValidator:
+    """Validates actions against Critical Functional Requirements."""
+
+    @classmethod
+    def validate_user_story(cls, user_story: dict) -> ValidationResult:
+        """Level 2: Validate user story before ROADMAP addition."""
+        violations = []
+
+        # Check CFR-001: Document ownership
+        for file in user_story.get("files", []):
+            owner = FileOwnership.get_owner(file)
+            assigned_agent = user_story.get("agent")
+            if owner != assigned_agent:
+                violations.append(
+                    CFRViolation(
+                        cfr="CFR-001",
+                        type="ownership",
+                        file=file,
+                        expected_owner=owner,
+                        assigned_agent=assigned_agent
+                    )
+                )
+
+        # Check CFR-002: Role boundaries
+        required_role = infer_role_from_work(user_story.get("description"))
+        assigned_agent = user_story.get("agent")
+        if not RoleMatrix.agent_has_role(assigned_agent, required_role):
+            violations.append(
+                CFRViolation(
+                    cfr="CFR-002",
+                    type="role_boundary",
+                    required_role=required_role,
+                    assigned_agent=assigned_agent
+                )
+            )
+
+        # Check CFR-003 & CFR-004: No overlaps
+        # (Implementation details in technical spec)
+
+        if violations:
+            alternatives = SafeAlternativeGenerator.generate(violations, user_story)
+            return ValidationResult(
+                passed=False,
+                violations=violations,
+                alternatives=alternatives
+            )
+
+        return ValidationResult(passed=True)
+
+    @classmethod
+    def validate_user_request(cls, request: str, agent: AgentType) -> ValidationResult:
+        """Level 3: Validate user request before execution."""
+        # Parse request to identify required actions
+        # Check against CFRs
+        # Return validation result with alternatives
+
+    @classmethod
+    def agent_self_check(cls, agent: AgentType, planned_work: dict) -> ValidationResult:
+        """Level 4: Agent validates work before planning."""
+        # Check if agent owns target files (CFR-001)
+        # Check if work matches agent's role (CFR-002)
+        # Return validation result (delegate if violations)
+```
+
+**2. Safe Alternative Generator**:
+```python
+class SafeAlternativeGenerator:
+    """Generates safe alternatives when CFR violations detected."""
+
+    @classmethod
+    def generate(cls, violations: list[CFRViolation], context: dict) -> list[Alternative]:
+        """Generate 2-3 safe alternatives that respect CFRs."""
+
+        alternatives = []
+
+        if has_ownership_violation(violations):
+            # Alternative 1: Delegate to correct owner
+            alternatives.append(
+                Alternative(
+                    description="Auto-delegate to correct owner",
+                    workflow=generate_delegation_workflow(violations),
+                    recommended=True
+                )
+            )
+
+        if has_role_violation(violations):
+            # Alternative 2: Multi-agent workflow
+            alternatives.append(
+                Alternative(
+                    description="Decompose into multi-agent workflow",
+                    workflow=generate_multi_agent_workflow(violations, context),
+                    recommended=True
+                )
+            )
+
+        # Alternative 3: Review CFRs
+        alternatives.append(
+            Alternative(
+                description="Review ownership matrix and CFRs",
+                action="show_cfr_documentation",
+                recommended=False
+            )
+        )
+
+        return alternatives
+```
+
+**3. User Notification for CFR Violations**:
+```python
+def warn_user_about_cfr_violation(violations: list[CFRViolation], alternatives: list[Alternative]):
+    """Expose CFR violation to user with safe alternatives."""
+
+    message = format_violation_message(violations)
+    message += "\n\nSafe Alternatives:\n"
+
+    for i, alt in enumerate(alternatives, 1):
+        message += f"{i}. {alt.description}\n"
+        if alt.workflow:
+            message += f"   {format_workflow(alt.workflow)}\n"
+
+    message += f"\nReview CFRs: docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md"
+
+    service = AIService()
+    service.warn_user(
+        title=f"⚠️ CFR VIOLATION: {violations[0].cfr}",
+        message=message,
+        priority="critical" if is_blocking(violations) else "high",
+        context={"violations": [v.to_dict() for v in violations]}
+    )
+```
+
+### Implementation Plan
+
+**Phase 1: CFR Validator Core (3 hours)**:
+- Create `coffee_maker/autonomous/ace/cfr_validator.py`
+- Implement violation detection for all 4 CFRs
+- Add validation methods for Levels 2, 3, 4
+- Write unit tests for validation logic
+
+**Phase 2: Safe Alternative Generation (2 hours)**:
+- Create SafeAlternativeGenerator class
+- Implement delegation workflow generation
+- Implement multi-agent workflow generation
+- Test alternative generation for common scenarios
+
+**Phase 3: User Notification System (2 hours)**:
+- Create CFR violation notification formatting
+- Integrate with existing `warn_user()` system
+- Add priority levels for different violation types
+- Test notification delivery and formatting
+
+**Phase 4: Level 2 Integration (User Story Validation) (2 hours)**:
+- Update project_manager to validate user stories before ROADMAP addition
+- Add validation to user story creation workflow
+- Test with example violations from CRITICAL_FUNCTIONAL_REQUIREMENTS.md
+- Verify alternatives are presented correctly
+
+**Phase 5: Level 3 Integration (User Request Validation) (2 hours)**:
+- Update user_listener to validate user requests
+- Add validation before delegation to team
+- Test with common user request patterns
+- Verify violation exposure and alternative presentation
+
+**Phase 6: Level 4 Integration (Agent Self-Check) (2 hours)**:
+- Update all agents to perform self-check before work
+- Add delegation logic when violations detected
+- Test with cross-agent scenarios
+- Verify transparent delegation
+
+**Phase 7: Testing & Documentation (3 hours)**:
+- Write comprehensive test suite (30+ scenarios)
+- Test all CFR enforcement levels
+- Test all CFR types (001-004)
+- Document validation API and workflows
+- Update collaboration documentation
+
+### Files to Create/Modify
+
+**New Files**:
+- `coffee_maker/autonomous/ace/cfr_validator.py` - CFR validation module (code_developer creates)
+- `coffee_maker/autonomous/ace/safe_alternatives.py` - Alternative generator (code_developer creates)
+- `tests/unit/test_cfr_enforcement.py` - Test suite (code_developer creates)
+- `docs/architecture/user_stories/US_039_TECHNICAL_SPEC.md` - Technical spec (architect creates)
+
+**Modified Files** (code_developer modifies):
+- `coffee_maker/autonomous/agents/project_manager.py` - Add Level 2 validation
+- `coffee_maker/autonomous/agents/user_listener.py` - Add Level 3 validation
+- `coffee_maker/autonomous/agents/base_agent.py` - Add Level 4 self-check (if needed)
+- `coffee_maker/cli/ai_service.py` - Enhance `warn_user()` for CFR violations
+
+**Modified Files** (project_manager modifies):
+- `docs/roadmap/TEAM_COLLABORATION.md` - Document CFR enforcement workflows
+- `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` - Already created ✅
+- `docs/roadmap/ROADMAP.md` - This user story
+
+### Testing Strategy
+
+**Unit Tests** (30+ scenarios):
+```python
+def test_cfr_001_ownership_violation_detection():
+    """Test CFR-001 detects ownership violations in user stories."""
+    user_story = {
+        "description": "project_manager modifies .claude/CLAUDE.md",
+        "files": [".claude/CLAUDE.md"],
+        "agent": "project_manager"
+    }
+    result = CFRValidator.validate_user_story(user_story)
+    assert not result.passed
+    assert result.violations[0].cfr == "CFR-001"
+    assert result.alternatives  # Safe alternatives provided
+
+def test_cfr_002_role_violation_detection():
+    """Test CFR-002 detects role boundary violations."""
+    user_story = {
+        "description": "assistant implements new feature",
+        "agent": "assistant",
+        "work_type": "implementation"
+    }
+    result = CFRValidator.validate_user_story(user_story)
+    assert not result.passed
+    assert result.violations[0].cfr == "CFR-002"
+
+def test_safe_alternatives_generated():
+    """Test safe alternatives generated for violations."""
+    violations = [ownership_violation, role_violation]
+    alternatives = SafeAlternativeGenerator.generate(violations, context)
+    assert len(alternatives) >= 2
+    assert any(alt.recommended for alt in alternatives)
+
+def test_level_2_user_story_validation():
+    """Test Level 2: User story validated before ROADMAP addition."""
+    # Test with violating user story
+    # Verify validation stops creation
+    # Verify alternatives presented to user
+
+def test_level_3_user_request_validation():
+    """Test Level 3: User request validated before execution."""
+    # Test with violating request
+    # Verify validation stops execution
+    # Verify user educated about boundaries
+
+def test_level_4_agent_self_check():
+    """Test Level 4: Agent self-check before work."""
+    # Test agent planning work outside its role
+    # Verify self-check detects violation
+    # Verify automatic delegation to correct agent
+```
+
+**Integration Tests**:
+- Real user stories with CFR violations
+- Real user requests with boundary issues
+- Real agent workflows with ownership conflicts
+- Verify all 4 enforcement levels work together
+- Verify safe alternatives are actionable
+
+### Success Metrics
+
+- **Zero Undetected Violations**: All CFR violations caught before execution
+- **100% User Exposure**: All violations exposed to users with clear explanations
+- **Alternatives Quality**: 95%+ of alternatives are actionable and respect boundaries
+- **User Understanding**: Users can make informed decisions about violations
+- **System Integrity**: No boundary violations reach execution across all levels
+- **Coverage**: >95% test coverage for CFR enforcement
+
+### Dependencies
+
+**Requires US-038 Complete**:
+- US-038 provides Level 1 enforcement (generator auto-delegation)
+- US-039 builds on this foundation with Levels 2-4
+- FileOwnership registry from US-038 used by CFR validator
+
+**Enhances**:
+- US-035 (Singleton enforcement)
+- US-038 (File ownership enforcement)
+
+**Blocks Future Work**:
+- Advanced multi-agent coordination (requires CFR enforcement)
+- Automated workflow optimization (requires violation pattern analysis)
+
+### Risks & Mitigation
+
+**Risk 1: False Positives (Over-Detection)**:
+- **Mitigation**: Comprehensive test suite with real scenarios
+- **Mitigation**: User can override if needed (with warning)
+- **Mitigation**: Improve detection based on feedback
+
+**Risk 2: Complex Validation Logic**:
+- **Mitigation**: Start simple (exact matches), add complexity gradually
+- **Mitigation**: Extensive unit tests for edge cases
+- **Mitigation**: Clear documentation of validation rules
+
+**Risk 3: User Fatigue from Warnings**:
+- **Mitigation**: Only warn on actual violations (not potential issues)
+- **Mitigation**: Provide quick resolution (recommended alternative)
+- **Mitigation**: Learn from patterns to reduce future violations
+
+**Risk 4: Integration Complexity**:
+- **Mitigation**: Phased rollout (Level 2 → Level 3 → Level 4)
+- **Mitigation**: Integration tests at each phase
+- **Mitigation**: Feature flags to disable levels if needed
+
+### Notes
+
+- **Completes CFR architecture**: US-035 (singleton) + US-038 (ownership) + US-039 (comprehensive enforcement)
+- **System invariants**: These rules prevent system from breaking itself
+- **User transparency**: All violations exposed, not hidden
+- **Safe alternatives**: System always provides actionable paths
+- **Learning opportunity**: Violation patterns help improve agent coordination
+- **Critical for multi-agent systems**: Prevents chaos from boundary confusion
+- **Foundation for autonomous operation**: Agents can safely delegate without violating boundaries
+
+---
