@@ -25571,3 +25571,508 @@ if agent_type != "code-searcher" and tool_call == "Glob":
 - User observation: "I see agents looking for files - they should know!"
 
 ---
+
+## US-043: Enable Parallel Agent Execution for Faster Delivery
+
+**Status**: 📝 PLANNED - HIGH PRIORITY (Performance Critical)
+
+**Created**: 2025-10-16
+
+**Type**: Performance / Infrastructure
+
+**Complexity**: Medium-High
+
+**Estimated Effort**: 2-3 days
+
+**User Story**:
+As a User, I want agents to work in parallel as much as possible, so that work is delivered faster and the system is more efficient.
+
+**Problem Statement**:
+
+Currently, agents appear to execute mostly sequentially. The user rarely sees parallel execution, leading to slower delivery than expected and underutilization of system capabilities.
+
+**User Feedback** (Critical):
+> "I don't understand why I hardly see some agents working in parallel: this is not the expected behavior, we want agents to work in parallel as much as possible in order to deliver faster"
+
+**Why Parallel Execution Is Safe**:
+
+Thanks to our CFR enforcement (US-035, US-038, US-039):
+1. **CFR-000**: No file conflicts possible (ownership enforced)
+2. **US-035**: Singleton prevents same-agent conflicts
+3. **US-038**: File ownership prevents cross-agent conflicts
+4. **Different directories**: Different agents own different files
+
+**Safe Parallel Combinations**:
+
+| Agent 1 | Working On | Agent 2 | Working On | Safe? | Why? |
+|---------|-----------|---------|-----------|-------|------|
+| code_developer | coffee_maker/ | project_manager | docs/roadmap/ | ✅ YES | Different files (CFR-001) |
+| code_developer | coffee_maker/ | architect | docs/architecture/ | ✅ YES | Different files (CFR-001) |
+| project_manager | docs/roadmap/ | architect | docs/architecture/ | ✅ YES | Different files (CFR-001) |
+| assistant | Creating demo | code_developer | Implementing | ✅ YES | assistant read-only |
+| code_developer #1 | coffee_maker/ | code_developer #2 | coffee_maker/ | ❌ NO | Singleton (US-035) |
+| project_manager #1 | ROADMAP.md | project_manager #2 | ROADMAP.md | ❌ NO | Singleton (US-035) |
+
+**Example Parallel Workflow**:
+
+```
+Time 0:
+  - code_developer: Implementing US-038 Phase 2 (coffee_maker/)
+  - project_manager: Writing strategic spec for US-045 (docs/roadmap/)
+  - assistant: Creating demo for US-036 (read-only, no files)
+  - architect: Designing technical spec for US-046 (docs/architecture/)
+
+All 4 agents working SIMULTANEOUSLY - no conflicts!
+
+Sequential would take: 4 × 30 minutes = 120 minutes
+Parallel takes: max(30, 30, 30, 30) = 30 minutes
+Speedup: 4x faster! 🎉
+```
+
+**Requirements**:
+
+### 1. Parallel Task Queue System
+
+Create a task scheduler that:
+- Accepts multiple tasks in a queue
+- Dispatches non-conflicting tasks in parallel
+- Monitors for conflicts (file ownership, singleton)
+- Throttles execution (max N parallel agents, e.g., 4-6)
+- Handles task completion and schedules next queued tasks
+
+### 2. Conflict Detection
+
+Before scheduling any task, check:
+- **File Ownership**: Does task require files owned by running agent?
+- **Singleton Constraints**: Is agent type already running? (US-035)
+- **Dependencies**: Does task need results from other task?
+- **Resource Limits**: Is system under heavy load?
+
+Only schedule if NO conflicts detected.
+
+### 3. Dependency Management
+
+Tasks can declare dependencies:
+- "Needs result from task X before starting"
+- Dependent tasks wait for prerequisites to complete
+- Independent tasks run immediately when scheduled
+- Dependency graph visualization for debugging
+
+### 4. Resource Management
+
+Prevent system overload:
+- Max parallel agents (configurable, default: 4)
+- CPU/memory monitoring (don't overload system)
+- Graceful degradation (reduce parallelism if system stressed)
+- Priority-based scheduling (high-priority tasks first)
+
+### 5. Status Visibility
+
+Real-time dashboard showing:
+- All currently running agents
+- Queued tasks waiting to execute
+- Task dependencies (who's waiting on what)
+- Resource utilization (CPU, memory)
+- Estimated completion times
+- Historical speedup metrics
+
+### 6. generator Integration
+
+generator orchestrates parallel execution:
+- Receives task requests from multiple sources
+- Analyzes conflicts using FileOwnership registry
+- Distributes tasks to available agents
+- Collects results as they complete
+- Handles failures gracefully (one agent fails, others continue)
+- Creates reflection traces for learning
+
+**Proposed Architecture**:
+
+```python
+class ParallelTaskScheduler:
+    """
+    Schedules agent tasks for parallel execution while respecting
+    CFR-000 (no file conflicts), US-035 (singleton), and US-038 (ownership).
+    """
+
+    def __init__(self, max_parallel: int = 4):
+        self.task_queue = PriorityQueue()  # Priority-based queue
+        self.running_agents = {}  # {agent_type: running_task}
+        self.max_parallel = max_parallel
+        self.file_ownership = FileOwnership()  # From US-038
+        self.agent_registry = AgentRegistry()  # From US-035
+
+    def schedule_task(self, task: Task) -> None:
+        """Schedule task for execution (parallel if possible)."""
+        # Check conflicts
+        if self._has_conflicts(task):
+            # Queue for later execution
+            self.task_queue.add(task, priority=task.priority)
+            logger.info(
+                f"Task {task.id} queued (conflicts detected). "
+                f"Queue size: {self.task_queue.size()}"
+            )
+        else:
+            # Execute immediately (no conflicts)
+            self._execute_task(task)
+
+    def _has_conflicts(self, task: Task) -> bool:
+        """Check if task conflicts with running agents."""
+
+        # 1. Check file ownership conflicts (CFR-001, US-038)
+        for agent_type, running_task in self.running_agents.items():
+            if self._files_overlap(task, running_task):
+                logger.debug(
+                    f"File conflict: {task.agent_type} needs files used by {agent_type}"
+                )
+                return True
+
+        # 2. Check singleton constraint (US-035)
+        if task.agent_type in self.running_agents:
+            logger.debug(
+                f"Singleton conflict: {task.agent_type} already running"
+            )
+            return True
+
+        # 3. Check dependencies (task needs results from other task)
+        if task.depends_on:
+            for dep_task_id in task.depends_on:
+                if not self._is_task_complete(dep_task_id):
+                    logger.debug(
+                        f"Dependency conflict: {task.id} depends on {dep_task_id}"
+                    )
+                    return True
+
+        # 4. Check resource limits
+        if len(self.running_agents) >= self.max_parallel:
+            logger.debug(
+                f"Resource limit: {len(self.running_agents)} agents running "
+                f"(max: {self.max_parallel})"
+            )
+            return True
+
+        # No conflicts - safe to execute
+        return False
+
+    def _files_overlap(self, task1: Task, task2: Task) -> bool:
+        """Check if two tasks would modify the same files."""
+        # Get files each task would modify
+        files1 = self.file_ownership.get_owned_paths(task1.agent_type)
+        files2 = self.file_ownership.get_owned_paths(task2.agent_type)
+
+        # Check for overlap
+        overlap = set(files1) & set(files2)
+        return len(overlap) > 0
+
+    def _execute_task(self, task: Task) -> None:
+        """Execute task in parallel (async)."""
+        # Register as running
+        self.running_agents[task.agent_type] = task
+
+        # Log execution start
+        logger.info(
+            f"🚀 Starting {task.agent_type}: {task.description} "
+            f"({len(self.running_agents)} parallel agents)"
+        )
+
+        # Start async execution
+        asyncio.create_task(self._run_agent(task))
+
+    async def _run_agent(self, task: Task) -> None:
+        """Run agent asynchronously."""
+        start_time = time.time()
+
+        try:
+            # Execute task
+            result = await agent_executor.execute(task)
+
+            # Mark complete
+            duration = time.time() - start_time
+            task.complete(result, duration)
+
+            logger.info(
+                f"✅ Completed {task.agent_type}: {task.description} "
+                f"({duration:.1f}s)"
+            )
+
+        except Exception as e:
+            # Handle failure gracefully
+            logger.error(
+                f"❌ Failed {task.agent_type}: {task.description} - {e}"
+            )
+            task.fail(e)
+
+        finally:
+            # Unregister (free up slot)
+            del self.running_agents[task.agent_type]
+
+            # Try scheduling next queued task
+            self._schedule_next_task()
+
+    def _schedule_next_task(self) -> None:
+        """Schedule next task from queue if possible."""
+        if self.task_queue.empty():
+            return
+
+        # Get highest priority task
+        next_task = self.task_queue.peek()
+
+        # Check if it can run now (no conflicts)
+        if not self._has_conflicts(next_task):
+            # Remove from queue and execute
+            self.task_queue.pop()
+            self._execute_task(next_task)
+```
+
+**CLI Commands**:
+
+```bash
+# Schedule multiple tasks for parallel execution
+$ poetry run project-manager delegate-multiple \
+    "code_developer: implement US-038 Phase 2" \
+    "architect: create technical spec for US-046" \
+    "project_manager: write strategic spec for US-047" \
+    "assistant: create demo for completed features"
+
+# Output:
+🚀 PARALLEL EXECUTION STARTED
+
+┌─────────────────────────────────────────────────────────┐
+│ 4 tasks scheduled for parallel execution               │
+└─────────────────────────────────────────────────────────┘
+
+⚙️  code_developer     → Implementing US-038 Phase 2
+⚙️  architect          → Creating US-046 technical spec
+⚙️  project_manager    → Writing US-047 strategic spec
+⚙️  assistant          → Creating feature demos
+
+No conflicts detected - all tasks can run in parallel!
+
+[Progress bars for each agent...]
+
+✅ All 4 tasks completed in 15 minutes
+   Sequential would have taken: 45 minutes
+   Speedup: 3x faster! 🎉
+
+# Check parallel execution status
+$ poetry run project-manager parallel-status
+
+Currently Running (3 agents):
+  - code_developer: Implementing US-038 Phase 2 (75% complete, ~5 min left)
+  - architect: Creating US-046 spec (40% complete, ~10 min left)
+  - project_manager: Writing US-047 spec (90% complete, ~2 min left)
+
+Queued (2 tasks):
+  - assistant: Create demo (waiting: code_developer to finish)
+  - code_developer: Implement US-049 (waiting: architect spec ready)
+
+Resource Usage:
+  - CPU: 45%
+  - Memory: 2.3 GB / 16 GB
+  - Max Parallel: 4
+  - Speedup Today: 2.8x average
+```
+
+**Acceptance Criteria**:
+
+- [ ] ParallelTaskScheduler class created with conflict detection
+- [ ] Conflict detection checks file ownership (CFR-001, US-038)
+- [ ] Conflict detection checks singleton constraints (US-035)
+- [ ] Dependency management (task A → task B)
+- [ ] Max parallel limit configurable (default: 4)
+- [ ] Real-time status dashboard (running, queued, dependencies)
+- [ ] generator orchestrates all parallel execution
+- [ ] Graceful failure handling (one agent fails, others continue)
+- [ ] Resource monitoring (CPU, memory, throttling)
+- [ ] Comprehensive tests (unit + integration)
+- [ ] CLI command: `delegate-multiple` for parallel tasks
+- [ ] CLI command: `parallel-status` for visibility
+- [ ] Documentation: How to use parallel execution
+- [ ] Performance metrics: Speedup measurements (before/after)
+
+**Quick Wins (Can Implement Immediately)**:
+
+Even before full parallel scheduler, we can enable parallel execution for obvious cases:
+
+**Approach 1: Manual Parallel Delegation**:
+```python
+# In assistant or user_listener
+parallel_tasks = [
+    Task(subagent_type="code-developer", description="Task 1", prompt="..."),
+    Task(subagent_type="architect", description="Task 2", prompt="..."),
+    Task(subagent_type="project-manager", description="Task 3", prompt="..."),
+]
+
+# Execute all in parallel (current Task tool supports this!)
+results = execute_parallel(parallel_tasks)
+```
+
+**Approach 2: Daemon Runs in Background**:
+- code_developer daemon runs continuously (already does this)
+- Other agents can work on other tasks simultaneously
+- User can invoke commands while daemon works
+
+**Immediate Action**: Document how to use existing parallel capabilities!
+
+**Edge Cases**:
+
+1. **What if all queued tasks conflict?**
+   → Wait for running agent to finish, then schedule next
+   → User notified: "Task queued, waiting for X to finish"
+
+2. **What if system overloaded?**
+   → Reduce max_parallel temporarily (e.g., 4 → 2)
+   → Queue new tasks until load decreases
+   → User notified: "System under load, task queued"
+
+3. **What if agent crashes?**
+   → Catch exception, log error, unregister agent
+   → Reschedule task (with retry limit)
+   → Don't block other agents (graceful degradation)
+   → User notified: "Task X failed, retrying..."
+
+4. **What if dependency cycle?**
+   → Detect cycle during scheduling (graph traversal)
+   → Raise clear error: "Dependency cycle: A→B→C→A"
+   → User asked to resolve cycle
+
+**Integration with Existing System**:
+
+- **US-035 (Singleton)**: Check agent registry before scheduling
+- **US-038 (Ownership)**: Check FileOwnership registry for conflicts
+- **US-039 (CFR)**: Validate all tasks respect CFRs
+- **US-042 (Context-Upfront)**: Agents receive context, no searching
+- **generator**: Orchestrates all parallel execution (ACE framework)
+
+**Performance Targets**:
+
+- **Speedup**: 3-4x for independent tasks (measured)
+- **Scheduling Overhead**: <100ms per task
+- **Parallel Capacity**: 4-6 agents comfortably
+- **Graceful Degradation**: Reduce parallelism under load
+- **Resource Efficiency**: <50% CPU, <4GB memory for 4 agents
+
+**Testing Strategy**:
+
+**Unit Tests**:
+```python
+def test_scheduler_detects_file_conflicts():
+    """Scheduler blocks tasks with file ownership conflicts."""
+    scheduler = ParallelTaskScheduler()
+
+    # Schedule code_developer task
+    task1 = Task(agent_type="code_developer", files=["coffee_maker/"])
+    scheduler.schedule_task(task1)
+
+    # Try to schedule another code_developer task (singleton conflict)
+    task2 = Task(agent_type="code_developer", files=["coffee_maker/"])
+    scheduler.schedule_task(task2)
+
+    # task2 should be queued, not running
+    assert len(scheduler.running_agents) == 1
+    assert scheduler.task_queue.size() == 1
+
+def test_scheduler_allows_parallel_no_conflicts():
+    """Scheduler allows parallel tasks with no conflicts."""
+    scheduler = ParallelTaskScheduler()
+
+    # Schedule 3 tasks with different file ownership
+    tasks = [
+        Task(agent_type="code_developer", files=["coffee_maker/"]),
+        Task(agent_type="project_manager", files=["docs/roadmap/"]),
+        Task(agent_type="architect", files=["docs/architecture/"]),
+    ]
+
+    for task in tasks:
+        scheduler.schedule_task(task)
+
+    # All 3 should be running in parallel
+    assert len(scheduler.running_agents) == 3
+    assert scheduler.task_queue.size() == 0
+```
+
+**Integration Tests**:
+```python
+@pytest.mark.asyncio
+async def test_parallel_execution_end_to_end():
+    """Full parallel execution with multiple agents."""
+    scheduler = ParallelTaskScheduler()
+
+    # Schedule 4 independent tasks
+    tasks = [
+        Task(agent_type="code_developer", description="Implement US-038"),
+        Task(agent_type="architect", description="Design US-046"),
+        Task(agent_type="project_manager", description="Write US-047 spec"),
+        Task(agent_type="assistant", description="Create demo"),
+    ]
+
+    for task in tasks:
+        scheduler.schedule_task(task)
+
+    # Wait for all to complete
+    await scheduler.wait_all()
+
+    # All should be successful
+    assert all(task.status == "completed" for task in tasks)
+
+    # Measure speedup
+    total_time = max(task.duration for task in tasks)
+    sequential_time = sum(task.duration for task in tasks)
+    speedup = sequential_time / total_time
+
+    assert speedup >= 3.0  # At least 3x faster
+```
+
+**Priority Justification**:
+
+**HIGH PRIORITY** because:
+1. **User Request**: Direct user feedback about performance
+2. **Delivery Speed**: 3-4x faster delivery for independent work
+3. **Resource Utilization**: Better use of system capabilities
+4. **User Satisfaction**: Visible performance improvement
+5. **Competitive Advantage**: Faster than sequential systems
+
+**Dependencies**:
+
+- ✅ US-035 (Singleton Enforcement) - COMPLETE
+- ✅ US-038 Phase 1 (File Ownership Registry) - COMPLETE
+- ✅ US-041 (architect Operational) - COMPLETE
+
+**Unblocks**:
+
+- Faster delivery for all future work
+- Better system resource utilization
+- User satisfaction with performance
+- Competitive advantage over sequential systems
+
+**Estimated Effort**: 2-3 days
+
+**Day 1: Task Scheduler & Conflict Detection** (8 hours)
+- ParallelTaskScheduler class
+- Conflict detection (file ownership, singleton, dependencies)
+- Resource management (max parallel, throttling)
+- Unit tests (90% coverage)
+
+**Day 2: generator Integration & CLI Commands** (8 hours)
+- generator orchestration of parallel execution
+- CLI commands (delegate-multiple, parallel-status)
+- Integration tests (end-to-end workflows)
+- Dashboard UI for status visibility
+
+**Day 3: Testing, Monitoring, Documentation** (8 hours)
+- Comprehensive testing (edge cases, failure scenarios)
+- Performance metrics and speedup measurements
+- Documentation (user guide, API reference)
+- Reflection traces for learning
+
+**Related Documents**:
+
+- docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md - CFR-000, US-035, US-038
+- .claude/CLAUDE.md - Agent ownership matrix
+- docs/roadmap/TEAM_COLLABORATION.md - Agent collaboration workflows
+
+**Notes**:
+
+This user story directly addresses user feedback about lack of parallel execution. The infrastructure is ready (CFR enforcement, singleton, ownership), we just need the scheduling layer to enable it.
+
+---

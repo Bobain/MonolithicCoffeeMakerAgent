@@ -1806,13 +1806,109 @@ If ANY check fails: STOP, delegate, or escalate.
 
 ---
 
+## Parallel Execution Enabled by CFR-000
+
+**Key Insight**: Because we enforce file conflict prevention (CFR-000), parallel agent execution is SAFE.
+
+**User Request** (2025-10-16):
+> "I don't understand why I hardly see some agents working in parallel: this is not the expected behavior, we want agents to work in parallel as much as possible in order to deliver faster"
+
+**Why Parallel Execution Is Safe**:
+
+Thanks to our CFR enforcement:
+1. **CFR-000**: No file conflicts possible (ownership enforced at tool level)
+2. **US-035**: Singleton prevents same-agent conflicts (one instance per agent type)
+3. **US-038**: File ownership prevents cross-agent conflicts (different directories)
+4. **CFR-001**: Clear ownership boundaries (no ambiguity about who owns what)
+
+**Parallel Execution Matrix**:
+
+| Agent 1 | Working On | Agent 2 | Working On | Safe? | Why? |
+|---------|-----------|---------|-----------|-------|------|
+| code_developer | coffee_maker/ | project_manager | docs/roadmap/ | ✅ PARALLEL SAFE | Different files (CFR-001) |
+| code_developer | coffee_maker/ | architect | docs/architecture/ | ✅ PARALLEL SAFE | Different files (CFR-001) |
+| project_manager | docs/roadmap/ | architect | docs/architecture/ | ✅ PARALLEL SAFE | Different files (CFR-001) |
+| assistant | Creating demo | code_developer | Implementing | ✅ PARALLEL SAFE | assistant read-only |
+| code_developer #1 | coffee_maker/ | code_developer #2 | coffee_maker/ | ❌ SEQUENTIAL ONLY | Singleton (US-035) |
+| project_manager #1 | ROADMAP.md | project_manager #2 | ROADMAP.md | ❌ SEQUENTIAL ONLY | Singleton (US-035) |
+
+**Example Parallel Workflow**:
+
+```
+Time 0:
+  - code_developer: Implementing US-038 Phase 2 (coffee_maker/)
+  - project_manager: Writing strategic spec for US-045 (docs/roadmap/)
+  - assistant: Creating demo for US-036 (read-only, no files)
+  - architect: Designing technical spec for US-046 (docs/architecture/)
+
+All 4 agents working SIMULTANEOUSLY - no conflicts!
+
+Sequential would take: 4 × 30 minutes = 120 minutes
+Parallel takes: max(30, 30, 30, 30) = 30 minutes
+Speedup: 4x faster! 🎉
+```
+
+**How US-043 Will Enable This**:
+
+US-043 (Parallel Agent Execution) creates a ParallelTaskScheduler that:
+1. Accepts multiple tasks in a queue
+2. Checks for conflicts using CFR enforcement:
+   - File ownership conflicts (CFR-001, US-038)
+   - Singleton constraints (US-035)
+   - Dependencies between tasks
+   - Resource limits (CPU, memory)
+3. Schedules non-conflicting tasks in parallel (up to 4-6 agents)
+4. Queues conflicting tasks until safe to execute
+5. Monitors resource usage and throttles if needed
+
+**Performance Impact**:
+
+- **Expected Speedup**: 3-4x for independent tasks
+- **Current State**: Mostly sequential execution
+- **Target State**: 4-6 agents working in parallel when safe
+- **Scheduling Overhead**: <100ms per task
+- **Resource Efficiency**: <50% CPU, <4GB memory
+
+**Safety Guarantees**:
+
+All parallel execution respects CFRs:
+- ✅ No file conflicts (CFR-000) - enforced by ownership checks
+- ✅ No singleton violations (US-035) - enforced by agent registry
+- ✅ No ownership violations (CFR-001) - enforced by FileOwnership registry
+- ✅ No role confusion (CFR-002) - each agent stays in their role
+- ✅ No overlaps (CFR-003, CFR-004) - clear boundaries maintained
+
+**Implementation Status**:
+
+- ✅ CFR-000 (File Conflict Prevention) - COMPLETE
+- ✅ US-035 (Singleton Enforcement) - COMPLETE
+- ✅ US-038 Phase 1 (File Ownership Registry) - COMPLETE
+- 📝 US-043 (Parallel Task Scheduler) - PLANNED (HIGH PRIORITY)
+
+This means US-043 (Parallel Execution) can be implemented safely thanks to CFR enforcement.
+
+**Related**:
+- docs/roadmap/ROADMAP.md - US-043 full specification
+- User feedback: Performance is critical priority
+
+---
+
 **Remember**: These CFRs exist to prevent the system from breaking itself. They are not optional. They are not suggestions. They are CRITICAL FUNCTIONAL REQUIREMENTS.
 
-**Version**: 1.3
+**Version**: 1.5
 **Last Updated**: 2025-10-16
-**Next Review**: After US-038 and US-039 implementation
+**Next Review**: After US-038, US-039, and US-043 implementation
 
 **Changelog**:
+- **v1.5** (2025-10-16): Added "Parallel Execution Enabled by CFR-000" section
+  - Documented why parallel execution is SAFE (thanks to CFR enforcement)
+  - Parallel execution matrix showing safe/unsafe combinations
+  - Example parallel workflow (4 agents, 4x speedup)
+  - How US-043 will enable parallel task scheduling
+  - Performance impact expectations (3-4x speedup)
+  - Safety guarantees (all CFRs respected during parallel execution)
+  - Implementation status of prerequisites (US-035, US-038 Phase 1 complete)
+  - Related: US-043 (Parallel Agent Execution) - HIGH PRIORITY user request
 - **v1.4** (2025-10-16): Added Agent File Access Patterns (Performance & Clarity)
   - Context-upfront principle: agents KNOW which files to read
   - No wasteful Glob/Grep during execution (except code-searcher)
