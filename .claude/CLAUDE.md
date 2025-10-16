@@ -17,7 +17,7 @@
    - `architect`: Architectural design and technical specifications (interacts through user_listener)
    - `code_developer`: Autonomous implementation of priorities from ROADMAP
    - `project_manager`: Project coordination, notifications, status tracking, GitHub monitoring (backend only)
-   - `assistant`: Documentation expert and intelligent dispatcher
+   - `assistant`: Documentation expert, intelligent dispatcher, demo creator, and bug reporter
    - `code-searcher`: Deep codebase analysis and forensic examination
    - `ux-design-expert`: UI/UX design guidance and Tailwind CSS
 
@@ -335,7 +335,8 @@ poetry run project-manager /status
 | **User approval requests** | architect | Proactively asks user for approval on important decisions | user_listener presents to user |
 | **Puppeteer DoD (during impl)** | code_developer | Verify features DURING implementation | project_manager for POST-completion verification |
 | **Puppeteer DoD (post-impl)** | project_manager | Verify completed work on user request | - |
-| **Puppeteer demos** | user_listener | Show features visually via UI (delegates to assistant) | assistant prepares demos |
+| **Puppeteer demos & testing** | assistant | Create visual demos, test features, report bugs | user_listener delegates demo requests to assistant |
+| **Bug reporting from demos** | assistant | Analyze bugs found during demos → report to project_manager | project_manager adds critical priorities to ROADMAP |
 | **GitHub PR create** | code_developer | Create PRs autonomously | - |
 | **GitHub monitoring** | project_manager | Monitor PRs, issues, CI/CD status | - |
 | **GitHub queries** | project_manager | All `gh` commands | user_listener delegates via UI |
@@ -351,14 +352,16 @@ poetry run project-manager /status
 
 ### Key Principles
 
-1. **assistant is a DOCUMENTATION EXPERT + INTELLIGENT DISPATCHER**
+1. **assistant is a DOCUMENTATION EXPERT + INTELLIGENT DISPATCHER + DEMO CREATOR + BUG REPORTER**
    - **Documentation Expert**: Has profound knowledge of ALL project docs (ROADMAP, specs, CLAUDE.md)
    - **Intelligent Dispatcher**: Routes requests to appropriate specialized agents
+   - **Demo Creator**: Creates visual demos using Puppeteer MCP to showcase features (ONLY agent that creates demos)
+   - **Bug Reporter**: Tests features, detects bugs, analyzes them, and reports to project_manager
    - Handles quick questions directly using deep documentation knowledge
    - Delegates complex tasks to specialists based on clear decision framework
    - Does NOT compete with specialized agents
-   - Think of it as "librarian + traffic controller"
-   - **NEVER modifies code or docs** - Always READ-ONLY, delegates to appropriate agent
+   - Think of it as "librarian + traffic controller + demo producer + QA reporter"
+   - **NEVER modifies code or strategic docs** - Always READ-ONLY for code/docs, but ACTIVE for demos and bug reports
    - **Keeps ROADMAP in great detail in mind** at all times
 
 2. **code_developer owns EXECUTION & TECHNICAL CONFIGURATION**
@@ -420,6 +423,8 @@ poetry run project-manager /status
 Does user need a UI? → user_listener (ONLY agent with UI)
 Is it architectural design? → architect
 Is it a quick question? → assistant
+Is it a demo creation? → assistant (ONLY agent that creates demos)
+Is it a bug found in demo? → assistant analyzes → reports to project_manager
 Is it about code internals? → code-searcher
 Is it about project status? → project_manager
 Is it about design? → ux-design-expert
@@ -428,7 +433,28 @@ Is it implementation? → code_developer
 
 ### Examples
 
-**✅ Correct Usage**:
+**✅ Correct Usage - Demo Creation & Bug Reporting**:
+```
+User to user_listener: "Show me how the dashboard works"
+→ user_listener delegates to assistant
+→ assistant creates visual demo with Puppeteer
+
+code_developer: "Feature X is complete"
+→ user_listener asks assistant to create demo
+→ assistant creates demo to showcase feature
+
+assistant (during demo): Detects bug in feature
+→ assistant analyzes bug thoroughly
+→ assistant reports to project_manager with analysis
+→ project_manager adds critical priority to ROADMAP
+
+User to user_listener: "Test the registration flow"
+→ user_listener delegates to assistant
+→ assistant tests with Puppeteer
+→ If bugs found: assistant reports to project_manager
+```
+
+**✅ Correct Usage - Other Tasks**:
 ```
 User: "Where is authentication implemented?"
 → code-searcher (complex code analysis)
@@ -445,13 +471,22 @@ User: "Implement feature X"
 
 **❌ Incorrect Usage**:
 ```
-assistant tries to verify DoD with Puppeteer
-→ NO! Use project_manager for verification
+project_manager tries to create demos
+→ NO! assistant is ONLY agent that creates demos
+
+user_listener tries to create demos directly
+→ NO! user_listener delegates to assistant
+
+assistant tries to verify DoD post-completion
+→ NO! Use project_manager for post-completion verification
+
+assistant tries to add bugs to ROADMAP directly
+→ NO! assistant reports to project_manager, who adds to ROADMAP
 
 project_manager tries to create a PR
 → NO! code_developer creates PRs
 
-assistant tries to edit code
+assistant tries to edit code to fix bugs
 → NO! code_developer owns all code changes
 
 code_developer tries to monitor all PRs
