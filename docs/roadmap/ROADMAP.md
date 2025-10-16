@@ -26076,3 +26076,404 @@ async def test_parallel_execution_end_to_end():
 This user story directly addresses user feedback about lack of parallel execution. The infrastructure is ready (CFR enforcement, singleton, ownership), we just need the scheduling layer to enable it.
 
 ---
+
+## US-044: Regular Refactoring and Technical Debt Reduction Workflow
+
+**Status**: 📝 PLANNED - HIGH PRIORITY (Code Quality)
+
+**Created**: 2025-10-16
+
+**Type**: Process / Workflow
+
+**Complexity**: Medium
+
+**Estimated Effort**: 2-3 days
+
+**User Story**:
+
+As a User, I want code_developer to perform regular refactoring, simplification, and technical debt reduction on instructions from architect, so that the codebase remains clean, maintainable, and efficient over time.
+
+**Problem Statement**:
+
+Currently:
+- Technical debt accumulates over time
+- Code becomes harder to maintain
+- Refactoring happens reactively (when things break)
+- No proactive code quality management
+- No systematic approach to identifying refactoring opportunities
+
+**User Requirements** (2025-10-16):
+
+1. "I want the code_developer to do code refactoring/simplification/technical debt reduction on a regular basis"
+2. "He should do this on instructions from the code-architect who decides when it is time for this"
+3. "architect should have prepared upfront the technical tasks and sub-tasks for code_developer to know what to do"
+
+**Solution**:
+
+architect proactively monitors code quality and schedules refactoring work for code_developer.
+
+**Workflow**:
+
+```
+architect (monitors code quality regularly)
+    ↓
+architect (detects technical debt/complexity)
+    ↓
+architect (creates refactoring plan)
+    ↓
+architect (creates technical tasks for code_developer)
+    ↓
+code_developer (executes refactoring tasks)
+    ↓
+architect (reviews refactored code)
+    ↓
+architect (marks refactoring complete)
+```
+
+**architect Responsibilities**:
+
+### 1. Regular Code Quality Monitoring (Weekly)
+
+architect monitors:
+- Code complexity metrics (radon, pylint)
+- Technical debt hotspots
+- Code duplication patterns
+- Architecture violations
+- Test coverage gaps
+- Large files (>2000 lines)
+- Complex functions (complexity >20)
+
+### 2. Refactoring Decision Making
+
+architect decides:
+- **When** refactoring is needed
+- **Priority** of refactoring vs. new features
+- **Balance** between technical debt and feature delivery
+- **Escalation** to user if major refactoring needed (>1 week)
+
+**Decision Criteria**:
+- File >2000 lines → Consider splitting
+- Complexity >20 → Simplify
+- Duplication >3 instances → Extract common code
+- Test coverage <80% → Add tests
+- Architecture violation → Fix immediately
+
+### 3. Refactoring Planning
+
+When refactoring needed, architect creates plan:
+
+**Plan Contents**:
+- **What**: Files/modules to refactor
+- **Why**: Technical debt identified
+- **How**: Approach and techniques
+- **Tasks**: Specific, actionable tasks for code_developer
+- **Estimate**: Hours/days required
+- **Acceptance Criteria**: Success metrics
+- **Testing**: How to verify nothing broken
+
+**Document Location**: `docs/architecture/refactoring/REFACTOR_YYYY_MM_DD_description.md`
+
+### 4. Task Creation for code_developer
+
+architect provides:
+- Specific, actionable tasks
+- Clear "before" and "after" examples
+- Testing requirements
+- Success metrics
+- Acceptance criteria
+
+**Task Format**:
+```markdown
+**Task 1: Extract SpecManagerMixin to separate module** (4 hours)
+
+Current State:
+- DevDaemon class: 1,592 lines
+- SpecManager logic embedded in DevDaemon
+
+Target State:
+- New module: coffee_maker/autonomous/spec_manager.py
+- SpecManager logic extracted
+- DevDaemon imports from spec_manager
+
+Steps:
+1. Create spec_manager.py
+2. Move spec logic from DevDaemon
+3. Update imports
+4. Test spec creation workflow
+
+Acceptance Criteria:
+- [ ] spec_manager.py created with all spec logic
+- [ ] DevDaemon.py reduced by ~200 lines
+- [ ] All tests passing
+- [ ] Spec creation works identically
+```
+
+**code_developer Responsibilities**:
+
+### 1. Execute Refactoring Tasks
+
+code_developer:
+- Follows architect's refactoring plan
+- Implements changes incrementally
+- Writes/updates tests
+- Verifies no functionality broken
+- Commits with clear messages
+
+### 2. Report Progress
+
+code_developer:
+- Updates task status
+- Flags any blockers
+- Requests clarification if needed
+- Reports completion with metrics
+
+### 3. Verify Success
+
+code_developer verifies:
+- All tests passing
+- Code complexity reduced
+- Coverage maintained/improved
+- No functionality broken
+- Performance unchanged or improved
+
+**Example Refactoring Plan**:
+
+```markdown
+# docs/architecture/refactoring/REFACTOR_2025_10_16_daemon_complexity.md
+
+## Refactoring Plan: Simplify DevDaemon Class
+
+**Created By**: architect
+**Date**: 2025-10-16
+**Priority**: HIGH
+**Estimated Effort**: 2 days
+
+### Why Refactor?
+
+DevDaemon class has grown to 1,592 lines with 25 methods.
+- Complexity score: 47 (should be <20)
+- Too many responsibilities
+- Hard to test
+- Hard to understand
+
+### Current State
+
+```python
+class DevDaemon:
+    # 1,592 lines
+    # 25 methods
+    # 12 mixin classes
+    # Complexity: 47
+```
+
+### Target State
+
+```python
+class DevDaemon:
+    # <500 lines
+    # <10 core methods
+    # Extract mixins to separate modules
+    # Complexity: <20
+```
+
+### Tasks for code_developer
+
+**Task 1: Extract SpecManagerMixin to separate module** (4 hours)
+- Move spec management logic to coffee_maker/autonomous/spec_manager.py
+- Update imports
+- Test spec creation workflow
+
+**Task 2: Extract ImplementationMixin to separate module** (4 hours)
+- Move implementation logic to coffee_maker/autonomous/implementation_manager.py
+- Update imports
+- Test implementation workflow
+
+**Task 3: Simplify main run() loop** (3 hours)
+- Reduce nested conditionals
+- Extract helper methods
+- Add inline documentation
+
+**Task 4: Update tests** (5 hours)
+- Update test imports
+- Add tests for extracted modules
+- Verify 100% coverage maintained
+
+### Acceptance Criteria
+
+- [ ] DevDaemon class <500 lines
+- [ ] Complexity score <20
+- [ ] All tests passing
+- [ ] No functionality broken
+- [ ] Code coverage maintained (>90%)
+- [ ] Documentation updated
+
+### Verification
+
+```bash
+# Complexity check
+radon cc coffee_maker/autonomous/daemon.py -s
+
+# Test coverage
+pytest --cov=coffee_maker/autonomous/daemon.py --cov-report=term
+
+# Integration test
+poetry run code-developer --auto-approve --max-iterations 1
+```
+```
+
+**Requirements**:
+
+### 1. Refactoring Schedule
+
+architect monitors code quality:
+- **Weekly**: Review complexity metrics
+- **Monthly**: Identify refactoring opportunities
+- **Quarterly**: Major architectural improvements
+
+### 2. Refactoring Plans Directory
+
+Create: `docs/architecture/refactoring/`
+- architect owns this directory (writes refactoring plans)
+- Template: `REFACTOR_YYYY_MM_DD_description.md`
+- Example plans showing best practices
+
+### 3. Code Quality Metrics
+
+Integrate tools:
+- **radon**: Code complexity metrics
+- **pylint**: Code quality checks
+- **coverage**: Test coverage tracking
+- **metrics over time**: Track improvement
+
+Alert architect when thresholds exceeded:
+- File >2000 lines
+- Function complexity >20
+- Duplication detected
+- Coverage drops below 80%
+
+### 4. Proactive Scheduling
+
+architect workflow:
+1. Weekly metrics review
+2. Identify refactoring needs
+3. Create refactoring plan
+4. Add REFACTOR priority to ROADMAP
+5. code_developer implements like any other priority
+
+**ROADMAP Format**:
+```markdown
+### REFACTOR-001: Simplify DevDaemon Class
+
+**Status**: 📝 PLANNED
+**Type**: Refactoring / Technical Debt
+**Priority**: HIGH
+**Estimated**: 2 days
+
+See: docs/architecture/refactoring/REFACTOR_2025_10_16_daemon_complexity.md
+```
+
+### 5. Review Process
+
+After code_developer completes refactoring:
+
+1. **architect reviews**:
+   - Verify complexity reduced
+   - Confirm no functionality broken
+   - Check tests comprehensive
+   - Validate acceptance criteria met
+
+2. **architect approval**:
+   - Approve PR
+   - Mark refactoring complete
+   - Update metrics
+   - Document learnings
+
+3. **Track improvement**:
+   - Before/after metrics
+   - Time invested
+   - Benefits realized
+   - Future refactoring identified
+
+**Acceptance Criteria**:
+
+- [ ] docs/architecture/refactoring/ directory created
+- [ ] Refactoring plan template created (REFACTOR_TEMPLATE.md)
+- [ ] architect monitors code quality weekly (scheduled)
+- [ ] architect can create refactoring plans
+- [ ] code_developer can execute refactoring tasks
+- [ ] Refactoring tasks appear in ROADMAP (REFACTOR-XXX format)
+- [ ] Code complexity metrics tracked (radon, pylint)
+- [ ] architect review process documented
+- [ ] Example refactoring plan exists (REFACTOR_2025_10_16_example.md)
+- [ ] Integration with CI/CD (quality gates)
+
+**Priority Justification**:
+
+**HIGH PRIORITY** because:
+1. **User Request**: Direct user requirement for regular refactoring
+2. **Code Quality**: Prevents technical debt accumulation
+3. **Maintainability**: Keeps codebase clean and understandable
+4. **Velocity**: Clean code = faster feature development
+5. **Sustainability**: Long-term system health
+
+**Estimated Effort**: 2-3 days
+
+**Day 1: Setup Infrastructure** (8 hours)
+- Create docs/architecture/refactoring/ directory
+- Create REFACTOR_TEMPLATE.md template
+- Integrate radon/pylint metrics
+- Setup weekly monitoring script
+- Create example refactoring plan
+
+**Day 2: architect Workflow** (8 hours)
+- Implement architect metrics monitoring
+- Create refactoring plan generation
+- ROADMAP integration (REFACTOR priorities)
+- architect review process
+- CLI commands for refactoring
+
+**Day 3: Testing & Documentation** (6 hours)
+- Test refactoring workflow end-to-end
+- Document architect responsibilities
+- Document code_developer responsibilities
+- Example refactoring execution
+- Integration tests
+
+**Integration**:
+
+This workflow respects ownership boundaries (CFR-001):
+- **architect**: Creates refactoring plans (owns docs/architecture/refactoring/)
+- **project_manager**: Adds REFACTOR priorities to ROADMAP (owns docs/roadmap/)
+- **code_developer**: Executes refactoring (owns coffee_maker/)
+
+**Dependencies**:
+
+- ✅ US-041 (architect Operational) - COMPLETE
+- ✅ CFR-001 (Document Ownership) - COMPLETE
+- 📝 CFR-005 (Ownership Maintenance) - PLANNED (this US creates it)
+
+**Unblocks**:
+
+- Systematic code quality improvement
+- Proactive technical debt reduction
+- Sustainable long-term development
+- CFR-005 implementation (ownership maintenance responsibility)
+
+**Related Documents**:
+
+- docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md - Will add CFR-005
+- .claude/CLAUDE.md - Agent ownership matrix
+- docs/roadmap/TEAM_COLLABORATION.md - Agent collaboration
+
+**Related CFRs**:
+
+This US implements CFR-005 (Ownership Includes Maintenance Responsibility):
+- architect monitors code quality (proactive maintenance)
+- architect schedules refactoring (maintenance planning)
+- code_developer executes refactoring (maintenance execution)
+
+**Notes**:
+
+This user story addresses the user's requirement for regular, systematic refactoring. architect takes the lead on deciding WHEN and WHAT to refactor, while code_developer executes the refactoring based on architect's detailed plans.
+
+---

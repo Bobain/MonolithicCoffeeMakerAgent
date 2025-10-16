@@ -1,6 +1,6 @@
 # Critical Functional Requirements - System Invariants
 
-**Version**: 1.0
+**Version**: 1.6
 **Date**: 2025-10-16
 **Status**: Active
 **Owner**: project_manager
@@ -163,39 +163,40 @@ If file conflict detected despite all safeguards:
 
 **Rule**: Each directory/file has EXACTLY ONE owner agent. Only the owner can modify.
 
-### Ownership Matrix
+### Ownership Matrix (with Maintenance Responsibilities - CFR-005)
 
-| Directory/File | Owner | Can Modify? | Others |
-|----------------|-------|-------------|--------|
-| **User Interface** | user_listener | ONLY UI for all user interactions | All others: NO UI (backend only) |
-| **docs/*.md** | project_manager | YES - Top-level files ONLY (not subdirectories) | All others: READ-ONLY |
-| **docs/roadmap/** | project_manager | YES - Strategic planning ONLY | All others: READ-ONLY |
-| **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Strategic, code_developer: Status only | All others: READ-ONLY |
-| **docs/PRIORITY_*_STRATEGIC_SPEC.md** | project_manager | YES - Creates strategic specs | All others: READ-ONLY |
-| **docs/architecture/** | architect | YES - Technical specs, ADRs, guidelines | All others: READ-ONLY |
-| **docs/architecture/specs/** | architect | YES - Technical specifications | All others: READ-ONLY |
-| **docs/architecture/decisions/** | architect | YES - ADRs (Architectural Decision Records) | All others: READ-ONLY |
-| **docs/architecture/guidelines/** | architect | YES - Implementation guidelines | All others: READ-ONLY |
-| **docs/generator/** | generator | YES - Execution traces | All others: READ-ONLY |
-| **docs/reflector/** | reflector | YES - Delta items (insights) | All others: READ-ONLY |
-| **docs/curator/** | curator | YES - Playbooks and curation | All others: READ-ONLY |
-| **docs/code-searcher/** | project_manager | YES - Code analysis documentation | code-searcher: Prepares findings (READ-ONLY) |
-| **docs/templates/** | project_manager | YES - Documentation templates | All others: READ-ONLY |
-| **docs/tutorials/** | project_manager | YES - Tutorial content | All others: READ-ONLY |
-| **docs/user_interpret/** | project_manager | YES - Meta-docs about user_interpret | All others: READ-ONLY |
-| **docs/code_developer/** | project_manager | YES - Meta-docs about code_developer | All others: READ-ONLY |
-| **pyproject.toml** | architect | YES - Dependency management (requires user approval) | All others: READ-ONLY |
-| **poetry.lock** | architect | YES - Dependency lock file | All others: READ-ONLY |
-| **.claude/** | code_developer | YES - Technical configurations | All others: READ-ONLY |
-| **.claude/agents/** | code_developer | YES - Agent configurations | All others: READ-ONLY |
-| **.claude/commands/** | code_developer | YES - Prompt templates | All others: READ-ONLY |
-| **.claude/mcp/** | code_developer | YES - MCP configurations | All others: READ-ONLY |
-| **.claude/CLAUDE.md** | code_developer | YES - Technical setup and implementation guide | All others: READ-ONLY |
-| **coffee_maker/** | code_developer | YES - All implementation | All others: READ-ONLY |
-| **tests/** | code_developer | YES - All test code | All others: READ-ONLY |
-| **scripts/** | code_developer | YES - Utility scripts | All others: READ-ONLY |
-| **.pre-commit-config.yaml** | code_developer | YES - Pre-commit hooks | All others: READ-ONLY |
-| **data/user_interpret/** | user_interpret | YES - Operational data (conversation logs, etc.) | All others: READ-ONLY |
+| Directory/File | Owner | Can Modify? | Maintenance Duties (CFR-005) | Others |
+|----------------|-------|-------------|------------------------------|--------|
+| **User Interface** | user_listener | ONLY UI for all user interactions | N/A (no files owned) | All others: NO UI (backend only) |
+| **docs/*.md** | project_manager | YES - Top-level files ONLY (not subdirectories) | Keep current, remove obsolete, simplify | All others: READ-ONLY |
+| **docs/roadmap/** | project_manager | YES - Strategic planning ONLY | Archive completed work, consolidate specs, keep ROADMAP organized | All others: READ-ONLY |
+| **docs/roadmap/ROADMAP.md** | project_manager (strategy), code_developer (status) | project_manager: Strategic, code_developer: Status only | Archive old priorities, simplify structure | All others: READ-ONLY |
+| **docs/PRIORITY_*_STRATEGIC_SPEC.md** | project_manager | YES - Creates strategic specs | Remove obsolete specs, consolidate duplicates | All others: READ-ONLY |
+| **docs/architecture/** | architect | YES - Technical specs, ADRs, guidelines | Archive old ADRs, update specs, organize directories, monitor code quality weekly | All others: READ-ONLY |
+| **docs/architecture/specs/** | architect | YES - Technical specifications | Update with system changes, archive superseded | All others: READ-ONLY |
+| **docs/architecture/decisions/** | architect | YES - ADRs (Architectural Decision Records) | Archive superseded ADRs, keep organized | All others: READ-ONLY |
+| **docs/architecture/guidelines/** | architect | YES - Implementation guidelines | Remove obsolete, update for current practices | All others: READ-ONLY |
+| **docs/architecture/refactoring/** | architect | YES - Refactoring plans | Clean up completed plans, organize by date | All others: READ-ONLY |
+| **docs/generator/** | generator | YES - Execution traces | Rotate trace files, archive old, summarize | All others: READ-ONLY |
+| **docs/reflector/** | reflector | YES - Delta items (insights) | Archive old deltas, consolidate similar insights | All others: READ-ONLY |
+| **docs/curator/** | curator | YES - Playbooks and curation | Prune duplicates, remove low-effectiveness patterns | All others: READ-ONLY |
+| **docs/code-searcher/** | project_manager | YES - Code analysis documentation | Archive old analyses, organize by type | code-searcher: Prepares findings (READ-ONLY) |
+| **docs/templates/** | project_manager | YES - Documentation templates | Update templates, keep aligned with practices | All others: READ-ONLY |
+| **docs/tutorials/** | project_manager | YES - Tutorial content | Update examples, verify links work | All others: READ-ONLY |
+| **docs/user_interpret/** | project_manager | YES - Meta-docs about user_interpret | Keep current with user_interpret changes | All others: READ-ONLY |
+| **docs/code_developer/** | project_manager | YES - Meta-docs about code_developer | Keep current with code_developer changes | All others: READ-ONLY |
+| **pyproject.toml** | architect | YES - Dependency management (requires user approval) | Review dependencies periodically, remove unused | All others: READ-ONLY |
+| **poetry.lock** | architect | YES - Dependency lock file | Keep synchronized with pyproject.toml | All others: READ-ONLY |
+| **.claude/** | code_developer | YES - Technical configurations | Update CLAUDE.md, keep configs current | All others: READ-ONLY |
+| **.claude/agents/** | code_developer | YES - Agent configurations | Update agent definitions as roles evolve | All others: READ-ONLY |
+| **.claude/commands/** | code_developer | YES - Prompt templates | Update prompts, remove obsolete | All others: READ-ONLY |
+| **.claude/mcp/** | code_developer | YES - MCP configurations | Keep MCP configs current | All others: READ-ONLY |
+| **.claude/CLAUDE.md** | code_developer | YES - Technical setup and implementation guide | Update as system evolves, keep accurate | All others: READ-ONLY |
+| **coffee_maker/** | code_developer | YES - All implementation | Refactor complex code (when architect requests), remove unused code, update comments | All others: READ-ONLY |
+| **tests/** | code_developer | YES - All test code | Organize test files, clean up temp files, maintain coverage | All others: READ-ONLY |
+| **scripts/** | code_developer | YES - Utility scripts | Remove obsolete scripts, update documentation | All others: READ-ONLY |
+| **.pre-commit-config.yaml** | code_developer | YES - Pre-commit hooks | Keep hooks current, update configurations | All others: READ-ONLY |
+| **data/user_interpret/** | user_interpret | YES - Operational data (conversation logs, etc.) | Rotate logs, archive old conversations | All others: READ-ONLY |
 
 ### Enforcement
 
@@ -361,6 +362,234 @@ architect requests approval → user approves → code_developer adds dependency
 - User stories must clearly state which agent handles what
 - If ambiguous responsibility: Stop, ask user to clarify
 - Document new responsibilities explicitly in this matrix
+
+---
+
+## CFR-005: Ownership Includes Maintenance Responsibility
+
+**Purpose**: Implements CFR-000 by ensuring owners proactively maintain their files/directories.
+
+**This CFR prevents**: Technical debt accumulation and system degradation from neglected maintenance.
+
+**Rule**: Owning files/directories means maintaining them (cleaning, simplifying, updating, organizing).
+
+**Core Principle**:
+
+Ownership is not just about write access. It includes ongoing care and stewardship.
+
+**Maintenance Responsibilities**:
+
+### For ALL Owners
+
+Every agent that owns files/directories MUST:
+
+### 1. Keep Directories Clean
+
+- Remove obsolete files
+- Archive old versions
+- Delete temporary files
+- Organize subdirectories logically
+
+### 2. Simplify Documents
+
+- Remove redundant content
+- Consolidate duplicated information
+- Refactor overly complex documents
+- Split large files into smaller ones
+
+### 3. Update Regularly
+
+- Keep documentation current
+- Update stale information
+- Refresh examples
+- Verify links still work
+
+### 4. Improve Over Time
+
+- Enhance clarity
+- Add missing sections
+- Improve organization
+- Fix formatting issues
+
+### Specific Responsibilities by Owner
+
+**code_developer** (owns coffee_maker/, tests/, .claude/):
+- Refactor complex code when architect identifies technical debt
+- Remove unused functions/classes
+- Update stale comments
+- Organize test files logically
+- Clean up temporary test files
+- Update .claude/CLAUDE.md as system evolves
+
+**project_manager** (owns docs/roadmap/):
+- Archive completed priorities
+- Remove obsolete strategic specs
+- Consolidate duplicate priorities
+- Keep ROADMAP organized and readable
+- Update TEAM_COLLABORATION.md as workflows evolve
+- Simplify CRITICAL_FUNCTIONAL_REQUIREMENTS.md if it grows too large
+
+**architect** (owns docs/architecture/):
+- Archive superseded ADRs
+- Update technical specs as system changes
+- Organize specs/decisions/guidelines directories
+- Remove obsolete guidelines
+- Refactor complex technical documents
+- Keep refactoring plans directory clean
+- Monitor code quality weekly (identifies refactoring needs)
+- Create refactoring plans when needed (docs/architecture/refactoring/)
+
+**generator** (owns docs/generator/):
+- Archive old execution traces
+- Rotate trace files (keep recent, archive old)
+- Summarize historical traces
+- Clean up large trace files
+
+**reflector** (owns docs/reflector/):
+- Archive old delta items
+- Consolidate similar insights
+- Remove duplicated learnings
+- Keep deltas directory organized
+
+**curator** (owns docs/curator/):
+- Prune playbook duplicates (semantic de-duplication)
+- Remove low-effectiveness patterns
+- Consolidate similar patterns
+- Keep playbook under size limits
+
+### When to Perform Maintenance
+
+**Regular Schedule** (Weekly/Monthly):
+- Review owned directories
+- Identify cleanup opportunities
+- Schedule maintenance work
+- Execute cleanups
+
+**Triggered Maintenance** (Event-based):
+- After major feature completion
+- When directory grows >50 files
+- When single file grows >2000 lines
+- When architect identifies technical debt
+
+**Proactive Maintenance** (Continuous):
+- While working in owned files
+- During feature implementation
+- During bug fixes
+- During reviews
+
+### Maintenance Workflow
+
+```
+Owner monitors owned directories
+    ↓
+Owner identifies maintenance needed
+    ↓
+Owner plans maintenance (if large, escalate to user)
+    ↓
+Owner executes maintenance
+    ↓
+Owner commits with clear message: "chore: Clean up docs/roadmap/"
+```
+
+### Escalation for Large Maintenance
+
+If maintenance requires >4 hours:
+1. Owner escalates to project_manager
+2. project_manager creates maintenance task in ROADMAP
+3. User approves priority
+4. Owner executes with dedicated time
+
+### Examples
+
+**Good Maintenance** (code_developer):
+```bash
+git log --oneline
+abc123 chore: Remove unused utility functions in coffee_maker/utils/
+def456 refactor: Split 1500-line daemon.py into mixins
+ghi789 chore: Clean up test fixtures in tests/unit/
+```
+
+**Good Maintenance** (project_manager):
+```bash
+git log --oneline
+abc123 chore: Archive completed priorities PRIORITY 1-10
+def456 chore: Consolidate duplicate strategic specs
+ghi789 docs: Reorganize ROADMAP for better readability
+```
+
+**Good Maintenance** (architect):
+```bash
+git log --oneline
+abc123 chore: Archive superseded ADR-003 (replaced by ADR-007)
+def456 docs: Update SPEC-001 with new architecture
+ghi789 chore: Organize refactoring plans by year
+```
+
+### Enforcement
+
+**Level 1: Self-Check**
+- Owner regularly reviews owned directories
+- Owner identifies maintenance opportunities
+- Owner schedules maintenance work
+
+**Level 2: architect Monitoring** (for code quality)
+- architect monitors code complexity
+- architect schedules refactoring when needed
+- See US-044 for workflow
+
+**Level 3: project_manager Monitoring** (for documentation)
+- project_manager monitors docs/ size
+- project_manager schedules cleanup when needed
+
+**Level 4: User Review**
+- User can request cleanup: "Please clean up docs/roadmap/"
+- Owner executes cleanup
+- Owner reports completion
+
+### Failure to Maintain = Violation
+
+If owner neglects maintenance:
+- Directories become cluttered
+- Files become unmaintainable
+- Technical debt accumulates
+- System degrades over time
+
+This violates the spirit of ownership and CFR-000 (prevent system degradation).
+
+### Metrics
+
+**Healthy Ownership**:
+- Files <2000 lines (mostly)
+- Directories <50 files (mostly)
+- No obsolete files >6 months old
+- Regular maintenance commits (monthly)
+- Code complexity within limits
+
+**Unhealthy Ownership** (needs attention):
+- Files >3000 lines
+- Directories >100 files
+- Many obsolete files
+- No maintenance commits in 3+ months
+- Code complexity exceeds limits
+
+### Benefits
+
+**For Owners**:
+- Easier to work in clean directories
+- Less cognitive load
+- Faster to find things
+- Pride in well-maintained code
+
+**For System**:
+- Better code quality
+- Easier onboarding
+- Lower technical debt
+- Sustainable long-term
+
+**For Users**:
+- Faster feature delivery
+- Fewer bugs from complexity
+- Confidence in system health
 
 ---
 
@@ -1895,11 +2124,21 @@ This means US-043 (Parallel Execution) can be implemented safely thanks to CFR e
 
 **Remember**: These CFRs exist to prevent the system from breaking itself. They are not optional. They are not suggestions. They are CRITICAL FUNCTIONAL REQUIREMENTS.
 
-**Version**: 1.5
+**Version**: 1.6
 **Last Updated**: 2025-10-16
-**Next Review**: After US-038, US-039, and US-043 implementation
+**Next Review**: After US-038, US-039, US-043, and US-044 implementation
 
 **Changelog**:
+- **v1.6** (2025-10-16): Added CFR-005 (Ownership Includes Maintenance Responsibility) and US-044 Integration
+  - New CFR-005: Ownership means proactive maintenance (cleaning, simplifying, updating, organizing)
+  - Updated ownership matrix (CFR-001) with maintenance duties column
+  - architect monitors code quality weekly and creates refactoring plans
+  - code_developer executes refactoring based on architect's detailed plans
+  - All owners must maintain their files/directories (CFR-005)
+  - Maintenance workflow: Regular, triggered, and proactive maintenance schedules
+  - Enforcement: Self-check, architect monitoring, project_manager monitoring, user review
+  - Metrics: Healthy vs. unhealthy ownership indicators
+  - Related: US-044 (Regular Refactoring and Technical Debt Reduction Workflow)
 - **v1.5** (2025-10-16): Added "Parallel Execution Enabled by CFR-000" section
   - Documented why parallel execution is SAFE (thanks to CFR enforcement)
   - Parallel execution matrix showing safe/unsafe combinations
