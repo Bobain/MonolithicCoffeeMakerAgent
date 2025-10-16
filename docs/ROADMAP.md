@@ -22018,7 +22018,7 @@ gh pr checks  # Monitor CI/CD
 
 ## US-033: Automatic User Story Detection in user_listener
 
-**Status**: 📝 PLANNED
+**Status**: ✅ COMPLETE
 **Type**: Agent Enhancement / User Experience
 **Complexity**: Medium
 **Priority**: High
