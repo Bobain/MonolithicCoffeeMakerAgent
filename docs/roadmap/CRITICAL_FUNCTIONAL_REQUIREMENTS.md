@@ -1564,6 +1564,171 @@ When in doubt:
 
 ---
 
+## Agent File Access Patterns
+
+**Purpose**: Agents should KNOW which files to read, not search for them.
+
+### The Rule: Context Upfront, Not Discovery During Execution
+
+**Principle**: Each agent should have their required files SPECIFIED in their role definition.
+
+**Why**:
+- **Performance**: No wasteful Glob/Grep during execution
+- **Clarity**: Clear what agent needs to function
+- **Predictability**: Reproducible behavior
+- **Separation of Concerns**: code-searcher handles discovery
+
+### Required Files by Agent
+
+Each agent's `.claude/agents/[agent_name].md` should include:
+
+```markdown
+## Required Files (Context)
+
+**Always Read Before Work**:
+- File 1: Why needed
+- File 2: Why needed
+- File 3: Why needed
+```
+
+**Example Specifications**:
+
+**code_developer**:
+```markdown
+## Required Files (Context)
+
+**Always Read Before Work**:
+- docs/roadmap/ROADMAP.md - Source of priorities to implement
+- .claude/CLAUDE.md - Project instructions and standards
+- .claude/agents/code_developer.md - Own role definition
+
+**Read When Implementing Priority X**:
+- docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md - Strategic requirements (if exists)
+- docs/architecture/specs/SPEC-*-*.md - Technical design (if exists)
+- docs/architecture/guidelines/GUIDELINE-*.md - Implementation patterns (as needed)
+
+**Never Search**: code_developer should NOT use Glob/Grep during implementation.
+**Exception**: May search codebase to understand existing implementation patterns.
+```
+
+**project_manager**:
+```markdown
+## Required Files (Context)
+
+**Always Read Before Work**:
+- docs/roadmap/ROADMAP.md - Master task list (owns this)
+- docs/roadmap/TEAM_COLLABORATION.md - Agent collaboration guide
+- docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md - System invariants
+- .claude/CLAUDE.md - Project instructions
+
+**Never Search**: project_manager should NOT use Glob/Grep for strategic work.
+```
+
+**architect**:
+```markdown
+## Required Files (Context)
+
+**Always Read Before Work**:
+- docs/roadmap/ROADMAP.md - Understand requirements
+- .claude/CLAUDE.md - Project architecture standards
+- docs/architecture/decisions/ADR-*.md - Past architectural decisions (skim existing)
+- docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md - Strategic requirements to design for
+
+**May Search**: architect MAY use code-searcher for codebase analysis when designing.
+```
+
+**assistant**:
+```markdown
+## Required Files (Context)
+
+**Always Read Before Work**:
+- docs/roadmap/ROADMAP.md - Full project context
+- .claude/CLAUDE.md - Complete project instructions
+- .claude/agents/assistant.md - Own role definition
+
+**May Search**: assistant delegates to code-searcher for deep code analysis.
+**For Simple Queries**: assistant uses Grep/Read for 1-2 file lookups.
+```
+
+**code-searcher**:
+```markdown
+## Required Files (Context)
+
+**Always Read Before Work**:
+- None - code-searcher DISCOVERS files (that's the role)
+
+**Primary Tool**: Glob, Grep, Read (for discovery and analysis)
+```
+
+### When to Use code-searcher
+
+**Delegate to code-searcher when**:
+- "Find all files that..."
+- "Where is X implemented?"
+- "Analyze security patterns across..."
+- "Identify code reuse opportunities..."
+
+**Don't use code-searcher for**:
+- Reading known files (just use Read tool)
+- Reading agent's own context files
+- Reading well-documented paths in CLAUDE.md
+
+### Performance Impact
+
+**BAD (wasteful)**:
+```python
+# code_developer during implementation
+roadmap_files = glob("docs/**/*ROADMAP*")  # ❌ Searching! Why?
+for f in roadmap_files:
+    # ... check if it's the right one
+```
+
+**GOOD (efficient)**:
+```python
+# code_developer during implementation
+roadmap = read_file("docs/roadmap/ROADMAP.md")  # ✅ Known path!
+```
+
+### Exception: Intentional Discovery
+
+**Only acceptable time to search**:
+- Agent is new and learning the codebase structure
+- Explicit discovery task: "Find all test files"
+- code-searcher delegated task
+- architect analyzing codebase patterns for design
+
+### Enforcement
+
+**During agent invocation**:
+1. Agent receives context files in prompt or configuration
+2. Agent reads specified files upfront
+3. Agent works with known context
+4. Agent delegates to code-searcher if discovery needed
+
+**generator should**:
+- Provide context files to agents when routing
+- Log if agent uses Glob/Grep unexpectedly
+- Create reflection trace: "Agent searched for files - should context be clearer?"
+
+### Benefits
+
+**Performance**:
+- No wasteful file system operations
+- Faster agent startup
+- Predictable execution time
+
+**Clarity**:
+- Clear what agent needs
+- Obvious if context is missing
+- Easy to debug issues
+
+**Maintainability**:
+- Single source of truth for agent context
+- Easy to update when file paths change
+- Clear separation of concerns
+
+---
+
 ## Quick Reference: Master Rule
 
 **MASTER RULE: CFR-000 - NEVER ALLOW FILE CONFLICTS**
@@ -1648,6 +1813,14 @@ If ANY check fails: STOP, delegate, or escalate.
 **Next Review**: After US-038 and US-039 implementation
 
 **Changelog**:
+- **v1.4** (2025-10-16): Added Agent File Access Patterns (Performance & Clarity)
+  - Context-upfront principle: agents KNOW which files to read
+  - No wasteful Glob/Grep during execution (except code-searcher)
+  - Clear "Required Files (Context)" specification for each agent
+  - Performance optimization: predictable, fast agent startup
+  - code-searcher handles discovery tasks (separation of concerns)
+  - generator monitors unexpected file searches
+  - Related: US-042 implementation
 - **v1.3** (2025-10-16): Added Ownership-Aware File Tools
   - Tool-level enforcement of CFR-000 (Layer 2 protection)
   - READ tool unrestricted for all agents

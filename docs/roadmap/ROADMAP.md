@@ -25373,3 +25373,201 @@ def test_code_developer_not_running():
 ---
 
 ---
+
+### US-042: Implement Context-Upfront File Access Pattern
+
+**Status**: 📝 PLANNED - HIGH PRIORITY (Performance & Clarity)
+
+**Created**: 2025-10-16
+
+**Estimated Effort**: 1 day
+
+**User Story**:
+As a system designer, I want agents to receive required files upfront in their context, so they don't waste time searching for files during execution, improving performance and clarity.
+
+**Problem Statement**:
+Currently, agents use Glob/Grep to search for files during execution. This is:
+- **Wasteful**: Searching when they should KNOW which files to read
+- **Confusing**: Why is the agent searching?
+- **Inefficient**: Adds latency to agent operations
+- **Unclear**: File requirements not documented
+
+code-searcher exists specifically for file discovery. Other agents should have their context specified upfront.
+
+**Description**:
+Ensure agents receive required files upfront, eliminating wasteful file searching during execution. Each agent's role definition should specify "Required Files (Context)" that are provided at invocation time.
+
+**Requirements**:
+
+1. **Agent Role Definitions Updated**:
+   - All `.claude/agents/*.md` include "Required Files (Context)" section
+   - Clear specification of which files agent needs
+   - Explanation of WHY each file is needed
+   - Exceptions documented (code-searcher, architect for analysis)
+
+2. **generator Context Provision**:
+   - generator loads context files before routing to agents
+   - Context files included in agent prompts
+   - Reduced need for agents to search
+
+3. **Agents Use Read for Known Paths**:
+   - Agents use Read tool for known file paths
+   - Glob/Grep only for:
+     - code-searcher (discovery is the role)
+     - architect (analyzing codebase patterns)
+     - Exceptional cases (documented)
+
+4. **File Searching Delegated to code-searcher**:
+   - "Find all files that..." → code-searcher
+   - "Where is X implemented?" → code-searcher
+   - Discovery tasks → code-searcher
+
+5. **Logging & Monitoring**:
+   - generator logs when agents unexpectedly search
+   - Reflection traces: "Agent searched - should context be clearer?"
+   - Performance metrics: reduced Glob/Grep calls
+
+6. **Documentation Updated**:
+   - CRITICAL_FUNCTIONAL_REQUIREMENTS.md includes "Agent File Access Patterns"
+   - Each agent's .md includes "Required Files (Context)"
+   - CLAUDE.md references context-upfront principle
+
+**Acceptance Criteria**:
+
+- [ ] All `.claude/agents/*.md` have "Required Files (Context)" section
+- [ ] generator provides context files when routing to agents
+- [ ] Agents receive context in prompts (not searching)
+- [ ] Agents use Read for known paths (not Glob/Grep)
+- [ ] code-searcher handles discovery tasks (delegated)
+- [ ] Performance metrics show reduced searching (baseline vs after)
+- [ ] Documentation updated (CFRs, agent definitions, CLAUDE.md)
+- [ ] Logging captures unexpected file searches
+- [ ] Tests verify context provision works
+- [ ] All agents follow pattern consistently
+
+**Technical Details**:
+
+**Required Files by Agent**:
+
+```markdown
+code_developer:
+  Always Read: ROADMAP.md, CLAUDE.md, code_developer.md
+  When Implementing: PRIORITY_*_STRATEGIC_SPEC.md, SPEC-*-*.md, GUIDELINE-*.md
+  Never Search: (except understanding existing code)
+
+project_manager:
+  Always Read: ROADMAP.md, TEAM_COLLABORATION.md, CRITICAL_FUNCTIONAL_REQUIREMENTS.md, CLAUDE.md
+  Never Search: (for strategic work)
+
+architect:
+  Always Read: ROADMAP.md, CLAUDE.md, ADR-*.md (skim), PRIORITY_*_STRATEGIC_SPEC.md
+  May Search: (for codebase analysis when designing)
+
+assistant:
+  Always Read: ROADMAP.md, CLAUDE.md, assistant.md
+  May Search: (delegates to code-searcher for deep analysis, uses Grep/Read for 1-2 files)
+
+code-searcher:
+  Always Read: None (discovery is the role)
+  Primary Tool: Glob, Grep, Read
+```
+
+**Implementation Approach**:
+
+```python
+# generator routes to agent with context
+def route_to_agent(agent_type, task):
+    # Load required files based on agent type
+    context_files = load_context_files(agent_type)
+
+    # Include in prompt
+    prompt = f"""
+    You are {agent_type}.
+
+    Context files loaded:
+    {context_files}
+
+    Task: {task}
+    """
+
+    return execute_agent(agent_type, prompt)
+
+def load_context_files(agent_type):
+    """Load required files for agent based on role definition."""
+    required_files = AGENT_REQUIRED_FILES[agent_type]
+
+    context = {}
+    for file_path, reason in required_files.items():
+        context[file_path] = {
+            "content": read_file(file_path),
+            "reason": reason
+        }
+
+    return context
+```
+
+**Performance Impact**:
+
+Before:
+```python
+# Agent searches for ROADMAP
+roadmap_files = glob("docs/**/*ROADMAP*")  # Slow!
+for f in roadmap_files:
+    if "ROADMAP.md" in f:
+        roadmap = read_file(f)
+```
+
+After:
+```python
+# Agent receives ROADMAP upfront
+roadmap = context["docs/roadmap/ROADMAP.md"]["content"]  # Fast!
+```
+
+**Monitoring**:
+
+```python
+# generator logs unexpected searches
+if agent_type != "code-searcher" and tool_call == "Glob":
+    logger.warning(
+        f"Agent '{agent_type}' used Glob unexpectedly. "
+        f"Pattern: {pattern}. "
+        f"Should context be clearer?"
+    )
+
+    # Create reflection trace
+    reflector.add_trace({
+        "type": "unexpected_file_search",
+        "agent": agent_type,
+        "tool": "Glob",
+        "pattern": pattern,
+        "suggestion": "Add to required files?"
+    })
+```
+
+**Dependencies**:
+
+- CRITICAL_FUNCTIONAL_REQUIREMENTS.md (v1.4) - "Agent File Access Patterns" section ✅
+- All agent role definitions exist ✅
+- generator routing mechanism exists ✅
+
+**Success Metrics**:
+
+- **Performance**: Reduced Glob/Grep calls by 80%+ (except code-searcher)
+- **Clarity**: All agents have documented context requirements
+- **Predictability**: Consistent agent startup time
+- **Monitoring**: Unexpected searches logged and traced
+- **Developer Experience**: Clearer what each agent needs
+
+**Notes**:
+
+**Why This Matters**:
+1. **Performance**: File system operations are expensive
+2. **Clarity**: Obvious what agent needs to work
+3. **Debugging**: Easy to see if context is missing
+4. **Separation of Concerns**: code-searcher handles discovery
+
+**Related**:
+- CRITICAL_FUNCTIONAL_REQUIREMENTS.md v1.4 - "Agent File Access Patterns"
+- User observation: "I see agents looking for files - they should know!"
+
+---
