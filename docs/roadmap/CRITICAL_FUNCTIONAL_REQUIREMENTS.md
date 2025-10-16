@@ -1,6 +1,6 @@
 # Critical Functional Requirements - System Invariants
 
-**Version**: 1.8
+**Version**: 1.9
 **Date**: 2025-10-16
 **Status**: Active
 **Owner**: project_manager
@@ -2166,6 +2166,119 @@ project_manager verifies (no recurrence)
 - User sees continuous improvement
 - Trust builds ("they learn and adapt")
 - System becomes smarter over time
+
+---
+
+## CFR-010: Architect Must Continuously Review and Improve Specs
+
+**Rule**: The architect MUST regularly re-read ALL specs and the FULL ROADMAP to proactively improve specifications and think ahead about implementation complexities.
+
+**Why This Is Critical**:
+
+1. **Continuous Improvement**: Specs get better with fresh perspectives
+2. **Anticipate Problems**: Early detection of complexity prevents wasted implementation effort
+3. **Cross-Feature Optimization**: See patterns and reuse opportunities across specs
+4. **Simplification Opportunities**: Find ways to reduce complexity as understanding deepens
+5. **Consistency**: Ensure all specs align with latest architectural decisions
+
+**Frequency**:
+- **Daily**: Quick review of ROADMAP changes
+- **Weekly**: Deep review of all active specs
+- **Before Each New Spec**: Review all existing specs for patterns and reuse
+- **After Implementation**: Review spec based on what was actually built
+
+**Review Process**:
+
+1. **Re-read FULL ROADMAP**:
+   - Note new priorities added
+   - Identify dependencies between features
+   - Spot opportunities for consolidation
+   - Update priority on what needs specs next
+
+2. **Re-read ALL Existing Specs**:
+   - Check for outdated assumptions
+   - Look for simplification opportunities
+   - Find duplicated patterns that could be shared
+   - Identify specs that can be merged or eliminated
+
+3. **Think Ahead**:
+   - What complexities will code_developer face?
+   - Can we reduce implementation effort by 30-50%?
+   - Are there existing solutions we can reuse?
+   - What's the MINIMUM viable implementation?
+
+4. **Update Specs Proactively**:
+   - Add simplifications discovered
+   - Update with better approaches
+   - Add warnings about pitfalls
+   - Document shortcuts and copy-paste examples
+
+5. **Create Improvement ADRs**:
+   - Document why specs changed
+   - Explain what was learned
+   - Capture patterns for future reference
+
+**Example Workflow**:
+
+```
+Monday Morning (30 min):
+  → architect reviews ROADMAP for changes
+  → Identifies 2 new priorities need specs
+  → Reviews existing SPEC-009, SPEC-010
+  → Finds duplication: both use notification patterns
+  → Creates shared NotificationHelper utility
+  → Updates both specs to use helper
+  → Reduces implementation from 6 hours → 3 hours
+
+Wednesday (1 hour):
+  → Deep review of all 5 active specs
+  → Discovers 3 specs use similar git operations
+  → Proposes GitOpsHelper abstraction
+  → Creates ADR-004 documenting decision
+  → Updates specs with simpler approach
+  → Total reduction: 12 hours → 6 hours
+
+Friday (30 min):
+  → Reviews code_developer's completed work
+  → Sees they struggled with config management
+  → Updates related specs with clearer config examples
+  → Adds "Common Pitfalls" section
+  → Prevents future implementations from same struggle
+```
+
+**Deliverables**:
+
+1. **Weekly Improvement Report** (`docs/architecture/WEEKLY_SPEC_REVIEW_[date].md`):
+   - What was reviewed
+   - What was improved
+   - Effort savings achieved
+   - Patterns identified
+
+2. **Updated Specs**:
+   - Simpler implementations
+   - Better examples
+   - Clearer warnings
+
+3. **New ADRs** (as needed):
+   - Document significant improvements
+   - Explain architectural evolution
+
+**Metrics to Track**:
+
+- **Simplification Rate**: % reduction in implementation complexity
+- **Reuse Rate**: % of new specs using shared components
+- **Effort Saved**: Hours saved by spec improvements
+- **Iteration Speed**: Time from spec creation to completion
+
+**Benefits**:
+
+- code_developer gets progressively better specs
+- Implementation time decreases over time
+- Fewer blockers and questions
+- Higher quality, more maintainable code
+- System learns and improves continuously
+
+**User Story**: US-049: Architect Continuous Spec Improvement Loop
 
 ---
 
