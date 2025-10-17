@@ -3452,12 +3452,65 @@ When ready to release, a designated human maintainer can:
 
 But agents NEVER do this - they always work on roadmap.
 
+### Git Tagging on Roadmap Branch
+
+**Complementary Strategy**: While CFR-013 requires all work on `roadmap` branch, git tags provide version markers and rollback points WITHOUT needing separate branches.
+
+**Tag Types** (See GUIDELINE-004 for complete details):
+
+1. **`wip-*`** (Work In Progress) - created by code_developer
+   - After implementation complete with tests passing
+   - Example: `wip-us-047`
+
+2. **`dod-verified-*`** (DoD Verified) - created by project_manager
+   - After Puppeteer testing confirms DoD satisfied
+   - Example: `dod-verified-us-047`
+
+3. **`milestone-*`** (Major Milestone) - created by project_manager
+   - After completing major feature or epic
+   - Example: `milestone-priority-9`
+
+4. **`stable-v*.*.*`** (Stable Release) - created by project_manager
+   - Production-ready release with semantic versioning
+   - Example: `stable-v1.3.0`
+
+**Example Workflow**:
+```bash
+# All work on roadmap branch (CFR-013)
+git branch
+# * roadmap  ✅
+
+# code_developer: Mark implementation complete
+git tag -a wip-us-047 -m "US-047 implementation complete, awaiting DoD"
+git push origin wip-us-047
+
+# project_manager: Mark DoD verified
+git tag -a dod-verified-us-047 -m "US-047 DoD verified with Puppeteer"
+git push origin dod-verified-us-047
+
+# project_manager: Mark stable release
+git tag -a stable-v1.3.0 -m "Release v1.3.0 - Architect Enablement"
+git push origin stable-v1.3.0
+
+# Result: Progressive stability markers on single branch ✅
+```
+
+**Benefits of Tags + Single Branch**:
+- Version tracking without branch complexity
+- Rollback points without merge conflicts
+- CI/CD deployment from `stable-*` tags
+- Clear progression: wip → dod-verified → stable
+- Complements CFR-013 perfectly
+
+**Reference**: See `docs/architecture/guidelines/GUIDELINE-004-git-tagging-strategy.md` for comprehensive tagging guidelines, examples, and best practices.
+
 ### Relationship to Other CFRs
 
 **CFR-000 (Prevent File Conflicts)**: Working on single branch reduces merge conflicts
 **CFR-001 (Document Ownership)**: Ownership applies regardless of branch, but single branch simplifies
 **CFR-008 (Architect Creates Specs)**: architect creates specs on roadmap branch
 **CFR-012 (Agent Responsiveness)**: Agents can interrupt work, but always on roadmap branch
+**GUIDELINE-004 (Git Tagging)**: Tags provide version markers on roadmap branch without needing feature branches
 
 ### Success Metrics
 

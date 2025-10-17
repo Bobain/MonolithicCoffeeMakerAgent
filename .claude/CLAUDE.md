@@ -160,6 +160,11 @@ prompt = load_prompt(PromptNames.CREATE_TECHNICAL_SPEC, {
 - **Commits**: Descriptive messages with 🤖 footer
 - **Pre-commit**: Hooks run automatically (black, autoflake, trailing-whitespace)
 - **Single Source of Truth**: All work immediately visible to entire team
+- **Tags**: Use git tags to mark stable versions and milestones (see GUIDELINE-004)
+  - `wip-*`: code_developer marks implementation complete, tests passing
+  - `dod-verified-*`: project_manager marks DoD verified with Puppeteer
+  - `milestone-*`: Major features/epics complete
+  - `stable-v*.*.*`: Production-ready releases (semantic versioning)
 
 ---
 
@@ -222,6 +227,55 @@ prompt = load_prompt(PromptNames.MY_NEW_PROMPT, {
 # Or in code (future):
 # result = await puppeteer_client.navigate("https://example.com")
 # screenshot = await puppeteer_client.screenshot()
+```
+
+### 4. Git Tagging Workflow (GUIDELINE-004)
+
+```bash
+# code_developer: After completing implementation
+pytest  # Ensure all tests pass
+git add .
+git commit -m "feat: Implement US-047 - Architect-only spec creation
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+git tag -a wip-us-047 -m "US-047 implementation complete, awaiting DoD
+
+Features:
+- Architect-only spec creation
+- User approval workflow
+- Error handling improvements
+
+Tests: All passing (23 tests)
+Status: Awaiting DoD verification"
+git push origin roadmap
+git push origin wip-us-047
+
+# project_manager: After DoD verification with Puppeteer
+git tag -a dod-verified-us-047 -m "US-047 DoD verified with Puppeteer testing
+
+Verification Steps:
+- Tested spec creation workflow end-to-end ✅
+- Confirmed user approval process works ✅
+- Verified error handling scenarios ✅
+
+DoD Status: All criteria met
+Tested By: project_manager"
+git push origin dod-verified-us-047
+
+# project_manager: After multiple priorities complete
+git tag -a stable-v1.3.0 -m "Release v1.3.0 - Architect Enablement
+
+New Features:
+- Architect-only spec creation (US-045, US-047) ✅
+- User approval workflow (US-046) ✅
+- Silent background agents (US-048) ✅
+
+Tests: 156 passing, 0 failing
+DoD: All priorities verified
+Status: Production ready"
+git push origin stable-v1.3.0
 ```
 
 ---
@@ -568,6 +622,10 @@ code_developer tries to monitor all PRs
 1. **Descriptive message**: Explain what and why
 2. **Include footer**: 🤖 Generated with Claude Code
 3. **Co-author**: `Co-Authored-By: Claude <noreply@anthropic.com>`
+4. **Tag appropriately**: Use git tags for significant milestones (see GUIDELINE-004)
+   - code_developer: Create `wip-*` tags after tests pass
+   - project_manager: Create `dod-verified-*` after Puppeteer verification
+   - project_manager: Create `stable-v*.*.*` for production releases
 
 ---
 
