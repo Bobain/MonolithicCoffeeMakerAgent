@@ -272,8 +272,14 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         if use_claude_cli:
             from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
 
-            self.claude = ClaudeCLIInterface(claude_path=claude_cli_path, model=model)
-            logger.info("✅ Using Claude CLI mode (subscription)")
+            try:
+                self.claude = ClaudeCLIInterface(claude_path=claude_cli_path, model=model)
+                logger.info("✅ Using Claude CLI mode (subscription)")
+            except RuntimeError as e:
+                logger.warning(f"Claude CLI initialization failed: {e}")
+                logger.info("Falling back to Claude API mode")
+                self.claude = ClaudeAPI(model=model)
+                self.use_claude_cli = False
         else:
             self.claude = ClaudeAPI(model=model)
             logger.info("✅ Using Claude API mode (requires credits)")

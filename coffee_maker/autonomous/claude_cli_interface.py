@@ -18,6 +18,7 @@ import logging
 import os
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,7 @@ class ClaudeCLIInterface:
         model: str = "sonnet",
         max_tokens: int = 8000,
         timeout: int = 3600,
+        use_project_context: bool = False,
     ):
         """Initialize Claude CLI interface.
 
@@ -93,11 +95,13 @@ class ClaudeCLIInterface:
             model: Claude model to use
             max_tokens: Maximum tokens per response (note: CLI doesn't enforce this)
             timeout: Command timeout in seconds
+            use_project_context: Whether to use project context (-p flag)
         """
-        self.claude_path = claude_path
+        self.claude_path = Path(claude_path)
         self.model = model
         self.max_tokens = max_tokens
         self.timeout = timeout
+        self.use_project_context = use_project_context
 
         if not self.is_available():
             raise RuntimeError(
@@ -113,7 +117,8 @@ class ClaudeCLIInterface:
         Returns:
             True if claude command exists and is executable
         """
-        return os.path.isfile(self.claude_path) and os.access(self.claude_path, os.X_OK)
+        claude_path_str = str(self.claude_path)
+        return os.path.isfile(claude_path_str) and os.access(claude_path_str, os.X_OK)
 
     def check_available(self) -> bool:
         """Check if Claude CLI is available and working.
@@ -184,7 +189,7 @@ class ClaudeCLIInterface:
         try:
             # Build command
             cmd = [
-                self.claude_path,
+                str(self.claude_path),
                 "-p",  # Print mode (non-interactive)
                 "--model",
                 self.model,
@@ -295,7 +300,7 @@ class ClaudeCLIInterface:
 
             # Execute /compact command
             cmd = [
-                self.claude_path,
+                str(self.claude_path),
                 "-p",  # Print mode
                 "--model",
                 self.model,
