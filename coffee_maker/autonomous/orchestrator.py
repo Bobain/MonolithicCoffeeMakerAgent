@@ -91,23 +91,37 @@ def _agent_runner_static(agent_type: AgentType, config: Dict, status_dir: Path, 
     Raises:
         AgentAlreadyRunningError: If agent type already registered
     """
+    # Setup logging in subprocess
+    import sys
+
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", stream=sys.stdout
+    )
+
     try:
+        logger.info(f"🚀 Starting {config['name']} subprocess (PID: {os.getpid()})")
+
         # Import agent class dynamically
+        logger.info(f"Importing {config['module']}.{config['class']}...")
         module = __import__(config["module"], fromlist=[config["class"]])
         agent_class = getattr(module, config["class"])
+        logger.info(f"✅ Agent class imported successfully")
 
         # Create agent instance
+        logger.info(f"Creating agent instance...")
         agent = agent_class(
             status_dir=status_dir,
             message_dir=message_dir,
             check_interval=config["check_interval"],
         )
+        logger.info(f"✅ Agent instance created")
 
         # Register agent (CFR-000 singleton enforcement)
         with AgentRegistry.register(agent_type):
             logger.info(f"✅ {config['name']} registered in singleton registry (PID: {os.getpid()})")
 
             # Run agent's continuous loop
+            logger.info(f"Starting continuous loop for {config['name']}...")
             agent.run_continuous()
 
     except Exception as e:
@@ -115,6 +129,22 @@ def _agent_runner_static(agent_type: AgentType, config: Dict, status_dir: Path, 
         import traceback
 
         traceback.print_exc()
+
+        # Write error status before exiting
+        try:
+            status_file = status_dir / f"{config['name']}_status.json"
+            error_status = {
+                "agent_type": config["name"],
+                "state": "crashed",
+                "error": str(e),
+                "traceback": traceback.format_exc(),
+                "pid": os.getpid(),
+                "timestamp": datetime.now().isoformat(),
+            }
+            status_file.write_text(json.dumps(error_status, indent=2))
+        except:
+            pass
+
         raise
 
 
