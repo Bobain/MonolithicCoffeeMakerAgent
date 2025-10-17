@@ -76,34 +76,48 @@ class RoadmapParser:
         """
         priorities = []
 
-        # Pattern to match priority headers
-        # Example: ### 🔴 **PRIORITY 1: Analytics & Observability** ⚡ FOUNDATION
-        pattern = r"^###\s+🔴\s+\*\*PRIORITY\s+(\d+(?:\.\d+)?):([^*]+)\*\*"
+        # Multiple patterns to match priority headers:
+        # 1. ### 🔴 **PRIORITY 1: Analytics & Observability** ⚡ FOUNDATION
+        # 2. ### PRIORITY 1: Analytics 📝 Planned
+        # 3. ### PRIORITY 1: Done ✅ Complete
+        patterns = [
+            r"^###\s+🔴\s+\*\*PRIORITY\s+(\d+(?:\.\d+)?):([^*]+)\*\*",  # Strict format
+            r"^###\s+PRIORITY\s+(\d+(?:\.\d+)?):([^#]+?)(?:\s+(?:📝|🔄|✅|⏸️).*)?$",  # Flexible format
+        ]
 
         lines = self.content.split("\n")
 
         for i, line in enumerate(lines):
-            match = re.search(pattern, line)
-            if match:
-                priority_num = match.group(1)
-                title = match.group(2).strip()
+            for pattern in patterns:
+                match = re.search(pattern, line)
+                if match:
+                    priority_num = match.group(1)
+                    title = match.group(2).strip()
 
-                # Look for status in next few lines
-                status = self._extract_status(lines, i)
+                    # Clean up title (remove emojis and status if captured)
+                    title = re.sub(r"\s*(📝|🔄|✅|⏸️).*$", "", title).strip()
 
-                # Extract full section content
-                section_content = self._extract_section(lines, i)
+                    # Look for status in next few lines
+                    status = self._extract_status(lines, i)
 
-                priorities.append(
-                    {
-                        "name": f"PRIORITY {priority_num}",
-                        "number": priority_num,
-                        "title": title,
-                        "status": status,
-                        "section_start": i,
-                        "content": section_content,
-                    }
-                )
+                    # If status not found in **Status**: lines, try to extract from header
+                    if status == "Unknown":
+                        status = self._extract_status_from_header(line)
+
+                    # Extract full section content
+                    section_content = self._extract_section(lines, i)
+
+                    priorities.append(
+                        {
+                            "name": f"PRIORITY {priority_num}",
+                            "number": priority_num,
+                            "title": title,
+                            "status": status,
+                            "section_start": i,
+                            "content": section_content,
+                        }
+                    )
+                    break  # Found match, move to next line
 
         logger.info(f"Found {len(priorities)} priorities")
         return priorities
@@ -129,6 +143,27 @@ class RoadmapParser:
 
         return "Unknown"
 
+    def _extract_status_from_header(self, header_line: str) -> str:
+        """Extract status emoji and text from priority header line.
+
+        Args:
+            header_line: The priority header line
+
+        Returns:
+            Status string (e.g., "complete", "planned", "in_progress", "blocked")
+        """
+        # Look for status emojis and convert to status strings
+        if "✅" in header_line or "Complete" in header_line:
+            return "complete"
+        elif "🔄" in header_line or "In Progress" in header_line:
+            return "in_progress"
+        elif "📝" in header_line or "Planned" in header_line:
+            return "planned"
+        elif "⏸️" in header_line or "Blocked" in header_line:
+            return "blocked"
+
+        return "Unknown"
+
     def _extract_section(self, lines: List[str], start_line: int) -> str:
         """Extract full section content until next priority or end.
 
@@ -145,11 +180,11 @@ class RoadmapParser:
         for i in range(start_line + 1, len(lines)):
             line = lines[i]
 
-            # Stop at next priority section
-            if line.startswith("### 🔴 **PRIORITY"):
+            # Stop at next priority section (both formats)
+            if re.match(r"^###\s+(🔴\s+)?\*?PRIORITY\s+\d+", line):
                 break
 
-            # Stop at major section divider
+            # Stop at major section divider (## but not ###)
             if line.startswith("## ") and not line.startswith("###"):
                 break
 
