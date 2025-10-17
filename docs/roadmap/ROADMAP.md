@@ -27041,14 +27041,15 @@ Skills **complement** prompts (not replace):
 **Phase 1 Deliverables**:
 
 1. **Infrastructure** (Week 1):
-   - Request Code Execution Tool beta access from Anthropic
+   - ✅ **Code Execution Tool AVAILABLE** (Public Beta - no approval needed!)
+   - Enable Code Execution Tool with `anthropic-beta: code-execution-2025-08-25` header
    - Create `.claude/skills/` directory structure
    - Implement `ExecutionController` (unified skill/prompt system)
    - Implement `SkillLoader` (similar to PromptLoader)
    - Implement `SkillRegistry` (automatic skill discovery)
    - Implement `SkillInvoker` (secure skill execution)
    - Implement `AgentSkillController` (per-agent orchestration)
-   - Add `pyyaml` dependency for skill metadata
+   - Add `pyyaml` dependency for skill metadata ✅ **APPROVED**
    - Update agent framework to support skills
 
 2. **code_developer Skills** (Weeks 2-3 - CRITICAL):
@@ -27063,7 +27064,8 @@ Skills **complement** prompts (not replace):
 **Acceptance Criteria**:
 
 **Infrastructure**:
-- [ ] Code Execution Tool beta access obtained
+- [x] Code Execution Tool AVAILABLE (Public Beta - ready to use!)
+- [ ] Code Execution Tool enabled with `anthropic-beta: code-execution-2025-08-25` header
 - [ ] `.claude/skills/` directory created with proper structure
 - [ ] `ExecutionController` implemented with SKILL_ONLY/PROMPT_ONLY/HYBRID modes
 - [ ] `SkillLoader` implemented (loads skills from `.claude/skills/`)
@@ -27095,7 +27097,7 @@ Skills **complement** prompts (not replace):
 **Implementation Phases**:
 
 **Week 1: Infrastructure Setup**
-- Day 1-2: Request beta access, design final architecture
+- Day 1-2: Enable Code Execution Tool (public beta), finalize architecture
 - Day 3-4: Implement ExecutionController, SkillLoader, SkillRegistry
 - Day 5: Implement SkillInvoker, AgentSkillController, testing
 
@@ -27111,10 +27113,11 @@ Skills **complement** prompts (not replace):
 - Day 21: Final testing, documentation, measurement
 
 **Dependencies**:
-- Code Execution Tool beta access (hard blocker)
-- `pyyaml` dependency (requires user approval) ✅ **APPROVED**
-- Existing Puppeteer MCP integration (already complete)
-- Current prompt system (unchanged, complementary)
+- ✅ Code Execution Tool AVAILABLE (Public Beta - no blocker!)
+- ✅ `pyyaml` dependency **APPROVED** (for skill metadata)
+- ✅ Existing Puppeteer MCP integration (already complete)
+- ✅ Current prompt system (unchanged, complementary)
+- 🆓 **50 free hours/day** with Code Execution Tool (then $0.05/hour)
 
 **ROI Analysis**:
 - **Investment**: 84-104 hours (4 weeks)
@@ -27158,7 +27161,7 @@ Skills **complement** prompts (not replace):
 - US-056 (Phase 2 expansion to more agents)
 - US-057 (Phase 3 polish and optimization)
 
-**Blocked By**: None (beta access can be requested immediately)
+**Blocked By**: ✅ **NONE - Ready to Start!** (Code Execution Tool already available in public beta)
 
 ---
 
