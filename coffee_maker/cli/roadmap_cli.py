@@ -197,7 +197,7 @@ def cmd_view(args: argparse.Namespace) -> int:
 
     if args.priority:
         # Show specific priority
-        priority_name = args.priority.upper()
+        priority_name = args.priority.upper().replace("-", " ")
         if not priority_name.startswith("PRIORITY"):
             priority_name = f"PRIORITY {priority_name}"
 
