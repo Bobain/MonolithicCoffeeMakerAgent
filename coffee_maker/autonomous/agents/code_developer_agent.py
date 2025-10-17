@@ -312,8 +312,28 @@ class CodeDeveloperAgent(BaseAgent):
         # Try architect's specs directory first (CFR-008)
         specs_dir = Path("docs/architecture/specs")
         if specs_dir.exists():
-            for spec_file in specs_dir.glob(f"SPEC-{priority_number}-*.md"):
-                return spec_file
+            # Try multiple patterns to handle different naming conventions
+            # PRIORITY 2.6 can match SPEC-2.6-*.md, SPEC-2-6-*.md, SPEC-002-6-*.md, etc.
+            patterns = [
+                f"SPEC-{priority_number}-*.md",  # SPEC-2.6-*.md
+                f"SPEC-{priority_number.replace('.', '-')}-*.md",  # SPEC-2-6-*.md
+                f"SPEC-{priority_number.zfill(5).replace('.', '-')}-*.md",  # SPEC-002-6-*.md (padded)
+            ]
+
+            # Also try without dots/dashes for edge cases
+            if "." in priority_number:
+                major, minor = priority_number.split(".", 1)
+                patterns.extend(
+                    [
+                        f"SPEC-{major.zfill(3)}-{minor}-*.md",  # SPEC-002-6-*.md
+                        f"SPEC-{major}-{minor}-*.md",  # SPEC-2-6-*.md
+                    ]
+                )
+
+            for pattern in patterns:
+                for spec_file in specs_dir.glob(pattern):
+                    logger.info(f"Found spec: {spec_file}")
+                    return spec_file
 
         # Fallback: Check old strategic spec location
         roadmap_spec = Path(f"docs/roadmap/PRIORITY_{priority_number}_TECHNICAL_SPEC.md")
