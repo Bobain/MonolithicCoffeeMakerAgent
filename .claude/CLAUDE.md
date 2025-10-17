@@ -154,10 +154,12 @@ prompt = load_prompt(PromptNames.CREATE_TECHNICAL_SPEC, {
 })
 ```
 
-### Git Workflow
-- **Branch**: Feature branches (`feature/priority-X`)
+### Git Workflow ⭐ UPDATED (CFR-013)
+- **Branch**: `roadmap` ONLY - ALL agents work on roadmap branch (CFR-013)
+- **NO Feature Branches**: Agents cannot create or switch to feature/* branches
 - **Commits**: Descriptive messages with 🤖 footer
 - **Pre-commit**: Hooks run automatically (black, autoflake, trailing-whitespace)
+- **Single Source of Truth**: All work immediately visible to entire team
 
 ---
 
@@ -263,19 +265,38 @@ prompt = load_prompt(PromptNames.MY_NEW_PROMPT, {
 
 ---
 
-## Running the System
+## 🚀 Running the System
 
-### Start Autonomous Daemon
+### ⭐ MOST IMPORTANT: Start Autonomous Daemon
+
+**To make code_developer work autonomously on ROADMAP priorities:**
+
 ```bash
-# With auto-approve (autonomous mode)
 poetry run code-developer --auto-approve
+```
 
-# Check status
+**What this does:**
+- 🤖 **Autonomous Mode**: code_developer works continuously without manual approval
+- 📋 **Implements ROADMAP**: Automatically picks next priority from `docs/roadmap/ROADMAP.md`
+- 🔄 **Continuous Work**: Runs until you stop it (Ctrl+C)
+- ✅ **Auto-Approve**: Makes implementation decisions automatically
+- 🌿 **CFR-013 Compliant**: All work happens on `roadmap` branch only
+
+**Monitor progress:**
+```bash
+# Check what code_developer is working on
 poetry run project-manager developer-status
 
-# View notifications
+# View recent notifications
 poetry run project-manager notifications
+
+# Check ROADMAP status
+poetry run project-manager /roadmap
 ```
+
+**Stop the daemon:**
+- Press `Ctrl+C` in the terminal where it's running
+- The daemon will clean up and exit gracefully
 
 ### Manual Commands
 ```bash
