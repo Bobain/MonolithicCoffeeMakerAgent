@@ -1429,6 +1429,137 @@ def cmd_dev_report(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_spec_metrics(args: argparse.Namespace) -> int:
+    """Show spec metrics and weekly improvement report.
+
+    US-049: Continuous Spec Improvement Loop (CFR-010)
+
+    Displays weekly spec improvement metrics including:
+    - Specs created this week
+    - Specs updated this week
+    - Complexity reduction trends
+    - Estimation accuracy
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager spec-metrics
+    """
+    from coffee_maker.cli.spec_metrics import SpecMetricsTracker
+
+    try:
+        print("\n" + "=" * 80)
+        print("SPEC IMPROVEMENT METRICS (US-049 - CFR-010)")
+        print("=" * 80 + "\n")
+
+        tracker = SpecMetricsTracker()
+
+        # Generate weekly report
+        report = tracker.generate_weekly_report()
+        print(report)
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Failed to show spec metrics: {e}")
+        print(f"❌ Error showing spec metrics: {e}")
+        return 1
+
+
+def cmd_spec_status(args: argparse.Namespace) -> int:
+    """Show spec status and coverage report.
+
+    US-049: Continuous Spec Improvement Loop (CFR-010)
+
+    Displays current status of all tracked specs:
+    - Spec creation dates
+    - Completion status
+    - Estimation accuracy
+    - Summary statistics
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager spec-status
+    """
+    from coffee_maker.cli.spec_metrics import SpecMetricsTracker
+
+    try:
+        print("\n" + "=" * 80)
+        print("SPEC STATUS REPORT (US-049 - CFR-010)")
+        print("=" * 80 + "\n")
+
+        tracker = SpecMetricsTracker()
+
+        # Generate status report
+        report = tracker.show_spec_status()
+        print(report)
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Failed to show spec status: {e}")
+        print(f"❌ Error showing spec status: {e}")
+        return 1
+
+
+def cmd_spec_diff(args: argparse.Namespace) -> int:
+    """Compare spec to actual implementation.
+
+    US-049: Continuous Spec Improvement Loop (CFR-010)
+
+    Analyzes how implementation differs from the technical specification:
+    - What spec said vs what was built
+    - Discrepancies and divergences
+    - Recommendations for spec improvements
+
+    Args:
+        args: Parsed command-line arguments with priority
+
+    Returns:
+        0 on success, 1 on error
+
+    Example:
+        $ project-manager spec-diff "PRIORITY 9"
+        $ project-manager spec-diff SPEC-049
+    """
+    from coffee_maker.cli.spec_diff import SpecDiffAnalyzer
+
+    try:
+        if not hasattr(args, "priority") or not args.priority:
+            print("❌ Error: You must specify a priority")
+            print("\nUsage: project-manager spec-diff <priority>")
+            print("\nExamples:")
+            print("  project-manager spec-diff 'PRIORITY 9'")
+            print("  project-manager spec-diff SPEC-049")
+            return 1
+
+        print("\n" + "=" * 80)
+        print("SPEC vs IMPLEMENTATION ANALYSIS (US-049 - CFR-010)")
+        print("=" * 80 + "\n")
+
+        analyzer = SpecDiffAnalyzer()
+
+        # Analyze priority
+        report = analyzer.analyze_priority(args.priority)
+        print(report)
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Failed to analyze spec diff: {e}")
+        print(f"❌ Error analyzing spec diff: {e}")
+        return 1
+
+
 def main() -> int:
     """Main CLI entry point.
 
@@ -1587,6 +1718,16 @@ Use 'project-manager chat' for the best experience!
         help="Days to look back (default: 1 for yesterday)",
     )
 
+    # Spec-metrics command (US-049: CFR-010)
+    subparsers.add_parser("spec-metrics", help="Show spec improvement metrics and weekly report (US-049)")
+
+    # Spec-status command (US-049: CFR-010)
+    subparsers.add_parser("spec-status", help="Show spec status and coverage report (US-049)")
+
+    # Spec-diff command (US-049: CFR-010)
+    spec_diff_parser = subparsers.add_parser("spec-diff", help="Compare spec to implementation (US-049)")
+    spec_diff_parser.add_argument("priority", help="Priority or spec ID to analyze")
+
     args = parser.parse_args()
 
     # US-030: Default to chat when no command provided
@@ -1629,6 +1770,9 @@ Use 'project-manager chat' for the best experience!
                 "summary": cmd_summary,  # US-017 Phase 2
                 "calendar": cmd_calendar,  # US-017 Phase 2
                 "dev-report": cmd_dev_report,  # PRIORITY 9
+                "spec-metrics": cmd_spec_metrics,  # US-049: CFR-010
+                "spec-status": cmd_spec_status,  # US-049: CFR-010
+                "spec-diff": cmd_spec_diff,  # US-049: CFR-010
             }
 
             # PRIORITY 9: Show daily report on first interaction of new day
