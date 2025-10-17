@@ -4,16 +4,16 @@
   "current_task": {
     "type": "design_review",
     "status": "reviewing",
-    "last_check": "2025-10-17T15:05:13.512589"
+    "last_check": "2025-10-17T16:09:40.821929"
   },
-  "last_heartbeat": "2025-10-17T15:05:13.512600",
-  "next_check": "2025-10-17T16:05:13.512601",
+  "last_heartbeat": "2025-10-17T16:09:40.821937",
+  "next_check": "2025-10-17T17:09:40.821938",
   "health": "healthy",
-  "pid": 6397,
+  "pid": 16203,
   "metrics": {
     "reviews_performed": 0,
     "recommendations_provided": 0,
-    "last_check": "2025-10-17T15:05:13.512563"
+    "last_check": "2025-10-17T16:09:40.821926"
   },
   "error": null
 }

@@ -4,16 +4,16 @@
   "current_task": {
     "type": "project_monitoring",
     "status": "monitoring",
-    "last_check": "2025-10-17T15:05:10.465180"
+    "last_check": "2025-10-17T16:09:37.803981"
   },
-  "last_heartbeat": "2025-10-17T15:05:10.465186",
-  "next_check": "2025-10-17T15:20:10.465187",
+  "last_heartbeat": "2025-10-17T16:09:37.803986",
+  "next_check": "2025-10-17T16:24:37.803987",
   "health": "healthy",
-  "pid": 6373,
+  "pid": 16174,
   "metrics": {
     "prs_checked": 0,
     "ci_status": "monitoring",
-    "last_check": "2025-10-17T15:05:10.465161"
+    "last_check": "2025-10-17T16:09:37.803978"
   },
   "error": null
 }
