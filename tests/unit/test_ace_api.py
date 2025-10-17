@@ -55,25 +55,20 @@ def sample_trace():
 def sample_playbook():
     """Sample playbook."""
     return Playbook(
-        playbook_version="1.0",
         agent_name="user_interpret",
-        agent_objective="Test objective",
-        success_criteria="Test criteria",
-        last_updated=datetime.now(),
+        bullets=[
+            PlaybookBullet(
+                bullet_id="bullet_1",
+                content="Test bullet",
+                category="success_pattern",
+                effectiveness=0.9,
+                usage_count=10,
+                status="active",
+            )
+        ],
         total_bullets=5,
-        effectiveness_score=0.85,
-        categories={
-            "category1": [
-                PlaybookBullet(
-                    bullet_id="bullet_1",
-                    type="success_pattern",
-                    content="Test bullet",
-                    helpful_count=10,
-                    confidence=0.9,
-                    priority=5,
-                )
-            ]
-        },
+        avg_effectiveness=0.85,
+        last_updated=datetime.now(),
     )
 
 

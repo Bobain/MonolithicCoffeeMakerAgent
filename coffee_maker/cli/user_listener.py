@@ -56,6 +56,122 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _detect_and_validate_mode() -> tuple[bool, str]:
+    """Detect Claude CLI vs API mode and validate availability.
+
+    Returns:
+        Tuple of (use_cli: bool, claude_path: str)
+
+    Raises:
+        RuntimeError: If neither Claude CLI nor API key is available
+    """
+    inside_claude_cli = bool(os.environ.get("CLAUDECODE") or os.environ.get("CLAUDE_CODE_ENTRYPOINT"))
+
+    if inside_claude_cli:
+        logger.info("Detected running inside Claude Code - forcing API mode to avoid nesting")
+
+    # Auto-detect mode: CLI vs API (same logic as daemon)
+    claude_path = "/opt/homebrew/bin/claude"
+    has_cli = shutil.which("claude") or os.path.exists(claude_path)
+    has_api_key = ConfigManager.has_anthropic_api_key()
+
+    use_claude_cli = False
+
+    if inside_claude_cli:
+        # We're already in Claude CLI - MUST use API to avoid nesting
+        if has_api_key:
+            print("=" * 70)
+            print("ℹ️  Detected: Running inside Claude Code")
+            print("=" * 70)
+            print("🔄 Using Anthropic API to avoid CLI nesting")
+            print("💡 TIP: CLI nesting is not recommended")
+            print("=" * 70 + "\n")
+            use_claude_cli = False
+        else:
+            # No API key - can't proceed
+            print("=" * 70)
+            print("❌ ERROR: Running inside Claude Code without API key")
+            print("=" * 70)
+            print("\nYou're running user-listener from within Claude Code.")
+            print("To avoid CLI nesting, we need to use API mode.")
+            print("\n🔧 SOLUTION:")
+            print("  1. Get your API key from: https://console.anthropic.com/")
+            print("  2. Set the environment variable:")
+            print("     export ANTHROPIC_API_KEY='your-api-key-here'")
+            print("  3. Or add it to your .env file")
+            print("\n💡 ALTERNATIVE: Run from a regular terminal (not Claude Code)")
+            print("=" * 70 + "\n")
+            raise RuntimeError("No API key available in Claude Code mode")
+    elif has_cli:
+        # CLI available - use it as default (free with subscription!)
+        print("=" * 70)
+        print("ℹ️  Auto-detected: Using Claude CLI (default)")
+        print("=" * 70)
+        print("💡 TIP: Claude CLI is free with your subscription!")
+        print("=" * 70 + "\n")
+        use_claude_cli = True
+    elif has_api_key:
+        # No CLI but has API key - use API
+        print("=" * 70)
+        print("ℹ️  Auto-detected: Using Anthropic API (no CLI found)")
+        print("=" * 70)
+        print("💡 TIP: Install Claude CLI for free usage!")
+        print("    Get it from: https://claude.ai/")
+        print("=" * 70 + "\n")
+        use_claude_cli = False
+    else:
+        # Neither available - error
+        print("=" * 70)
+        print("❌ ERROR: No Claude access available!")
+        print("=" * 70)
+        print("\nThe chat requires either:")
+        print("  1. Claude CLI installed (recommended - free with subscription), OR")
+        print("  2. Anthropic API key (requires credits)")
+        print("\n🔧 SOLUTION 1 (CLI Mode - Recommended):")
+        print("  1. Install Claude CLI from: https://claude.ai/")
+        print("  2. Run: poetry run user-listener")
+        print("\n🔧 SOLUTION 2 (API Mode):")
+        print("  1. Get your API key from: https://console.anthropic.com/")
+        print("  2. Set the environment variable:")
+        print("     export ANTHROPIC_API_KEY='your-api-key-here'")
+        print("  3. Run: poetry run user-listener")
+        print("\n" + "=" * 70 + "\n")
+        raise RuntimeError("No Claude CLI or API key available")
+
+    return use_claude_cli, claude_path
+
+
+def _initialize_chat_components(use_claude_cli: bool, claude_path: str) -> tuple:
+    """Initialize editor and AI service components.
+
+    Args:
+        use_claude_cli: Whether to use Claude CLI
+        claude_path: Path to Claude CLI executable
+
+    Returns:
+        Tuple of (editor, ai_service)
+
+    Raises:
+        RuntimeError: If AI service is not available
+    """
+    # Initialize components (REUSED from project-manager chat)
+    editor = RoadmapEditor(ROADMAP_PATH)
+    ai_service = AIService(use_claude_cli=use_claude_cli, claude_cli_path=claude_path)
+
+    # Check AI service availability
+    if not ai_service.check_available():
+        print("❌ AI service not available")
+        print("\nPlease check:")
+        if use_claude_cli:
+            print("  - Claude CLI is installed and working")
+        else:
+            print("  - ANTHROPIC_API_KEY is valid")
+        print("  - Internet connection is active")
+        raise RuntimeError("AI service not available")
+
+    return editor, ai_service
+
+
 def main() -> int:
     """Main entry point for user-listener CLI.
 
@@ -63,9 +179,10 @@ def main() -> int:
 
     This function:
     1. Registers as USER_LISTENER singleton
-    2. Sets up ChatSession with AI service
-    3. Starts interactive REPL loop
-    4. Handles errors gracefully
+    2. Detects and validates Claude CLI vs API mode
+    3. Sets up ChatSession with AI service
+    4. Starts interactive REPL loop
+    5. Handles errors gracefully
 
     Returns:
         0 on success, 1 on error
@@ -82,95 +199,11 @@ def main() -> int:
         with AgentRegistry.register(AgentType.USER_LISTENER):
             logger.info("✅ user_listener registered in singleton registry")
 
-            # Check if we're ALREADY running inside Claude CLI (Claude Code)
-            # If so, we MUST use API mode to avoid nesting
-            inside_claude_cli = bool(os.environ.get("CLAUDECODE") or os.environ.get("CLAUDE_CODE_ENTRYPOINT"))
-
-            if inside_claude_cli:
-                logger.info("Detected running inside Claude Code - forcing API mode to avoid nesting")
-
-            # Auto-detect mode: CLI vs API (same logic as daemon)
-            claude_path = "/opt/homebrew/bin/claude"
-            has_cli = shutil.which("claude") or os.path.exists(claude_path)
-            has_api_key = ConfigManager.has_anthropic_api_key()
-
-            use_claude_cli = False
-
-            if inside_claude_cli:
-                # We're already in Claude CLI - MUST use API to avoid nesting
-                if has_api_key:
-                    print("=" * 70)
-                    print("ℹ️  Detected: Running inside Claude Code")
-                    print("=" * 70)
-                    print("🔄 Using Anthropic API to avoid CLI nesting")
-                    print("💡 TIP: CLI nesting is not recommended")
-                    print("=" * 70 + "\n")
-                    use_claude_cli = False
-                else:
-                    # No API key - can't proceed
-                    print("=" * 70)
-                    print("❌ ERROR: Running inside Claude Code without API key")
-                    print("=" * 70)
-                    print("\nYou're running user-listener from within Claude Code.")
-                    print("To avoid CLI nesting, we need to use API mode.")
-                    print("\n🔧 SOLUTION:")
-                    print("  1. Get your API key from: https://console.anthropic.com/")
-                    print("  2. Set the environment variable:")
-                    print("     export ANTHROPIC_API_KEY='your-api-key-here'")
-                    print("  3. Or add it to your .env file")
-                    print("\n💡 ALTERNATIVE: Run from a regular terminal (not Claude Code)")
-                    print("=" * 70 + "\n")
-                    return 1
-            elif has_cli:
-                # CLI available - use it as default (free with subscription!)
-                print("=" * 70)
-                print("ℹ️  Auto-detected: Using Claude CLI (default)")
-                print("=" * 70)
-                print("💡 TIP: Claude CLI is free with your subscription!")
-                print("=" * 70 + "\n")
-                use_claude_cli = True
-            elif has_api_key:
-                # No CLI but has API key - use API
-                print("=" * 70)
-                print("ℹ️  Auto-detected: Using Anthropic API (no CLI found)")
-                print("=" * 70)
-                print("💡 TIP: Install Claude CLI for free usage!")
-                print("    Get it from: https://claude.ai/")
-                print("=" * 70 + "\n")
-                use_claude_cli = False
-            else:
-                # Neither available - error
-                print("=" * 70)
-                print("❌ ERROR: No Claude access available!")
-                print("=" * 70)
-                print("\nThe chat requires either:")
-                print("  1. Claude CLI installed (recommended - free with subscription), OR")
-                print("  2. Anthropic API key (requires credits)")
-                print("\n🔧 SOLUTION 1 (CLI Mode - Recommended):")
-                print("  1. Install Claude CLI from: https://claude.ai/")
-                print("  2. Run: poetry run user-listener")
-                print("\n🔧 SOLUTION 2 (API Mode):")
-                print("  1. Get your API key from: https://console.anthropic.com/")
-                print("  2. Set the environment variable:")
-                print("     export ANTHROPIC_API_KEY='your-api-key-here'")
-                print("  3. Run: poetry run user-listener")
-                print("\n" + "=" * 70 + "\n")
-                return 1
+            # Detect and validate Claude CLI vs API mode
+            use_claude_cli, claude_path = _detect_and_validate_mode()
 
             # Initialize components (REUSED from project-manager chat)
-            editor = RoadmapEditor(ROADMAP_PATH)
-            ai_service = AIService(use_claude_cli=use_claude_cli, claude_cli_path=claude_path)
-
-            # Check AI service availability
-            if not ai_service.check_available():
-                print("❌ AI service not available")
-                print("\nPlease check:")
-                if use_claude_cli:
-                    print("  - Claude CLI is installed and working")
-                else:
-                    print("  - ANTHROPIC_API_KEY is valid")
-                print("  - Internet connection is active")
-                return 1
+            editor, ai_service = _initialize_chat_components(use_claude_cli, claude_path)
 
             # Display welcome banner (SPEC-010: Update to identify as user_listener)
             print("\n" + "=" * 70)
@@ -191,6 +224,10 @@ def main() -> int:
     except KeyboardInterrupt:
         print("\n\nGoodbye!\n")
         return 0
+
+    except RuntimeError as e:
+        logger.error(f"Runtime error: {e}")
+        return 1
 
     except ValueError as e:
         print(f"❌ Configuration error: {e}")

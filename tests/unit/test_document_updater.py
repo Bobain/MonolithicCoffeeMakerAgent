@@ -29,8 +29,12 @@ def temp_docs(tmp_path):
     docs_dir = tmp_path / "docs"
     docs_dir.mkdir()
 
+    # Create docs/roadmap subdirectory
+    roadmap_dir = docs_dir / "roadmap"
+    roadmap_dir.mkdir()
+
     # Create realistic ROADMAP.md
-    roadmap_path = docs_dir / "ROADMAP.md"
+    roadmap_path = roadmap_dir / "ROADMAP.md"
     roadmap_path.write_text(
         """# Coffee Maker Agent - Prioritized Roadmap
 

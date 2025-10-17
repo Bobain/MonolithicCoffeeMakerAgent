@@ -20,7 +20,7 @@ def preview_generator(tmp_path):
 @pytest.fixture
 def sample_roadmap(tmp_path):
     """Create sample ROADMAP.md file."""
-    roadmap_path = tmp_path / "docs" / "ROADMAP.md"
+    roadmap_path = tmp_path / "docs" / "roadmap" / "ROADMAP.md"
     roadmap_path.parent.mkdir(parents=True)
     roadmap_path.write_text(
         """# Coffee Maker Agent - Roadmap
