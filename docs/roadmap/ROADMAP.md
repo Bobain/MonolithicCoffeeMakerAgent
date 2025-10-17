@@ -1,8 +1,8 @@
 # Coffee Maker Agent - Prioritized Roadmap
 
-**Last Updated**: 2025-10-17 ⭐ **US-054 ADDED: CFR-011 Architect Daily Integration (CRITICAL)**
+**Last Updated**: 2025-10-17 ⭐ **US-055/056/057 ADDED: Claude Skills Integration (HIGH PRIORITY)**
 **Current Branch**: `roadmap`
-**Status**: PRIORITY 1-4 ✅ COMPLETE | US-033/034/038/042 ✅ COMPLETE | **US-054: CFR-011 Enforcement (CRITICAL) - Ready for Implementation**
+**Status**: PRIORITY 1-10 ✅ COMPLETE | **US-055: Claude Skills Phase 1 (HIGH) - Ready for Implementation** | US-054: CFR-011 (CRITICAL)
 **Quick-Start**: ⚡ CLI: `project-manager` (defaults to chat!) | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py`
 **Achievement**: 🎉 **VISIBILITY LOOP OPERATIONAL** - code_developer now merges to roadmap frequently, project_manager has real-time visibility!
 
@@ -27004,6 +27004,246 @@ class ArchitectDailyRoutine:
                 f"Run: architect analyze-codebase"
             )
 ```
+
+---
+
+### US-055: Claude Skills Integration - Phase 1 (Foundation + High-Value Skills)
+
+**Status**: 📝 Planned - HIGH PRIORITY ⭐
+
+**Created**: 2025-10-17
+
+**Estimated Effort**: 4 weeks (84-104 hours)
+
+**User Story**:
+As an autonomous agent, I want to use Claude Skills for complex multi-step workflows, so that I can reduce implementation time by 60-70% while maintaining multi-AI provider support through hybrid architecture.
+
+**Problem Statement**:
+Current prompt-based system works well for creative reasoning but is inefficient for:
+- Complex multi-step workflows (refactoring, testing, DoD verification)
+- Executable code tasks (security audits, dependency analysis)
+- Automated verification (browser testing, test running, evidence capture)
+- Composable workflows (combining multiple tools seamlessly)
+
+**Skills offer:**
+- Executable code + AI reasoning combined
+- 60-70% time reduction for complex priorities
+- Automated verification and testing
+- Composable, reusable workflows
+- On-demand loading (helps CFR-007 context budget)
+
+**Architecture Approach**:
+Skills **complement** prompts (not replace):
+- **Prompts** = Multi-provider support (Gemini, OpenAI) + creative reasoning
+- **Skills** = Claude-specific automation + executable workflows
+- **Hybrid mode** = Best of both worlds
+
+**Phase 1 Deliverables**:
+
+1. **Infrastructure** (Week 1):
+   - Request Code Execution Tool beta access from Anthropic
+   - Create `.claude/skills/` directory structure
+   - Implement `ExecutionController` (unified skill/prompt system)
+   - Implement `SkillLoader` (similar to PromptLoader)
+   - Implement `SkillRegistry` (automatic skill discovery)
+   - Implement `SkillInvoker` (secure skill execution)
+   - Implement `AgentSkillController` (per-agent orchestration)
+   - Add `pyyaml` dependency for skill metadata
+   - Update agent framework to support skills
+
+2. **code_developer Skills** (Weeks 2-3 - CRITICAL):
+   - **Test-Driven Implementation Skill**: Automated TDD workflow (write tests → implement → verify coverage)
+   - **Refactoring Skill**: Analyze → transform → test → commit (automated refactoring)
+   - **PR Creation Skill**: Analyze changes → generate PR → link to ROADMAP → create
+
+3. **architect + project_manager Skills** (Week 4 - HIGH):
+   - **Spec Generator Skill** (architect): Generate comprehensive technical specs automatically
+   - **DoD Verification Skill** (project_manager): Puppeteer + tests + GitHub checks + evidence capture
+
+**Acceptance Criteria**:
+
+**Infrastructure**:
+- [ ] Code Execution Tool beta access obtained
+- [ ] `.claude/skills/` directory created with proper structure
+- [ ] `ExecutionController` implemented with SKILL_ONLY/PROMPT_ONLY/HYBRID modes
+- [ ] `SkillLoader` implemented (loads skills from `.claude/skills/`)
+- [ ] `SkillRegistry` implemented (automatic skill discovery)
+- [ ] `SkillInvoker` implemented (secure execution with sandboxing)
+- [ ] `AgentSkillController` implemented (per-agent orchestration)
+- [ ] `pyyaml` dependency added to pyproject.toml
+- [ ] Agent base class updated to support skills
+- [ ] 100% backward compatible (existing prompts work unchanged)
+
+**code_developer Skills**:
+- [ ] Test-Driven Implementation Skill: Reduces implementation time by 50%+
+- [ ] Refactoring Skill: Automated refactoring with test verification
+- [ ] PR Creation Skill: Creates well-formatted PRs in <3 minutes
+
+**architect + project_manager Skills**:
+- [ ] Spec Generator Skill: Generates specs in 1 hour (vs 3 hours manual)
+- [ ] DoD Verification Skill: Verifies DoD in 15 min (vs 1 hour manual)
+
+**Quality**:
+- [ ] All skills have comprehensive tests (unit + integration)
+- [ ] Context budget compliance: Agent core ≤30% (CFR-007)
+- [ ] Skills tracked in Langfuse for observability
+- [ ] Error handling and retry logic implemented
+- [ ] Security review passed for all skills
+- [ ] Documentation complete (SPEC-001, ADR-002, GUIDELINE-005)
+- [ ] All existing tests pass (no regressions)
+
+**Implementation Phases**:
+
+**Week 1: Infrastructure Setup**
+- Day 1-2: Request beta access, design final architecture
+- Day 3-4: Implement ExecutionController, SkillLoader, SkillRegistry
+- Day 5: Implement SkillInvoker, AgentSkillController, testing
+
+**Week 2-3: code_developer Skills**
+- Days 6-8: Test-Driven Implementation Skill (most complex)
+- Days 9-11: Refactoring Skill (high complexity)
+- Days 12-13: PR Creation Skill (medium complexity)
+- Day 14: Integration testing, debugging
+
+**Week 4: architect + project_manager Skills**
+- Days 15-17: Spec Generator Skill
+- Days 18-20: DoD Verification Skill
+- Day 21: Final testing, documentation, measurement
+
+**Dependencies**:
+- Code Execution Tool beta access (hard blocker)
+- `pyyaml` dependency (requires user approval) ✅ **APPROVED**
+- Existing Puppeteer MCP integration (already complete)
+- Current prompt system (unchanged, complementary)
+
+**ROI Analysis**:
+- **Investment**: 84-104 hours (4 weeks)
+- **Annual Savings**: 625-1250 hours
+- **Break-Even**: 2-4 months
+- **5-Year ROI**: 750%
+
+**Technical Specifications**:
+- **SPEC-001**: `docs/architecture/specs/SPEC-001-claude-skills-integration.md` ✅ Created
+- **ADR-002**: `docs/architecture/decisions/ADR-002-integrate-claude-skills.md` ✅ Created
+- **GUIDELINE-005**: `docs/architecture/guidelines/GUIDELINE-005-creating-claude-skills.md` ✅ Created
+- **Summary**: `docs/architecture/SKILLS_INTEGRATION_SUMMARY.md` ✅ Created
+
+**Priority Level**: HIGH ⭐
+
+**Rationale**:
+- **Exceptional ROI**: 750% over 5 years, break-even in 2-4 months
+- **Massive time savings**: 60-70% reduction for complex priorities
+- **Solves current pain points**: Refactoring, DoD verification, spec creation
+- **Complementary architecture**: Maintains multi-provider support
+- **Low risk**: Managed risks with clear mitigations
+- **Future-proof**: Positions agents for advanced AI capabilities
+
+**Success Metrics**:
+- Implementation time: ≥60% reduction for complex priorities
+- DoD verification: ≤15 minutes (vs. 1 hour)
+- Spec creation: ≤1 hour (vs. 3 hours)
+- PR creation: ≤3 minutes (vs. 20 minutes)
+- Context budget: ≤30% for agent core
+- Code quality: Fewer bugs in review
+- Tests passing: 100% (no regressions)
+
+**Related Documents**:
+- `docs/architecture/specs/SPEC-001-claude-skills-integration.md` - Complete architecture
+- `docs/architecture/decisions/ADR-002-integrate-claude-skills.md` - Architectural decision
+- `docs/architecture/guidelines/GUIDELINE-005-creating-claude-skills.md` - Development guide
+- `docs/architecture/SKILLS_INTEGRATION_SUMMARY.md` - Executive summary
+- `.claude/commands/` - Existing prompts (complementary, not replaced)
+
+**Unblocks**:
+- US-056 (Phase 2 expansion to more agents)
+- US-057 (Phase 3 polish and optimization)
+
+**Blocked By**: None (beta access can be requested immediately)
+
+---
+
+### US-056: Claude Skills Integration - Phase 2 (Medium-Value Skills)
+
+**Status**: 📝 Planned - MEDIUM-HIGH PRIORITY
+
+**Created**: 2025-10-17
+
+**Estimated Effort**: 3 weeks (76-96 hours)
+
+**User Story**:
+As an autonomous agent, I want additional skills for strategic workflows (ROADMAP health, architecture analysis, demos, bug analysis, security audits), so that I can expand automation coverage across all major agent workflows.
+
+**Phase 2 Deliverables**:
+
+1. **Strategic Skills** (Weeks 1-2):
+   - **ROADMAP Health Skill** (project_manager): Analyze ROADMAP, check GitHub, identify blockers, generate health report
+   - **Architecture Analysis Skill** (architect): Scan codebase, build dependency graph, suggest improvements
+   - **Demo Creation Skill** (assistant): Automated Puppeteer demos with screenshots and narration
+   - **Bug Analysis Skill** (assistant): Reproduce bug, capture logs, analyze root cause, comprehensive report
+
+2. **Deep Analysis Skills** (Week 3):
+   - **Security Audit Skill** (code-searcher): Comprehensive security scanning (vulnerabilities, dependencies, auth flows)
+   - **Dependency Impact Skill** (architect): Analyze dependency changes, identify risks, suggest migration paths
+
+**Acceptance Criteria**:
+- [ ] All 6 Phase 2 skills operational
+- [ ] ROADMAP Health: Generates reports in 5 minutes
+- [ ] Demo Creation: 10 minutes (vs 45 minutes manual)
+- [ ] Security Audit: 30 minutes (vs 3 hours manual)
+- [ ] All skills tested and documented
+- [ ] Langfuse tracking integrated
+- [ ] Context budget compliance maintained
+
+**Dependencies**:
+- US-055 (Phase 1) must be complete
+- Skills infrastructure operational
+
+**Priority Level**: MEDIUM-HIGH
+
+**Estimated Effort**: 3 weeks (76-96 hours)
+
+---
+
+### US-057: Claude Skills Integration - Phase 3 (Polish + Optimization)
+
+**Status**: 📝 Planned - MEDIUM PRIORITY
+
+**Created**: 2025-10-17
+
+**Estimated Effort**: 2 weeks (36-48 hours)
+
+**User Story**:
+As an autonomous agent, I want enhancement skills (code forensics, design system, visual regression) and optimized performance, so that the complete skills suite is production-ready with excellent performance.
+
+**Phase 3 Deliverables**:
+
+1. **Enhancement Skills** (Week 1):
+   - **Code Forensics Skill** (code-searcher): Trace code evolution, identify contributors, analyze patterns
+   - **Design System Skill** (ux-design-expert): Generate design systems from Tailwind
+   - **Visual Regression Skill** (ux-design-expert): Detect unintended visual changes
+
+2. **Optimization** (Week 2):
+   - Performance tuning (skill execution speed)
+   - Context budget optimization (lazy loading, caching)
+   - Documentation completion (all skills documented)
+   - Skill marketplace submission (optional)
+   - Maintenance playbook creation
+
+**Acceptance Criteria**:
+- [ ] All 15 skills operational (complete suite)
+- [ ] Context budget: ≤30% for all agents
+- [ ] Performance benchmarks documented
+- [ ] Comprehensive documentation complete
+- [ ] Maintenance playbook created
+- [ ] 60%+ time reduction validated in production
+- [ ] All agents have 2-5 skills each
+
+**Dependencies**:
+- US-056 (Phase 2) must be complete
+
+**Priority Level**: MEDIUM
+
+**Estimated Effort**: 2 weeks (36-48 hours)
 
 ---
 
