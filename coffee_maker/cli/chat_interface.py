@@ -26,7 +26,7 @@ import os
 import re
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -48,6 +48,7 @@ from coffee_maker.cli.commands import get_command_handler, list_commands
 from coffee_maker.cli.notifications import NotificationDB, NOTIF_PRIORITY_HIGH
 from coffee_maker.cli.roadmap_editor import RoadmapEditor
 from coffee_maker.process_manager import ProcessManager
+from coffee_maker.autonomous.standup_generator import StandupGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -284,6 +285,7 @@ class ProjectManagerCompleter(Completer):
             "start",
             "stop",
             "restart",
+            "standup",
             "exit",
             "quit",
             "notifications",
@@ -745,6 +747,9 @@ class ChatSession:
         Displays welcome message and enters REPL loop.
         Handles user input, routes commands, and displays responses.
 
+        PRIORITY 9: Enhanced Communication & Daily Standup
+        Shows daily standup report on first chat of the day (>12 hours since last chat).
+
         PRIORITY: Automatic Daemon Management (Priority #3)
         Automatically checks if daemon is running and starts it if needed.
         No user approval required - just make it work.
@@ -764,6 +769,12 @@ class ChatSession:
 
         self._display_welcome()
         self._load_roadmap_context()
+
+        # PRIORITY 9: Show daily standup on first chat of day
+        if self._should_show_daily_standup():
+            self._generate_and_display_standup()
+            self._update_last_chat_timestamp()
+
         self._run_repl_loop()
 
     def _run_repl_loop(self):
@@ -898,6 +909,9 @@ class ChatSession:
             return self._cmd_daemon_stop()
         elif cmd_name == "restart":
             return self._cmd_daemon_restart()
+        elif cmd_name == "standup":
+            # PRIORITY 9: Force generation of daily standup report
+            return self._cmd_standup_force()
 
         # Get command handler for other commands
         handler = get_command_handler(cmd_name)
@@ -1451,3 +1465,95 @@ class ChatSession:
         except Exception as e:
             logger.warning(f"Failed to load roadmap context: {e}")
             self.console.print("\n[yellow]Warning: Could not load roadmap summary[/]\n")
+
+    def _should_show_daily_standup(self) -> bool:
+        """Check if daily standup should be shown.
+
+        Shows standup if more than 12 hours have passed since last chat.
+
+        Returns:
+            True if standup should be shown, False otherwise
+        """
+        config_dir = Path.home() / ".project_manager"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        last_chat_file = config_dir / "last_chat.json"
+
+        if not last_chat_file.exists():
+            # First time running
+            return True
+
+        try:
+            config = read_json_file(last_chat_file, default={})
+            last_chat_time_str = config.get("last_chat_timestamp")
+
+            if not last_chat_time_str:
+                return True
+
+            last_chat_time = datetime.fromisoformat(last_chat_time_str)
+            hours_elapsed = (datetime.now() - last_chat_time).total_seconds() / 3600
+
+            # Show standup if more than 12 hours have passed
+            return hours_elapsed > 12
+
+        except Exception as e:
+            logger.warning(f"Error checking last chat time: {e}")
+            return False
+
+    def _update_last_chat_timestamp(self):
+        """Update the last chat timestamp in config."""
+        config_dir = Path.home() / ".project_manager"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        last_chat_file = config_dir / "last_chat.json"
+
+        try:
+            write_json_file(
+                last_chat_file,
+                {
+                    "last_chat_timestamp": datetime.now().isoformat(),
+                    "date": date.today().isoformat(),
+                },
+            )
+        except Exception as e:
+            logger.warning(f"Failed to update last chat timestamp: {e}")
+
+    def _generate_and_display_standup(self):
+        """Generate and display daily standup report.
+
+        Called at session start if it's the first chat of the day.
+        """
+        try:
+            self.console.print("\n[cyan]Generating daily standup report...[/]\n")
+
+            # Generate standup for yesterday
+            yesterday = date.today() - timedelta(days=1)
+            generator = StandupGenerator()
+            summary = generator.generate_daily_standup(yesterday)
+
+            # Display the standup
+            self.console.print("[bold]═" * 30 + "═[/]")
+            md = Markdown(summary.summary_text)
+            self.console.print(md)
+            self.console.print("[bold]═" * 30 + "═[/]\n")
+
+        except Exception as e:
+            logger.error(f"Failed to generate standup: {e}")
+            self.console.print(f"\n[yellow]Warning: Could not generate standup report ({str(e)})[/]\n")
+
+    def _cmd_standup_force(self) -> str:
+        """Force generation of daily standup report.
+
+        This can be invoked with /standup command at any time.
+
+        Returns:
+            Response message
+        """
+        try:
+            yesterday = date.today() - timedelta(days=1)
+            generator = StandupGenerator()
+            summary = generator.generate_daily_standup(yesterday, force_regenerate=True)
+
+            return summary.summary_text
+
+        except Exception as e:
+            logger.error(f"Failed to generate standup: {e}")
+            return f"❌ Failed to generate standup: {str(e)}"
