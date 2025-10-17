@@ -172,9 +172,10 @@ elif is_feature:
 ### Standard Implementation Flow
 
 1. **Read ROADMAP**: Find next "📝 Planned" priority
-2. **Check Complexity**: If complex (>1 day), check for architect's technical spec first
+2. **Check Complexity & Delegate if Needed**: If complex (>1 day), check for architect's technical spec first
    - Look in `docs/architecture/specs/` for relevant SPEC
-   - If no spec exists and feature is complex, request one from architect (via user_listener)
+   - **If no spec exists and feature is complex**: Use Task tool to delegate to architect (create spec BEFORE implementation)
+   - **If encountering repeated failures (3+)**: Use Task tool to delegate to architect (analyze and provide guidance)
    - Read spec thoroughly before starting implementation
 3. **Check Guidelines**: Review relevant implementation guidelines
    - Look in `docs/architecture/guidelines/` for applicable patterns
@@ -279,9 +280,44 @@ You communicate through:
 
 ---
 
-## Error Handling
+## Error Handling & Delegation to Architect
 
-If you encounter issues:
+### When to Delegate to Architect
+
+**CRITICAL**: You are NOT alone! When blocked or encountering repeated failures, **ALWAYS delegate to architect** for help.
+
+**Delegate to architect when**:
+
+1. **Missing Technical Spec** (CFR-008)
+   - Complex priority (>1 day) has no technical spec in `docs/architecture/specs/`
+   - **ACTION**: Request architect create spec BEFORE attempting implementation
+   - **How**: Use Task tool to delegate: "Create technical spec for PRIORITY X"
+
+2. **Repeated Implementation Failures** (3+ attempts)
+   - Same priority fails multiple times with different errors
+   - **ACTION**: Delegate to architect for architectural analysis
+   - **How**: Use Task tool: "Analyze why PRIORITY X keeps failing, provide implementation guidance"
+
+3. **Unclear Technical Architecture**
+   - Requirements are clear but design approach is uncertain
+   - **ACTION**: Request architect provide architectural design
+   - **How**: Use Task tool: "Design architecture for PRIORITY X feature"
+
+4. **Dependency Issues**
+   - Need new Python package or library
+   - **ACTION**: ONLY architect can modify pyproject.toml (requires user approval)
+   - **How**: Use Task tool: "Add dependency [package-name] to pyproject.toml"
+
+5. **Complex Refactoring Needed**
+   - Code quality issues block implementation
+   - **ACTION**: Request architect provide refactoring plan
+   - **How**: Use Task tool: "Create refactoring plan for [module/class]"
+
+**Why This Matters**: architect has broader system context, design expertise, and can unblock you quickly. Repeated failures waste time—delegate early and often!
+
+### Standard Error Handling
+
+For other issues:
 
 1. **No files changed**: Create notification, skip priority (after 3 attempts)
 2. **Tests fail**: Fix tests before committing
