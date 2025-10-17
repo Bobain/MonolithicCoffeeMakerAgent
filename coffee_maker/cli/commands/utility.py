@@ -550,6 +550,40 @@ def cmd_spec_diff(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_spec_review(args: argparse.Namespace) -> int:
+    """Show technical spec coverage report for architect.
+
+    US-047 Phase 2: Architect Proactive Workflow
+
+    This command shows which priorities have technical specifications and
+    which ones are missing, helping architect proactively create missing specs
+    to enforce CFR-008.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        0 on success, 1 on error
+    """
+    from coffee_maker.cli.spec_review import SpecReviewReport
+
+    try:
+        print("\n" + "=" * 80)
+        print("TECHNICAL SPEC COVERAGE REPORT (US-047 - CFR-008)")
+        print("=" * 80 + "\n")
+
+        report_gen = SpecReviewReport()
+        report = report_gen.generate_report()
+        print(report)
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Failed to generate spec review report: {e}")
+        print(f"❌ Error generating spec review: {e}")
+        return 1
+
+
 def setup_parser(subparsers):
     """Configure utility-related subcommands.
 
@@ -587,6 +621,9 @@ def setup_parser(subparsers):
     spec_diff_parser = subparsers.add_parser("spec-diff", help="Compare spec to implementation (US-049)")
     spec_diff_parser.add_argument("priority", help="Priority or spec ID to analyze")
 
+    # Spec-review command (US-047: CFR-008)
+    subparsers.add_parser("spec-review", help="Show technical spec coverage report (US-047 - CFR-008)")
+
 
 def execute(args: argparse.Namespace) -> int:
     """Execute utility commands based on args.command.
@@ -606,6 +643,7 @@ def execute(args: argparse.Namespace) -> int:
         "spec-metrics": cmd_spec_metrics,
         "spec-status": cmd_spec_status,
         "spec-diff": cmd_spec_diff,
+        "spec-review": cmd_spec_review,
     }
 
     handler = commands.get(args.command)

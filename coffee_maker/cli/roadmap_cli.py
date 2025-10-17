@@ -166,6 +166,7 @@ Use 'project-manager chat' for the best experience!
                 "spec-metrics",
                 "spec-status",
                 "spec-diff",
+                "spec-review",
             ]:
                 return utility.execute(args)
             else:
