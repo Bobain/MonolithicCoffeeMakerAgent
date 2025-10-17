@@ -1,0 +1,19 @@
+{
+  "agent_type": "ux-design-expert",
+  "state": "working",
+  "current_task": {
+    "type": "design_review",
+    "status": "reviewing",
+    "last_check": "2025-10-17T15:05:13.512589"
+  },
+  "last_heartbeat": "2025-10-17T15:05:13.512600",
+  "next_check": "2025-10-17T16:05:13.512601",
+  "health": "healthy",
+  "pid": 6397,
+  "metrics": {
+    "reviews_performed": 0,
+    "recommendations_provided": 0,
+    "last_check": "2025-10-17T15:05:13.512563"
+  },
+  "error": null
+}

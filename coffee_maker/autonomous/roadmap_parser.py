@@ -56,6 +56,17 @@ class RoadmapParser:
         self.content = self.roadmap_path.read_text()
         logger.info(f"Loaded roadmap from {roadmap_path}")
 
+    def reload(self):
+        """Reload roadmap from disk.
+
+        Example:
+            >>> parser = RoadmapParser("docs/roadmap/ROADMAP.md")
+            >>> # ... roadmap file changes ...
+            >>> parser.reload()  # Re-read from disk
+        """
+        self.content = self.roadmap_path.read_text()
+        logger.info(f"Reloaded roadmap from {self.roadmap_path}")
+
     def get_priorities(self) -> List[Dict]:
         """Get all priorities from roadmap.
 

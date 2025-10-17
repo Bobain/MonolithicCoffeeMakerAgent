@@ -1,0 +1,19 @@
+{
+  "agent_type": "project_manager",
+  "state": "working",
+  "current_task": {
+    "type": "project_monitoring",
+    "status": "monitoring",
+    "last_check": "2025-10-17T15:05:10.465180"
+  },
+  "last_heartbeat": "2025-10-17T15:05:10.465186",
+  "next_check": "2025-10-17T15:20:10.465187",
+  "health": "healthy",
+  "pid": 6373,
+  "metrics": {
+    "prs_checked": 0,
+    "ci_status": "monitoring",
+    "last_check": "2025-10-17T15:05:10.465161"
+  },
+  "error": null
+}

@@ -1,0 +1,19 @@
+{
+  "agent_type": "code-searcher",
+  "state": "working",
+  "current_task": {
+    "type": "code_analysis",
+    "status": "analyzing",
+    "last_check": "2025-10-17T15:05:12.489789"
+  },
+  "last_heartbeat": "2025-10-17T15:05:12.489793",
+  "next_check": "2025-10-18T15:05:12.489794",
+  "health": "healthy",
+  "pid": 6387,
+  "metrics": {
+    "analyses_performed": 0,
+    "issues_found": 0,
+    "last_check": "2025-10-17T15:05:12.489773"
+  },
+  "error": null
+}

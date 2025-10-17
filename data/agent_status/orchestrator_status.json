@@ -1,0 +1,16 @@
+{
+  "agent_type": "orchestrator",
+  "state": "working",
+  "current_task": {
+    "type": "team_orchestration",
+    "status": "agents_launched",
+    "started_at": "2025-10-17T15:05:14.442532",
+    "agents_running": 6
+  },
+  "last_heartbeat": "2025-10-17T15:05:14.442860",
+  "next_check": "2025-10-17T15:05:44.442867",
+  "health": "healthy",
+  "pid": 6352,
+  "metrics": {},
+  "error": null
+}

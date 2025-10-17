@@ -1,0 +1,11 @@
+{
+  "agent_type": "code_developer",
+  "state": "error",
+  "current_task": null,
+  "last_heartbeat": "2025-10-17T15:05:24.214498",
+  "next_check": "2025-10-17T15:10:24.214563",
+  "health": "unhealthy",
+  "pid": 5920,
+  "metrics": {},
+  "error": "'RoadmapParser' object has no attribute 'reload'"
+}

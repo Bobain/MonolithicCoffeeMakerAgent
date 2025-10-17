@@ -336,3 +336,29 @@ class GitManager:
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to checkout: {e.stderr}")
             return False
+
+    def pull(self, branch: Optional[str] = None) -> bool:
+        """Pull latest changes from remote.
+
+        Args:
+            branch: Branch to pull (default: current branch)
+
+        Returns:
+            True if successful
+
+        Example:
+            >>> git = GitManager()
+            >>> git.pull("roadmap")
+        """
+        try:
+            # Checkout branch if specified
+            if branch and branch != self.get_current_branch():
+                self.checkout(branch)
+
+            self._run_git("pull")
+            logger.info(f"Pulled latest changes")
+            return True
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to pull: {e.stderr}")
+            return False

@@ -73,6 +73,51 @@ from coffee_maker.autonomous.agents.base_agent import BaseAgent
 logger = logging.getLogger(__name__)
 
 
+def _agent_runner_static(agent_type: AgentType, config: Dict, status_dir: Path, message_dir: Path):
+    """Target function for agent subprocess (static/module-level for pickling).
+
+    This function runs in the child process and:
+    1. Registers agent in singleton registry (CFR-000)
+    2. Enforces CFR-013 (roadmap branch only)
+    3. Runs agent's continuous work loop
+    4. Handles cleanup on exit
+
+    Args:
+        agent_type: Type of agent
+        config: Agent configuration
+        status_dir: Directory for agent status files
+        message_dir: Directory for inter-agent messages
+
+    Raises:
+        AgentAlreadyRunningError: If agent type already registered
+    """
+    try:
+        # Import agent class dynamically
+        module = __import__(config["module"], fromlist=[config["class"]])
+        agent_class = getattr(module, config["class"])
+
+        # Create agent instance
+        agent = agent_class(
+            status_dir=status_dir,
+            message_dir=message_dir,
+            check_interval=config["check_interval"],
+        )
+
+        # Register agent (CFR-000 singleton enforcement)
+        with AgentRegistry.register(agent_type):
+            logger.info(f"✅ {config['name']} registered in singleton registry (PID: {os.getpid()})")
+
+            # Run agent's continuous loop
+            agent.run_continuous()
+
+    except Exception as e:
+        logger.error(f"❌ {config['name']} crashed: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise
+
+
 class OrchestratorAgent(BaseAgent):
     """Multi-agent orchestrator managing parallel team execution.
 
@@ -346,8 +391,8 @@ class OrchestratorAgent(BaseAgent):
         try:
             # Create agent process
             process = Process(
-                target=self._agent_runner,
-                args=(agent_type, config),
+                target=_agent_runner_static,
+                args=(agent_type, config, self.status_dir, self.message_dir),
                 name=f"agent_{config['name']}",
             )
 
@@ -363,48 +408,6 @@ class OrchestratorAgent(BaseAgent):
 
         except Exception as e:
             logger.error(f"❌ Failed to launch {config['name']}: {e}")
-
-    def _agent_runner(self, agent_type: AgentType, config: Dict):
-        """Target function for agent subprocess.
-
-        This function runs in the child process and:
-        1. Registers agent in singleton registry (CFR-000)
-        2. Enforces CFR-013 (roadmap branch only)
-        3. Runs agent's continuous work loop
-        4. Handles cleanup on exit
-
-        Args:
-            agent_type: Type of agent
-            config: Agent configuration
-
-        Raises:
-            AgentAlreadyRunningError: If agent type already registered
-        """
-        try:
-            # Import agent class dynamically
-            module = __import__(config["module"], fromlist=[config["class"]])
-            agent_class = getattr(module, config["class"])
-
-            # Create agent instance
-            agent = agent_class(
-                status_dir=self.status_dir,
-                message_dir=self.message_dir,
-                check_interval=config["check_interval"],
-            )
-
-            # Register agent (CFR-000 singleton enforcement)
-            with AgentRegistry.register(agent_type):
-                logger.info(f"✅ {config['name']} registered in singleton registry (PID: {os.getpid()})")
-
-                # Run agent's continuous loop
-                agent.run_continuous()
-
-        except Exception as e:
-            logger.error(f"❌ {config['name']} crashed: {e}")
-            import traceback
-
-            traceback.print_exc()
-            raise
 
     def _check_agent_health(self):
         """Monitor agent health via status files and process liveness.

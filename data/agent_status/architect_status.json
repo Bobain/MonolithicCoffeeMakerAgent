@@ -1,0 +1,18 @@
+{
+  "agent_type": "architect",
+  "state": "working",
+  "current_task": {
+    "type": "spec_creation",
+    "status": "idle",
+    "last_check": "2025-10-17T15:05:08.445773"
+  },
+  "last_heartbeat": "2025-10-17T15:05:08.445779",
+  "next_check": "2025-10-17T16:05:08.445780",
+  "health": "healthy",
+  "pid": 6358,
+  "metrics": {
+    "specs_created": 0,
+    "last_check": "2025-10-17T15:05:08.445759"
+  },
+  "error": null
+}

@@ -1,0 +1,19 @@
+{
+  "agent_type": "assistant",
+  "state": "working",
+  "current_task": {
+    "type": "demo_creation",
+    "status": "idle",
+    "last_check": "2025-10-17T15:05:11.466682"
+  },
+  "last_heartbeat": "2025-10-17T15:05:11.466689",
+  "next_check": "2025-10-17T15:35:11.466690",
+  "health": "healthy",
+  "pid": 6385,
+  "metrics": {
+    "demos_created": 0,
+    "bugs_found": 0,
+    "last_check": "2025-10-17T15:05:11.466666"
+  },
+  "error": null
+}
