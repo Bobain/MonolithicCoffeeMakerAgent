@@ -1,6 +1,6 @@
 # Critical Functional Requirements - System Invariants
 
-**Version**: 2.1
+**Version**: 2.2
 **Date**: 2025-10-17
 **Status**: Active
 **Owner**: project_manager
@@ -3274,6 +3274,204 @@ architect: [Finally responds 30 minutes later]
 
 ---
 
+## CFR-013: All Agents Must Work on `roadmap` Branch Only
+
+**Rule**: ALL agents MUST stay on the `roadmap` branch at ALL times. NO agent can switch branches or create new branches.
+
+**Core Principle**:
+```
+✅ ALLOWED: Work on roadmap branch
+❌ FORBIDDEN: git checkout <other-branch>
+❌ FORBIDDEN: git checkout -b <new-branch>
+❌ FORBIDDEN: Working on main branch
+❌ FORBIDDEN: Working on feature/* branches
+```
+
+**Why This Is Critical**:
+
+1. **Single Source of Truth**: All work happens in one place - easy to track and coordinate
+2. **No Branch Conflicts**: Eliminates merge conflicts between parallel feature branches
+3. **Simplified Workflow**: No confusion about which branch has latest work
+4. **Prevents Work Loss**: All commits immediately visible to entire team
+5. **Easier Rollback**: Single branch history simplifies reverting changes
+
+**Real-World Problem This Solves**:
+```
+BEFORE CFR-013 (chaotic):
+- code_developer creates feature/us-047-architect-only-specs
+- architect creates feature/us-048-silent-background-agents
+- project_manager updates roadmap branch
+→ Result: Work scattered across 3 branches
+→ Result: Merge conflicts when trying to combine
+→ Result: Lost track of what's where
+
+AFTER CFR-013 (clean):
+- ALL agents work on roadmap branch
+- code_developer commits to roadmap
+- architect commits to roadmap
+- project_manager commits to roadmap
+→ Result: All work immediately visible
+→ Result: No merge conflicts
+→ Result: Perfect coordination
+```
+
+### Enforcement
+
+**Git Operations - ALLOWED**:
+```bash
+✅ git status              # Check status
+✅ git add <files>         # Stage changes
+✅ git commit -m "..."     # Commit to roadmap
+✅ git push origin roadmap # Push to remote
+✅ git pull origin roadmap # Pull latest
+✅ git log                 # View history
+✅ git diff                # View changes
+```
+
+**Git Operations - FORBIDDEN**:
+```bash
+❌ git checkout main                    # CFR-013 VIOLATION
+❌ git checkout feature/my-branch       # CFR-013 VIOLATION
+❌ git checkout -b feature/new-branch   # CFR-013 VIOLATION
+❌ git switch main                      # CFR-013 VIOLATION
+❌ git branch new-branch                # CFR-013 VIOLATION
+```
+
+**Error Message on Violation**:
+```
+CFR-013 VIOLATION: Attempted to switch away from roadmap branch
+
+Current branch: roadmap
+Attempted checkout: feature/my-feature
+Violating agent: code_developer
+
+CFR-013 requires ALL agents to work on roadmap branch ONLY.
+Switching branches is FORBIDDEN.
+
+✅ ALLOWED: git add/commit/push on roadmap branch
+❌ FORBIDDEN: git checkout <other-branch>
+
+Reason: Single source of truth, prevents branch conflicts, simplifies coordination.
+```
+
+### Implementation
+
+**Pre-Commit Hook** (Recommended):
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit
+
+CURRENT_BRANCH=$(git branch --show-current)
+
+if [ "$CURRENT_BRANCH" != "roadmap" ]; then
+    echo "❌ CFR-013 VIOLATION: You are on branch '$CURRENT_BRANCH'"
+    echo "   ALL work must happen on 'roadmap' branch"
+    echo "   Run: git checkout roadmap"
+    exit 1
+fi
+```
+
+**Agent Validation** (Before git operations):
+```python
+def validate_cfr_013():
+    """Ensure agent is on roadmap branch before any git operation."""
+    import subprocess
+
+    current_branch = subprocess.check_output(
+        ["git", "branch", "--show-current"],
+        text=True
+    ).strip()
+
+    if current_branch != "roadmap":
+        raise CFR013ViolationError(
+            f"CFR-013 VIOLATION: Currently on branch '{current_branch}'. "
+            f"ALL agents must work on 'roadmap' branch ONLY. "
+            f"Run: git checkout roadmap"
+        )
+```
+
+### Examples
+
+**✅ CORRECT: Agent stays on roadmap**:
+```
+code_developer: [Currently on roadmap branch]
+code_developer: [Edits coffee_maker/autonomous/daemon.py]
+code_developer: git add coffee_maker/autonomous/daemon.py
+code_developer: git commit -m "feat: Add feature X"
+code_developer: git push origin roadmap
+
+✅ All work done on roadmap branch - CFR-013 compliant
+```
+
+**✅ CORRECT: Agent pulls latest before working**:
+```
+architect: git checkout roadmap  # Already on roadmap, this is safe
+architect: git pull origin roadmap  # Get latest changes
+architect: [Creates SPEC-066.md]
+architect: git add docs/architecture/specs/SPEC-066.md
+architect: git commit -m "docs: Add SPEC-066"
+
+✅ Stays on roadmap throughout - CFR-013 compliant
+```
+
+**❌ INCORRECT: Agent switches to feature branch**:
+```
+code_developer: git checkout -b feature/my-feature  # CFR-013 VIOLATION!
+code_developer: [Makes changes]
+code_developer: git commit -m "feat: Add feature"
+
+❌ Created feature branch - CFR-013 VIOLATION
+❌ Work isolated from team - CFR-013 VIOLATION
+❌ REQUIRED: Switch back to roadmap and commit there
+```
+
+**❌ INCORRECT: Agent works on main**:
+```
+project_manager: git checkout main  # CFR-013 VIOLATION!
+project_manager: [Updates ROADMAP.md]
+project_manager: git commit -m "docs: Update roadmap"
+
+❌ Worked on main instead of roadmap - CFR-013 VIOLATION
+❌ Changes not visible to team on roadmap - CFR-013 VIOLATION
+❌ REQUIRED: Work on roadmap branch only
+```
+
+### Exceptions
+
+**NONE**. There are NO exceptions to CFR-013.
+
+- **ALL agents** (code_developer, architect, project_manager, assistant, etc.) work on roadmap
+- **ALL work** (code, docs, specs, reports, etc.) goes to roadmap
+- **ALL commits** happen on roadmap branch
+
+**Release Process** (Future):
+When ready to release, a designated human maintainer can:
+1. Merge roadmap → main
+2. Tag the release
+3. Deploy from main
+
+But agents NEVER do this - they always work on roadmap.
+
+### Relationship to Other CFRs
+
+**CFR-000 (Prevent File Conflicts)**: Working on single branch reduces merge conflicts
+**CFR-001 (Document Ownership)**: Ownership applies regardless of branch, but single branch simplifies
+**CFR-008 (Architect Creates Specs)**: architect creates specs on roadmap branch
+**CFR-012 (Agent Responsiveness)**: Agents can interrupt work, but always on roadmap branch
+
+### Success Metrics
+
+- **Branch Compliance**: 100% of commits on roadmap branch
+- **No Feature Branches**: Zero feature/* branches created by agents
+- **Team Visibility**: All team members see all work immediately
+- **Merge Conflicts**: Reduced to near-zero (only from concurrent edits)
+
+**Enforcement**: Code-level validation before any git checkout operation
+**Monitoring**: Track git history to ensure no feature branches created
+**User Story**: US-056: Single Branch Workflow Enforcement (to be created)
+
+---
+
 ## Agent File Access Patterns
 
 **Purpose**: Agents should KNOW which files to read, not search for them.
@@ -3605,11 +3803,20 @@ This means US-043 (Parallel Execution) can be implemented safely thanks to CFR e
 
 **Remember**: These CFRs exist to prevent the system from breaking itself. They are not optional. They are not suggestions. They are CRITICAL FUNCTIONAL REQUIREMENTS.
 
-**Version**: 1.7
-**Last Updated**: 2025-10-16
-**Next Review**: After US-038, US-039, US-043, and US-044 implementation
+**Version**: 2.2
+**Last Updated**: 2025-10-17
+**Next Review**: After US-038, US-039, US-043, US-044, and US-056 implementation
 
 **Changelog**:
+- **v2.2** (2025-10-17): Added CFR-013 (All Agents Must Work on roadmap Branch Only)
+  - NO agent can switch branches (git checkout forbidden)
+  - ALL work happens on roadmap branch (single source of truth)
+  - Prevents: Branch conflicts, scattered work, merge complexity
+  - Benefits: Team visibility, simpler coordination, reduced conflicts
+  - Enforcement: Pre-commit hook + agent validation before git operations
+  - Zero exceptions - ALL agents work on roadmap
+  - Release process: Only human maintainers merge roadmap → main
+  - Related: US-056 (Single Branch Workflow Enforcement - to be created)
 - **v2.1** (2025-10-17): Added CFR-012 (Agent Responsiveness Priority)
   - Immediate user/agent requests override continuous background work
   - Priority: User requests (P1) > Inter-agent delegations (P2) > Background work (P3)
