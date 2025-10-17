@@ -1,7 +1,7 @@
 # Critical Functional Requirements - System Invariants
 
-**Version**: 1.9
-**Date**: 2025-10-16
+**Version**: 2.0
+**Date**: 2025-10-17
 **Status**: Active
 **Owner**: project_manager
 
@@ -2279,6 +2279,245 @@ Friday (30 min):
 - System learns and improves continuously
 
 **User Story**: US-049: Architect Continuous Spec Improvement Loop
+
+---
+
+## CFR-011: Architect Must Integrate code-searcher Findings Daily
+
+**Rule**: The architect MUST read code-searcher analysis reports daily AND proactively analyze the codebase itself to identify architectural improvements, then integrate ALL findings into technical specifications.
+
+**Why This Is Critical**:
+
+1. **Proactive Problem Prevention**: Catch issues before they become blockers
+2. **Data-Driven Decisions**: Use actual codebase metrics, not assumptions
+3. **Continuous Quality**: Architecture improves based on real code analysis
+4. **Avoid Technical Debt**: Address quality issues before they accumulate
+5. **Knowledge Integration**: code-searcher finds patterns architect must integrate
+
+**Two-Part Mandate**:
+
+### Part 1: Read code-searcher Analysis Reports Daily
+
+**Frequency**: EVERY DAY (automated enforcement)
+
+**What to Read**:
+- `/docs/*_AUDIT_*.md` - Security, quality, dependency audits
+- `/docs/*_ANALYSIS_*.md` - Code quality, pattern, reuse analyses
+- `/docs/CODEBASE_ANALYSIS_SUMMARY_*.md` - Executive summaries
+
+**What to Do**:
+1. **Extract Action Items**: Identify improvements that need specs
+2. **Prioritize**: High-impact, low-effort improvements first
+3. **Create Specs**: For each major improvement (SPEC-050, SPEC-051, etc.)
+4. **Update Existing Specs**: Integrate findings into current specs
+5. **Track Integration**: Document what was integrated and why
+
+### Part 2: Proactively Analyze Code Yourself
+
+**Frequency**: WEEKLY (minimum)
+
+**What to Analyze**:
+1. **New Code**: Review recent commits (git log --since=1.week)
+2. **Problem Areas**: Files with frequent changes or bugs
+3. **Complex Modules**: Large files (>500 LOC), high complexity
+4. **Duplicate Patterns**: Look for code that can be abstracted
+5. **Missing Abstractions**: Opportunities for utilities/helpers
+
+**Tools to Use**:
+- `Read` tool: Examine specific files
+- `Grep` tool: Find patterns across codebase
+- `Glob` tool: Identify similar files
+- `Bash` tool: Run metrics (`wc -l`, `git log`, etc.)
+
+**What to Do**:
+1. **Document Findings**: Create analysis notes
+2. **Create Improvement Specs**: Address issues found
+3. **Update ADRs**: Document architectural decisions
+4. **Inform code_developer**: Provide guidance on patterns
+
+**Enforcement Mechanism**:
+
+```python
+# In architect agent startup/daily routine:
+
+class ArchitectDailyRoutine:
+    """Enforces CFR-011 daily integration workflow."""
+
+    def __init__(self):
+        self.last_code_searcher_read = self._load_last_read_date()
+        self.last_codebase_analysis = self._load_last_analysis_date()
+
+    def enforce_cfr_011(self):
+        """Mandatory daily check before architect can create new specs."""
+        today = datetime.now().date()
+
+        # Part 1: code-searcher report reading
+        if self.last_code_searcher_read < today:
+            reports = self._find_new_code_searcher_reports()
+            if reports and not self._has_read_reports(reports):
+                raise CFR011ViolationError(
+                    f"CFR-011 VIOLATION: Must read {len(reports)} new code-searcher "
+                    f"reports before creating specs today.\n\n"
+                    f"Reports to read:\n" + "\n".join(f"- {r}" for r in reports) +
+                    f"\n\nRun: architect daily-integration"
+                )
+            self._mark_reports_read(today)
+
+        # Part 2: Weekly codebase analysis
+        days_since_analysis = (today - self.last_codebase_analysis).days
+        if days_since_analysis >= 7:
+            raise CFR011ViolationError(
+                f"CFR-011 VIOLATION: {days_since_analysis} days since last "
+                f"codebase analysis (max: 7 days).\n\n"
+                f"Must analyze codebase yourself before creating new specs.\n"
+                f"Run: architect analyze-codebase"
+            )
+
+    def daily_integration_workflow(self):
+        """Guided workflow for integrating code-searcher findings."""
+        # 1. Read all new reports
+        reports = self._find_new_code_searcher_reports()
+        for report in reports:
+            print(f"Reading: {report}")
+            self._display_report_summary(report)
+
+        # 2. Extract actionable items
+        action_items = self._extract_action_items(reports)
+        print(f"\nFound {len(action_items)} actionable improvements")
+
+        # 3. Create specs for major improvements
+        for item in action_items:
+            if item.impact == "HIGH" or item.effort <= "4 hours":
+                self._create_improvement_spec(item)
+
+        # 4. Update existing specs
+        self._integrate_findings_into_specs(action_items)
+
+        # 5. Document integration
+        self._create_integration_report(reports, action_items)
+
+        # 6. Mark complete
+        self._mark_reports_read(datetime.now().date())
+
+    def analyze_codebase_workflow(self):
+        """Guided workflow for architect's own codebase analysis."""
+        # 1. Recent commits
+        recent_commits = self._analyze_recent_commits()
+
+        # 2. Problem areas
+        problem_files = self._identify_problem_areas()
+
+        # 3. Complexity hot spots
+        complex_modules = self._find_complex_modules()
+
+        # 4. Duplicate patterns
+        duplications = self._find_duplicate_patterns()
+
+        # 5. Create findings report
+        self._create_architect_analysis_report({
+            "commits": recent_commits,
+            "problems": problem_files,
+            "complexity": complex_modules,
+            "duplications": duplications
+        })
+
+        # 6. Create improvement specs
+        self._create_specs_from_analysis()
+
+        # 7. Mark complete
+        self._mark_analysis_complete(datetime.now().date())
+```
+
+**Deliverables**:
+
+1. **Daily Integration Report** (`docs/architecture/CODE_SEARCHER_INTEGRATION_[date].md`):
+   - Which reports were read
+   - Action items extracted
+   - Specs created/updated
+   - Cross-references
+
+2. **Weekly Analysis Report** (`docs/architecture/ARCHITECT_CODEBASE_ANALYSIS_[date].md`):
+   - What architect analyzed
+   - Findings and recommendations
+   - Improvement specs created
+   - Metrics tracked
+
+3. **Updated Specs**:
+   - Existing specs updated with findings
+   - New improvement specs created (SPEC-050+)
+
+4. **Tracking File** (`data/architect_integration_status.json`):
+   ```json
+   {
+     "last_code_searcher_read": "2025-10-17",
+     "last_codebase_analysis": "2025-10-17",
+     "reports_read": [
+       "SECURITY_AUDIT_2025-10-17.md",
+       "CODE_QUALITY_ANALYSIS_2025-10-17.md"
+     ],
+     "action_items_total": 12,
+     "specs_created": 4,
+     "specs_updated": 6,
+     "next_analysis_due": "2025-10-24"
+   }
+   ```
+
+**Correct Workflow**:
+
+```
+Daily (Every Morning):
+1. architect agent starts
+2. CFR-011 enforcement check runs automatically
+3. If new code-searcher reports exist: MUST read before creating specs
+4. If >7 days since codebase analysis: MUST analyze before creating specs
+5. Run daily-integration workflow
+6. THEN: Create new specs for priorities
+
+Weekly (Every Monday):
+1. Run architect analyze-codebase
+2. Review last 7 days of commits
+3. Identify problem areas
+4. Find duplicate patterns
+5. Create improvement specs
+6. Update tracking file
+```
+
+**Incorrect Workflow** (BLOCKED):
+
+```
+❌ architect tries to create new spec without reading code-searcher reports
+   → CFR011ViolationError raised
+   → Spec creation BLOCKED
+   → Clear error message with reports to read
+
+❌ architect hasn't analyzed codebase in 8 days
+   → CFR011ViolationError raised
+   → Must run analyze-codebase first
+   → Clear error message with days overdue
+```
+
+**Metrics**:
+
+- **Integration Rate**: % of code-searcher findings addressed
+- **Response Time**: Days from code-searcher report to spec integration
+- **Improvement Velocity**: Number of improvement specs created per week
+- **Quality Trend**: Are quality metrics improving over time?
+
+**Benefits**:
+
+- **Proactive**: Issues caught before they become blockers
+- **Data-Driven**: Decisions based on real code analysis
+- **Continuous**: Architecture improves every day
+- **Comprehensive**: Both automated (code-searcher) and manual (architect) analysis
+- **Enforced**: Code prevents violations, not just guidelines
+
+**Integration with Other CFRs**:
+
+- **CFR-008**: architect creates all specs → includes improvement specs
+- **CFR-010**: Continuous spec review → informed by code-searcher findings
+- **ADR-003**: Simplification-first → use metrics to prove simplification
+
+**User Story**: US-054: Architect Daily Integration of code-searcher Findings (NEW)
 
 ---
 
