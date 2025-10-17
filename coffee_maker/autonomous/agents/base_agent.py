@@ -211,8 +211,12 @@ class BaseAgent(ABC):
                 # Write status (heartbeat)
                 self._write_status()
 
-                # Sleep before next iteration
-                time.sleep(self.check_interval)
+                # Sleep before next iteration (in small chunks to remain responsive)
+                # Split long sleep into 30-second chunks to:
+                # 1. Update heartbeat frequently
+                # 2. Check for urgent messages during sleep
+                # 3. Remain responsive even with long check_intervals (1 hour, 24 hours)
+                self._responsive_sleep(self.check_interval)
 
             except KeyboardInterrupt:
                 logger.info(f"\n⏹️  {self.agent_type.value} stopped by user")
@@ -258,6 +262,46 @@ class BaseAgent(ABC):
                 f"  3. Restart agent"
             )
             raise CFR013ViolationError(error_msg)
+
+    def _responsive_sleep(self, total_seconds: int):
+        """Sleep in small chunks while remaining responsive to messages.
+
+        Instead of sleeping for the entire check_interval at once (which can be
+        1 hour or 24 hours), split the sleep into 30-second chunks. During each
+        chunk, we:
+        1. Check for urgent messages (can interrupt sleep early)
+        2. Update heartbeat (prevents "stale heartbeat" warnings)
+        3. Remain responsive to user signals (Ctrl+C)
+
+        This solves the "stale heartbeat" problem where agents with long
+        check_intervals (architect=1h, code-searcher=24h) don't update their
+        status for hours, causing monitoring systems to report them as unhealthy.
+
+        Args:
+            total_seconds: Total time to sleep (in seconds)
+
+        Returns:
+            None (may return early if urgent message received)
+        """
+        HEARTBEAT_INTERVAL = 30  # Update heartbeat every 30 seconds
+        elapsed = 0
+
+        while elapsed < total_seconds and self.running:
+            # Sleep for the smaller of: remaining time or heartbeat interval
+            sleep_time = min(HEARTBEAT_INTERVAL, total_seconds - elapsed)
+            time.sleep(sleep_time)
+            elapsed += sleep_time
+
+            # Check for urgent messages during sleep (can interrupt)
+            urgent_message = self._check_inbox_urgent()
+            if urgent_message:
+                logger.info(f"🚨 {self.agent_type.value} interrupted during sleep by urgent message")
+                self._handle_message(urgent_message)
+                # Exit sleep early to handle urgent message
+                break
+
+            # Update heartbeat to show we're alive
+            self._write_status()
 
     def _check_inbox_urgent(self) -> Optional[Dict]:
         """Check inbox for URGENT messages only (CFR-012 Priority 1).
