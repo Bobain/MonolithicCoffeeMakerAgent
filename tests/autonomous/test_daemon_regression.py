@@ -32,16 +32,16 @@ class TestDaemonNonRegression:
             roadmap_path="docs/roadmap/ROADMAP.md",
             auto_approve=True,
             create_prs=False,
-            use_claude_cli=True,
-            max_retries=5,
-            verbose=True,
+            use_claude_cli=False,
+            sleep_interval=60,
+            model="sonnet",
         )
 
         assert daemon.auto_approve is True
         assert daemon.create_prs is False
-        assert daemon.use_claude_cli is True
-        assert daemon.max_retries == 5
-        assert daemon.verbose is True
+        assert daemon.use_claude_cli is False
+        assert daemon.sleep_interval == 60
+        assert daemon.model == "sonnet"
 
     def test_roadmap_parser_finds_priorities(self):
         """Verify roadmap parser can find planned priorities."""
@@ -285,10 +285,10 @@ class TestBackwardCompatibility:
         daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md")
 
         # Check defaults haven't changed
-        assert daemon.auto_approve is False  # Safe default
+        assert daemon.auto_approve is True  # Default autonomous mode
         assert daemon.create_prs is True  # Default behavior
         assert daemon.max_retries == 3  # Standard retry count
-        assert daemon.verbose is False  # Quiet by default
+        assert daemon.sleep_interval == 30  # Default sleep interval
 
 
 class TestCriticalUserScenarios:

@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from coffee_maker.autonomous.claude_cli_interface import ClaudeCLI
+from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
 from coffee_maker.autonomous.git_manager import GitManager
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 
@@ -92,11 +92,11 @@ class TestRoadmapParserIntegration:
 
 
 class TestClaudeCLIIntegration:
-    """Test ClaudeCLI integration with system."""
+    """Test ClaudeCLIInterface integration with system."""
 
     def test_check_availability_real(self):
         """Test checking if Claude CLI is actually available."""
-        cli = ClaudeCLI()
+        cli = ClaudeCLIInterface()
         result = cli.check_available()
 
         # Should return bool
@@ -110,7 +110,7 @@ class TestClaudeCLIIntegration:
 
     def test_execute_command_help(self):
         """Test executing a simple help command."""
-        cli = ClaudeCLI()
+        cli = ClaudeCLIInterface()
 
         # Try --help (should work even if not authenticated)
         result = cli.execute_command(["--help"], timeout=5)
@@ -198,7 +198,7 @@ class TestDaemonComponentsIntegration:
         # Initialize all components
         parser = RoadmapParser(str(roadmap_path))
         git = GitManager()
-        claude = ClaudeCLI()
+        claude = ClaudeCLIInterface()
 
         # All should be initialized
         assert parser.content is not None
@@ -233,7 +233,7 @@ class TestDaemonSafety:
 
     def test_claude_cli_handles_timeout(self):
         """Test that Claude CLI handles timeouts gracefully."""
-        cli = ClaudeCLI(timeout=1)
+        cli = ClaudeCLIInterface(timeout=1)
 
         # Execute with very short timeout (likely to timeout on complex operations)
         result = cli.execute_prompt("test prompt", timeout=0.001)
