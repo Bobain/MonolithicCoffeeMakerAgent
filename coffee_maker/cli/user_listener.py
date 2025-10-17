@@ -3,248 +3,209 @@
 This module provides the standalone `poetry run user-listener` command that serves
 as the PRIMARY USER INTERFACE for the MonolithicCoffeeMakerAgent system.
 
-Architecture:
-    UserListenerCLI: Main class for interactive chat interface
-    - Uses Haiku 4.5 for cost-efficient UI orchestration
-    - Reuses existing ChatSession infrastructure
-    - AgentDelegationRouter for intent classification and delegation
-    - Enforces singleton pattern via AgentRegistry
+SPEC-010: User-Listener UI Command (SIMPLIFIED)
+- Reuses 100% of ChatSession infrastructure from project-manager chat
+- Enforces singleton pattern via AgentRegistry
+- Minimal code: ~250 lines, mostly copy-paste from roadmap_cli.py
 
-Usage:
-    $ poetry run user-listener
+Architecture:
+    User runs: poetry run user-listener
+       ↓
+    user_listener.py main()
+       ↓
+    Register as USER_LISTENER (singleton)
+       ↓
+    Create ChatSession (REUSED from project_manager)
+       ↓
+    Start chat loop
 
 Key Features:
     - Interactive REPL for user input
-    - Intent classification to route to appropriate agents
     - Rich terminal output with markdown and syntax highlighting
-    - Conversation context preservation
     - Singleton enforcement (only one instance at a time)
+    - Same functionality as project-manager chat
+    - All existing commands work (/add, /update, /view, /analyze, etc.)
 
 References:
     - SPEC-010: User-Listener UI Command
-    - AgentRegistry: Singleton enforcement
-    - ChatSession: Existing chat infrastructure reuse
-    - AIService: Haiku 4.5 model for orchestration
+    - ADR-003: Simplification-First Approach
+    - roadmap_cli.py: Source for cmd_chat() function (REUSED)
 """
 
 import logging
-from typing import Dict
+import os
+import shutil
+import sys
 
-from rich.console import Console
-
-from coffee_maker.autonomous.agent_registry import AgentAlreadyRunningError, AgentRegistry, AgentType
-from coffee_maker.cli.agent_router import AgentDelegationRouter
+from coffee_maker.autonomous.agent_registry import (
+    AgentAlreadyRunningError,
+    AgentRegistry,
+    AgentType,
+)
 from coffee_maker.cli.ai_service import AIService
 from coffee_maker.cli.chat_interface import ChatSession
+from coffee_maker.cli.roadmap_editor import RoadmapEditor
+from coffee_maker.config import ROADMAP_PATH, ConfigManager
+
+# Configure logging BEFORE imports that might fail
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
 
 logger = logging.getLogger(__name__)
-console = Console()
 
 
-class UserListenerCLI:
-    """Primary user interface for MonolithicCoffeeMakerAgent.
-
-    ONLY agent with UI responsibility. All user interactions go through here.
-
-    This class:
-    - Manages interactive chat session with Haiku 4.5
-    - Classifies user intent and delegates to specialized agents
-    - Maintains conversation history and context
-    - Enforces singleton pattern via AgentRegistry
-    - Provides rich terminal UI with markdown rendering
-
-    Attributes:
-        ai_service: AIService with Haiku 4.5 model
-        chat_session: ChatSession for managing conversation
-        agent_router: AgentDelegationRouter for intent classification
-        registry: AgentRegistry for singleton enforcement
-    """
-
-    def __init__(self):
-        """Initialize user-listener CLI.
-
-        Sets up:
-        - Haiku 4.5 AI service for cost-efficient orchestration
-        - ChatSession for conversation management
-        - AgentDelegationRouter for intent routing
-        - AgentRegistry for singleton enforcement
-        """
-        # Use Haiku 4.5 for cost-efficient UI orchestration
-        self.ai_service = AIService(model="claude-3-5-haiku-20241022", max_tokens=4000, use_claude_cli=False)
-
-        # Reuse existing ChatSession infrastructure
-        self.chat_session = ChatSession(ai_service=self.ai_service, editor=None, enable_streaming=True)
-
-        # Agent delegation router
-        self.agent_router = AgentDelegationRouter(self.ai_service)
-
-        # Register as singleton
-        self.registry = AgentRegistry()
-
-    def start(self):
-        """Start interactive user-listener session.
-
-        Registers as singleton and starts REPL loop.
-        Only exits on /exit, /quit, or Ctrl+C.
-        """
-        with AgentRegistry.register(AgentType.USER_LISTENER):
-            self._display_welcome()
-            self._run_repl_loop()
-
-    def _display_welcome(self):
-        """Display welcome message."""
-        console.print("\n[bold]User Listener[/] [dim]·[/] Primary Interface")
-        console.print("[dim]Powered by Claude Haiku 4.5[/]\n")
-        console.print("[dim]I'm your interface to the agent team.[/]")
-        console.print("[dim]Tell me what you need, and I'll route it to the right specialist.[/]")
-        console.print("[dim]Type /exit or /quit to leave.\n[/]")
-
-    def _run_repl_loop(self):
-        """Main REPL loop for user interaction.
-
-        Continuously prompts for user input and processes it until exit.
-        """
-        while True:
-            try:
-                user_input = self.chat_session.prompt_session.prompt("› ")
-
-                if not user_input.strip():
-                    continue
-
-                # Handle exit commands
-                if user_input.lower() in ["/exit", "/quit", "exit", "quit"]:
-                    break
-
-                # Process input and display response
-                response = self._process_input(user_input)
-                self.chat_session._display_response(response)
-
-            except KeyboardInterrupt:
-                break
-            except Exception as e:
-                logger.error(f"Error processing input: {e}", exc_info=True)
-                console.print(f"\n[red]Error: {e}[/]\n")
-
-    def _process_input(self, user_input: str) -> str:
-        """Process user input and delegate to appropriate agent.
-
-        Args:
-            user_input: User's message
-
-        Returns:
-            Response from delegated agent or user_listener
-
-        Logic:
-            1. Classify intent (which agent should handle this?)
-            2. If high confidence (>0.8), delegate directly
-            3. Otherwise, ask user_listener's AI (Haiku 4.5) to handle
-        """
-        try:
-            # Classify intent (which agent should handle this?)
-            agent_type, confidence = self.agent_router.classify_intent(user_input)
-
-            # Log classification
-            logger.info(f"Intent: {agent_type.value} (confidence: {confidence:.2f})")
-
-            # If high confidence, delegate directly
-            if confidence > 0.8:
-                return self.agent_router.delegate_to_agent(agent_type, user_input, self.chat_session.history)
-
-            # Otherwise, ask user_listener's AI (Haiku 4.5) to handle
-            return self._handle_with_ai(user_input)
-
-        except Exception as e:
-            logger.error(f"Error in _process_input: {e}", exc_info=True)
-            return f"I encountered an error processing your request: {e}"
-
-    def _handle_with_ai(self, user_input: str) -> str:
-        """Handle request with user_listener's AI (Haiku 4.5).
-
-        Used for general questions, clarifications, and ambiguous requests
-        that don't clearly map to a specific agent.
-
-        Args:
-            user_input: User's message
-
-        Returns:
-            AI response from Haiku 4.5
-        """
-        try:
-            context = self._build_context()
-
-            response = self.ai_service.process_request(
-                user_input=user_input,
-                context=context,
-                history=self.chat_session.history[-5:] if self.chat_session.history else [],
-                stream=False,
-            )
-
-            return response.message
-
-        except Exception as e:
-            logger.error(f"Error in _handle_with_ai: {e}", exc_info=True)
-            return f"I encountered an error: {e}"
-
-    def _build_context(self) -> Dict:
-        """Build context for AI requests.
-
-        Returns:
-            Context dictionary with agent info
-        """
-        return {
-            "role": "user_listener",
-            "responsibilities": [
-                "Primary user interface",
-                "Intent classification",
-                "Agent delegation",
-                "Context maintenance",
-            ],
-            "available_agents": [
-                "project_manager - Strategic tasks, ROADMAP, GitHub",
-                "architect - Design, specs, ADRs, dependencies",
-                "code_developer - Implementation, PRs",
-                "assistant - Documentation, demos, bugs",
-                "code-searcher - Deep code analysis",
-                "ux-design-expert - UI/UX design",
-            ],
-        }
-
-
-def main():
+def main() -> int:
     """Main entry point for user-listener CLI.
 
     Command: poetry run user-listener
 
     This function:
-    1. Sets up logging
-    2. Creates UserListenerCLI instance
-    3. Registers singleton via AgentRegistry
-    4. Starts interactive REPL loop
-    5. Handles errors gracefully
-    """
-    import sys
+    1. Registers as USER_LISTENER singleton
+    2. Sets up ChatSession with AI service
+    3. Starts interactive REPL loop
+    4. Handles errors gracefully
 
-    # Setup logging
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    Returns:
+        0 on success, 1 on error
+
+    SPEC-010 Implementation:
+        - Copy cmd_chat() logic from roadmap_cli.py
+        - Add singleton registration (AgentType.USER_LISTENER)
+        - Update welcome banner ("User Listener · Primary Interface")
+        - Reuse all ChatSession infrastructure
+    """
 
     try:
-        # Create and start user-listener CLI
-        cli = UserListenerCLI()
-        cli.start()
+        # US-035: Register user_listener in singleton registry
+        with AgentRegistry.register(AgentType.USER_LISTENER):
+            logger.info("✅ user_listener registered in singleton registry")
+
+            # Check if we're ALREADY running inside Claude CLI (Claude Code)
+            # If so, we MUST use API mode to avoid nesting
+            inside_claude_cli = bool(os.environ.get("CLAUDECODE") or os.environ.get("CLAUDE_CODE_ENTRYPOINT"))
+
+            if inside_claude_cli:
+                logger.info("Detected running inside Claude Code - forcing API mode to avoid nesting")
+
+            # Auto-detect mode: CLI vs API (same logic as daemon)
+            claude_path = "/opt/homebrew/bin/claude"
+            has_cli = shutil.which("claude") or os.path.exists(claude_path)
+            has_api_key = ConfigManager.has_anthropic_api_key()
+
+            use_claude_cli = False
+
+            if inside_claude_cli:
+                # We're already in Claude CLI - MUST use API to avoid nesting
+                if has_api_key:
+                    print("=" * 70)
+                    print("ℹ️  Detected: Running inside Claude Code")
+                    print("=" * 70)
+                    print("🔄 Using Anthropic API to avoid CLI nesting")
+                    print("💡 TIP: CLI nesting is not recommended")
+                    print("=" * 70 + "\n")
+                    use_claude_cli = False
+                else:
+                    # No API key - can't proceed
+                    print("=" * 70)
+                    print("❌ ERROR: Running inside Claude Code without API key")
+                    print("=" * 70)
+                    print("\nYou're running user-listener from within Claude Code.")
+                    print("To avoid CLI nesting, we need to use API mode.")
+                    print("\n🔧 SOLUTION:")
+                    print("  1. Get your API key from: https://console.anthropic.com/")
+                    print("  2. Set the environment variable:")
+                    print("     export ANTHROPIC_API_KEY='your-api-key-here'")
+                    print("  3. Or add it to your .env file")
+                    print("\n💡 ALTERNATIVE: Run from a regular terminal (not Claude Code)")
+                    print("=" * 70 + "\n")
+                    return 1
+            elif has_cli:
+                # CLI available - use it as default (free with subscription!)
+                print("=" * 70)
+                print("ℹ️  Auto-detected: Using Claude CLI (default)")
+                print("=" * 70)
+                print("💡 TIP: Claude CLI is free with your subscription!")
+                print("=" * 70 + "\n")
+                use_claude_cli = True
+            elif has_api_key:
+                # No CLI but has API key - use API
+                print("=" * 70)
+                print("ℹ️  Auto-detected: Using Anthropic API (no CLI found)")
+                print("=" * 70)
+                print("💡 TIP: Install Claude CLI for free usage!")
+                print("    Get it from: https://claude.ai/")
+                print("=" * 70 + "\n")
+                use_claude_cli = False
+            else:
+                # Neither available - error
+                print("=" * 70)
+                print("❌ ERROR: No Claude access available!")
+                print("=" * 70)
+                print("\nThe chat requires either:")
+                print("  1. Claude CLI installed (recommended - free with subscription), OR")
+                print("  2. Anthropic API key (requires credits)")
+                print("\n🔧 SOLUTION 1 (CLI Mode - Recommended):")
+                print("  1. Install Claude CLI from: https://claude.ai/")
+                print("  2. Run: poetry run user-listener")
+                print("\n🔧 SOLUTION 2 (API Mode):")
+                print("  1. Get your API key from: https://console.anthropic.com/")
+                print("  2. Set the environment variable:")
+                print("     export ANTHROPIC_API_KEY='your-api-key-here'")
+                print("  3. Run: poetry run user-listener")
+                print("\n" + "=" * 70 + "\n")
+                return 1
+
+            # Initialize components (REUSED from project-manager chat)
+            editor = RoadmapEditor(ROADMAP_PATH)
+            ai_service = AIService(use_claude_cli=use_claude_cli, claude_cli_path=claude_path)
+
+            # Check AI service availability
+            if not ai_service.check_available():
+                print("❌ AI service not available")
+                print("\nPlease check:")
+                if use_claude_cli:
+                    print("  - Claude CLI is installed and working")
+                else:
+                    print("  - ANTHROPIC_API_KEY is valid")
+                print("  - Internet connection is active")
+                return 1
+
+            # Display welcome banner (SPEC-010: Update to identify as user_listener)
+            print("\n" + "=" * 70)
+            print("User Listener · Primary Interface")
+            print("=" * 70)
+            print("Powered by Claude AI\n")
+
+            # Start chat session (REUSED from project-manager chat)
+            session = ChatSession(ai_service, editor)
+            session.start()
+
+            return 0
 
     except AgentAlreadyRunningError as e:
-        console.print(f"\n[red]Error: {e}[/]\n")
-        sys.exit(1)
+        print(f"\n❌ Error: {e}\n")
+        return 1
 
     except KeyboardInterrupt:
-        console.print("\n\n[dim]Goodbye![/]\n")
-        sys.exit(0)
+        print("\n\nGoodbye!\n")
+        return 0
+
+    except ValueError as e:
+        print(f"❌ Configuration error: {e}")
+        if "ANTHROPIC_API_KEY" in str(e):
+            print("\n💡 TIP: Install Claude CLI for free usage (no API key needed)!")
+            print("   Get it from: https://claude.ai/")
+        return 1
 
     except Exception as e:
-        console.print(f"\n[red]Unexpected error: {e}[/]\n")
-        logger.error(f"Fatal error in user-listener", exc_info=True)
-        sys.exit(1)
+        logger.error(f"Chat session failed: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
