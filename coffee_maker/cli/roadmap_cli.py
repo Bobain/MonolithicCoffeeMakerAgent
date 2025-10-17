@@ -1402,7 +1402,10 @@ def cmd_dev_report(args: argparse.Namespace) -> int:
         $ project-manager dev-report          # Yesterday's work
         $ project-manager dev-report --days 7 # Last week
     """
+    from datetime import datetime, timedelta
     from coffee_maker.cli.daily_report_generator import DailyReportGenerator
+    from rich.panel import Panel
+    from rich.markdown import Markdown
 
     try:
         # Get days from args (default: 1 for yesterday)
