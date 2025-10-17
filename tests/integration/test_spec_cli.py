@@ -7,7 +7,8 @@ import pytest
 from unittest.mock import Mock, patch
 from pathlib import Path
 
-from coffee_maker.cli.roadmap_cli import cmd_spec
+# Import from modularized command module (SPEC-050)
+from coffee_maker.cli.commands.utility import cmd_spec
 from coffee_maker.cli.spec_workflow import SpecReviewResult
 from coffee_maker.autonomous.spec_generator import TechnicalSpec, Phase, Task
 from coffee_maker.utils.task_estimator import TimeEstimate

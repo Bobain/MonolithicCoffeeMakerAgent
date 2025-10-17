@@ -19,7 +19,8 @@ from unittest.mock import patch
 from datetime import datetime
 from argparse import Namespace
 
-from coffee_maker.cli.roadmap_cli import cmd_summary, cmd_calendar
+# Import from modularized command module (SPEC-050)
+from coffee_maker.cli.commands.status import cmd_summary, cmd_calendar
 from coffee_maker.reports.status_report_generator import StoryCompletion, UpcomingStory
 
 
@@ -128,7 +129,7 @@ def test_cmd_summary_default_parameters(sample_roadmap_file, mock_completions, c
     """Test cmd_summary with default parameters (14 days, markdown format)."""
     args = Namespace(days=14, format="markdown")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         with patch(
             "coffee_maker.reports.status_report_generator.StatusReportGenerator.get_recent_completions",
             return_value=mock_completions,
@@ -147,7 +148,7 @@ def test_cmd_summary_custom_days(sample_roadmap_file, mock_completions, capsys):
     """Test cmd_summary with custom --days parameter."""
     args = Namespace(days=7, format="markdown")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         with patch(
             "coffee_maker.reports.status_report_generator.StatusReportGenerator.get_recent_completions",
             return_value=mock_completions,
@@ -165,7 +166,7 @@ def test_cmd_summary_text_format(sample_roadmap_file, mock_completions, capsys):
     """Test cmd_summary with text format (removes markdown formatting)."""
     args = Namespace(days=14, format="text")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         with patch(
             "coffee_maker.reports.status_report_generator.StatusReportGenerator.get_recent_completions",
             return_value=mock_completions,
@@ -183,7 +184,7 @@ def test_cmd_summary_no_completions(sample_roadmap_file, capsys):
     """Test cmd_summary when no completions found."""
     args = Namespace(days=14, format="markdown")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         with patch(
             "coffee_maker.reports.status_report_generator.StatusReportGenerator.get_recent_completions",
             return_value=[],
@@ -212,7 +213,7 @@ def test_cmd_summary_invalid_format(sample_roadmap_file, capsys):
     """Test cmd_summary with invalid --format parameter."""
     args = Namespace(days=14, format="json")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         result = cmd_summary(args)
 
     captured = capsys.readouterr()
@@ -225,7 +226,7 @@ def test_cmd_summary_missing_roadmap(capsys):
     """Test cmd_summary when ROADMAP.md does not exist."""
     args = Namespace(days=14, format="markdown")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path("/nonexistent/ROADMAP.md")):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path("/nonexistent/ROADMAP.md")):
         result = cmd_summary(args)
 
     captured = capsys.readouterr()
@@ -241,7 +242,7 @@ def test_cmd_calendar_default_parameters(sample_roadmap_file, mock_upcoming, cap
     """Test cmd_calendar with default parameters (3 items, markdown format)."""
     args = Namespace(limit=3, format="markdown")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         with patch(
             "coffee_maker.reports.status_report_generator.StatusReportGenerator.get_upcoming_deliverables",
             return_value=mock_upcoming,
@@ -260,7 +261,7 @@ def test_cmd_calendar_custom_limit(sample_roadmap_file, mock_upcoming, capsys):
     """Test cmd_calendar with custom --limit parameter."""
     args = Namespace(limit=5, format="markdown")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         with patch(
             "coffee_maker.reports.status_report_generator.StatusReportGenerator.get_upcoming_deliverables",
             return_value=mock_upcoming,
@@ -278,7 +279,7 @@ def test_cmd_calendar_text_format(sample_roadmap_file, mock_upcoming, capsys):
     """Test cmd_calendar with text format (removes markdown formatting)."""
     args = Namespace(limit=3, format="text")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         with patch(
             "coffee_maker.reports.status_report_generator.StatusReportGenerator.get_upcoming_deliverables",
             return_value=mock_upcoming,
@@ -296,7 +297,7 @@ def test_cmd_calendar_no_upcoming(sample_roadmap_file, capsys):
     """Test cmd_calendar when no upcoming deliverables found."""
     args = Namespace(limit=3, format="markdown")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         with patch(
             "coffee_maker.reports.status_report_generator.StatusReportGenerator.get_upcoming_deliverables",
             return_value=[],
@@ -325,7 +326,7 @@ def test_cmd_calendar_invalid_format(sample_roadmap_file, capsys):
     """Test cmd_calendar with invalid --format parameter."""
     args = Namespace(limit=3, format="xml")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         result = cmd_calendar(args)
 
     captured = capsys.readouterr()
@@ -338,7 +339,7 @@ def test_cmd_calendar_missing_roadmap(capsys):
     """Test cmd_calendar when ROADMAP.md does not exist."""
     args = Namespace(limit=3, format="markdown")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path("/nonexistent/ROADMAP.md")):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path("/nonexistent/ROADMAP.md")):
         result = cmd_calendar(args)
 
     captured = capsys.readouterr()
@@ -355,7 +356,7 @@ def test_summary_and_calendar_work_together(sample_roadmap_file, mock_completion
     # First run summary
     args_summary = Namespace(days=14, format="markdown")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         with patch(
             "coffee_maker.reports.status_report_generator.StatusReportGenerator.get_recent_completions",
             return_value=mock_completions,
@@ -367,7 +368,7 @@ def test_summary_and_calendar_work_together(sample_roadmap_file, mock_completion
     # Then run calendar
     args_calendar = Namespace(limit=3, format="markdown")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         with patch(
             "coffee_maker.reports.status_report_generator.StatusReportGenerator.get_upcoming_deliverables",
             return_value=mock_upcoming,
@@ -385,7 +386,7 @@ def test_summary_tip_mentions_calendar(sample_roadmap_file, mock_completions, ca
     """Test that summary command mentions calendar in tips."""
     args = Namespace(days=14, format="markdown")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         with patch(
             "coffee_maker.reports.status_report_generator.StatusReportGenerator.get_recent_completions",
             return_value=mock_completions,
@@ -400,7 +401,7 @@ def test_calendar_tip_mentions_summary(sample_roadmap_file, mock_upcoming, capsy
     """Test that calendar command mentions summary in tips."""
     args = Namespace(limit=3, format="markdown")
 
-    with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", Path(sample_roadmap_file)):
+    with patch("coffee_maker.cli.commands.status.ROADMAP_PATH", Path(sample_roadmap_file)):
         with patch(
             "coffee_maker.reports.status_report_generator.StatusReportGenerator.get_upcoming_deliverables",
             return_value=mock_upcoming,

@@ -21,13 +21,12 @@ from coffee_maker.cli.notifications import (
     NOTIF_TYPE_INFO,
     NOTIF_TYPE_QUESTION,
 )
-from coffee_maker.cli.roadmap_cli import (
-    cmd_notifications,
-    cmd_respond,
-    cmd_status,
-    cmd_sync,
-    cmd_view,
-)
+
+# Import command handlers from modularized command modules (SPEC-050)
+from coffee_maker.cli.commands.roadmap import cmd_view
+from coffee_maker.cli.commands.status import cmd_status
+from coffee_maker.cli.commands.notifications import cmd_notifications, cmd_respond
+from coffee_maker.cli.commands.utility import cmd_sync
 
 
 class TestCmdView:
@@ -70,7 +69,7 @@ Test content for priority 3.
         args = MagicMock()
         args.priority = None
 
-        with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", temp_roadmap):
+        with patch("coffee_maker.cli.commands.roadmap.ROADMAP_PATH", temp_roadmap):
             result = cmd_view(args)
 
         assert result == 0
@@ -85,7 +84,7 @@ Test content for priority 3.
         args = MagicMock()
         args.priority = "2"
 
-        with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", temp_roadmap):
+        with patch("coffee_maker.cli.commands.roadmap.ROADMAP_PATH", temp_roadmap):
             result = cmd_view(args)
 
         assert result == 0
@@ -101,7 +100,7 @@ Test content for priority 3.
         args = MagicMock()
         args.priority = "PRIORITY-1"
 
-        with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", temp_roadmap):
+        with patch("coffee_maker.cli.commands.roadmap.ROADMAP_PATH", temp_roadmap):
             result = cmd_view(args)
 
         assert result == 0
@@ -115,7 +114,7 @@ Test content for priority 3.
         args = MagicMock()
         args.priority = "999"
 
-        with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", temp_roadmap):
+        with patch("coffee_maker.cli.commands.roadmap.ROADMAP_PATH", temp_roadmap):
             cmd_view(args)
 
         # Should still succeed but show not found message
@@ -129,7 +128,7 @@ Test content for priority 3.
 
         nonexistent = Path("/tmp/nonexistent_roadmap_12345.md")
 
-        with patch("coffee_maker.cli.roadmap_cli.ROADMAP_PATH", nonexistent):
+        with patch("coffee_maker.cli.commands.roadmap.ROADMAP_PATH", nonexistent):
             result = cmd_view(args)
 
         assert result == 1
@@ -169,7 +168,7 @@ class TestCmdNotifications:
         mock_db = MagicMock()
         mock_db.get_pending_notifications.return_value = []
 
-        with patch("coffee_maker.cli.roadmap_cli.NotificationDB", return_value=mock_db):
+        with patch("coffee_maker.cli.commands.notifications.NotificationDB", return_value=mock_db):
             result = cmd_notifications(args)
 
         assert result == 0
@@ -211,7 +210,7 @@ class TestCmdNotifications:
         mock_db = MagicMock()
         mock_db.get_pending_notifications.return_value = notifications
 
-        with patch("coffee_maker.cli.roadmap_cli.NotificationDB", return_value=mock_db):
+        with patch("coffee_maker.cli.commands.notifications.NotificationDB", return_value=mock_db):
             result = cmd_notifications(args)
 
         assert result == 0
@@ -249,7 +248,7 @@ class TestCmdRespond:
         mock_db.get_notification.return_value = notification
         mock_db.respond_to_notification.return_value = None
 
-        with patch("coffee_maker.cli.roadmap_cli.NotificationDB", return_value=mock_db):
+        with patch("coffee_maker.cli.commands.notifications.NotificationDB", return_value=mock_db):
             result = cmd_respond(args)
 
         assert result == 0
@@ -271,7 +270,7 @@ class TestCmdRespond:
         mock_db = MagicMock()
         mock_db.get_notification.return_value = None
 
-        with patch("coffee_maker.cli.roadmap_cli.NotificationDB", return_value=mock_db):
+        with patch("coffee_maker.cli.commands.notifications.NotificationDB", return_value=mock_db):
             result = cmd_respond(args)
 
         assert result == 1
@@ -298,7 +297,7 @@ class TestCmdRespond:
         mock_db = MagicMock()
         mock_db.get_notification.return_value = notification
 
-        with patch("coffee_maker.cli.roadmap_cli.NotificationDB", return_value=mock_db):
+        with patch("coffee_maker.cli.commands.notifications.NotificationDB", return_value=mock_db):
             result = cmd_respond(args)
 
         assert result == 1
@@ -350,7 +349,7 @@ class TestCLIIntegration:
         mock_db = MagicMock()
         mock_db.get_pending_notifications.side_effect = Exception("Database error")
 
-        with patch("coffee_maker.cli.roadmap_cli.NotificationDB", return_value=mock_db):
+        with patch("coffee_maker.cli.commands.notifications.NotificationDB", return_value=mock_db):
             # The exception should be caught and logged
             # For now, the command doesn't have try/except at the handler level
             # but main() does, so this tests that behavior
