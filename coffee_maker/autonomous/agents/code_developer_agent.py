@@ -47,7 +47,7 @@ from typing import Dict, Optional
 
 from coffee_maker.autonomous.agent_registry import AgentType
 from coffee_maker.autonomous.agents.base_agent import BaseAgent
-from coffee_maker.autonomous.claude_api import ClaudeAPI
+from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
 from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 
@@ -107,7 +107,7 @@ class CodeDeveloperAgent(BaseAgent):
         )
 
         self.roadmap = RoadmapParser(roadmap_file)
-        self.claude = ClaudeAPI()
+        self.claude = ClaudeCLIInterface()
         self.auto_approve = auto_approve
         self.attempted_priorities: Dict[str, int] = {}
         self.max_retries = 3
@@ -245,13 +245,15 @@ class CodeDeveloperAgent(BaseAgent):
 
         # Execute with Claude
         logger.info("🤖 Executing Claude API...")
-        result = self.claude.execute_prompt(prompt, timeout=3600)
-
-        if not result.success:
-            logger.error(f"Claude API failed: {result.error}")
+        try:
+            result = self.claude.execute_prompt(prompt, timeout=3600)
+            if not result or not getattr(result, "success", False):
+                logger.error(f"Claude API failed: {getattr(result, 'error', 'Unknown error')}")
+                return False
+            logger.info(f"✅ Claude API complete")
+        except Exception as e:
+            logger.error(f"❌ Error executing Claude API: {e}")
             return False
-
-        logger.info(f"✅ Claude API complete (tokens: {result.usage})")
 
         # Update task progress
         self.current_task["progress"] = 0.6

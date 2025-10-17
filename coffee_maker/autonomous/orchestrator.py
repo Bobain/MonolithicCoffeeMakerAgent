@@ -1,10 +1,10 @@
 """Multi-Agent Orchestrator - Transform daemon into parallel team execution.
 
-This module implements the AutonomousTeamOrchestrator that launches and manages
-ALL six agents working simultaneously as a coordinated autonomous team.
+This module implements the OrchestratorAgent that IS an autonomous agent itself
+and launches and manages ALL six agents working simultaneously as a coordinated team.
 
 Architecture:
-    AutonomousTeamOrchestrator: Parent orchestrator process
+    OrchestratorAgent (7th Agent - inherits BaseAgent)
     ├── Launches 6 agent subprocesses (architect, code_developer, etc.)
     ├── Monitors agent health (heartbeat checking every 30 seconds)
     ├── Restarts crashed agents (with exponential backoff)
@@ -38,22 +38,22 @@ Prerequisites (US-056):
 
 Usage Examples:
     Start full team (all 6 agents):
-    >>> orchestrator = AutonomousTeamOrchestrator()
-    >>> orchestrator.run()
+    >>> orchestrator = OrchestratorAgent()
+    >>> orchestrator.run_continuous()
 
     Start specific agents only (for testing):
-    >>> orchestrator = AutonomousTeamOrchestrator(
+    >>> orchestrator = OrchestratorAgent(
     ...     agent_types=[AgentType.ARCHITECT, AgentType.CODE_DEVELOPER]
     ... )
-    >>> orchestrator.run()
+    >>> orchestrator.run_continuous()
 
 Related:
     SPEC-057: Technical specification
-    US-057: Strategic requirement document
+    US-057: Strategic requirement document (7th agent as orchestrator)
     PRE_US_057_REFACTORING_ANALYSIS: Green light approval
 
 Timeline:
-    Week 1 (Days 1-3): Foundation (orchestrator + base_agent)
+    Week 1 (Days 1-3): Foundation (orchestrator + base_agent) - DONE
     Week 2 (Days 4-8): Agent migration (code_developer + architect + PM)
     Week 3 (Days 9-15): Complete team + testing + deployment
 """
@@ -65,23 +65,20 @@ import time
 from datetime import datetime
 from multiprocessing import Process
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from coffee_maker.autonomous.agent_registry import AgentRegistry, AgentType
-from coffee_maker.autonomous.git_manager import GitManager
+from coffee_maker.autonomous.agents.base_agent import BaseAgent
 
 logger = logging.getLogger(__name__)
 
 
-class CFR013ViolationError(Exception):
-    """Exception raised when CFR-013 is violated (not on roadmap branch)."""
-
-
-class AutonomousTeamOrchestrator:
+class OrchestratorAgent(BaseAgent):
     """Multi-agent orchestrator managing parallel team execution.
 
-    This orchestrator launches ALL six agents in separate subprocesses and
-    coordinates their work through file-based messaging and status tracking.
+    This agent IS the 7th autonomous agent and launches ALL six other agents
+    in separate subprocesses, coordinating their work through file-based
+    messaging and status tracking.
 
     Responsibilities:
         1. Launch 6 agent subprocesses in priority order
@@ -89,34 +86,36 @@ class AutonomousTeamOrchestrator:
         3. Restart crashed agents (exponential backoff up to max restarts)
         4. Enforce CFR-013 (all agents on roadmap branch)
         5. Coordinate graceful shutdown
+        6. Respond to user_listener commands
 
     Attributes:
-        agents: Dictionary mapping AgentType to agent configuration
+        agent_types: List of agents to launch (default: all 6)
+        max_restarts: Maximum restarts before giving up
+        restart_backoff: Initial backoff delay between restarts (seconds)
         processes: Dictionary mapping AgentType to subprocess.Process
-        status_dir: Directory for agent status files (data/agent_status/)
-        message_dir: Directory for inter-agent messages (data/agent_messages/)
-        running: Boolean flag indicating if orchestrator is running
-        restart_policy: Configuration for crash recovery
-        git: GitManager instance for branch validation
+        restart_counts: Dictionary tracking restart attempts per agent
+        last_restart: Dictionary tracking last restart time per agent
 
     Example:
-        >>> orchestrator = AutonomousTeamOrchestrator()
-        >>> orchestrator.run()  # Launches all 6 agents and monitors them
+        >>> orchestrator = OrchestratorAgent()
+        >>> orchestrator.run_continuous()  # Launches all 6 agents, runs continuously
     """
 
     def __init__(
         self,
         status_dir: Path = Path("data/agent_status"),
         message_dir: Path = Path("data/agent_messages"),
+        check_interval: int = 30,  # Health check every 30 seconds
         max_restarts_per_agent: int = 3,
         restart_backoff: float = 60.0,  # seconds
-        agent_types: Optional[list] = None,
+        agent_types: Optional[List[AgentType]] = None,
     ):
-        """Initialize orchestrator with configuration.
+        """Initialize OrchestratorAgent.
 
         Args:
             status_dir: Directory for agent status files
             message_dir: Directory for inter-agent messages
+            check_interval: Seconds between health checks (default: 30)
             max_restarts_per_agent: Maximum restarts before giving up
             restart_backoff: Initial backoff delay between restarts (seconds)
             agent_types: Optional list of agent types to launch (default: all 6)
@@ -124,19 +123,21 @@ class AutonomousTeamOrchestrator:
         Raises:
             CFR013ViolationError: If not on roadmap branch (CFR-013)
         """
-        self.status_dir = Path(status_dir)
-        self.message_dir = Path(message_dir)
+        # Initialize BaseAgent
+        super().__init__(
+            agent_type=AgentType.ORCHESTRATOR,
+            status_dir=status_dir,
+            message_dir=message_dir,
+            check_interval=check_interval,
+        )
+
         self.max_restarts = max_restarts_per_agent
         self.restart_backoff = restart_backoff
-
-        # Create directories
-        self.status_dir.mkdir(parents=True, exist_ok=True)
-        self.message_dir.mkdir(parents=True, exist_ok=True)
 
         # Agent configurations
         self.all_agents = self._initialize_agent_configs()
 
-        # Filter to specific agent types if requested
+        # Filter to specific agent types if requested (default: all 6 agents)
         if agent_types:
             self.agents = {
                 agent_type: config for agent_type, config in self.all_agents.items() if agent_type in agent_types
@@ -150,13 +151,9 @@ class AutonomousTeamOrchestrator:
         self.last_restart: Dict[AgentType, datetime] = {}
 
         # State
-        self.running = False
-        self.start_time = None
+        self.team_start_time = None
 
-        # Git manager for CFR-013 enforcement
-        self.git = GitManager()
-
-        logger.info(f"AutonomousTeamOrchestrator initialized with {len(self.agents)} agents")
+        logger.info(f"OrchestratorAgent initialized - will manage {len(self.agents)} agents")
 
     def _initialize_agent_configs(self) -> Dict[AgentType, Dict]:
         """Initialize configurations for all agents.
@@ -224,58 +221,66 @@ class AutonomousTeamOrchestrator:
             },
         }
 
-    def run(self):
-        """Launch all agents and monitor their execution.
+    def _do_background_work(self):
+        """Orchestrator's background work: monitor agent health and restart crashed agents.
 
-        This method:
-        1. Enforces CFR-013 (roadmap branch only)
-        2. Launches all agent subprocesses in priority order
-        3. Monitors agent health continuously (every 30 seconds)
-        4. Restarts crashed agents with exponential backoff
-        5. Coordinates graceful shutdown
-        6. Handles KeyboardInterrupt (Ctrl+C)
+        This method is called once per check_interval (30 seconds by default) and:
+        1. Checks agent health via status files and process liveness
+        2. Handles crashed agents with exponential backoff restart
+        3. Writes orchestrator status for monitoring
 
-        Runs indefinitely until:
-            - User stops with Ctrl+C
-            - Fatal error occurs
-            - All agents have crashed beyond max restarts
-
-        Example:
-            >>> orchestrator = AutonomousTeamOrchestrator()
-            >>> orchestrator.run()  # Blocking call, runs until stopped
+        On first run (team_start_time is None), launches all agents.
         """
-        logger.info("=" * 70)
-        logger.info("🚀 Starting Autonomous Team Orchestrator...")
-        logger.info("=" * 70)
+        # On first iteration, launch all agents
+        if self.team_start_time is None:
+            logger.info("Launching all agents in priority order...")
+            self._launch_all_agents()
+            self.team_start_time = datetime.now()
+            self.current_task = {
+                "type": "team_orchestration",
+                "status": "agents_launched",
+                "started_at": self.team_start_time.isoformat(),
+                "agents_running": len(self.processes),
+            }
+            return
 
-        # CFR-013: Ensure we're on roadmap branch before starting
-        self._enforce_cfr_013()
+        # Check agent health
+        self._check_agent_health()
 
-        # Launch all agents
-        self._launch_all_agents()
+        # Handle crashed agents
+        self._handle_crashed_agents()
 
-        # Monitor health loop
-        self.running = True
-        self.start_time = datetime.now()
+        # Write orchestrator status
+        self._write_orchestrator_status()
 
-        try:
-            while self.running:
-                # Check agent health
-                self._check_agent_health()
+        # Update metrics
+        self.metrics["agents_running"] = sum(1 for p in self.processes.values() if p.is_alive())
+        self.metrics["total_restarts"] = sum(self.restart_counts.values())
+        self.metrics["uptime_seconds"] = (datetime.now() - self.team_start_time).total_seconds()
 
-                # Handle crashed agents
-                self._handle_crashed_agents()
+    def _handle_message(self, message: Dict):
+        """Handle inter-agent messages.
 
-                # Write orchestrator status
-                self._write_orchestrator_status()
+        Message types:
+        - status_query: Return orchestrator and agent status
+        - agent_status: Update from user_listener about agent state
+        - shutdown_request: Graceful shutdown request
 
-                # Sleep before next health check
-                time.sleep(30)
+        Args:
+            message: Message dictionary with 'type' and 'content'
+        """
+        msg_type = message.get("type")
 
-        except KeyboardInterrupt:
-            logger.info("\n⏹️  Orchestrator stopped by user (Ctrl+C)")
-        finally:
-            self._shutdown_all_agents()
+        if msg_type == "status_query":
+            logger.info("Status query received from user_listener")
+            # Status will be written by _write_status() in next iteration
+
+        elif msg_type == "shutdown_request":
+            logger.info("Shutdown request received from user_listener")
+            self.running = False
+
+        else:
+            logger.warning(f"Unknown message type: {msg_type}")
 
     def _enforce_cfr_013(self):
         """Ensure orchestrator is on roadmap branch (CFR-013).
@@ -494,9 +499,11 @@ class AutonomousTeamOrchestrator:
         """
         try:
             status_info = {
-                "orchestrator": "AutonomousTeamOrchestrator",
-                "started_at": self.start_time.isoformat() if self.start_time else None,
-                "uptime_seconds": ((datetime.now() - self.start_time).total_seconds() if self.start_time else 0),
+                "orchestrator": "OrchestratorAgent",
+                "started_at": self.team_start_time.isoformat() if self.team_start_time else None,
+                "uptime_seconds": (
+                    (datetime.now() - self.team_start_time).total_seconds() if self.team_start_time else 0
+                ),
                 "agents": {},
                 "timestamp": datetime.now().isoformat(),
             }
@@ -554,14 +561,21 @@ class AutonomousTeamOrchestrator:
 
 
 def main():
-    """CLI entry point for starting the orchestrator.
+    """CLI entry point for starting the OrchestratorAgent.
 
     Usage:
         python -m coffee_maker.autonomous.orchestrator
+
+    Example:
+        # Run all 6 agents
+        python -m coffee_maker.autonomous.orchestrator
+
+        # Run specific agents for testing
+        python -m coffee_maker.autonomous.orchestrator --agents ARCHITECT,CODE_DEVELOPER
     """
     import argparse
 
-    parser = argparse.ArgumentParser(description="Autonomous Team Orchestrator - Multi-agent parallel execution")
+    parser = argparse.ArgumentParser(description="OrchestratorAgent - Multi-agent parallel execution")
     parser.add_argument(
         "--agents",
         type=str,
@@ -600,7 +614,7 @@ def main():
             return
 
     # Create and run orchestrator
-    orchestrator = AutonomousTeamOrchestrator(
+    orchestrator = OrchestratorAgent(
         status_dir=Path(args.status_dir),
         message_dir=Path(args.message_dir),
         max_restarts_per_agent=args.max_restarts,
@@ -608,9 +622,12 @@ def main():
     )
 
     try:
-        orchestrator.run()
-    except CFR013ViolationError as e:
-        logger.error(str(e))
+        orchestrator.run_continuous()
+    except Exception as e:
+        logger.error(f"Orchestrator error: {e}")
+        import traceback
+
+        traceback.print_exc()
         return
 
 
