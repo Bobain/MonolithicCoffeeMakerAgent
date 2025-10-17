@@ -37,13 +37,15 @@ def sample_trace():
             "success_criteria": "Test criteria",
         },
         user_query="Test query",
-        current_context="Test context",
+        context="Test context",
         executions=[
             Execution(
-                execution_id=1,
+                execution_id="exec_123",
+                prompt="Test prompt",
+                input_data={},
+                output="Test output",
                 result_status="success",
                 duration_seconds=1.5,
-                token_usage=100,
             )
         ],
     )

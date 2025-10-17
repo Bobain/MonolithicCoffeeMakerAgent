@@ -1,8 +1,8 @@
 # Coffee Maker Agent - Prioritized Roadmap
 
-**Last Updated**: 2025-10-16 🎉 **US-033, US-034, US-038, US-042 COMPLETE! Multiple Priorities Ready!**
+**Last Updated**: 2025-10-17 ⭐ **US-054 ADDED: CFR-011 Architect Daily Integration (CRITICAL)**
 **Current Branch**: `roadmap`
-**Status**: PRIORITY 1-4 ✅ COMPLETE | US-033/034/038/042 ✅ COMPLETE | **Next: 🚨 US-041 (BLOCKING) + Multiple Parallel Work Items**
+**Status**: PRIORITY 1-4 ✅ COMPLETE | US-033/034/038/042 ✅ COMPLETE | **US-054: CFR-011 Enforcement (CRITICAL) - Ready for Implementation**
 **Quick-Start**: ⚡ CLI: `project-manager` (defaults to chat!) | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py`
 **Achievement**: 🎉 **VISIBILITY LOOP OPERATIONAL** - code_developer now merges to roadmap frequently, project_manager has real-time visibility!
 
@@ -26763,5 +26763,241 @@ Reviewed 8 specs, identified 3 reuse opportunities, simplified 2 implementations
 This is the **continuous improvement loop** that ensures architectural quality doesn't degrade over time. The first weekly review (2025-10-16) already shows 12-16 hours of effort savings - this demonstrates the value of regular spec review and improvement.
 
 **Example Success**: The first review identified that SPEC-009 could be simplified by 87.5% (2 weeks → 2 days) by reusing existing infrastructure. This is exactly the kind of improvement that continuous review enables.
+
+---
+
+### US-054: Architect Daily Integration of code-searcher Findings (CFR-011)
+
+**Status**: 📝 Planned - CRITICAL (CFR-011 Enforcement)
+
+**Created**: 2025-10-17
+
+**Estimated Effort**: 1-2 days
+
+**User Story**:
+As the architect agent, I must read code-searcher analysis reports daily and analyze the codebase weekly to identify refactoring opportunities and technical debt reduction, so that all findings are integrated into technical specifications before creating new specs.
+
+**Problem Statement**:
+Currently, code-searcher produces valuable analysis reports about code quality, duplication, technical debt, and refactoring opportunities, but architect does not systematically integrate these findings:
+- **Reports ignored**: code-searcher reports sit unread in docs/
+- **Technical debt accumulates**: Refactoring opportunities missed
+- **Duplicate work**: Same patterns implemented multiple times
+- **Quality degradation**: Code quality issues not addressed proactively
+- **No enforcement**: No mechanism to ensure architect reads reports
+
+This is a **Critical Functional Requirement** (CFR-011) that ensures architect maintains code quality through continuous integration of code-searcher findings.
+
+**Description**:
+Implement enforcement mechanism where architect MUST read code-searcher reports daily AND analyze the codebase weekly before being allowed to create new technical specifications. This creates a feedback loop: code-searcher identifies issues → architect reads and acts on findings → new specs incorporate improvements → code_developer implements better code.
+
+**Requirements**:
+
+1. **Daily Integration Workflow**:
+   - Check for new code-searcher reports every day
+   - BLOCK spec creation if unread reports exist
+   - Read all reports and extract action items
+   - Update existing specs with findings
+   - Create refactoring specs as needed
+
+2. **Weekly Codebase Analysis**:
+   - Analyze codebase yourself every 7 days (max)
+   - Identify: large files, duplicate code, missing abstractions, test gaps
+   - BLOCK spec creation if >7 days since last analysis
+   - Document findings in analysis report
+   - Create refactoring priorities based on findings
+
+3. **Enforcement Mechanism**:
+   - `ArchitectDailyRoutine` class with `enforce_cfr_011()` method
+   - Raises `CFR011ViolationError` if violations detected
+   - Tracking file: `data/architect_integration_status.json`
+   - CLI commands: `architect daily-integration`, `architect analyze-codebase`
+   - Integration with spec creation workflow
+
+4. **Tracking Data** (`data/architect_integration_status.json`):
+   ```json
+   {
+     "last_code_searcher_read": "2025-10-17",
+     "last_codebase_analysis": "2025-10-17",
+     "reports_read": 12,
+     "refactoring_specs_created": 4,
+     "specs_updated": 6,
+     "next_analysis_due": "2025-10-24"
+   }
+   ```
+
+5. **CLI Commands**:
+   - `architect daily-integration` - Guided workflow for reading reports
+   - `architect analyze-codebase` - Perform weekly codebase analysis
+   - `architect cfr-011-status` - Check compliance status
+
+**Acceptance Criteria**:
+
+- [ ] `ArchitectDailyRoutine` class implemented in `coffee_maker/autonomous/architect_daily_routine.py`
+- [ ] `CFR011ViolationError` exception defined
+- [ ] `enforce_cfr_011()` method raises exception if:
+  - Unread code-searcher reports exist
+  - >7 days since last codebase analysis
+- [ ] Tracking file `data/architect_integration_status.json` created and maintained
+- [ ] CLI command `architect daily-integration` works (guided workflow)
+- [ ] CLI command `architect analyze-codebase` works (performs analysis)
+- [ ] CLI command `architect cfr-011-status` works (shows compliance)
+- [ ] Spec creation workflow calls `enforce_cfr_011()` BEFORE creating specs
+- [ ] Unit tests for `ArchitectDailyRoutine` (100% coverage of enforcement logic)
+- [ ] Integration test: spec creation blocked when violations exist
+- [ ] Integration test: spec creation allowed when compliant
+- [ ] Documentation updated (CFR-011, architect.md, CLAUDE.md)
+- [ ] All tests pass
+
+**Implementation Phases**:
+
+**Phase 1: Core Enforcement Mechanism** (4-6 hours)
+- Create `ArchitectDailyRoutine` class
+- Implement `enforce_cfr_011()` with both checks:
+  - Part 1: code-searcher report reading (daily)
+  - Part 2: Codebase analysis (weekly)
+- Define `CFR011ViolationError` exception
+- Create tracking file structure
+- Add file I/O for tracking data
+
+**Phase 2: CLI Commands** (3-4 hours)
+- Implement `architect daily-integration` command
+- Implement `architect analyze-codebase` command
+- Implement `architect cfr-011-status` command
+- Add to `coffee_maker/cli/architect_cli.py` (new file)
+- Integrate with existing CLI framework
+
+**Phase 3: Workflow Integration** (2-3 hours)
+- Integrate `enforce_cfr_011()` into spec creation workflow
+- Add pre-check before `daemon_spec_manager` creates specs
+- Handle exceptions gracefully (inform user, stop spec creation)
+- Update architect agent prompt to include daily routine
+
+**Phase 4: Testing & Documentation** (2-3 hours)
+- Write unit tests for `ArchitectDailyRoutine`
+- Write integration tests for spec creation blocking
+- Update CFR-011 documentation
+- Update architect.md agent definition
+- Update CLAUDE.md with new workflow
+
+**Estimated Effort**: 1-2 days (11-16 hours total)
+
+**Dependencies**:
+- US-047 (architect must be creating specs for enforcement to matter)
+- code-searcher must be producing reports (already happening)
+
+**Technical Specification Required**: Yes - architect will create detailed implementation spec
+
+**Delegation to architect**: This priority requires architectural design for:
+- Enforcement mechanism architecture
+- Tracking file format and persistence
+- CLI command structure
+- Integration points with existing daemon workflow
+- Exception handling strategy
+
+**Priority Level**: CRITICAL
+
+**Rationale**:
+- **Code Quality**: Proactive identification and resolution of technical debt
+- **Refactoring**: Systematic approach to code improvement
+- **Learning Loop**: Architect learns from codebase analysis
+- **Prevention**: Stop quality degradation before it becomes costly
+- **CFR Compliance**: Enforces Critical Functional Requirement (CFR-011)
+- **Efficiency**: Better specs from informed architect = faster implementation
+
+**Related Documents**:
+- `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` - CFR-011 full definition
+- `docs/architecture/specs/SPEC-050-refactor-roadmap-cli-modularization.md` - Example refactoring spec
+- `docs/architecture/specs/SPEC-051-centralized-prompt-utilities.md` - Example refactoring spec
+- `docs/architecture/specs/SPEC-052-standardized-error-handling.md` - Example refactoring spec
+- `docs/architecture/specs/SPEC-053-test-coverage-expansion.md` - Example refactoring spec
+- `docs/architecture/decisions/ADR-004-code-searcher-integration.md` - code-searcher integration approach
+- `.claude/agents/architect.md` - Architect role definition
+- `.claude/agents/code-searcher.md` - code-searcher role definition
+
+**Unblocks**:
+- US-049 (continuous spec improvement needs findings from code-searcher)
+- All refactoring priorities (SPEC-050, SPEC-051, SPEC-052, SPEC-053)
+
+**Blocked By**: None (can start immediately)
+
+**Notes**:
+This creates a powerful feedback loop:
+1. code-searcher analyzes codebase → finds issues
+2. architect reads reports daily → extracts improvements
+3. architect creates/updates specs → incorporates findings
+4. code_developer implements → better code quality
+5. Repeat cycle → continuous improvement
+
+**Success Metrics**:
+- Reports read within 24 hours: 100%
+- Codebase analysis frequency: Every 7 days (max)
+- Refactoring specs created from findings: Track count
+- Spec updates from findings: Track count
+- Code quality trend: Improving (fewer issues over time)
+
+**Example Workflow**:
+
+```
+Day 1 (Monday):
+1. architect starts work day
+2. enforce_cfr_011() runs automatically
+3. Finds 2 new code-searcher reports
+4. BLOCKS spec creation with: "CFR-011 VIOLATION: Must read 2 new reports"
+5. architect runs: architect daily-integration
+6. Reads reports, extracts 5 refactoring opportunities
+7. Creates SPEC-054 (refactoring) based on findings
+8. Updates SPEC-030 with new patterns identified
+9. Tracking updated: last_code_searcher_read = 2025-10-17
+10. Now allowed to create new specs
+
+Day 8 (Monday):
+1. architect starts work day
+2. enforce_cfr_011() runs automatically
+3. Finds 7 days since last codebase analysis
+4. BLOCKS spec creation with: "CFR-011 VIOLATION: 7 days since analysis"
+5. architect runs: architect analyze-codebase
+6. Analyzes: large files (5 found), duplicate code (12 instances), test gaps (8 modules)
+7. Creates analysis report: docs/architecture/CODEBASE_ANALYSIS_2025-10-17.md
+8. Creates 3 refactoring priorities in ROADMAP
+9. Tracking updated: last_codebase_analysis = 2025-10-17
+10. Now allowed to create new specs
+```
+
+**Reference Implementation** (from CFR-011):
+
+```python
+class ArchitectDailyRoutine:
+    """Enforces CFR-011 daily integration workflow."""
+
+    def __init__(self):
+        self.last_code_searcher_read = self._load_last_read_date()
+        self.last_codebase_analysis = self._load_last_analysis_date()
+
+    def enforce_cfr_011(self):
+        """Mandatory daily check before architect can create new specs."""
+        today = datetime.now().date()
+
+        # Part 1: code-searcher report reading
+        if self.last_code_searcher_read < today:
+            reports = self._find_new_code_searcher_reports()
+            if reports and not self._has_read_reports(reports):
+                raise CFR011ViolationError(
+                    f"CFR-011 VIOLATION: Must read {len(reports)} new "
+                    f"code-searcher reports before creating specs today.\n\n"
+                    f"Reports to read:\n" + "\n".join(f"- {r}" for r in reports) +
+                    f"\n\nRun: architect daily-integration"
+                )
+            self._mark_reports_read(today)
+
+        # Part 2: Weekly codebase analysis
+        days_since_analysis = (today - self.last_codebase_analysis).days
+        if days_since_analysis >= 7:
+            raise CFR011ViolationError(
+                f"CFR-011 VIOLATION: {days_since_analysis} days since last "
+                f"codebase analysis (max: 7 days).\n\n"
+                f"Must analyze codebase yourself before creating new specs.\n"
+                f"Run: architect analyze-codebase"
+            )
+```
 
 ---
