@@ -603,6 +603,14 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
         logger.info("✅ ROADMAP.md found")
 
+        # CFR-013 validation: Daemon must work on roadmap branch only
+        logger.info("Checking CFR-013 compliance...")
+        if not self._validate_cfr_013():
+            logger.error("❌ CFR-013 validation failed")
+            return False
+
+        logger.info("✅ CFR-013 compliant")
+
         return True
 
     def _reset_claude_context(self) -> bool:
@@ -654,3 +662,47 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         """Stop the daemon gracefully."""
         logger.info("Stopping daemon...")
         self.running = False
+
+    def _validate_cfr_013(self) -> bool:
+        """Validate CFR-013: Daemon must be on roadmap branch.
+
+        CFR-013 requires ALL agents to work ONLY on the 'roadmap' branch.
+        This method validates that the daemon is on the correct branch before
+        starting any operations.
+
+        Returns:
+            True if on roadmap branch, False otherwise
+
+        Raises:
+            No exceptions - logs error and returns False for graceful failure
+        """
+        try:
+            current_branch = self.git.get_current_branch()
+
+            if current_branch != "roadmap":
+                logger.error("")
+                logger.error("=" * 60)
+                logger.error("CFR-013 VIOLATION: Daemon must work on 'roadmap' branch ONLY")
+                logger.error("=" * 60)
+                logger.error(f"Current branch: {current_branch}")
+                logger.error(f"Expected branch: roadmap")
+                logger.error("")
+                logger.error("CFR-013 requires ALL agents to work on the roadmap branch.")
+                logger.error("This ensures:")
+                logger.error("  - Single source of truth")
+                logger.error("  - No merge conflicts between feature branches")
+                logger.error("  - All work immediately visible to team")
+                logger.error("")
+                logger.error("To fix:")
+                logger.error("  1. git checkout roadmap")
+                logger.error("  2. git pull origin roadmap")
+                logger.error("  3. Restart daemon")
+                logger.error("")
+                return False
+
+            logger.info("✅ CFR-013 compliant: On 'roadmap' branch")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error validating CFR-013: {e}")
+            return False

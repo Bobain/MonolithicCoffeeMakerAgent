@@ -16,10 +16,6 @@ Part of US-021 Phase 1 - Option D: Split Large Files
 import logging
 import subprocess
 
-from coffee_maker.cli.notifications import (
-    NOTIF_PRIORITY_CRITICAL,
-    NOTIF_TYPE_ERROR,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -51,34 +47,28 @@ class GitOpsMixin:
     def _sync_roadmap_branch(self) -> bool:
         """Sync with 'roadmap' branch before each iteration.
 
-        This ensures the daemon always works with the latest priorities
-        and prevents working on stale/obsolete tasks.
+        CFR-013 COMPLIANT: Since daemon always works on roadmap branch,
+        this method simply pulls latest changes from origin/roadmap.
+
+        No branch switching, no merge needed.
 
         Returns:
-            True if sync successful or not needed, False if sync failed
-
-        Implementation:
-            1. Fetch origin/roadmap
-            2. Merge origin/roadmap into current branch
-            3. Handle conflicts gracefully
+            True if sync successful, False if sync failed
         """
         try:
-            # Fetch latest from roadmap branch
-            result = subprocess.run(
-                ["git", "fetch", "origin", "roadmap"],
-                cwd=self.git.repo_path,
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
+            # Validate we're on roadmap branch (defensive check)
+            current_branch = subprocess.check_output(
+                ["git", "branch", "--show-current"], cwd=self.git.repo_path, text=True
+            ).strip()
 
-            if result.returncode != 0:
-                logger.warning(f"Failed to fetch roadmap branch: {result.stderr}")
+            if current_branch != "roadmap":
+                logger.error(f"CFR-013 VIOLATION in _sync_roadmap_branch: On '{current_branch}', expected 'roadmap'")
                 return False
 
-            # Merge origin/roadmap
+            # Pull latest from origin/roadmap
+            logger.info("Pulling latest from origin/roadmap...")
             result = subprocess.run(
-                ["git", "merge", "origin/roadmap", "--no-edit"],
+                ["git", "pull", "origin", "roadmap", "--no-edit"],
                 cwd=self.git.repo_path,
                 capture_output=True,
                 text=True,
@@ -88,7 +78,7 @@ class GitOpsMixin:
             if result.returncode != 0:
                 # Check if merge conflict
                 if "CONFLICT" in result.stdout or "CONFLICT" in result.stderr:
-                    logger.error("❌ Merge conflict with roadmap branch!")
+                    logger.error("❌ Merge conflict with origin/roadmap!")
                     logger.error("Manual intervention required to resolve conflicts")
 
                     # Abort merge
@@ -99,10 +89,10 @@ class GitOpsMixin:
                     )
                     return False
                 else:
-                    logger.warning(f"Merge failed: {result.stderr}")
+                    logger.warning(f"Pull failed: {result.stderr}")
                     return False
 
-            logger.info("✅ Synced with 'roadmap' branch")
+            logger.info("✅ Synced with origin/roadmap")
             return True
 
         except Exception as e:
@@ -110,143 +100,54 @@ class GitOpsMixin:
             return False
 
     def _merge_to_roadmap(self, message: str = "Sync progress to roadmap") -> bool:
-        """Merge current feature branch to roadmap branch.
+        """Push changes to roadmap branch.
 
-        US-029: CRITICAL - project_manager depends on this for visibility!
+        CFR-013 COMPLIANT: Since daemon always works on roadmap branch,
+        this method simply commits and pushes changes to origin/roadmap.
 
-        This method ensures project_manager can see all progress in real-time
-        by frequently merging feature branch changes to the roadmap branch.
-
-        Called after:
-        - Completing any sub-task
-        - Updating ROADMAP.md (CRITICAL!)
-        - Creating new tickets
-        - Before sleep/idle
+        No branch switching, no merging needed.
 
         Args:
             message: Description of what was accomplished
 
         Returns:
-            True if merge successful, False if conflicts
+            True if push successful, False otherwise
 
         Example:
-            >>> # After updating ROADMAP.md
-            >>> self._merge_to_roadmap("Updated US-021 progress")
-            True
-
-            >>> # Before sleep
-            >>> self._merge_to_roadmap("End of iteration checkpoint")
+            >>> # After completing a subtask
+            >>> self._merge_to_roadmap("Completed US-056 Phase 1")
             True
         """
         try:
-            # Get current branch
+            # Validate we're on roadmap branch (defensive check)
             current_branch = subprocess.check_output(
                 ["git", "branch", "--show-current"], cwd=self.git.repo_path, text=True
             ).strip()
 
-            if current_branch == "roadmap":
-                logger.warning("Already on roadmap branch, skipping merge")
-                return True
+            if current_branch != "roadmap":
+                logger.error(f"CFR-013 VIOLATION in _merge_to_roadmap: On '{current_branch}', expected 'roadmap'")
+                return False
 
-            # Commit any uncommitted changes
+            # Check for uncommitted changes
             status = subprocess.check_output(["git", "status", "--porcelain"], cwd=self.git.repo_path, text=True)
 
             if status.strip():
-                logger.info(f"Committing changes before merge: {message}")
+                # Commit changes
+                logger.info(f"Committing changes: {message}")
                 subprocess.run(["git", "add", "-A"], cwd=self.git.repo_path, check=True)
                 subprocess.run(["git", "commit", "-m", message], cwd=self.git.repo_path, check=True)
-                subprocess.run(
-                    ["git", "push", "origin", current_branch],
-                    cwd=self.git.repo_path,
-                    check=True,
-                )
-
-            # Switch to roadmap
-            subprocess.run(["git", "checkout", "roadmap"], cwd=self.git.repo_path, check=True)
-            subprocess.run(["git", "pull", "origin", "roadmap"], cwd=self.git.repo_path, check=True)
-
-            # Merge with --no-ff (preserves history)
-            merge_result = subprocess.run(
-                [
-                    "git",
-                    "merge",
-                    "--no-ff",
-                    "-m",
-                    f"Merge {current_branch}: {message}",
-                    current_branch,
-                ],
-                cwd=self.git.repo_path,
-                capture_output=True,
-                text=True,
-            )
-
-            if merge_result.returncode != 0:
-                # CONFLICT - abort and notify project_manager
-                subprocess.run(["git", "merge", "--abort"], cwd=self.git.repo_path, check=True)
-                subprocess.run(
-                    ["git", "checkout", current_branch],
-                    cwd=self.git.repo_path,
-                    check=True,
-                )
-
-                # Create CRITICAL notification for project_manager
-                self.notifications.create_notification(
-                    type=NOTIF_TYPE_ERROR,
-                    priority=NOTIF_PRIORITY_CRITICAL,
-                    title=f"🚨 MERGE CONFLICT: {current_branch} → roadmap",
-                    message=f"""Automatic merge to roadmap failed with conflicts.
-
-⚠️  PROJECT_MANAGER VISIBILITY BLOCKED!
-
-The roadmap branch is now out of sync with {current_branch}.
-Manual intervention required to restore visibility.
-
-Steps to resolve:
-1. git checkout roadmap
-2. git pull origin roadmap
-3. git merge {current_branch}
-4. Resolve conflicts in affected files
-5. git add <resolved-files>
-6. git commit
-7. git push origin roadmap
-
-Until resolved, project_manager cannot see latest progress.
-""",
-                    sound=False,
-                    agent_id="code_developer",
-                )
-
-                logger.error(f"Merge conflict: {current_branch} → roadmap")
-                logger.error("PROJECT_MANAGER VISIBILITY BLOCKED!")
-                return False
+            else:
+                logger.info("No uncommitted changes to commit")
 
             # Push to origin/roadmap
+            logger.info("Pushing to origin/roadmap...")
             subprocess.run(["git", "push", "origin", "roadmap"], cwd=self.git.repo_path, check=True)
 
-            # Switch back to feature branch
-            subprocess.run(["git", "checkout", current_branch], cwd=self.git.repo_path, check=True)
-
-            logger.info(f"✅ Merged {current_branch} → roadmap")
-            logger.info(f"✅ project_manager can now see: {message}")
+            logger.info(f"✅ Pushed to roadmap: {message}")
+            logger.info("✅ project_manager can now see progress")
             return True
 
         except Exception as e:
-            logger.error(f"Failed to merge to roadmap: {e}")
+            logger.error(f"Failed to push to roadmap: {e}")
             logger.error("PROJECT_MANAGER CANNOT SEE PROGRESS!")
-
-            # Try to recover
-            try:
-                subprocess.run(
-                    ["git", "checkout", current_branch],
-                    cwd=self.git.repo_path,
-                    check=True,
-                )
-            except subprocess.CalledProcessError as e:
-                logger.error(
-                    f"Failed to recover branch: {e}",
-                    extra={"branch": current_branch, "returncode": e.returncode},
-                )
-            except Exception as e:
-                logger.error(f"Unexpected error during branch recovery: {e}", exc_info=True)
-
             return False

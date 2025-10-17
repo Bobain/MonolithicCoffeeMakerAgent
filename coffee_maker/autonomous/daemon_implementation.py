@@ -182,34 +182,22 @@ The daemon will skip this priority in future iterations.
         # Clear previous subtasks
         self.current_subtasks = []
 
-        # PRIORITY 4: Update progress - creating branch
-        self.status.report_progress(10, "Creating feature branch")
+        # PRIORITY 4: Update progress - validating branch
+        self.status.report_progress(10, "Validating roadmap branch")
 
-        # Track subtask: Creating branch (estimated: 10 seconds)
-        subtask_start = datetime.now()
-        self._update_subtask(
-            "Creating feature branch",
-            "in_progress",
-            subtask_start,
-            estimated_seconds=10,
-        )
-
-        # Create branch
-        branch_name = f"feature/{priority_name.lower().replace(' ', '-').replace(':', '')}"
-        logger.info(f"Creating branch: {branch_name}")
-
-        if not self.git.create_branch(branch_name):
-            logger.error("Failed to create branch")
-            self._update_subtask("Creating feature branch", "failed", subtask_start, estimated_seconds=10)
+        # Validate CFR-013 compliance before implementation
+        current_branch = self.git.get_current_branch()
+        if current_branch != "roadmap":
+            logger.error(f"CFR-013 VIOLATION: Must be on roadmap branch, currently on: {current_branch}")
             return False
 
-        self._update_subtask("Creating feature branch", "completed", subtask_start, estimated_seconds=10)
+        logger.info("✅ CFR-013 compliant: Working on 'roadmap' branch")
 
-        # PRIORITY 4: Log branch creation
+        # PRIORITY 4: Log CFR-013 compliance
         self.status.report_activity(
-            ActivityType.GIT_BRANCH,
-            f"Created branch: {branch_name}",
-            details={"branch": branch_name},
+            ActivityType.INFO,
+            "CFR-013 validated: On roadmap branch",
+            details={"branch": "roadmap"},
         )
 
         # Build prompt for Claude
@@ -319,13 +307,13 @@ Status: Requires human decision
 
         self._update_subtask("Pushing to remote", "completed", subtask_start, estimated_seconds=30)
 
-        logger.info("✅ Branch pushed")
+        logger.info("✅ Roadmap branch pushed")
 
         # PRIORITY 4: Log push activity
         self.status.report_activity(
             ActivityType.GIT_PUSH,
-            f"Pushed branch: {branch_name}",
-            details={"branch": branch_name},
+            "Pushed to roadmap branch",
+            details={"branch": "roadmap"},
         )
 
         # Create PR if enabled

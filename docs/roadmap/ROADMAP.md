@@ -27006,3 +27006,696 @@ class ArchitectDailyRoutine:
 ```
 
 ---
+
+### US-056: Enforce CFR-013 - Daemon Must Work on roadmap Branch Only
+
+**Status**: 🚨 BLOCKED - CRITICAL PRIORITY (Daemon Cannot Operate)
+
+**Created**: 2025-10-17
+
+**Estimated Effort**: 2-3 hours
+
+**User Story**:
+As a user, I want the code_developer daemon to work directly on the `roadmap` branch, so that all autonomous work follows CFR-013 and avoids branch-related errors.
+
+**Problem Statement**:
+The code_developer daemon currently violates CFR-013 by attempting to create feature branches:
+
+**Current Behavior (VIOLATION)**:
+```python
+# daemon_implementation.py:198
+branch_name = f"feature/{priority_name.lower().replace(' ', '-').replace(':', '')}"
+logger.info(f"Creating branch: {branch_name}")
+if not self.git.create_branch(branch_name):
+    logger.error("Failed to create branch")
+    return False
+```
+
+**Error Encountered**:
+```
+Failed to create branch: erreur : Vos modifications locales...
+```
+
+**Why This Blocks Daemon**:
+- Daemon tries to create `feature/us-056-...` branch
+- Git rejects because there are uncommitted changes
+- CFR-013 requires ALL work on `roadmap` branch only
+- NO feature branches allowed for ANY agent
+
+This is a **Critical Functional Requirement** (CFR-013) violation that completely blocks autonomous daemon operations.
+
+**Description**:
+Remove all feature branch creation logic from code_developer daemon and update it to work directly on the `roadmap` branch. All commits should go straight to `roadmap` with frequent, clear commit messages.
+
+**Requirements**:
+
+1. **Remove Feature Branch Creation**:
+   - Delete lines 198-204 in `daemon_implementation.py` (branch creation logic)
+   - Delete branch name generation logic
+   - Remove `self.git.create_branch()` call
+   - Remove related status reporting for branch creation
+
+2. **Work Directly on roadmap Branch**:
+   - Ensure daemon is on `roadmap` branch at startup
+   - Add validation: Check current branch is `roadmap` before any work
+   - Raise clear error if not on `roadmap` branch
+   - Stay on `roadmap` throughout entire daemon lifecycle
+
+3. **Update Git Operations**:
+   - Remove branch pushing logic (no separate branches to push)
+   - Keep commit logic (commits go to `roadmap` directly)
+   - Update push to: `git push origin roadmap`
+   - No more `git push -u origin feature/...`
+
+4. **Add CFR-013 Validation**:
+   - Add `validate_cfr_013()` method to daemon startup
+   - Check: `git branch --show-current` == "roadmap"
+   - Raise `CFR013ViolationError` if on wrong branch
+   - Clear error message with instructions
+
+5. **Update Pull Request Creation**:
+   - PRs are created FROM `roadmap` TO `main` (if PRs still desired)
+   - Or disable PR creation entirely (work stays on `roadmap` until manual merge)
+   - Update PR body to reference `roadmap` branch
+   - Consider if PRs are even needed in single-branch workflow
+
+6. **Update Status Reporting**:
+   - Remove "Creating branch" progress step
+   - Update activity logging (no branch creation events)
+   - Log commits directly to `roadmap` instead
+   - Simplify progress reporting
+
+7. **Update Prompts**:
+   - Review `.claude/commands/implement-feature.md`
+   - Review `.claude/commands/implement-documentation.md`
+   - Ensure prompts don't mention feature branches
+   - Clarify work happens on `roadmap` branch
+
+8. **Documentation Updates**:
+   - Update CLAUDE.md "Git Workflow" section (already updated with CFR-013)
+   - Update daemon documentation
+   - Add CFR-013 reference to code_developer agent docs
+   - Update any diagrams showing branch workflow
+
+**Acceptance Criteria**:
+
+- [ ] code_developer daemon works ONLY on `roadmap` branch
+- [ ] NO feature branch creation logic remains
+- [ ] Daemon validates it's on `roadmap` at startup
+- [ ] Clear error if daemon starts on wrong branch
+- [ ] All commits go directly to `roadmap`
+- [ ] Push operations target `origin roadmap`
+- [ ] Status reporting updated (no branch creation step)
+- [ ] PR creation updated or disabled appropriately
+- [ ] Prompts don't reference feature branches
+- [ ] Documentation reflects single-branch workflow
+- [ ] CFR-013 compliance verified
+- [ ] Daemon can run without branch-related errors
+
+**Correct Workflow (After Implementation)**:
+
+```bash
+# Daemon startup
+1. Check current branch: git branch --show-current
+2. If not "roadmap": STOP with clear error
+3. If "roadmap": Continue
+
+# Implementation cycle
+4. Pull latest: git pull origin roadmap
+5. Make changes directly on roadmap
+6. Commit frequently: git commit -m "feat: Progress on US-056"
+7. Push to roadmap: git push origin roadmap
+8. Repeat for next priority (stay on roadmap!)
+
+# NO branch creation
+# NO git checkout -b feature/...
+# NO separate branches
+```
+
+**Implementation Changes**:
+
+**BEFORE (CFR-013 VIOLATION)**:
+```python
+# Create branch
+branch_name = f"feature/{priority_name.lower()...}"
+if not self.git.create_branch(branch_name):
+    return False
+
+# ... work ...
+
+# Push feature branch
+if not self.git.push():  # pushes feature/* branch
+    return False
+```
+
+**AFTER (CFR-013 COMPLIANT)**:
+```python
+# Validate we're on roadmap
+self._validate_cfr_013()  # Raises if not on roadmap
+
+# Work directly on roadmap (no branch creation!)
+# ... make changes ...
+
+# Commit to roadmap
+if not self.git.commit(commit_message):
+    return False
+
+# Push roadmap
+if not self.git.push("roadmap"):  # explicit: push to roadmap
+    return False
+```
+
+**Error Messages**:
+
+```
+CFR-013 VIOLATION: code_developer must work on roadmap branch
+
+Current branch: main
+Required branch: roadmap
+
+CFR-013 requires ALL agents to work on roadmap branch ONLY.
+Creating feature branches is FORBIDDEN.
+
+To fix:
+1. git checkout roadmap
+2. Restart daemon
+
+Reason: Single source of truth, prevents branch conflicts, simplifies coordination.
+```
+
+**Benefits**:
+
+1. **Unblocks Daemon**: Daemon can operate without branch errors
+2. **CFR-013 Compliance**: Follows critical functional requirement
+3. **Simplifies Workflow**: Less git complexity, fewer failure points
+4. **Team Visibility**: All work immediately visible on `roadmap`
+5. **No Merge Conflicts**: Single branch eliminates branch merge issues
+6. **Faster Iteration**: No branch creation/switching overhead
+7. **Easier Rollback**: Single branch history simplifies reverting
+
+**Dependencies**:
+- CFR-013 must be documented (already done in CRITICAL_FUNCTIONAL_REQUIREMENTS.md)
+- CLAUDE.md already updated with single-branch workflow
+
+**Technical Specification Required**: No - straightforward refactoring (remove branch logic, add validation)
+
+**Estimated Changes**:
+- `daemon_implementation.py`: Remove 10 lines, add 5 lines (validation)
+- `git_manager.py`: Update push method to accept branch name
+- Documentation: Update references (minimal)
+- Prompts: Review and update (minimal)
+
+**Priority Level**: 🚨 CRITICAL - BLOCKS ALL AUTONOMOUS WORK
+
+---
+
+### US-057: Transform Daemon into Multi-Agent Orchestrator (Parallel Team Execution)
+
+**Status**: 📋 PLANNED (Blocked by US-056)
+
+**Priority**: HIGH (Foundation for true autonomous team operation)
+
+**Estimated Effort**: 3 weeks (major architectural refactor)
+
+**Created**: 2025-10-17
+
+**Prerequisites**:
+- US-056: Enforce CFR-013 (Daemon on roadmap branch only) 🚨 REQUIRED
+
+**User Story**:
+As a user, I want ALL agents (architect, code_developer, project_manager, assistant, code-searcher, ux-design-expert) to run simultaneously in parallel, so that work happens 3-6x faster through coordinated team collaboration.
+
+**Problem Statement**:
+
+The current code_developer daemon architecture creates artificial bottlenecks through sequential execution:
+
+**Current (Sequential - 9 hours)**:
+```
+code_developer daemon (single agent):
+1. Wait for spec         → 2 hours (blocking)
+2. Implement             → 4 hours (sequential)
+3. Wait for demo         → 1 hour (manual request)
+4. Fix bug               → 2 hours (reactive)
+Total: 9 hours per priority
+```
+
+**Proposed (Parallel - 4 hours)**:
+```
+Multi-Agent Orchestrator (6 agents simultaneously):
+architect ────────► Creating specs (proactive, CFR-011)
+code_developer ───► Implementing (never blocked)
+assistant ────────► Creating demos (automatic)
+project_manager ──► Monitoring GitHub (continuous)
+code-searcher ────► Analyzing codebase (weekly)
+ux-design-expert ─► Reviewing UI/UX (as needed)
+Total: 4 hours per priority (2.25x faster)
+```
+
+**Description**:
+
+Transform the current single-agent daemon into a **Multi-Agent Orchestrator** that launches and manages ALL agents working simultaneously as a coordinated autonomous team. Each agent runs continuously in its own subprocess, executing its responsibilities in parallel with other agents.
+
+**Key Vision**: Move from "single developer" to "autonomous team" - multiple agents collaborating like a human team would, with specialization, delegation, and coordination.
+
+**Architecture Overview**:
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│           Autonomous Team Orchestrator                        │
+│                                                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │  architect   │  │ code_        │  │ project_     │       │
+│  │  (subprocess)│  │ developer    │  │ manager      │       │
+│  │              │  │ (subprocess) │  │ (subprocess) │       │
+│  │ • CFR-011    │  │              │  │              │       │
+│  │ • Specs      │  │ • Implement  │  │ • Monitor    │       │
+│  │ • Daily      │  │ • Commit     │  │ • Verify DoD │       │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
+│                                                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │  assistant   │  │ code-        │  │ ux-design-   │       │
+│  │  (subprocess)│  │ searcher     │  │ expert       │       │
+│  │              │  │ (subprocess) │  │ (subprocess) │       │
+│  │ • Demos      │  │              │  │              │       │
+│  │ • Bug report │  │ • Weekly     │  │ • UI/UX      │       │
+│  │ • Puppeteer  │  │ • Analysis   │  │ • Review     │       │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
+│                                                               │
+│  Coordination: Shared state + Inter-agent messaging          │
+│  CFR-013: ALL agents on roadmap branch                       │
+│  CFR-012: Urgent requests interrupt background work          │
+│  CFR-000: File ownership prevents conflicts                  │
+└───────────────────────────────────────────────────────────────┘
+```
+
+**Agent Responsibilities**:
+
+**1. architect (Proactive Spec Creation)**
+- **Continuous Loop**: Check ROADMAP every hour
+- **CFR-011 Enforcement**: Create 3-5 specs AHEAD of code_developer
+- **Daily Integration**: Read code-searcher reports, integrate findings
+- **Weekly Analysis**: Analyze codebase for refactoring opportunities
+- **Responds to**: Urgent spec requests (CFR-012)
+- **File Ownership**: docs/architecture/, pyproject.toml
+- **Works on**: roadmap branch only (CFR-013)
+
+**2. code_developer (Implementation)**
+- **Continuous Loop**: Implement next priority from ROADMAP
+- **Sync First**: Pull from roadmap branch at start of each iteration (US-027)
+- **Never Blocks**: Specs ready because architect worked ahead
+- **Frequent Commits**: Commit frequently with agent identification
+- **Merge Progress**: Merge to roadmap after completion (US-024)
+- **Responds to**: Urgent bug fixes (CFR-012)
+- **File Ownership**: coffee_maker/, tests/, scripts/, .claude/
+- **Works on**: roadmap branch only (CFR-013)
+
+**3. project_manager (Monitoring & Coordination)**
+- **Continuous Loop**: Monitor GitHub every 15 minutes
+- **GitHub Monitoring**: Check PRs, issues, CI/CD status
+- **ROADMAP Health**: Track stalled priorities, velocity
+- **Verify DoD**: When requested (post-completion)
+- **Proactive Warnings**: Alert user about blockers
+- **Responds to**: User status requests (CFR-012)
+- **File Ownership**: docs/roadmap/, docs/*.md (top-level)
+- **Works on**: roadmap branch only (CFR-013)
+
+**4. assistant (Demos, Bugs, Documentation)**
+- **Continuous Loop**: Check for completed features every 30 minutes
+- **Demo Creation**: Create visual demos with Puppeteer (ONLY agent that creates demos)
+- **Bug Detection**: Test features during demos
+- **Comprehensive Bug Reporting**: Provide detailed analysis to project_manager:
+  - Root cause analysis (what went wrong technically)
+  - Requirements for fix (specific changes needed)
+  - Expected behavior once corrected (how it should work)
+  - Complete reproduction steps, environment, impact
+- **Documentation Expert**: Deep knowledge of all project docs
+- **Responds to**: Quick questions, demo requests (CFR-012)
+- **File Access**: READ-ONLY for code/docs, ACTIVE for demos/bug reports
+- **Works on**: roadmap branch only (CFR-013)
+
+**5. code-searcher (Continuous Analysis)**
+- **Continuous Loop**: Weekly codebase analysis
+- **Security Audits**: Weekly security scanning
+- **Dependency Analysis**: Trace dependencies, identify issues
+- **Code Reuse**: Find duplication, suggest refactoring
+- **Present Findings**: To assistant → project_manager → docs
+- **Responds to**: Deep analysis requests (CFR-012)
+- **File Access**: READ-ONLY everywhere
+- **Works on**: roadmap branch only (CFR-013)
+
+**6. ux-design-expert (Design Guidance)**
+- **Continuous Loop**: Review UI/UX changes hourly
+- **Design Review**: Analyze recent UI changes
+- **Proactive Feedback**: Suggest improvements
+- **Tailwind Guidance**: CSS and styling recommendations
+- **Responds to**: Design questions (CFR-012)
+- **File Access**: Provides specs, doesn't implement
+- **Works on**: roadmap branch only (CFR-013)
+
+**Coordination Mechanisms**:
+
+**1. Shared State (File-Based)**:
+```
+data/agent_status/
+├── architect_status.json          # Architect current work
+├── code_developer_status.json     # Developer progress
+├── project_manager_status.json    # Project health
+├── assistant_status.json          # Demo queue
+├── code_searcher_status.json      # Analysis progress
+└── ux_design_expert_status.json   # Design review queue
+
+Status Format:
+{
+  "agent": "architect",
+  "state": "working",
+  "current_task": "Creating SPEC-057-001.md",
+  "progress": 0.6,
+  "last_heartbeat": "2025-10-17T10:30:00",
+  "metrics": {"specs_created_today": 2}
+}
+```
+
+**2. Inter-Agent Messaging (Delegation)**:
+```
+data/agent_messages/
+├── architect_inbox/
+│   └── urgent_spec_request_*.json
+├── code_developer_inbox/
+│   └── bug_fix_request_*.json
+└── assistant_inbox/
+    └── demo_request_*.json
+
+Message Format:
+{
+  "from": "code_developer",
+  "to": "assistant",
+  "type": "demo_request",
+  "priority": "normal",
+  "timestamp": "2025-10-17T10:32:00",
+  "content": {"feature": "US-045", "title": "..."}
+}
+```
+
+**3. CFR Enforcement**:
+- **CFR-000**: File ownership prevents conflicts (each agent owns specific dirs)
+- **CFR-012**: All agents check for urgent requests every iteration
+- **CFR-013**: All agents validate they're on roadmap branch at startup
+
+**Requirements**:
+
+**Phase 1: Foundation (Week 1)**
+
+1. **Create Orchestrator Base** (2 days):
+   - [ ] Create `coffee_maker/orchestrator/` module
+   - [ ] Implement `AutonomousTeamOrchestrator` class
+   - [ ] Multi-process management with subprocess
+   - [ ] Agent health monitoring (heartbeat every 30 seconds)
+   - [ ] Crash recovery with automatic restart
+   - [ ] Graceful shutdown of all agents
+
+2. **Create Agent Base Classes** (2 days):
+   - [ ] Create `coffee_maker/orchestrator/agent_base.py`
+   - [ ] Implement `BaseAgent` with CFR-013 enforcement
+   - [ ] Continuous work loop with CFR-012 interruption handling
+   - [ ] Status file writing (heartbeat, progress, metrics)
+   - [ ] Inbox checking for inter-agent messages
+   - [ ] Agent identification in commits
+
+3. **Shared State Infrastructure** (1 day):
+   - [ ] Create `data/agent_status/` directory
+   - [ ] Create `data/agent_messages/` directory structure
+   - [ ] Implement status file schemas (JSON)
+   - [ ] Implement message queue system
+   - [ ] Add cleanup logic for old messages
+
+**Phase 2: Agent Migration (Week 2)**
+
+4. **Migrate code_developer Agent** (2 days):
+   - [ ] Extract daemon logic into `CodeDeveloperAgent`
+   - [ ] Inherit from `BaseAgent`
+   - [ ] Implement continuous work loop
+   - [ ] Test in orchestrator
+   - [ ] Verify CFR-013 compliance
+
+5. **Create architect Agent** (2 days):
+   - [ ] Implement `ArchitectAgent` with CFR-011 logic
+   - [ ] Morning ROADMAP check for spec coverage
+   - [ ] Daily code-searcher report reading
+   - [ ] Weekly codebase analysis
+   - [ ] Test in orchestrator
+   - [ ] Verify creates specs proactively
+
+6. **Create project_manager Agent** (1 day):
+   - [ ] Implement `ProjectManagerAgent`
+   - [ ] GitHub monitoring loop (every 15 minutes)
+   - [ ] ROADMAP health checks
+   - [ ] DoD verification on request (with Puppeteer)
+   - [ ] Proactive warning system
+   - [ ] Test in orchestrator
+
+7. **Create assistant Agent** (2 days):
+   - [ ] Implement `AssistantAgent`
+   - [ ] Demo creation loop (Puppeteer)
+   - [ ] Bug detection during demos
+   - [ ] Comprehensive bug reporting to project_manager
+   - [ ] Test in orchestrator
+   - [ ] Verify demo creation works
+
+8. **Create code-searcher & ux-design-expert Agents** (1 day):
+   - [ ] Implement `CodeSearcherAgent` (weekly analysis)
+   - [ ] Implement `UXDesignExpertAgent` (reactive + review)
+   - [ ] Test in orchestrator
+   - [ ] Verify findings delegation works
+
+**Phase 3: Integration & Deployment (Week 3)**
+
+9. **CLI Interface** (1 day):
+   - [ ] Create `poetry run orchestrator` command
+   - [ ] Add subcommands: start, stop, status, restart, logs
+   - [ ] Add `--agents` flag for selective agent launch
+   - [ ] Add `--max-agents` flag for resource limiting
+   - [ ] Test CLI commands
+
+10. **Observability** (1 day):
+    - [ ] Central dashboard showing all agent statuses
+    - [ ] Langfuse tracking for all agent executions
+    - [ ] Unified logging with agent identification
+    - [ ] Real-time progress monitoring UI
+
+11. **Integration Testing** (2 days):
+    - [ ] Test multi-agent coordination scenarios
+    - [ ] Test CFR enforcement (CFR-000, CFR-012, CFR-013)
+    - [ ] Test crash recovery and restart
+    - [ ] Test message passing between agents
+    - [ ] Performance benchmarks (verify 3-6x speedup)
+
+12. **Documentation** (1 day):
+    - [ ] Update CLAUDE.md with orchestrator architecture
+    - [ ] Update .claude/agents/README.md with usage
+    - [ ] Update TEAM_COLLABORATION.md
+    - [ ] Add CFR-014 to CRITICAL_FUNCTIONAL_REQUIREMENTS.md
+    - [ ] Create migration guide from single-agent daemon
+
+**Acceptance Criteria**:
+
+**Functional**:
+- [ ] Orchestrator launches all 6 agents in separate subprocesses
+- [ ] Each agent runs continuous work loop with CFR-012 interruption
+- [ ] Agent health monitoring with automatic restart on crash
+- [ ] Status files written by all agents (heartbeat every 30 seconds)
+- [ ] Inter-agent messaging works (delegation via message queue)
+- [ ] CFR-000 file ownership enforced (no conflicts between agents)
+- [ ] CFR-013 enforced (all agents on roadmap branch, validation at startup)
+- [ ] CLI interface for orchestrator control (start, stop, status, restart, logs)
+- [ ] Graceful shutdown of all agents on SIGTERM
+
+**Performance**:
+- [ ] architect creates 3-5 specs ahead of code_developer (CFR-011)
+- [ ] code_developer implementation time unchanged (~4 hours/priority)
+- [ ] assistant creates demo within 30 minutes of feature completion
+- [ ] project_manager checks GitHub every 15 minutes
+- [ ] code-searcher runs weekly analysis automatically
+- [ ] Overall priority completion time reduced by 50% (from 9 hours → 4 hours)
+
+**Quality**:
+- [ ] Zero merge conflicts between agents (CFR-000 compliance)
+- [ ] All commits include agent identification
+- [ ] All agents respond to urgent requests within 2 minutes (CFR-012)
+- [ ] Status dashboard shows all agent states in real-time
+- [ ] Langfuse tracking for all agent executions
+- [ ] Comprehensive logging with agent identification
+
+**Definition of Done**:
+
+**Code Complete**:
+- [ ] All 6 agent classes implemented and tested
+- [ ] Orchestrator with multi-process management
+- [ ] Status file infrastructure with heartbeat
+- [ ] Inter-agent messaging system with priority queue
+- [ ] CFR enforcement in all agents (000, 012, 013)
+- [ ] CLI interface with all subcommands
+- [ ] Health monitoring and automatic restart
+
+**Tests Pass**:
+- [ ] Unit tests: 100% coverage for orchestrator
+- [ ] Integration tests: Multi-agent coordination scenarios
+- [ ] CFR enforcement tests (verify all CFRs respected)
+- [ ] Crash recovery tests (agent restart works)
+- [ ] Performance benchmarks (verify 3-6x speedup claim)
+- [ ] Message passing tests (delegation works)
+
+**Documentation**:
+- [ ] CLAUDE.md updated with orchestrator architecture
+- [ ] .claude/agents/README.md with usage examples
+- [ ] TEAM_COLLABORATION.md updated with coordination workflows
+- [ ] CFR-014 added to CRITICAL_FUNCTIONAL_REQUIREMENTS.md
+- [ ] Migration guide: single-agent → multi-agent
+- [ ] Troubleshooting guide for common issues
+
+**Deployment**:
+- [ ] Orchestrator deployed and running in production
+- [ ] All 6 agents operational and healthy
+- [ ] Status dashboard accessible and updating
+- [ ] Monitoring and alerting configured
+- [ ] User notified of new multi-agent system
+- [ ] Legacy single-agent daemon deprecated
+
+**Validation**:
+- [ ] Orchestrator runs for 24 hours without crashes
+- [ ] architect creates specs proactively (no code_developer blocking observed)
+- [ ] assistant creates demos automatically (within 30 minutes)
+- [ ] project_manager monitors GitHub continuously (every 15 minutes)
+- [ ] All agents respect CFR-013 (roadmap branch only - verified)
+- [ ] Zero merge conflicts observed in 24-hour test
+- [ ] Priority completion time reduced by 50% (measured over 5 priorities)
+- [ ] User feedback: "This feels like a real team working together"
+
+**Benefits**:
+
+**1. Speed (3-6x Faster)**:
+- Parallel execution instead of sequential
+- architect creates specs proactively (no blocking)
+- code_developer never waits for specs
+- assistant demos features automatically
+- Overall: 9 hours → 4 hours per priority
+
+**2. Quality (Proactive QA)**:
+- Continuous testing via assistant demos
+- Bugs caught within 1 hour of completion
+- Comprehensive bug reports enable quick fixes
+- Weekly code-searcher analysis improves codebase
+
+**3. Autonomy (True Self-Management)**:
+- Team operates without human intervention
+- architect prevents code_developer blocking
+- assistant provides continuous QA
+- project_manager monitors proactively
+
+**4. Visibility (Real-Time Monitoring)**:
+- Status dashboard shows all agent activity
+- Proactive warnings about issues
+- GitHub monitoring catches problems early
+- No surprises, no delays
+
+**5. Learning (Continuous Improvement)**:
+- Weekly code-searcher analysis
+- architect integrates findings into specs
+- Codebase quality improves over time
+- Technical debt addressed proactively
+
+**Risks & Mitigations**:
+
+**Risk 1: Process Complexity**
+- **Risk**: 6 subprocesses harder to manage
+- **Mitigation**: Robust health monitoring, automatic restart, comprehensive logging
+
+**Risk 2: File Conflicts**
+- **Risk**: Multiple agents → merge conflicts
+- **Mitigation**: Strict CFR-000 file ownership, runtime enforcement, READ-ONLY where appropriate
+
+**Risk 3: Message Queue Overload**
+- **Risk**: Too many messages → performance degradation
+- **Mitigation**: Priority-based queue, size limits (max 100), automatic cleanup, CFR-012 urgent first
+
+**Risk 4: Cost (API Usage)**
+- **Risk**: 6 agents → high API costs
+- **Mitigation**: Smart sleep intervals, batch operations, use Claude CLI where possible
+
+**Risk 5: Debugging Difficulty**
+- **Risk**: Multi-agent bugs harder to debug
+- **Mitigation**: Langfuse observability, detailed logging, status files, crash history tracking
+
+**Success Criteria**:
+
+The multi-agent orchestrator will be considered successful when:
+
+1. **All 6 agents running continuously** in parallel subprocesses (verified for 24 hours)
+2. **architect creates specs proactively** (CFR-011: 3-5 ahead, measured)
+3. **code_developer never blocks** waiting for specs (zero blocking events observed)
+4. **assistant creates demos automatically** within 30 minutes (measured over 10 features)
+5. **project_manager monitors GitHub** continuously (checks every 15 minutes verified)
+6. **Zero merge conflicts** between agents (CFR-000: measured over 1 week)
+7. **All agents on roadmap branch** (CFR-013: 100% compliance verified)
+8. **Priority completion time reduced by 50%** (3-6x speedup: 9 hours → 4 hours measured)
+9. **System runs 24 hours without intervention** (full autonomy demonstrated)
+10. **User feedback: "This feels like a real team working together"** (qualitative validation)
+
+**Related Work**:
+
+**Prerequisites**:
+- US-056: Enforce CFR-013 (Daemon on roadmap branch only) 🚨 REQUIRED
+
+**Builds On**:
+- US-045: Daemon delegates spec creation to architect
+- US-027: Roadmap branch as single source of truth
+- US-024: Frequent roadmap sync
+- US-035: Agent singleton enforcement (CFR-000)
+- CFR-011: Architect proactive spec creation
+- CFR-012: Agent responsiveness priority
+- CFR-013: All agents on roadmap branch
+
+**Enables**:
+- US-058+: Future priorities implemented 3-6x faster
+- Continuous QA with automatic demos
+- Proactive architecture with specs always ready
+- Real-time project monitoring
+- Weekly codebase improvements
+- True autonomous team operation
+
+**Technical Specification**: See /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/docs/roadmap/US_057_MULTI_AGENT_ORCHESTRATOR.md
+
+**Estimated Timeline**: 3 weeks (15 working days)
+
+**Expected Impact**: 🚀 TRANSFORMATIONAL (3-6x speedup, true team autonomy)
+
+**Rationale**:
+- **Blocking Issue**: Daemon cannot currently operate due to CFR-013 violation
+- **Critical Requirement**: CFR-013 is a system invariant that must be enforced
+- **High Impact**: Unblocks ALL future autonomous development work
+- **Low Risk**: Simplifies rather than complicates (removing code)
+- **Quick Fix**: 2-3 hours to implement and test
+
+**Related Documents**:
+- `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` - CFR-013 full definition
+- `.claude/CLAUDE.md` - Single-branch workflow already documented
+- `coffee_maker/autonomous/daemon_implementation.py` - Code that needs fixing (line 198)
+- `docs/architecture/guidelines/GUIDELINE-004-git-tagging-strategy.md` - Git tagging on roadmap branch
+
+**Unblocks**:
+- ALL future autonomous daemon work
+- All pending priorities waiting for code_developer
+- Continuous autonomous development
+
+**Blocked By**: None (can implement immediately)
+
+**Notes**:
+This is the highest priority fix needed right now. Without this, the code_developer daemon cannot operate autonomously at all. The fix is straightforward (remove feature branch logic, add validation) and low risk (simplifies the workflow rather than adding complexity).
+
+**Success Metrics**:
+- Daemon starts successfully: 100%
+- Daemon stays on roadmap branch: 100%
+- No branch-related errors: 0 errors
+- All commits go to roadmap: 100%
+- CFR-013 compliance: Full compliance
+
+---
