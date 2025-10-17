@@ -1,6 +1,6 @@
 # Critical Functional Requirements - System Invariants
 
-**Version**: 2.0
+**Version**: 2.1
 **Date**: 2025-10-17
 **Status**: Active
 **Owner**: project_manager
@@ -3127,6 +3127,153 @@ When in doubt:
 
 ---
 
+## CFR-012: Agent Responsiveness Priority (Immediate Requests Override Background Work)
+
+**Rule**: ALL agents MUST prioritize immediate requests from users or other agents OVER their continuous background work loops.
+
+**Core Principle**:
+```
+Priority 1 (HIGHEST): User requests
+Priority 2 (HIGH): Inter-agent delegation requests
+Priority 3 (NORMAL): Continuous background work
+```
+
+**Why This Is Critical**:
+
+1. **Team Collaboration is Priority**: Focus is encouraged, but teamwork takes precedence
+2. **Responsiveness Matters**: Users and agents shouldn't wait while background work runs
+3. **Dynamic Task Assignment**: Work priorities change; agents must adapt
+4. **Prevent Isolation**: Agents can't ignore the team while doing background tasks
+
+**Real-World Example**:
+```
+architect is in continuous loop creating specs for future priorities
+  ↓
+user_listener: "architect, review PRIORITY 9 spec - it's blocking implementation"
+  ↓
+architect MUST:
+  ✅ INTERRUPT background work immediately
+  ✅ Handle the urgent request
+  ✅ THEN resume background work after
+
+architect MUST NOT:
+  ❌ Ignore request and continue background loop
+  ❌ Say "I'm busy with continuous work"
+  ❌ Delay response until loop completes
+```
+
+### Enforcement
+
+**Every agent's continuous work loop MUST**:
+
+```python
+while True:  # Continuous mode
+    # Priority 1: Check for immediate requests
+    if has_user_request() or has_agent_delegation():
+        handle_immediately()  # INTERRUPT loop
+        # Resume loop after handling
+
+    # Priority 3: Background work
+    do_continuous_background_work()
+```
+
+**Work Loop Pattern**:
+```
+CONTINUOUS AGENT WORKFLOW:
+
+┌─────────────────────────────────────┐
+│  Check: Any immediate requests?     │
+│  - User asking something?            │
+│  - Another agent needs help?         │
+└──────────┬──────────────────────────┘
+           │
+           ├─YES──► INTERRUPT background work
+           │        Handle request immediately
+           │        Resume background work after
+           │
+           └─NO───► Continue background work
+                    - Create specs
+                    - Analyze code
+                    - Monitor progress
+                    - Generate reports
+                    └─► Loop back to check requests
+```
+
+### Examples
+
+**✅ CORRECT: architect prioritizes user request**:
+```
+architect: [Creating SPEC-068 in background loop...]
+
+user: "architect, is SPEC-050 ready for implementation?"
+
+architect: [INTERRUPTS SPEC-068 creation]
+architect: "Yes, SPEC-050 is complete. Here's the summary: ..."
+architect: [RESUMES SPEC-068 creation after answering]
+```
+
+**✅ CORRECT: code_developer handles delegation**:
+```
+code_developer: [Implementing SPEC-050 phase 3...]
+
+project_manager: "code_developer, urgent bug in notifications.py"
+
+code_developer: [SAVES current work]
+code_developer: [SWITCHES to bug fix]
+code_developer: "Bug fixed, tests passing"
+code_developer: [RESUMES SPEC-050 phase 3]
+```
+
+**❌ INCORRECT: agent ignores request**:
+```
+architect: [Creating SPEC-069...]
+
+user: "architect, review this spec please"
+
+architect: [Continues SPEC-069 creation, ignores user]
+architect: [Completes entire background loop first]
+architect: [Finally responds 30 minutes later]
+
+→ VIOLATION: User had to wait unnecessarily
+```
+
+### Implementation Requirements
+
+1. **Request Detection**: Agents must check for new requests at start of each loop iteration
+2. **Immediate Interruption**: Background work paused immediately when request arrives
+3. **Context Preservation**: Save background work state before interrupting
+4. **Resume After**: Return to background work after handling request
+5. **Clear Communication**: Acknowledge receipt of urgent requests
+
+### Relationship to Other CFRs
+
+**CFR-000 (File Conflicts)**: Still applies - interrupted agent can't violate ownership
+**CFR-008 (Architect Creates Specs)**: User/agent requests override background spec creation
+**CFR-011 (Code-searcher Integration)**: Daily integration can be interrupted for urgent needs
+
+### There is Always Work Left
+
+**Key Insight**: "There is always some work left that the agent could do"
+
+- **architect**: Always more complexity to analyze, specs to improve, patterns to document
+- **code_developer**: Always more refactoring, test coverage, code quality improvements
+- **project_manager**: Always more coordination, metrics tracking, strategic planning
+- **assistant**: Always more testing, demos to create, documentation to improve
+- **code-searcher**: Always more analysis, security audits, pattern detection
+
+**But**: This continuous work must yield to immediate team needs.
+
+### Success Metrics
+
+- **Response Time**: How quickly do agents respond to requests?
+- **Interruption Smoothness**: Do agents cleanly pause/resume work?
+- **Team Coordination**: Are agents helping each other effectively?
+- **User Satisfaction**: Do users feel agents are responsive?
+
+**User Story**: US-055: Agent Continuous Work with Interruption Handling
+
+---
+
 ## Agent File Access Patterns
 
 **Purpose**: Agents should KNOW which files to read, not search for them.
@@ -3463,6 +3610,15 @@ This means US-043 (Parallel Execution) can be implemented safely thanks to CFR e
 **Next Review**: After US-038, US-039, US-043, and US-044 implementation
 
 **Changelog**:
+- **v2.1** (2025-10-17): Added CFR-012 (Agent Responsiveness Priority)
+  - Immediate user/agent requests override continuous background work
+  - Priority: User requests (P1) > Inter-agent delegations (P2) > Background work (P3)
+  - Enforcement: Check for requests at start of each loop iteration
+  - Context preservation: Save state before interrupting
+  - Key principle: "Team collaboration is priority - focus encouraged but teamwork takes precedence"
+  - Key insight: "There is always some work left" - continuous work must yield to team needs
+  - Related: US-055 (Agent Continuous Work with Interruption Handling)
+- **v2.0** (2025-10-17): Added CFR-011 (Architect Must Integrate code-searcher Findings Daily)
 - **v1.8** (2025-10-16): Added CFR-007 (Agent Context Budget - 30% Maximum)
   - New CFR-007: Agent core materials must fit in ≤30% of context window
   - Core materials: prompt, role, responsibilities, tools, owned critical documents
