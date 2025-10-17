@@ -1,6 +1,6 @@
 # Critical Functional Requirements - System Invariants
 
-**Version**: 2.2
+**Version**: 2.3
 **Date**: 2025-10-17
 **Status**: Active
 **Owner**: project_manager
@@ -2301,9 +2301,126 @@ Friday (30 min):
 4. **Proactive Maintenance**: Fix problems before they become blockers
 5. **Knowledge Integration**: code-searcher finds patterns architect must address through refactoring specs
 
-**Two-Part Mandate**:
+**Three-Part Mandate**:
 
-### Part 1: Read code-searcher Analysis Reports Daily
+### Part 1: Proactively Create Specs for ALL ROADMAP Priorities (BEFORE code_developer Needs Them)
+
+**Frequency**: CONTINUOUS (proactive, not reactive)
+
+**Core Principle**: **architect works AHEAD of code_developer, NEVER reacts to blocking**
+
+**The Problem This Solves**:
+```
+❌ REACTIVE (BAD - What happened with PRIORITY 2.6):
+code_developer: Reaches PRIORITY 2.6
+code_developer: ❌ CFR-008: Technical spec missing!
+code_developer: BLOCKS - waits for spec
+code_developer: Creates notification
+user: Notices code_developer is blocked
+user: Asks architect to create spec (reactive)
+architect: Creates spec (too late)
+→ Result: code_developer wasted time waiting, momentum lost
+
+✅ PROACTIVE (GOOD - What MUST happen):
+architect: Reads FULL ROADMAP every morning
+architect: Identifies PRIORITY 2.6, 2.7, 2.8, ... coming up
+architect: Creates specs for next 3-5 priorities AHEAD of code_developer
+code_developer: Reaches PRIORITY 2.6
+code_developer: ✅ Spec already exists!
+code_developer: Implements immediately (no blocking)
+→ Result: Zero blocking, continuous flow, maximum velocity
+```
+
+**What architect MUST Do**:
+
+1. **Every Morning: Read Full ROADMAP** (`docs/roadmap/ROADMAP.md`)
+   - Identify ALL "📝 Planned" priorities
+   - Check which ones have specs (docs/architecture/specs/SPEC-*-*.md)
+   - Create list of priorities missing specs
+
+2. **Proactively Create Specs for Next 3-5 Priorities**
+   - Don't wait for code_developer to get blocked
+   - Work AHEAD of implementation
+   - Target: Always have 3-5 specs ready BEFORE code_developer needs them
+   - Priority: Current priority + next 4 priorities
+
+3. **Update Spec Coverage Report**
+   - Track which priorities have specs
+   - Track which priorities are coming up
+   - Warn if falling behind (fewer than 3 specs ahead)
+
+**Enforcement**:
+
+```python
+def check_proactive_spec_coverage():
+    """Ensure architect has specs for upcoming priorities."""
+    roadmap = parse_roadmap()
+    current_priority = roadmap.get_next_planned()
+    upcoming_priorities = roadmap.get_next_n_planned(5)
+
+    missing_specs = []
+    for priority in upcoming_priorities:
+        if not spec_exists(priority):
+            missing_specs.append(priority)
+
+    if len(missing_specs) > 2:  # More than 2 specs missing
+        raise CFR011ViolationError(
+            f"CFR-011 VIOLATION: architect falling behind on spec creation!\n\n"
+            f"Missing specs for upcoming priorities:\n" +
+            "\n".join(f"- {p['name']}: {p['title']}" for p in missing_specs) +
+            f"\n\n"
+            f"architect MUST work AHEAD of code_developer.\n"
+            f"Target: Always have 3-5 specs ready BEFORE code_developer needs them.\n"
+            f"\n"
+            f"ACTION: Create specs for next 3-5 priorities NOW."
+        )
+```
+
+**Daily Workflow for architect**:
+
+```
+Morning (Every Day):
+1. Read FULL ROADMAP.md
+2. Identify current priority (what code_developer is working on)
+3. Identify next 5 priorities
+4. Check: Do specs exist for all next 5?
+   - YES → Continue with daily integration (Part 2)
+   - NO → CREATE missing specs immediately (top priority)
+5. Update spec coverage report
+6. THEN: Continue with code-searcher integration (Part 2)
+```
+
+**Spec Coverage Report** (`docs/architecture/SPEC_COVERAGE_REPORT.md`):
+
+```markdown
+# Spec Coverage Report
+Generated: 2025-10-17 06:00:00
+
+## Current Status
+- Current Priority: PRIORITY 2.6 (code_developer working on this)
+- Spec Coverage: 3 of 5 upcoming priorities (⚠️ WARNING: Need 2 more specs)
+
+## Priority Status
+| Priority | Title | Spec Status | Action |
+|----------|-------|-------------|--------|
+| PRIORITY 2.6 | Daemon Fix Verification | ✅ Exists (SPEC-002-6) | Ready |
+| PRIORITY 2.7 | Daemon Crash Recovery | ✅ Exists (SPEC-002-7) | Ready |
+| PRIORITY 2.8 | Daemon Status Reporting | ✅ Exists (SPEC-002-8) | Ready |
+| PRIORITY 2.9 | Sound Notifications | ❌ MISSING | **architect CREATE NOW** |
+| PRIORITY 3 | code_developer Daemon | ❌ MISSING | **architect CREATE NOW** |
+
+## Action Required
+⚠️ architect must create 2 specs TODAY to maintain coverage
+```
+
+**Benefits of Proactive Spec Creation**:
+- ✅ **Zero Blocking**: code_developer never waits for specs
+- ✅ **Maximum Velocity**: Continuous implementation flow
+- ✅ **Better Planning**: architect thinks ahead, sees big picture
+- ✅ **Quality Specs**: Time to research, not rushed to unblock
+- ✅ **Parallel Work**: architect works on future, code_developer on present
+
+### Part 2: Read code-searcher Analysis Reports Daily
 
 **Frequency**: EVERY DAY (automated enforcement)
 
@@ -2319,7 +2436,7 @@ Friday (30 min):
 4. **Update Existing Specs**: Integrate quality improvements into current specs
 5. **Track Integration**: Document what refactorings were addressed and why
 
-### Part 2: Proactively Analyze Code Yourself
+### Part 3: Proactively Analyze Code Yourself
 
 **Frequency**: WEEKLY (minimum)
 
@@ -2475,13 +2592,24 @@ class ArchitectDailyRoutine:
 Daily (Every Morning):
 1. architect agent starts
 2. CFR-011 enforcement check runs automatically
-3. If new code-searcher reports exist: MUST read before creating specs
-4. If >7 days since codebase analysis: MUST analyze before creating specs
-5. Run daily-integration workflow
-6. THEN: Create new specs for priorities
+3. PART 1 (PRIORITY): Check ROADMAP spec coverage
+   - Read full ROADMAP.md
+   - Identify next 5 priorities
+   - Check which have specs
+   - If <3 specs ready: CREATE missing specs immediately
+   - Update spec coverage report
+4. PART 2: If new code-searcher reports exist: MUST read and integrate
+   - Run daily-integration workflow
+   - Extract refactoring opportunities
+   - Create/update refactoring specs
+5. PART 3: If >7 days since codebase analysis: MUST analyze
+   - Run analyze-codebase workflow
+   - Identify problem areas and duplications
+   - Create improvement specs
+6. THEN: Continue with continuous work (more specs, refactoring, etc.)
 
 Weekly (Every Monday):
-1. Run architect analyze-codebase
+1. Run architect analyze-codebase (Part 3)
 2. Review last 7 days of commits
 3. Identify problem areas
 4. Find duplicate patterns
@@ -3856,11 +3984,22 @@ This means US-043 (Parallel Execution) can be implemented safely thanks to CFR e
 
 **Remember**: These CFRs exist to prevent the system from breaking itself. They are not optional. They are not suggestions. They are CRITICAL FUNCTIONAL REQUIREMENTS.
 
-**Version**: 2.2
+**Version**: 2.3
 **Last Updated**: 2025-10-17
 **Next Review**: After US-038, US-039, US-043, US-044, and US-056 implementation
 
 **Changelog**:
+- **v2.3** (2025-10-17): Enhanced CFR-011 with Proactive Spec Creation Mandate
+  - Added Part 1: Proactively Create Specs for ALL ROADMAP Priorities (BEFORE code_developer needs them)
+  - Core principle: architect works AHEAD of code_developer, NEVER reacts to blocking
+  - Target: Always maintain 3-5 specs ahead of current implementation
+  - architect MUST read full ROADMAP every morning and create missing specs
+  - Prevents code_developer from blocking on missing specs (addresses PRIORITY 2.6 issue)
+  - Changed from "Two-Part Mandate" to "Three-Part Mandate"
+  - Added enforcement mechanism: check_proactive_spec_coverage() with CFR011ViolationError
+  - Added Spec Coverage Report to track which priorities have specs ready
+  - Updated workflow to prioritize proactive spec creation (Part 1) before code-searcher integration (Part 2)
+  - Why critical: Eliminates reactive spec creation, maintains development velocity, zero blocking
 - **v2.2** (2025-10-17): Added CFR-013 (All Agents Must Work on roadmap Branch Only)
   - NO agent can switch branches (git checkout forbidden)
   - ALL work happens on roadmap branch (single source of truth)
@@ -3869,6 +4008,8 @@ This means US-043 (Parallel Execution) can be implemented safely thanks to CFR e
   - Enforcement: Pre-commit hook + agent validation before git operations
   - Zero exceptions - ALL agents work on roadmap
   - Release process: Only human maintainers merge roadmap → main
+  - Added git tagging strategy integration (see GUIDELINE-004)
+  - Tag types: wip-* (code_developer), dod-verified-* (project_manager), milestone-*, stable-v*.*.*
   - Related: US-056 (Single Branch Workflow Enforcement - to be created)
 - **v2.1** (2025-10-17): Added CFR-012 (Agent Responsiveness Priority)
   - Immediate user/agent requests override continuous background work
