@@ -2284,15 +2284,22 @@ Friday (30 min):
 
 ## CFR-011: Architect Must Integrate code-searcher Findings Daily
 
-**Rule**: The architect MUST read code-searcher analysis reports daily AND proactively analyze the codebase itself to identify architectural improvements, then integrate ALL findings into technical specifications.
+**Rule**: The architect MUST read code-searcher analysis reports daily AND proactively analyze the codebase itself to identify **refactoring opportunities and technical debt reduction**, then integrate ALL findings into technical specifications.
+
+**What "Improvements" Means**:
+- ✅ **Refactoring**: Code restructuring (splitting large files, extracting utilities, removing duplication)
+- ✅ **Technical Debt Reduction**: Addressing accumulated quality issues (test coverage gaps, inconsistent patterns, missing abstractions)
+- ✅ **Code Quality**: Simplification, maintainability, readability improvements
+- ✅ **Security Fixes**: Addressing vulnerabilities and security concerns
+- ❌ **NOT New Features**: This is about improving existing code quality, not adding functionality
 
 **Why This Is Critical**:
 
-1. **Proactive Problem Prevention**: Catch issues before they become blockers
-2. **Data-Driven Decisions**: Use actual codebase metrics, not assumptions
-3. **Continuous Quality**: Architecture improves based on real code analysis
-4. **Avoid Technical Debt**: Address quality issues before they accumulate
-5. **Knowledge Integration**: code-searcher finds patterns architect must integrate
+1. **Prevent Technical Debt Accumulation**: Address quality issues before they compound
+2. **Data-Driven Refactoring**: Use actual codebase metrics, not assumptions
+3. **Continuous Code Quality**: Codebase improves daily through systematic refactoring
+4. **Proactive Maintenance**: Fix problems before they become blockers
+5. **Knowledge Integration**: code-searcher finds patterns architect must address through refactoring specs
 
 **Two-Part Mandate**:
 
@@ -2306,11 +2313,11 @@ Friday (30 min):
 - `/docs/CODEBASE_ANALYSIS_SUMMARY_*.md` - Executive summaries
 
 **What to Do**:
-1. **Extract Action Items**: Identify improvements that need specs
-2. **Prioritize**: High-impact, low-effort improvements first
-3. **Create Specs**: For each major improvement (SPEC-050, SPEC-051, etc.)
-4. **Update Existing Specs**: Integrate findings into current specs
-5. **Track Integration**: Document what was integrated and why
+1. **Extract Refactoring Items**: Identify code that needs restructuring (large files, duplication, complexity)
+2. **Prioritize**: High-impact, low-effort refactorings first
+3. **Create Refactoring Specs**: For each major refactoring (SPEC-050: Split roadmap_cli.py, SPEC-051: Extract prompt utilities)
+4. **Update Existing Specs**: Integrate quality improvements into current specs
+5. **Track Integration**: Document what refactorings were addressed and why
 
 ### Part 2: Proactively Analyze Code Yourself
 
@@ -2330,10 +2337,10 @@ Friday (30 min):
 - `Bash` tool: Run metrics (`wc -l`, `git log`, etc.)
 
 **What to Do**:
-1. **Document Findings**: Create analysis notes
-2. **Create Improvement Specs**: Address issues found
-3. **Update ADRs**: Document architectural decisions
-4. **Inform code_developer**: Provide guidance on patterns
+1. **Document Refactoring Opportunities**: Create analysis notes on code that needs improvement
+2. **Create Refactoring Specs**: Address technical debt and quality issues found
+3. **Update ADRs**: Document refactoring decisions and patterns
+4. **Inform code_developer**: Provide guidance on refactoring patterns and best practices
 
 **Enforcement Mechanism**:
 
@@ -2381,20 +2388,20 @@ class ArchitectDailyRoutine:
             print(f"Reading: {report}")
             self._display_report_summary(report)
 
-        # 2. Extract actionable items
-        action_items = self._extract_action_items(reports)
-        print(f"\nFound {len(action_items)} actionable improvements")
+        # 2. Extract refactoring opportunities
+        refactorings = self._extract_refactoring_items(reports)
+        print(f"\nFound {len(refactorings)} refactoring opportunities")
 
-        # 3. Create specs for major improvements
-        for item in action_items:
-            if item.impact == "HIGH" or item.effort <= "4 hours":
-                self._create_improvement_spec(item)
+        # 3. Create refactoring specs for high-impact items
+        for refactoring in refactorings:
+            if refactoring.impact == "HIGH" or refactoring.effort <= "4 hours":
+                self._create_refactoring_spec(refactoring)
 
-        # 4. Update existing specs
-        self._integrate_findings_into_specs(action_items)
+        # 4. Update existing specs with quality improvements
+        self._integrate_findings_into_specs(refactorings)
 
         # 5. Document integration
-        self._create_integration_report(reports, action_items)
+        self._create_integration_report(reports, refactorings)
 
         # 6. Mark complete
         self._mark_reports_read(datetime.now().date())
@@ -2421,8 +2428,8 @@ class ArchitectDailyRoutine:
             "duplications": duplications
         })
 
-        # 6. Create improvement specs
-        self._create_specs_from_analysis()
+        # 6. Create refactoring specs
+        self._create_refactoring_specs_from_analysis()
 
         # 7. Mark complete
         self._mark_analysis_complete(datetime.now().date())
@@ -2432,19 +2439,19 @@ class ArchitectDailyRoutine:
 
 1. **Daily Integration Report** (`docs/architecture/CODE_SEARCHER_INTEGRATION_[date].md`):
    - Which reports were read
-   - Action items extracted
-   - Specs created/updated
+   - Refactoring opportunities extracted
+   - Refactoring specs created/updated
    - Cross-references
 
 2. **Weekly Analysis Report** (`docs/architecture/ARCHITECT_CODEBASE_ANALYSIS_[date].md`):
    - What architect analyzed
-   - Findings and recommendations
-   - Improvement specs created
+   - Refactoring opportunities and technical debt identified
+   - Refactoring specs created (SPEC-050: Split files, SPEC-051: Extract utilities, etc.)
    - Metrics tracked
 
 3. **Updated Specs**:
-   - Existing specs updated with findings
-   - New improvement specs created (SPEC-050+)
+   - Existing specs updated with quality improvements
+   - New refactoring specs created (SPEC-050+)
 
 4. **Tracking File** (`data/architect_integration_status.json`):
    ```json
