@@ -45,7 +45,7 @@ Message Format:
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from coffee_maker.autonomous.agent_registry import AgentType
 from coffee_maker.autonomous.agents.base_agent import BaseAgent
@@ -126,9 +126,40 @@ class ArchitectAgent(BaseAgent):
         """
         logger.info("🏗️  Architect: Checking for specs to create...")
 
-        # TODO: Implement proactive spec creation
-        # For now, just log and continue
-        logger.info("ℹ️  Proactive spec creation not yet implemented")
+        # Sync with roadmap branch
+        logger.info("🔄 Syncing with roadmap branch...")
+        self.git.pull("roadmap")
+
+        # Parse ROADMAP for priorities
+        from coffee_maker.autonomous.roadmap_parser import RoadmapParser
+
+        roadmap = RoadmapParser(self.roadmap_file)
+
+        # Get all planned priorities
+        priorities = roadmap.get_priorities()
+        planned = [p for p in priorities if "planned" in p["status"].lower() or "📝" in p["status"]]
+
+        logger.info(f"Found {len(planned)} planned priorities to check for specs")
+
+        # Check each planned priority for missing specs
+        for priority in planned:
+            priority_number = priority.get("number", "")
+            priority_name = priority.get("name", "")
+
+            if not priority_number:
+                continue
+
+            # Check if spec already exists
+            spec_file = self._find_existing_spec(priority_number)
+
+            if spec_file:
+                logger.info(f"✅ Spec exists for {priority_name}: {spec_file.name}")
+                continue
+
+            # Spec missing - create it!
+            logger.warning(f"📝 Creating spec for {priority_name}")
+            self._create_spec_for_priority(priority)
+            break  # Create one spec per iteration
 
         # Update metrics
         self.metrics["specs_created"] = self.metrics.get("specs_created", 0)
@@ -163,9 +194,22 @@ class ArchitectAgent(BaseAgent):
             logger.warning(f"🚨 URGENT spec request from code_developer for {priority_name}")
 
             if msg_priority == "urgent":
-                # TODO: Create spec immediately and notify code_developer
                 logger.info(f"Creating spec for {priority_name} (URGENT)...")
-                # In Phase 3: Implement spec creation
+                # Create spec immediately
+                self._create_spec_for_priority(priority_info)
+
+                # Notify code_developer that spec is ready
+                self.send_message_to_agent(
+                    to_agent=AgentType.CODE_DEVELOPER,
+                    message_type="spec_ready",
+                    content={
+                        "priority": priority_name,
+                        "spec_file": f"SPEC-{priority_info.get('number', 'unknown')}-*.md",
+                    },
+                    priority="normal",
+                )
+
+                logger.info(f"✅ Spec created for {priority_name}, notified code_developer")
 
         elif msg_type == "design_review":
             # Request for design guidance
@@ -175,3 +219,109 @@ class ArchitectAgent(BaseAgent):
 
         else:
             logger.warning(f"Unknown message type: {msg_type}")
+
+    def _find_existing_spec(self, priority_number: str) -> Optional[Path]:
+        """Find existing technical specification for a priority.
+
+        Args:
+            priority_number: Priority number (e.g., "9", "2.6")
+
+        Returns:
+            Path to spec file if found, None otherwise
+        """
+        # Try architect's specs directory (CFR-008)
+        specs_dir = self.specs_dir
+        if specs_dir.exists():
+            # Try multiple patterns
+            patterns = [
+                f"SPEC-{priority_number}-*.md",
+                f"SPEC-{priority_number.replace('.', '-')}-*.md",
+                f"SPEC-{priority_number.zfill(3)}-*.md",
+            ]
+
+            # Also try without dots/dashes for edge cases
+            if "." in priority_number:
+                major, minor = priority_number.split(".", 1)
+                patterns.extend(
+                    [
+                        f"SPEC-{major.zfill(3)}-{minor}-*.md",
+                        f"SPEC-{major}-{minor}-*.md",
+                    ]
+                )
+
+            for pattern in patterns:
+                for spec_file in specs_dir.glob(pattern):
+                    return spec_file
+
+        return None
+
+    def _create_spec_for_priority(self, priority: Dict):
+        """Create technical specification for a priority using Claude.
+
+        Args:
+            priority: Priority dictionary from ROADMAP
+        """
+        priority_name = priority.get("name", "unknown")
+        priority_number = priority.get("number", "unknown")
+        priority_title = priority.get("title", "")
+        priority_content = priority.get("content", "")
+
+        logger.info(f"📝 Creating spec for {priority_name}: {priority_title}")
+
+        # Update current task
+        self.current_task = {
+            "type": "spec_creation",
+            "priority": priority_name,
+            "started_at": datetime.now().isoformat(),
+            "progress": 0.2,
+        }
+
+        # Load prompt
+        from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
+
+        prompt = load_prompt(
+            PromptNames.CREATE_TECHNICAL_SPEC,
+            {
+                "PRIORITY_NAME": priority_name,
+                "PRIORITY_TITLE": priority_title,
+                "PRIORITY_CONTENT": priority_content[:2000],  # Limit context
+                "SPEC_NUMBER": priority_number,
+            },
+        )
+
+        # Update progress
+        self.current_task["progress"] = 0.4
+
+        # Execute with Claude
+        from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+
+        claude = ClaudeCLIInterface()
+        logger.info("🤖 Executing Claude API for spec creation...")
+
+        try:
+            result = claude.execute_prompt(prompt, timeout=3600)
+            if not result or not getattr(result, "success", False):
+                logger.error(f"Claude API failed: {getattr(result, 'error', 'Unknown error')}")
+                return
+            logger.info("✅ Claude API complete")
+        except Exception as e:
+            logger.error(f"❌ Error executing Claude API: {e}")
+            return
+
+        # Update progress
+        self.current_task["progress"] = 0.8
+
+        # Commit changes
+        commit_message = f"docs: Add technical spec for {priority_name} - {priority_title}"
+        self.commit_changes(commit_message)
+
+        logger.info(f"✅ Spec created and committed for {priority_name}")
+
+        # Update metrics
+        self.metrics["specs_created"] = self.metrics.get("specs_created", 0) + 1
+        self.metrics["last_spec_created"] = priority_name
+        self.metrics["last_spec_time"] = datetime.now().isoformat()
+
+        # Update progress
+        self.current_task["progress"] = 1.0
+        self.current_task["status"] = "complete"
