@@ -98,7 +98,19 @@ class RoadmapParser:
 
         lines = self.content.split("\n")
 
+        # Track code blocks to skip priorities inside them
+        in_code_block = False
+
         for i, line in enumerate(lines):
+            # Check for code fence markers
+            if line.strip().startswith("```"):
+                in_code_block = not in_code_block
+                continue
+
+            # Skip lines inside code blocks
+            if in_code_block:
+                continue
+
             for pattern in patterns:
                 match = re.search(pattern, line)
                 if match:
