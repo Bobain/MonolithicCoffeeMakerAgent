@@ -4,15 +4,15 @@
   "current_task": {
     "type": "spec_creation",
     "status": "idle",
-    "last_check": "2025-10-17T16:09:35.770541"
+    "last_check": "2025-10-17T17:56:28.307743"
   },
-  "last_heartbeat": "2025-10-17T16:09:35.770544",
-  "next_check": "2025-10-17T17:09:35.770544",
+  "last_heartbeat": "2025-10-17T17:56:28.307754",
+  "next_check": "2025-10-17T18:56:28.307755",
   "health": "healthy",
-  "pid": 16154,
+  "pid": 19747,
   "metrics": {
     "specs_created": 0,
-    "last_check": "2025-10-17T16:09:35.770539"
+    "last_check": "2025-10-17T17:56:28.307734"
   },
   "error": null
 }

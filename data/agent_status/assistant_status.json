@@ -4,16 +4,16 @@
   "current_task": {
     "type": "demo_creation",
     "status": "idle",
-    "last_check": "2025-10-17T16:09:38.807630"
+    "last_check": "2025-10-17T17:52:01.289034"
   },
-  "last_heartbeat": "2025-10-17T16:09:38.807636",
-  "next_check": "2025-10-17T16:39:38.807637",
+  "last_heartbeat": "2025-10-17T17:56:31.343006",
+  "next_check": "2025-10-17T18:26:31.343035",
   "health": "healthy",
-  "pid": 16186,
+  "pid": 19762,
   "metrics": {
     "demos_created": 0,
     "bugs_found": 0,
-    "last_check": "2025-10-17T16:09:38.807627"
+    "last_check": "2025-10-17T17:52:01.289031"
   },
   "error": null
 }

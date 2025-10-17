@@ -4,17 +4,17 @@
   "current_task": {
     "type": "team_orchestration",
     "status": "agents_launched",
-    "started_at": "2025-10-17T16:09:41.764410",
+    "started_at": "2025-10-17T17:52:04.249743",
     "agents_running": 6
   },
-  "last_heartbeat": "2025-10-17T16:13:41.831226",
-  "next_check": "2025-10-17T16:14:11.831231",
+  "last_heartbeat": "2025-10-17T17:53:04.264994",
+  "next_check": "2025-10-17T17:53:34.264999",
   "health": "healthy",
-  "pid": 16147,
+  "pid": 19737,
   "metrics": {
     "agents_running": 6,
     "total_restarts": 0,
-    "uptime_seconds": 240.066803
+    "uptime_seconds": 60.015243
   },
   "error": null
 }

@@ -4,16 +4,16 @@
   "current_task": {
     "type": "code_analysis",
     "status": "analyzing",
-    "last_check": "2025-10-17T16:09:39.809566"
+    "last_check": "2025-10-17T17:52:02.295849"
   },
-  "last_heartbeat": "2025-10-17T16:09:39.809572",
-  "next_check": "2025-10-18T16:09:39.809573",
+  "last_heartbeat": "2025-10-17T17:56:32.351530",
+  "next_check": "2025-10-18T17:56:32.351574",
   "health": "healthy",
-  "pid": 16195,
+  "pid": 19781,
   "metrics": {
     "analyses_performed": 0,
     "issues_found": 0,
-    "last_check": "2025-10-17T16:09:39.809563"
+    "last_check": "2025-10-17T17:52:02.295846"
   },
   "error": null
 }
