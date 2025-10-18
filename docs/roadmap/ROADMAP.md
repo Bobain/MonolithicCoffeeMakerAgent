@@ -29700,3 +29700,161 @@ As a system architect, I need a comprehensive orchestrator agent design, so that
 - SPEC-067 - Architect Code Review Process
 
 ---
+### US-050: Architect Creates POCs for Complex Implementations
+
+**Status**: 📝 Planned - HIGH PRIORITY (Quality & Risk Reduction)
+
+**Created**: 2025-10-18
+
+**Estimated Effort**: Varies by task (1-4 hours per POC)
+
+**User Story**:
+As the architect agent, I want to create a Proof of Concept (POC) implementation for complex tasks on top of technical specifications, so that code_developer has a working reference implementation and we reduce implementation risk for difficult features.
+
+**Problem Statement**:
+Currently, architect creates comprehensive technical specs, but for complex tasks:
+- **No working code reference**: code_developer must figure out implementation details from scratch
+- **Higher implementation risk**: Complex features may have hidden complexity not visible in specs
+- **Longer implementation time**: code_developer spends time exploring approaches that architect could validate upfront
+- **Potential for misinterpretation**: Specs may be ambiguous without concrete code examples
+
+**Description**:
+For complex tasks (estimated effort > 2 days OR technical complexity = High), architect creates a minimal Proof of Concept implementation alongside the technical spec. This POC serves as:
+1. **Reference implementation** - Shows exactly how components should work
+2. **Risk validation** - Proves the approach is feasible before full implementation
+3. **API validation** - Validates interface designs with working code
+4. **Implementation guide** - Provides concrete examples for code_developer
+
+**Requirements**:
+
+1. **POC Criteria** (When to create):
+   - Estimated effort > 2 days (16+ hours)
+   - Technical complexity = High
+   - Novel architectural patterns (not used before)
+   - Integration with external systems (GitHub API, Puppeteer, etc.)
+   - Performance-critical components (caching, rate limiting, etc.)
+
+2. **POC Scope** (What to include):
+   - Minimal implementation of core components (20-30% of full implementation)
+   - Working examples of key interfaces/APIs
+   - Integration points validated (external APIs, databases, etc.)
+   - Critical path proven (hardest part working)
+   - Comments explaining architectural decisions
+
+3. **POC Location**:
+   - Save to: `docs/architecture/pocs/POC-{number}-{feature-slug}/`
+   - Structure:
+     ```
+     docs/architecture/pocs/POC-072-team-daemon/
+       ├── README.md           # POC overview, how to run, what it proves
+       ├── team_daemon.py      # Minimal TeamDaemon implementation
+       ├── agent_process.py    # Minimal AgentProcess wrapper
+       ├── message_queue.py    # Minimal MessageQueue (SQLite)
+       └── test_poc.py         # Tests proving POC works
+     ```
+
+4. **POC Documentation**:
+   - README.md explains:
+     - What this POC proves (specific risks validated)
+     - How to run it (commands, dependencies)
+     - What's NOT included (out of scope)
+     - How code_developer should use it (reference, not copy-paste)
+   - Code comments explain:
+     - Architectural decisions (why this approach)
+     - Simplifications made (what's omitted vs full implementation)
+     - Integration points (how to connect to real systems)
+
+5. **POC Delivery**:
+   - Created BEFORE code_developer starts implementation
+   - Committed alongside technical spec
+   - Referenced in spec (link to POC directory)
+   - Reviewed with user if POC reveals new complexity
+
+6. **Integration with Workflow**:
+   - architect creates spec → determines if POC needed → creates POC if complex
+   - code_developer reads spec + POC → implements full version
+   - POC remains as reference (not merged into production)
+
+**Acceptance Criteria**:
+
+- [ ] architect evaluates complexity for every new spec
+- [ ] POCs created for all complex tasks (effort > 2 days OR complexity = High)
+- [ ] Each POC includes working code + tests + README
+- [ ] POC validates critical path (hardest parts proven)
+- [ ] POC committed alongside spec (same PR/commit)
+- [ ] code_developer references POC during implementation
+- [ ] POCs documented in docs/architecture/pocs/README.md
+- [ ] Metrics tracked: % of complex tasks with POCs, time saved
+
+**Example POCs**:
+
+1. **POC-072-team-daemon**: Multi-agent orchestration
+   - Proves: Subprocess management, message queue, health monitoring
+   - Scope: Spawn 2 agents, send 1 message, detect 1 crash
+   - Time: 2-3 hours
+
+2. **POC-048-notification-enforcement**: CFR-009 sound enforcement
+   - Proves: Validation logic works, errors raised correctly
+   - Scope: Mock NotificationDB, test 3 scenarios
+   - Time: 1 hour
+
+3. **POC-049-review-triggers**: File-based review detection
+   - Proves: File mtime detection, trigger accuracy
+   - Scope: Create/modify files, test trigger detection
+   - Time: 1-2 hours
+
+**Benefits**:
+
+- **Risk Reduction**: Validate approach before full implementation (30-50% risk reduction)
+- **Faster Implementation**: code_developer has working reference (20-30% time savings)
+- **Better Quality**: POC catches design issues early (fewer post-implementation refactors)
+- **Knowledge Transfer**: POC documents architectural intent in code
+- **Confidence**: User sees working prototype before full implementation
+
+**Time Investment vs Savings**:
+
+- **POC Creation Time**: 1-4 hours (10-20% of implementation time)
+- **Implementation Time Saved**: 20-30% (code_developer has reference)
+- **Refactoring Time Saved**: 50-70% (fewer design issues caught late)
+- **ROI**: 2-3x return (invest 2 hours, save 4-6 hours)
+
+**When NOT to Create POC**:
+
+- Simple tasks (effort < 2 days)
+- Well-understood patterns (used many times before)
+- Straightforward CRUD operations
+- Documentation-only changes
+- Test-only changes
+
+**Estimated Effort**: 1-4 hours per POC (varies by complexity)
+
+**Dependencies**: None (can start immediately)
+
+**Technical Specification Required**: No (this is a process change, not a technical implementation)
+
+**Priority Level**: HIGH
+
+**Rationale**:
+- Reduces implementation risk for complex features
+- Validates architectural decisions with working code
+- Accelerates code_developer implementation (reference implementation)
+- Improves quality (catches design issues early)
+- CFR-010 compatible (continuous improvement includes POC creation)
+
+**Related Documents**:
+- CFR-008: Architect-Only Spec Creation
+- CFR-010: Continuous Spec Improvement
+- ADR-003: Simplification-First Approach
+- SPEC-071: Architect-Only Spec Creation
+- SPEC-072: Multi-Agent Orchestration Daemon (candidate for first POC)
+
+**Unblocks**: Complex implementations (SPEC-072, future complex specs)
+
+**Blocked By**: None
+
+**Notes**:
+This adds a new responsibility to architect: create POCs for complex tasks. This is a best practice in software architecture - validate risky decisions with working prototypes before committing to full implementation.
+
+POCs are NOT production code - they're reference implementations that prove feasibility and guide code_developer. They should be minimal (20-30% of full implementation) and focused on proving the hardest parts work.
+
+---
