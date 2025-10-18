@@ -43,10 +43,11 @@ Message Handling:
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from coffee_maker.autonomous.agent_registry import AgentType
 from coffee_maker.autonomous.agents.base_agent import BaseAgent
+from coffee_maker.autonomous.agents.code_developer_commit_review_mixin import CodeDeveloperCommitReviewMixin
 from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
 from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
@@ -54,7 +55,7 @@ from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 logger = logging.getLogger(__name__)
 
 
-class CodeDeveloperAgent(BaseAgent):
+class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
     """Code developer agent - Autonomous implementation execution.
 
     Responsibilities:
@@ -111,8 +112,92 @@ class CodeDeveloperAgent(BaseAgent):
         self.auto_approve = auto_approve
         self.attempted_priorities: Dict[str, int] = {}
         self.max_retries = 3
+        self._current_priority_name = None  # Track current priority for commit reviews
 
         logger.info(f"✅ CodeDeveloperAgent initialized (auto_approve={auto_approve})")
+
+    def commit_changes(self, message: str, files: Optional[List[str]] = None):
+        """Override commit_changes to send review request to architect.
+
+        This method:
+        1. Captures files changed BEFORE commit
+        2. Calls parent's commit_changes (does the actual commit)
+        3. Extracts commit SHA from git log
+        4. Sends commit_review_request to architect (via mixin)
+
+        Args:
+            message: Commit message
+            files: Optional list of specific files to commit
+        """
+        # STEP 1: Get list of changed files BEFORE commit
+        import subprocess
+
+        try:
+            # Get staged + unstaged changes
+            result = subprocess.run(
+                ["git", "diff", "--name-only", "HEAD"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            files_changed = [f for f in result.stdout.strip().split("\n") if f]
+
+            # Also get staged files
+            result_staged = subprocess.run(
+                ["git", "diff", "--name-only", "--cached"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            files_staged = [f for f in result_staged.stdout.strip().split("\n") if f]
+
+            # Combine and deduplicate
+            files_changed = list(set(files_changed + files_staged))
+
+            if not files_changed:
+                logger.warning("No files changed - skipping commit review request")
+                # Still commit though
+                super().commit_changes(message, files)
+                return
+
+        except Exception as e:
+            logger.error(f"Error getting changed files: {e}")
+            # Continue with commit anyway
+            super().commit_changes(message, files)
+            return
+
+        # STEP 2: Commit changes (call parent)
+        super().commit_changes(message, files)
+
+        # STEP 3: Get commit SHA from git log
+        try:
+            result_sha = subprocess.run(
+                ["git", "log", "-1", "--format=%H"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            commit_sha = result_sha.stdout.strip()
+
+            if not commit_sha:
+                logger.warning("Could not get commit SHA - skipping review request")
+                return
+
+        except Exception as e:
+            logger.error(f"Error getting commit SHA: {e}")
+            return
+
+        # STEP 4: Send review request to architect (via mixin)
+        try:
+            self._after_commit_success(
+                commit_sha=commit_sha,
+                files_changed=files_changed,
+                commit_message=message,
+                priority_name=self._current_priority_name or "unknown",
+            )
+        except Exception as e:
+            logger.error(f"Error sending commit review request: {e}")
+            # Don't fail the commit if review request fails
 
     def _do_background_work(self):
         """Implement next planned priority from ROADMAP.
@@ -150,6 +235,9 @@ class CodeDeveloperAgent(BaseAgent):
 
         priority_name = next_priority["name"]
         logger.info(f"📋 Next priority: {priority_name}")
+
+        # Track current priority for commit reviews
+        self._current_priority_name = priority_name
 
         # Update current task for status tracking
         self.current_task = {
@@ -398,6 +486,7 @@ class CodeDeveloperAgent(BaseAgent):
         """Handle inter-agent messages.
 
         Message types:
+        - tactical_feedback: Feedback from architect commit review (requires action)
         - bug_fix_request: Bug found during demo (from assistant)
         - spec_ready: Notification that spec is ready (from architect)
 
@@ -406,7 +495,11 @@ class CodeDeveloperAgent(BaseAgent):
         """
         msg_type = message.get("type")
 
-        if msg_type == "bug_fix_request":
+        if msg_type == "tactical_feedback":
+            # Tactical feedback from architect (via mixin)
+            self._process_tactical_feedback(message)
+
+        elif msg_type == "bug_fix_request":
             # Bug found by assistant during demo
             bug_info = message["content"]
             priority_name = bug_info.get("feature", "unknown")

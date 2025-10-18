@@ -49,11 +49,12 @@ from typing import Dict, Optional
 
 from coffee_maker.autonomous.agent_registry import AgentType
 from coffee_maker.autonomous.agents.base_agent import BaseAgent
+from coffee_maker.autonomous.agents.architect_skills_mixin import ArchitectSkillsMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ArchitectAgent(BaseAgent):
+class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
     """Architect agent - Proactive technical specification creation.
 
     Responsibilities:
@@ -110,20 +111,27 @@ class ArchitectAgent(BaseAgent):
         logger.info("✅ ArchitectAgent initialized (proactive spec creation)")
 
     def _do_background_work(self):
-        """Architect's background work: proactive spec creation.
+        """Architect's background work: skills integration + proactive spec creation.
 
-        Workflow (CFR-011):
-        1. Pull latest from roadmap
-        2. Parse ROADMAP for planned priorities
-        3. For each priority without a spec:
+        Workflow (Enhanced with Skills):
+        1. Process commit review requests (CRITICAL priority)
+        2. Run weekly refactoring analysis (if Monday + >7 days)
+        3. Pull latest from roadmap
+        4. Parse ROADMAP for planned priorities
+        5. For each priority without a spec:
+           - Run architecture reuse check (MANDATORY)
            - Determine if spec is needed (complexity-based)
            - Create specification
            - Document in ADR
            - Commit changes
-        4. Sleep for check_interval
+        6. Sleep for check_interval
 
         This ensures code_developer always has specs available.
         """
+        # STEP 1 & 2: Enhanced background work from mixin (commit reviews + refactoring)
+        self._enhanced_background_work()
+
+        # STEP 3+: Original proactive spec creation
         logger.info("🏗️  Architect: Checking for specs to create...")
 
         # Sync with roadmap branch
@@ -176,6 +184,7 @@ class ArchitectAgent(BaseAgent):
         """Handle inter-agent messages.
 
         Message types:
+        - commit_review_request: Code_developer commit needs review (handled in background work)
         - spec_request (urgent): Code_developer blocked on missing spec
         - design_review: Request for design guidance
         - dependency_check: Request for dependency management
@@ -186,7 +195,14 @@ class ArchitectAgent(BaseAgent):
         msg_type = message.get("type")
         msg_priority = message.get("priority", "normal")
 
-        if msg_type == "spec_request":
+        if msg_type == "commit_review_request":
+            # Commit review requests are handled by _process_commit_reviews() in background work
+            # Just log it here for visibility
+            commit_sha = message.get("content", {}).get("commit_sha", "unknown")
+            logger.info(f"📬 Commit review request queued: {commit_sha[:7]} (priority: {msg_priority})")
+            # Review will be processed in next background work iteration
+
+        elif msg_type == "spec_request":
             # Urgent spec request from code_developer
             priority_info = message.get("content", {}).get("priority", {})
             priority_name = priority_info.get("name", "unknown")
@@ -258,6 +274,9 @@ class ArchitectAgent(BaseAgent):
     def _create_spec_for_priority(self, priority: Dict):
         """Create technical specification for a priority using Claude.
 
+        MANDATORY STEP: Run architecture reuse check BEFORE creating spec.
+        This ensures we always check existing components first.
+
         Args:
             priority: Priority dictionary from ROADMAP
         """
@@ -273,18 +292,35 @@ class ArchitectAgent(BaseAgent):
             "type": "spec_creation",
             "priority": priority_name,
             "started_at": datetime.now().isoformat(),
-            "progress": 0.2,
+            "progress": 0.1,
         }
+
+        # MANDATORY: Run architecture reuse check BEFORE spec creation
+        logger.info(f"🔍 Running MANDATORY architecture reuse check for {priority_name}")
+        reuse_analysis = self._run_architecture_reuse_check_before_spec(priority)
+
+        # Update progress
+        self.current_task["progress"] = 0.3
 
         # Load prompt
         from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
+
+        # Include reuse analysis in the spec creation context
+        spec_context = f"""{priority_content[:1500]}
+
+## 🔍 Architecture Reuse Analysis
+
+{reuse_analysis}
+
+**IMPORTANT**: Use components from the reuse analysis above when creating this spec.
+"""
 
         prompt = load_prompt(
             PromptNames.CREATE_TECHNICAL_SPEC,
             {
                 "PRIORITY_NAME": priority_name,
                 "PRIORITY_TITLE": priority_title,
-                "PRIORITY_CONTENT": priority_content[:2000],  # Limit context
+                "PRIORITY_CONTENT": spec_context,
                 "SPEC_NUMBER": priority_number,
             },
         )
