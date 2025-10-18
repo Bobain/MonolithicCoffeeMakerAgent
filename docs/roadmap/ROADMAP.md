@@ -28142,3 +28142,537 @@ This is the highest priority fix needed right now. Without this, the code_develo
 - CFR-013 compliance: Full compliance
 
 ---
+
+### US-059: Update PROPOSED_SKILLS Document with Curator Insights
+
+**Status**: ✅ READY FOR IMPLEMENTATION - HIGHEST PRIORITY ⭐⭐⭐
+
+**Created**: 2025-10-18
+
+**Ready**: 2025-10-18 (All blockers cleared, US-061 approved)
+
+**Estimated Effort**: 4-6 hours
+
+**User Story**:
+As a system architect, I want the PROPOSED_SKILLS document to demonstrate how ACE curator insights informed the 5 skill recommendations, so that the skill evolution process is data-driven and evidence-based.
+
+**Problem Statement**:
+The trace-execution skill (converted from generator agent) represents a major architectural success. However, `docs/architecture/specs/PROPOSED_SKILLS_2025-10-18.md` does not yet show how ACE curator playbook excerpts and insights informed the 5 recommended skills. This documentation is critical to demonstrate:
+- Data-driven skill evolution (not arbitrary decisions)
+- Curator playbook value in guiding architectural improvements
+- Evidence-based approach to agent-to-skill conversions
+- Lessons learned from generator-to-skill transformation
+
+**Context**:
+- **Recent Success**: Generator agent successfully converted to trace-execution skill
+- **Curator Value**: ACE curator has accumulated insights about agent workflows
+- **5 Proposed Skills**: Document already exists but needs curator integration
+- **Strategic Importance**: Shows ACE framework value in improving system architecture
+
+**Requirements**:
+
+1. **Add Curator Insights Section**:
+   - New section: "How Curator Insights Informed These Skills"
+   - Show specific playbook excerpts that led to each skill recommendation
+   - Reference curator observations about workflow patterns
+   - Demonstrate evidence-based decision making
+
+2. **Update Each Skill Recommendation**:
+   - **Skill 1-5**: Add subsection "Curator Evidence"
+   - Quote relevant playbook excerpts
+   - Show frequency data (how often curator observed pattern)
+   - Link curator insights to skill design decisions
+
+3. **Add Generator-to-Skill Case Study**:
+   - Document: Why generator became trace-execution skill
+   - Show: Curator insights that identified generator as skill candidate
+   - Evidence: Playbook excerpts about ACE observation patterns
+   - Lessons: What this teaches about future conversions
+
+4. **Include Curator Playbook Excerpts**:
+   - Quote actual playbook content (anonymized if needed)
+   - Show evolution of insights over time
+   - Demonstrate how playbook guided architectural decisions
+   - Reference specific curator dates/versions
+
+5. **Data-Driven Skill Evolution Framework**:
+   - Create framework: How to use curator insights for skill decisions
+   - Criteria: When to convert agent to skill (based on curator data)
+   - Metrics: Success indicators from curator observations
+   - Process: Curator → Analysis → Skill Recommendation → Implementation
+
+**Acceptance Criteria**:
+
+- [ ] PROPOSED_SKILLS document updated with curator insights section
+- [ ] All 5 skills include "Curator Evidence" subsections
+- [ ] Generator-to-skill case study documented with playbook excerpts
+- [ ] Actual curator playbook quotes included (minimum 5 excerpts)
+- [ ] Framework created: How to use curator data for skill decisions
+- [ ] Document shows clear link: Curator insights → Skill recommendations
+- [ ] Evidence-based approach demonstrated (not arbitrary)
+- [ ] Lessons learned section: What generator conversion taught us
+- [ ] Cross-references to curator playbook files
+- [ ] architect reviews and approves updated document
+
+**Deliverables**:
+
+1. **Updated PROPOSED_SKILLS Document**:
+   - File: `docs/architecture/specs/PROPOSED_SKILLS_2025-10-18.md`
+   - New sections: Curator insights, evidence, case study
+   - Playbook excerpts integrated throughout
+
+2. **Curator-to-Skill Decision Framework**:
+   - Embedded in PROPOSED_SKILLS or separate document
+   - Process for future skill recommendations
+   - Criteria for agent-to-skill conversions
+
+**Dependencies**:
+- Curator playbook files must exist and be accessible
+- trace-execution skill implementation complete (✅ done)
+- PROPOSED_SKILLS document exists (✅ done)
+
+**Blocked By**: None (READY TO START - US-061 architectural clarity obtained)
+
+**Blocks**:
+- None (US-060 can proceed in parallel)
+
+**Priority Level**: HIGHEST ⭐⭐⭐
+
+**Rationale**:
+- **Evidence-Based Architecture**: Shows decisions driven by data, not intuition
+- **Curator Value**: Demonstrates ACE curator's strategic importance
+- **Skill Evolution**: Documents process for future skill recommendations
+- **Architectural Improvement**: Generator conversion shows benefits clearly
+- **Knowledge Transfer**: Documents lessons for team and future decisions
+
+**Success Metrics**:
+- Curator insights clearly visible in document: 100%
+- All 5 skills have evidence sections: 5/5
+- Generator case study complete: Yes
+- Playbook excerpts included: ≥5 quotes
+- Framework usable for future decisions: Yes
+- architect approval obtained: Yes
+
+**Related Documents**:
+- `docs/architecture/specs/PROPOSED_SKILLS_2025-10-18.md` - Document to update
+- `.claude/skills/trace-execution.md` - Recent generator-to-skill success
+- `docs/curator/` - Curator playbooks (source of insights)
+- `docs/architecture/decisions/ADR-009-retire-code-searcher-replace-with-skills.md` - Related ADR
+
+**Timeline**: 1 day (4-6 hours)
+
+---
+
+### US-060: Update Agent Definitions with Startup Skills Documentation
+
+**Status**: ✅ READY FOR IMPLEMENTATION - HIGHEST PRIORITY ⭐⭐⭐
+
+**Created**: 2025-10-18
+
+**Ready**: 2025-10-18 (All blockers cleared, US-061 approved)
+
+**Estimated Effort**: 6-8 hours
+
+**User Story**:
+As an autonomous agent, I want my definition file to document startup skills in my responsibility section with integration examples, so that my capabilities and workflow are clearly understood.
+
+**Problem Statement**:
+Agent definition files exist (`.claude/agents/architect.md`, `code_developer.md`, `project_manager.md`) but do not yet document:
+- Startup skills each agent uses
+- trace-execution skill (MANDATORY for all agents)
+- How skills integrate into agent workflows
+- Examples of skill invocation during agent work
+
+**Context**:
+- **Startup Skills Exist**: `architect-startup.md`, `code-developer-startup.md`, `project-manager-startup.md`
+- **trace-execution MANDATORY**: All agents must use trace-execution skill for ACE observability
+- **Integration Examples Needed**: Show how skills are invoked during agent work
+- **Agent Clarity**: Definitions should reflect current capabilities
+
+**Requirements**:
+
+1. **architect.md Updates**:
+   - Add "Startup Skills" section
+   - Document: `architect-startup.md` (proactive spec creation, architecture reuse check)
+   - Document: `trace-execution.md` (MANDATORY - ACE observability)
+   - Include: Integration examples showing when skills are invoked
+   - Show: How skills enhance architect's workflow
+
+2. **code_developer.md Updates**:
+   - Add "Startup Skills" section
+   - Document: `code-developer-startup.md` (implementation, testing, PR creation)
+   - Document: `trace-execution.md` (MANDATORY - ACE observability)
+   - Include: Integration examples showing skill usage during implementation
+   - Show: How skills accelerate development workflow
+
+3. **project_manager.md Updates**:
+   - Add "Startup Skills" section
+   - Document: `project-manager-startup.md` (ROADMAP health, GitHub monitoring, DoD verification)
+   - Document: `trace-execution.md` (MANDATORY - ACE observability)
+   - Include: Integration examples showing monitoring and verification workflows
+   - Show: How skills support project management
+
+4. **trace-execution Skill (MANDATORY)**:
+   - All 3 agents MUST document trace-execution usage
+   - Explain: Why trace-execution is mandatory (ACE observability)
+   - Show: When trace-execution is invoked (every significant action)
+   - Document: What data trace-execution captures
+
+5. **Integration Examples**:
+   - Real-world workflow scenarios
+   - Show: "When X happens, agent invokes Y skill"
+   - Include: Skill parameters and expected outputs
+   - Demonstrate: Skill composition (combining multiple skills)
+
+6. **Skill Invocation Patterns**:
+   - Document: How agents load skills (`SkillLoader`)
+   - Show: Skill invocation syntax
+   - Explain: Skill parameters and variable substitution
+   - Include: Error handling and fallback strategies
+
+**Acceptance Criteria**:
+
+**architect.md**:
+- [ ] "Startup Skills" section added
+- [ ] `architect-startup.md` documented with integration examples
+- [ ] `trace-execution.md` documented as MANDATORY
+- [ ] Real workflow examples showing skill invocation
+- [ ] Skill composition examples (architecture reuse + spec creation)
+
+**code_developer.md**:
+- [ ] "Startup Skills" section added
+- [ ] `code-developer-startup.md` documented with integration examples
+- [ ] `trace-execution.md` documented as MANDATORY
+- [ ] Real workflow examples showing skill invocation during implementation
+- [ ] Skill composition examples (TDD + refactoring + PR creation)
+
+**project_manager.md**:
+- [ ] "Startup Skills" section added
+- [ ] `project-manager-startup.md` documented with integration examples
+- [ ] `trace-execution.md` documented as MANDATORY
+- [ ] Real workflow examples showing skill invocation during monitoring
+- [ ] Skill composition examples (ROADMAP health + GitHub + DoD)
+
+**All Agent Files**:
+- [ ] trace-execution usage clearly documented (MANDATORY)
+- [ ] Integration examples realistic and actionable
+- [ ] Skill invocation patterns explained
+- [ ] Error handling documented
+- [ ] Cross-references to skill files
+
+**Quality**:
+- [ ] architect reviews all updates
+- [ ] Examples tested (skills actually work as documented)
+- [ ] Formatting consistent across all 3 agent files
+- [ ] Clear distinction: startup skills vs. other skills
+
+**Deliverables**:
+
+1. **Updated Agent Definitions**:
+   - `.claude/agents/architect.md` (updated)
+   - `.claude/agents/code_developer.md` (updated)
+   - `.claude/agents/project_manager.md` (updated)
+
+2. **Integration Documentation**:
+   - Embedded in each agent file
+   - Real-world workflow examples
+   - Skill invocation patterns
+
+**Dependencies**:
+- Startup skills exist (✅ done)
+- trace-execution skill exists (✅ done)
+- Agent definition files exist (✅ done)
+
+**Blocked By**: None (READY TO START - US-061 architectural clarity obtained, US-059 in parallel)
+
+**Priority Level**: HIGHEST ⭐⭐⭐
+
+**Rationale**:
+- **Agent Clarity**: Definitions must reflect current capabilities
+- **Onboarding**: New team members understand agent workflows
+- **Skills Visibility**: Shows value of skills system
+- **trace-execution**: Documents MANDATORY observability requirement
+- **Integration**: Shows how skills enhance agent effectiveness
+
+**Success Metrics**:
+- All 3 agent files updated: 3/3
+- trace-execution documented as MANDATORY: 3/3
+- Integration examples included: ≥2 per agent
+- architect approval: Yes
+- Skills invocable as documented: 100%
+
+**Related Documents**:
+- `.claude/agents/architect.md` - To be updated
+- `.claude/agents/code_developer.md` - To be updated
+- `.claude/agents/project_manager.md` - To be updated
+- `.claude/skills/trace-execution.md` - MANDATORY skill
+- `.claude/skills/*-startup.md` - Startup skills to document
+
+**Timeline**: 1-2 days (6-8 hours)
+
+---
+
+### US-061: Architect + Project_Manager: Design Decision on Reflector & Curator Agent-to-Skill Conversion
+
+**Status**: ✅ APPROVED - READY FOR IMPLEMENTATION ⭐⭐⭐
+
+**Created**: 2025-10-18
+
+**Approved**: 2025-10-18 (User approval obtained)
+
+**Decision**: **Reflector and Curator REMAIN AS AGENTS** (ADR-010 approved by user)
+
+**Estimated Effort**: 8-12 hours (collaborative analysis + ADR creation)
+
+**User Story**:
+As a system architect and project manager, we need to analyze whether Reflector and Curator agents should be converted to skills (like generator was), so that we can optimize the ACE framework architecture based on data-driven analysis.
+
+**Problem Statement**:
+
+**Recent Success**:
+- Generator agent successfully converted to trace-execution skill
+- Benefits observed: reduced complexity, better observability, on-demand loading
+- Freed up agent slot for more active agents
+
+**Critical Question**:
+Should Reflector and Curator follow the same pattern (agent → skill)?
+
+**Or are they fundamentally different?**
+
+**Analysis Required**:
+
+**1. Compare Generator vs. Reflector vs. Curator**:
+
+**Generator (✅ Became trace-execution skill)**:
+- Function: Capture execution traces
+- Frequency: Every agent action (very frequent)
+- Autonomy: Reactive (no independent decisions)
+- State: Stateless (just capture and save)
+- Interaction: No inter-agent communication needed
+
+**Reflector (❓ Agent or Skill?)**:
+- Function: Extract insights from traces
+- Frequency: Periodic (weekly or on-demand)
+- Autonomy: Semi-autonomous (analyzes patterns, generates insights)
+- State: Maintains insight history
+- Interaction: Reads traces, writes delta items
+
+**Curator (❓ Agent or Skill?)**:
+- Function: Maintain evolving playbooks from insights
+- Frequency: Periodic (weekly or on-demand)
+- Autonomy: Highly autonomous (curates knowledge, evolves playbooks)
+- State: Maintains playbook versions, evolution history
+- Interaction: Reads deltas, writes playbooks, informs architecture
+
+**2. Evaluation Criteria**:
+
+For each (Reflector, Curator), analyze:
+
+**Benefits of Skill Conversion**:
+- Reduced complexity (fewer agents to orchestrate)
+- On-demand loading (context budget improvement)
+- Simplified deployment (no separate process)
+- Easier maintenance (single codebase)
+- Better integration (direct function calls)
+
+**Benefits of Staying Agent**:
+- Autonomous operation (runs independently)
+- Persistent state (maintains history)
+- Background processing (doesn't block other agents)
+- Inter-agent communication (messages, notifications)
+- Scheduled execution (weekly automatic runs)
+
+**3. Architect Analysis Focus**:
+
+**Architect investigates**:
+- System architecture implications
+- Component composition and reuse
+- Skill vs. agent patterns in codebase
+- Technical complexity of conversion
+- Maintenance burden comparison
+- Integration with existing skills/agents
+
+**4. Project_Manager Analysis Focus**:
+
+**project_manager investigates**:
+- Operational complexity (orchestration)
+- Observability requirements
+- Deployment and scaling considerations
+- User experience impact (how users invoke)
+- Cost considerations (API usage, resources)
+- Timeline for potential conversion
+
+**5. Joint Decision Framework**:
+
+**Decision Matrix**:
+```
+                  | Generator | Reflector | Curator
+------------------+-----------+-----------+--------
+Frequency         | Very High | Medium    | Low
+Autonomy          | None      | Medium    | High
+State Required    | No        | Yes       | Yes
+Inter-Agent Comm  | No        | Limited   | Extensive
+Background Work   | No        | Yes       | Yes
+------------------+-----------+-----------+--------
+Recommendation    | SKILL ✅   | ?         | ?
+```
+
+**Requirements**:
+
+1. **Reflector Analysis**:
+   - Analyze current reflector implementation
+   - Identify: Stateful vs. stateless components
+   - Evaluate: Could reflector work as on-demand skill?
+   - Consider: Loses what capabilities if converted to skill?
+   - Assess: Technical complexity of conversion
+
+2. **Curator Analysis**:
+   - Analyze current curator implementation
+   - Identify: Autonomous behaviors that require agent status
+   - Evaluate: Could curator work as on-demand skill?
+   - Consider: Playbook evolution still possible as skill?
+   - Assess: Impact on ACE framework effectiveness
+
+3. **Comparison to Generator**:
+   - Document: What made generator ideal for skill conversion
+   - Compare: Do reflector/curator share same characteristics?
+   - Identify: Key differences that matter for decision
+   - Analyze: Generator conversion lessons learned
+
+4. **Collaborative Decision Process**:
+   - architect: Technical architecture recommendation
+   - project_manager: Operational and strategic recommendation
+   - Joint discussion: Resolve any conflicts
+   - Consensus: Final recommendation with rationale
+
+5. **Deliverable: ADR (Architectural Decision Record)**:
+   - Title: "ADR-0XX: Reflector and Curator - Agent vs. Skill Decision"
+   - Context: Current ACE architecture, generator conversion
+   - Decision: Keep as agents OR convert to skills (with clear rationale)
+   - Consequences: Benefits, trade-offs, implementation plan
+   - Alternatives considered: Other options evaluated
+
+**Acceptance Criteria**:
+
+**Analysis Phase**:
+- [ ] Reflector implementation analyzed (current code reviewed)
+- [ ] Curator implementation analyzed (current code reviewed)
+- [ ] Decision matrix completed (all criteria evaluated)
+- [ ] Generator conversion lessons documented
+- [ ] Benefits/drawbacks listed for each option
+
+**Architect Analysis**:
+- [ ] Technical architecture recommendation prepared
+- [ ] Component reuse analysis complete
+- [ ] Conversion complexity assessed
+- [ ] Integration implications documented
+
+**project_manager Analysis**:
+- [ ] Operational complexity analysis complete
+- [ ] Observability requirements documented
+- [ ] User experience impact assessed
+- [ ] Resource/cost analysis prepared
+
+**Collaborative Decision**:
+- [ ] architect and project_manager discuss findings
+- [ ] Conflicts resolved (if any)
+- [ ] Consensus reached on recommendation
+- [ ] Clear rationale documented
+
+**ADR Creation**:
+- [ ] ADR-0XX created in `docs/architecture/decisions/`
+- [ ] Decision clearly stated: Keep agents OR convert to skills
+- [ ] Rationale comprehensive and evidence-based
+- [ ] Consequences (benefits/trade-offs) documented
+- [ ] Implementation plan included (if conversion recommended)
+- [ ] Alternatives considered section complete
+
+**Quality**:
+- [ ] User approval obtained for final decision
+- [ ] ADR follows standard format
+- [ ] Evidence-based (not subjective opinions)
+- [ ] Implementation plan realistic and achievable
+
+**Deliverables**:
+
+1. **ADR-0XX: Reflector and Curator Architecture Decision**:
+   - File: `docs/architecture/decisions/ADR-0XX-reflector-curator-agent-vs-skill.md`
+   - Decision: Keep as agents OR convert to skills
+   - Rationale: Comprehensive, evidence-based
+   - Implementation plan: If conversion recommended
+
+2. **Analysis Documents** (embedded in ADR or separate):
+   - Reflector analysis
+   - Curator analysis
+   - Decision matrix
+   - Comparison to generator
+
+**Possible Outcomes**:
+
+**Outcome 1: Convert Both to Skills**:
+- Reflector → reflection-analysis skill
+- Curator → playbook-curation skill
+- Benefits: Simpler architecture, on-demand execution
+- Implementation: 2-3 weeks to convert both
+
+**Outcome 2: Keep Both as Agents**:
+- Reflector remains agent (autonomous insight generation)
+- Curator remains agent (autonomous playbook evolution)
+- Benefits: Maintains autonomy, background processing
+- No implementation needed (status quo)
+
+**Outcome 3: Hybrid Approach**:
+- Reflector → skill (less autonomy needed)
+- Curator → agent (high autonomy valuable)
+- Benefits: Optimal balance
+- Implementation: 1-2 weeks to convert reflector
+
+**Outcome 4: Defer Decision**:
+- Need more data from generator skill usage
+- Wait for US-055 (Skills Integration Phase 1)
+- Revisit after observing skill patterns
+- Timeline: Revisit in 1-2 months
+
+**Dependencies**:
+- Generator-to-skill conversion complete (✅ done)
+- trace-execution skill operational (✅ done)
+- US-059 insights may inform decision (✅ parallel work)
+
+**Blocked By**: None (ADR-010 complete, user approved)
+
+**Blocks**:
+- US-059 (architectural clarity helps documentation)
+- US-060 (architectural clarity helps documentation)
+- Future Reflector agent implementation (approved architecture)
+- Future Curator agent implementation (approved architecture)
+
+**Priority Level**: HIGHEST ⭐⭐⭐ (CRITICAL ARCHITECTURAL DECISION)
+
+**Rationale**:
+- **Strategic Importance**: Determines future ACE framework architecture
+- **Generator Success**: Conversion worked well, should we replicate?
+- **Architectural Clarity**: Defines skill vs. agent boundaries
+- **System Optimization**: May simplify orchestration significantly
+- **Data-Driven**: Should be based on analysis, not assumptions
+- **User Input Critical**: This decision affects system behavior fundamentally
+
+**Success Metrics**:
+- ADR created: Yes
+- Decision clearly documented: Yes
+- Evidence-based analysis: Yes
+- architect + project_manager consensus: Yes
+- User approval obtained: Yes
+- Implementation plan (if needed): Clear and realistic
+
+**Related Documents**:
+- `docs/architecture/decisions/ADR-009-retire-code-searcher-replace-with-skills.md` - Related precedent
+- `.claude/skills/trace-execution.md` - Generator conversion result
+- `docs/curator/` - Curator playbooks (analyze this)
+- `docs/reflector/` - Reflector delta items (analyze this)
+- `docs/architecture/specs/PROPOSED_SKILLS_2025-10-18.md` - May inform decision
+
+**Timeline**: 2-3 days (8-12 hours collaborative work)
+
+**CRITICAL**: User must approve final decision before any implementation
+
+---
