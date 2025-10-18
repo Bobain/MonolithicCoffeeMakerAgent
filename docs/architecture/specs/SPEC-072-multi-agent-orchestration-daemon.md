@@ -1,12 +1,14 @@
 # SPEC-072: Multi-Agent Orchestration Daemon
 
-**Status**: Draft
+**Status**: Draft (Reverted to POC-072 Design)
 
 **Created**: 2025-10-18
 
+**Updated**: 2025-10-18 (Reverted to zero-dependency in-memory queue)
+
 **Author**: architect agent
 
-**Estimated Effort**: 3-4 days (24-32 hours)
+**Estimated Effort**: 2-3 days (16-24 hours) ⭐ REDUCED (simpler architecture)
 
 **Priority**: CRITICAL - Foundation for autonomous team operation
 
@@ -164,81 +166,66 @@ team-daemon (PID 1000)
     └── Bug detection
 ```
 
-### Message Queue Architecture (Redis-Based)
+### Message Queue Architecture (In-Memory, POC-072 Design)
 
-**Decision**: Use **Redis** for production message queue (pre-approved per ADR-013)
+**Decision**: Use **Python stdlib only** (multiprocessing.Queue + heapq) - **Zero external dependencies**
+
+**Rationale**: User preference for zero external dependencies, especially for working POC
 
 **Benefits**:
-- ✅ Persistent message storage (survives daemon crashes)
-- ✅ Built-in duration tracking (Redis Hashes + Sorted Sets)
-- ✅ Real-time bottleneck analysis (O(log N) queries)
-- ✅ Pub/Sub for live observability (no polling)
-- ✅ Battle-tested reliability (100K+ ops/sec)
-- ✅ Zero user approval needed (pre-approved dependency)
+- ✅ Zero external dependencies (multiprocessing + heapq are Python stdlib)
+- ✅ POC-072 already validated (4 passing tests)
+- ✅ Simpler architecture (no Redis server to manage)
+- ✅ Faster for local development (no network overhead)
+- ✅ Easier to debug (all in-process, no external state)
+
+**Trade-offs Accepted**:
+- ⚠️ No persistence (messages lost on daemon crash)
+- ⚠️ Single-machine only (no distributed coordination)
+- ⚠️ Manual bottleneck tracking (no built-in sorted sets)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    REDIS MESSAGE QUEUE                          │
+│                 IN-MEMORY MESSAGE QUEUE                         │
+│                 (multiprocessing.Queue + heapq)                 │
 │                                                                 │
 │  ┌────────────────────────────────────────────────────────┐    │
-│  │  Task Queues (Redis Lists - LPUSH/RPOP)               │    │
-│  │  - queue:architect (create_spec tasks)                 │    │
-│  │  - queue:code_developer (implement tasks)              │    │
-│  │  - queue:assistant (demo tasks)                        │    │
-│  │  - queue:project_manager (verification tasks)          │    │
+│  │  Priority Heap (heapq)                                 │    │
+│  │  - Messages sorted by priority (1=highest, 10=lowest) │    │
+│  │  - O(log N) insert, O(log N) pop                      │    │
+│  │  - Per-recipient filtering (get messages for agent)    │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │  Task Metadata (dict)                                  │    │
+│  │  task_id → {                                           │    │
+│  │    sender: AgentType,                                  │    │
+│  │    recipient: AgentType,                               │    │
+│  │    type: MessageType,                                  │    │
+│  │    payload: dict,                                      │    │
+│  │    priority: int,                                      │    │
+│  │    timestamp: datetime,                                │    │
+│  │    status: queued|running|complete|failed,             │    │
+│  │    start_time: datetime (when started),                │    │
+│  │    duration_ms: int (when completed)                   │    │
+│  │  }                                                     │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │  Bottleneck Tracking (heapq)                           │    │
+│  │  - Max heap of slowest tasks (by duration_ms)          │    │
+│  │  - Keep top 100 slowest tasks                          │    │
+│  │  - O(log N) insert, O(1) get max                       │    │
 │  │                                                        │    │
-│  │  Priority: Multi-list approach                        │    │
-│  │  - queue:high (p1-3): Check first                     │    │
-│  │  - queue:normal (p4-6): Check second                  │    │
-│  │  - queue:low (p7-10): Check last                      │    │
+│  │  Query: nlargest(10, heap) → top 10 slowest tasks     │    │
 │  └────────────────────────────────────────────────────────┘    │
 │                                                                 │
-│  ┌────────────────────────────────────────────────────────┐    │
-│  │  Event Stream (Redis Pub/Sub)                         │    │
-│  │  Channel: events:orchestrator                         │    │
-│  │  - spec_created {spec_id, agent, timestamp}           │    │
-│  │  - implementation_complete {priority, pr, duration}    │    │
-│  │  - bug_detected {severity, title, agent}              │    │
-│  │  - agent_started {agent, pid}                         │    │
-│  │  - agent_crashed {agent, retry_count}                 │    │
-│  └────────────────────────────────────────────────────────┘    │
-│                                                                 │
-│  ┌────────────────────────────────────────────────────────┐    │
-│  │  Task Metadata (Redis Hashes)                         │    │
-│  │  key: task:{task_id}                                  │    │
-│  │  - start_time: timestamp                              │    │
-│  │  - duration: milliseconds (updated on completion)     │    │
-│  │  - agent: AgentType                                   │    │
-│  │  - status: queued|running|complete|failed             │    │
-│  │  - priority: 1-10                                     │    │
-│  │  - payload: JSON                                      │    │
-│  └────────────────────────────────────────────────────────┘    │
-│                                                                 │
-│  ┌────────────────────────────────────────────────────────┐    │
-│  │  Bottleneck Analysis (Redis Sorted Sets)              │    │
-│  │  zset: tasks:by_duration                              │    │
-│  │  - {task_id: duration_ms} (sorted by duration)        │    │
-│  │                                                        │    │
-│  │  Query slowest 10 tasks: ZREVRANGE 0 9 WITHSCORES    │    │
-│  │  Query 95th percentile: ZREVRANGE 0 <5% of total>    │    │
-│  └────────────────────────────────────────────────────────┘    │
-│                                                                 │
-│  ┌────────────────────────────────────────────────────────┐    │
-│  │  Agent Status (Redis Hashes)                          │    │
-│  │  key: agent:{agent_type}                              │    │
-│  │  - pid: process ID                                    │    │
-│  │  - status: running|crashed|stopped                    │    │
-│  │  - current_task: task_id or null                      │    │
-│  │  - last_heartbeat: timestamp                          │    │
-│  │  - tasks_completed: counter                           │    │
-│  │  - tasks_failed: counter                              │    │
-│  └────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────┘
-         ↓                    ↓                    ↓
-   Subscribers:       Subscribers:          Subscribers:
-   - code_developer   - project_manager     - Langfuse exporter
-   - project_manager  - architect           - Orchestrator dashboard
-   - assistant        - assistant           - All agents (coordination)
+         ↓               ↓               ↓               ↓
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│code_developer│ │project_mgr   │ │ architect    │ │  assistant   │
+│  Subprocess  │ │ Subprocess   │ │ Subprocess   │ │  Subprocess  │
+└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
 ```
 
 ---
@@ -577,43 +564,61 @@ class AgentProcess:
 
 ---
 
-### 3. Message Queue (Redis-Based)
+### 3. Message Queue (In-Memory, POC-072 Design)
 
 **File**: `coffee_maker/autonomous/message_queue.py`
 
-**Implementation**: **Redis** (production) with fallback to in-memory (development/testing)
+**Implementation**: **Python stdlib only** (multiprocessing.Queue + heapq + dict)
 
-**Dependencies**: `redis` (✅ pre-approved per ADR-013), `hiredis` (✅ pre-approved, faster parser)
+**Dependencies**: **None** (multiprocessing, heapq, uuid, datetime are Python stdlib)
 
 **API**:
 
 ```python
+import heapq
+import multiprocessing
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Dict, List, Optional
+
+
 class Message:
     """Inter-agent message."""
     sender: AgentType
     recipient: AgentType
     type: MessageType  # TASK_DELEGATE, STATUS_UPDATE, BUG_REPORT, etc.
     payload: dict
-    priority: int  # 1=highest, 10=lowest
-    timestamp: datetime
-    task_id: str  # Unique task identifier (UUID)
+    priority: int = 5  # 1=highest, 10=lowest
+    timestamp: datetime = field(default_factory=datetime.now)
+    task_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+
+    def __lt__(self, other):
+        """For heapq ordering (lower priority value = higher priority)."""
+        return self.priority < other.priority
+
 
 class MessageQueue:
-    """Redis-based inter-agent communication queue.
+    """In-memory inter-agent communication queue using Python stdlib.
 
-    Provides reliable, persistent message passing between agents.
-    Supports priority queuing, broadcast messages, and duration tracking.
+    Provides reliable message passing between agents with priority queuing
+    and duration tracking. Based on POC-072 validated design.
 
     Features:
-    - Persistent storage (survives daemon crashes)
-    - Priority queuing (3 priority levels: high/normal/low)
-    - Duration tracking (start time → completion time)
-    - Bottleneck analysis (slowest tasks via Redis Sorted Sets)
-    - Real-time observability (Redis Pub/Sub)
-    - Langfuse integration (automatic metrics export)
+    - Zero external dependencies (stdlib only)
+    - Priority queuing (heapq-based, O(log N) operations)
+    - Duration tracking (in-memory dict with task metadata)
+    - Bottleneck analysis (heapq of slowest tasks)
+    - Simple, debuggable architecture
+
+    Trade-offs:
+    - No persistence (messages lost on daemon crash)
+    - Single-machine only (no distributed coordination)
+    - Manual bottleneck tracking (no external sorted sets)
 
     Example:
-        >>> queue = MessageQueue(redis_url="redis://localhost:6379/0")
+        >>> queue = MessageQueue()
         >>> queue.send(Message(
         ...     sender=AgentType.ARCHITECT,
         ...     recipient=AgentType.CODE_DEVELOPER,
@@ -629,16 +634,18 @@ class MessageQueue:
         >>> queue.mark_completed(message.task_id, duration_ms=1500)
     """
 
-    def __init__(self, redis_url: str = "redis://localhost:6379/0"):
-        """Initialize Redis-based message queue.
+    def __init__(self):
+        """Initialize in-memory message queue."""
+        # Priority heap: (priority, message)
+        self._heap: List[tuple] = []
 
-        Args:
-            redis_url: Redis connection URL (default: localhost)
-        """
-        import redis
-        self.redis = redis.from_url(redis_url, decode_responses=True)
-        self.pubsub = self.redis.pubsub()
-        self.pubsub.subscribe("events:orchestrator")
+        # Task metadata: task_id → metadata dict
+        self._tasks: Dict[str, dict] = {}
+
+        # Bottleneck tracking: heap of (duration_ms, task_id)
+        # Keep top 100 slowest tasks
+        self._slowest_tasks: List[tuple] = []
+        self._max_slowest_tasks = 100
 
     def send(self, message: Message) -> None:
         """Send message to recipient's queue with priority.
@@ -647,69 +654,71 @@ class MessageQueue:
             message: Message to send
 
         Implementation:
-            1. Generate unique task_id (UUID)
-            2. Store task metadata in Redis Hash (task:{task_id})
-            3. Push task_id to recipient's priority queue (LPUSH)
-            4. Publish event to Pub/Sub channel
+            1. Generate task_id (if not already set)
+            2. Store task metadata in self._tasks
+            3. Push (priority, message) to heap
         """
-        import uuid
-        task_id = str(uuid.uuid4())
+        task_id = message.task_id
 
         # Store task metadata
-        self.redis.hset(f"task:{task_id}", mapping={
-            "sender": message.sender.value,
-            "recipient": message.recipient.value,
-            "type": message.type.value,
-            "payload": json.dumps(message.payload),
+        self._tasks[task_id] = {
+            "sender": message.sender,
+            "recipient": message.recipient,
+            "type": message.type,
+            "payload": message.payload,
             "priority": message.priority,
-            "timestamp": message.timestamp.isoformat(),
+            "timestamp": message.timestamp,
             "status": "queued",
-        })
+            "start_time": None,
+            "duration_ms": None,
+        }
 
-        # Push to appropriate priority queue
-        priority_level = self._get_priority_level(message.priority)
-        self.redis.lpush(f"queue:{priority_level}:{message.recipient.value}", task_id)
-
-        # Publish event
-        self.redis.publish("events:orchestrator", json.dumps({
-            "event": "task_queued",
-            "task_id": task_id,
-            "recipient": message.recipient.value,
-            "priority": message.priority,
-        }))
+        # Push to priority heap
+        heapq.heappush(self._heap, (message.priority, message))
 
     def get(self, recipient: AgentType, timeout: float = 1.0) -> Optional[Message]:
         """Get next message for recipient (highest priority first).
 
         Args:
             recipient: Agent to get messages for
-            timeout: Timeout in seconds (default: 1.0)
+            timeout: Timeout in seconds (ignored for in-memory queue)
 
         Returns:
             Next message or None if no messages available
 
         Implementation:
-            1. Check high priority queue first (RPOP queue:high:{agent})
-            2. If empty, check normal priority queue
-            3. If empty, check low priority queue
-            4. If task found, load metadata from Redis Hash
-            5. Return Message object
+            1. Pop all messages from heap
+            2. Find messages for this recipient
+            3. Return highest priority message for recipient
+            4. Push back all other messages
         """
-        # Check queues in priority order
-        for priority_level in ["high", "normal", "low"]:
-            task_id = self.redis.rpop(f"queue:{priority_level}:{recipient.value}")
-            if task_id:
-                # Load task metadata
-                task_data = self.redis.hgetall(f"task:{task_id}")
-                return Message(
-                    sender=AgentType(task_data["sender"]),
-                    recipient=AgentType(task_data["recipient"]),
-                    type=MessageType(task_data["type"]),
-                    payload=json.loads(task_data["payload"]),
-                    priority=int(task_data["priority"]),
-                    timestamp=datetime.fromisoformat(task_data["timestamp"]),
-                    task_id=task_id,
-                )
+        found_messages = []
+        other_messages = []
+
+        # Extract all messages
+        while self._heap:
+            priority, msg = heapq.heappop(self._heap)
+            if msg.recipient == recipient:
+                found_messages.append((priority, msg))
+            else:
+                other_messages.append((priority, msg))
+
+        # Push back messages not for this recipient
+        for item in other_messages:
+            heapq.heappush(self._heap, item)
+
+        # Return highest priority message for this recipient
+        if found_messages:
+            # Get message with lowest priority value (highest priority)
+            _, message = min(found_messages, key=lambda x: x[0])
+
+            # Push back other messages for this recipient
+            for item in found_messages:
+                if item[1] != message:
+                    heapq.heappush(self._heap, item)
+
+            return message
+
         return None
 
     def mark_started(self, task_id: str, agent: AgentType) -> None:
@@ -719,15 +728,9 @@ class MessageQueue:
             task_id: Task identifier
             agent: Agent starting the task
         """
-        self.redis.hset(f"task:{task_id}", mapping={
-            "status": "running",
-            "start_time": datetime.now().isoformat(),
-        })
-        self.redis.publish("events:orchestrator", json.dumps({
-            "event": "task_started",
-            "task_id": task_id,
-            "agent": agent.value,
-        }))
+        if task_id in self._tasks:
+            self._tasks[task_id]["status"] = "running"
+            self._tasks[task_id]["start_time"] = datetime.now()
 
     def mark_completed(self, task_id: str, duration_ms: int) -> None:
         """Mark task as completed, record duration, update bottleneck metrics.
@@ -736,23 +739,15 @@ class MessageQueue:
             task_id: Task identifier
             duration_ms: Task duration in milliseconds
         """
-        self.redis.hset(f"task:{task_id}", mapping={
-            "status": "complete",
-            "duration": duration_ms,
-            "completed_at": datetime.now().isoformat(),
-        })
+        if task_id in self._tasks:
+            self._tasks[task_id]["status"] = "complete"
+            self._tasks[task_id]["duration_ms"] = duration_ms
+            self._tasks[task_id]["completed_at"] = datetime.now()
 
-        # Update bottleneck analysis (sorted set by duration)
-        self.redis.zadd("tasks:by_duration", {task_id: duration_ms})
-
-        # Publish completion event
-        task_data = self.redis.hgetall(f"task:{task_id}")
-        self.redis.publish("events:orchestrator", json.dumps({
-            "event": "task_completed",
-            "task_id": task_id,
-            "agent": task_data["recipient"],
-            "duration_ms": duration_ms,
-        }))
+            # Update bottleneck tracking (keep top 100 slowest tasks)
+            heapq.heappush(self._slowest_tasks, (-duration_ms, task_id))
+            if len(self._slowest_tasks) > self._max_slowest_tasks:
+                heapq.heappop(self._slowest_tasks)
 
     def get_slowest_tasks(self, limit: int = 10) -> List[dict]:
         """Get slowest tasks for bottleneck analysis.
@@ -763,118 +758,85 @@ class MessageQueue:
         Returns:
             List of task metadata sorted by duration (slowest first)
         """
-        # Get task IDs sorted by duration (descending)
-        task_ids = self.redis.zrevrange("tasks:by_duration", 0, limit - 1, withscores=True)
+        import heapq
+
+        # Get top N slowest tasks (nlargest on negative durations)
+        slowest = heapq.nsmallest(limit, self._slowest_tasks)
 
         results = []
-        for task_id, duration_ms in task_ids:
-            task_data = self.redis.hgetall(f"task:{task_id}")
-            results.append({
-                "task_id": task_id,
-                "duration_ms": duration_ms,
-                "agent": task_data["recipient"],
-                "type": task_data["type"],
-                "timestamp": task_data["timestamp"],
-            })
+        for neg_duration, task_id in slowest:
+            duration_ms = -neg_duration
+            if task_id in self._tasks:
+                task = self._tasks[task_id]
+                results.append({
+                    "task_id": task_id,
+                    "duration_ms": duration_ms,
+                    "agent": task["recipient"].value,
+                    "type": task["type"].value,
+                    "timestamp": task["timestamp"].isoformat(),
+                })
+
         return results
 
-    def broadcast(self, message: Message) -> None:
-        """Broadcast message to all agents via Pub/Sub.
+    def has_messages(self) -> bool:
+        """Check if queue has messages."""
+        return len(self._heap) > 0
 
-        Args:
-            message: Message to broadcast
-        """
-        self.redis.publish("events:orchestrator", json.dumps({
-            "event": "broadcast",
-            "sender": message.sender.value,
-            "type": message.type.value,
-            "payload": message.payload,
-        }))
+    def size(self) -> int:
+        """Get queue size."""
+        return len(self._heap)
 
-    def _get_priority_level(self, priority: int) -> str:
-        """Map priority (1-10) to priority level (high/normal/low).
-
-        Args:
-            priority: Priority value (1=highest, 10=lowest)
-
-        Returns:
-            Priority level: "high" (1-3), "normal" (4-6), "low" (7-10)
-        """
-        if priority <= 3:
-            return "high"
-        elif priority <= 6:
-            return "normal"
-        else:
-            return "low"
+    def stop(self) -> None:
+        """Stop message queue (cleanup)."""
+        self._heap.clear()
+        self._tasks.clear()
+        self._slowest_tasks.clear()
 ```
 
-**Redis Data Structures**:
+**In-Memory Data Structures**:
 
+```python
+# Task Metadata (dict)
+_tasks = {
+    "task_uuid_123": {
+        "sender": AgentType.ARCHITECT,
+        "recipient": AgentType.CODE_DEVELOPER,
+        "type": MessageType.TASK_DELEGATE,
+        "payload": {"spec_id": "SPEC-071"},
+        "priority": 2,
+        "timestamp": datetime(2025, 10, 18, 10, 30, 0),
+        "status": "queued" | "running" | "complete" | "failed",
+        "start_time": datetime(2025, 10, 18, 10, 30, 5),  # when started
+        "duration_ms": 1500,  # when completed
+        "completed_at": datetime(2025, 10, 18, 10, 30, 6, 500),
+    }
+}
+
+# Priority Heap (list of tuples)
+_heap = [
+    (1, Message(...)),  # priority=1 (highest)
+    (2, Message(...)),  # priority=2
+    (5, Message(...)),  # priority=5
+]
+
+# Bottleneck Tracking (max heap of slowest tasks)
+_slowest_tasks = [
+    (-3500, "task_id_1"),  # 3500ms (slowest)
+    (-2800, "task_id_2"),  # 2800ms
+    (-1500, "task_id_3"),  # 1500ms
+]
+# Query: heapq.nsmallest(10, _slowest_tasks) → top 10 slowest
 ```
-# Task Metadata (Hash)
-task:{uuid}
-├── sender: "architect"
-├── recipient: "code_developer"
-├── type: "TASK_DELEGATE"
-├── payload: '{"spec_id": "SPEC-071"}'
-├── priority: 2
-├── timestamp: "2025-10-18T10:30:00"
-├── status: "queued" | "running" | "complete" | "failed"
-├── start_time: "2025-10-18T10:30:05" (when started)
-├── duration: 1500 (milliseconds, when completed)
-└── completed_at: "2025-10-18T10:30:06.5"
 
-# Priority Queues (Lists)
-queue:high:code_developer → [task_id_1, task_id_2, ...]
-queue:normal:code_developer → [task_id_3, task_id_4, ...]
-queue:low:code_developer → [task_id_5, task_id_6, ...]
+**POC-072 Validation**:
 
-# Bottleneck Analysis (Sorted Set)
-tasks:by_duration
-├── task_id_1: 3500 (ms)
-├── task_id_2: 2800 (ms)
-└── task_id_3: 1500 (ms)
+POC-072 already validates this design with 4 passing tests:
+- ✅ Message queue priority ordering
+- ✅ Agent process lifecycle (start/stop)
+- ✅ Health monitoring (crash detection)
+- ✅ Graceful shutdown
 
-# Pub/Sub Channel
-events:orchestrator
-└── {event: "task_completed", task_id: "...", duration_ms: 1500}
-```
-
-**Migration from POC-072**:
-
-POC-072 uses in-memory `multiprocessing.Queue`. Migration to Redis requires:
-
-1. **Install dependencies** (✅ pre-approved):
-   ```bash
-   poetry add redis hiredis
-   ```
-
-2. **Start Redis** (development):
-   ```bash
-   docker run -d -p 6379:6379 redis:7-alpine
-   # Or: brew install redis && redis-server
-   ```
-
-3. **Update TeamDaemon** to use Redis-based MessageQueue:
-   ```python
-   # Before (POC-072):
-   self.message_queue = MessageQueue()  # In-memory
-
-   # After (Production):
-   self.message_queue = MessageQueue(
-       redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0")
-   )
-   ```
-
-4. **Zero changes to agent code** - `MessageQueue` API remains identical
-
-5. **Fallback for testing** - Use FakeRedis for unit tests (no Redis server required)
-
-**Performance**:
-- Redis throughput: 100K+ ops/sec (far exceeds orchestrator needs ~10-50 msg/min)
-- Latency: <1ms for `LPUSH`/`RPOP` operations
-- Memory: ~1KB per task (10K tasks = 10MB)
-- Persistence: AOF (Append-Only File) ensures durability
+**No migration needed** - POC-072 code can be used directly as foundation
 
 ---
 
@@ -1001,30 +963,28 @@ Each agent needs a daemon implementation:
 
 ## Implementation Plan
 
-### Phase 1: Core Infrastructure (Week 1, 18-22 hours)
+### Phase 1: Core Infrastructure (Week 1, 14-18 hours)
 
 **Day 1-2: Team Daemon Framework** (8-10 hours)
-- Create `TeamDaemon` class
+- Create `TeamDaemon` class (based on POC-072)
 - Implement agent process management
 - Add health monitoring
 - Implement graceful shutdown
 
-**Day 3: Redis-Based Message Queue** (6-7 hours) ⭐ UPDATED
-- Install Redis dependencies (`poetry add redis hiredis`) ✅ Pre-approved
-- Implement `MessageQueue` class with Redis backend
-  - Task queuing (LPUSH/RPOP with priority levels)
-  - Task metadata storage (Redis Hashes)
+**Day 3: In-Memory Message Queue** (3-4 hours) ⭐ SIMPLIFIED
+- Port POC-072 `MessageQueue` to production code
+  - Priority heap (heapq) with recipient filtering
+  - Task metadata storage (dict)
   - Duration tracking (`mark_started`, `mark_completed`)
-  - Bottleneck analysis (Redis Sorted Sets)
-  - Pub/Sub for real-time events
-- Add FakeRedis fallback for testing (no server required)
-- Create `RedisConfig` dataclass for connection settings
+  - Bottleneck analysis (heapq of slowest tasks)
+- Add type hints and production-quality error handling
+- **Zero dependencies** - stdlib only
 
-**Day 4: Testing & Integration** (4-5 hours)
-- Unit tests for TeamDaemon (with FakeRedis)
+**Day 4: Testing & Integration** (3-4 hours)
+- Unit tests for TeamDaemon (based on POC-072 tests)
 - Integration tests for agent spawning
 - Health check tests
-- Redis message queue tests (priority ordering, persistence)
+- Message queue tests (priority ordering, bottleneck tracking)
 
 ### Phase 2: Agent Daemons (Week 2, 12-16 hours)
 
@@ -1064,7 +1024,7 @@ Each agent needs a daemon implementation:
 
 **Goal**: Identify slow tasks and agent performance bottlenecks automatically
 
-**Implementation**: Redis Sorted Sets + Pub/Sub
+**Implementation**: In-memory heapq with task metadata dict
 
 ```python
 # In TeamDaemon._coordination_loop()
@@ -1082,73 +1042,81 @@ def _check_bottlenecks(self) -> None:
             # Send notification to project_manager
             self._notify_bottleneck(task)
 
-    # Calculate percentiles
+    # Calculate percentiles (from in-memory data)
     p50, p95, p99 = self._get_percentiles()
     logger.info(f"Task durations: p50={p50}ms, p95={p95}ms, p99={p99}ms")
 ```
 
 ### Bottleneck Metrics Dashboard
 
-**Query Examples**:
+**Query Examples** (in-memory operations):
 
 ```python
-# Get slowest 10 tasks
+# Get slowest 10 tasks (from heapq)
 slowest = queue.get_slowest_tasks(limit=10)
 # → [{task_id, duration_ms, agent, type, timestamp}, ...]
 
-# Get average duration per agent
+# Get average duration per agent (from task metadata dict)
 for agent_type in AgentType:
-    tasks = redis.keys(f"task:*")
     agent_tasks = [
-        redis.hget(task, "duration")
-        for task in tasks
-        if redis.hget(task, "recipient") == agent_type.value
+        task["duration_ms"]
+        for task in queue._tasks.values()
+        if task["recipient"] == agent_type and task["duration_ms"] is not None
     ]
     avg_duration = sum(agent_tasks) / len(agent_tasks) if agent_tasks else 0
     print(f"{agent_type.value}: avg={avg_duration}ms")
 
-# Get 95th percentile duration
-total_tasks = redis.zcard("tasks:by_duration")
-p95_index = int(total_tasks * 0.05)  # Top 5%
-p95_tasks = redis.zrevrange("tasks:by_duration", 0, p95_index, withscores=True)
-p95_duration = p95_tasks[-1][1] if p95_tasks else 0
+# Get 95th percentile duration (from sorted slowest tasks)
+all_durations = [
+    task["duration_ms"]
+    for task in queue._tasks.values()
+    if task["duration_ms"] is not None
+]
+all_durations.sort()
+p95_index = int(len(all_durations) * 0.95)
+p95_duration = all_durations[p95_index] if all_durations else 0
 print(f"95th percentile: {p95_duration}ms")
 ```
 
 ### Langfuse Integration for Observability
 
-**Redis Pub/Sub → Langfuse Exporter**:
+**In-Memory Events → Langfuse Exporter**:
 
 ```python
 class LangfuseExporter:
-    """Export Redis events to Langfuse for observability."""
+    """Export task completion events to Langfuse for observability."""
 
-    def __init__(self, redis_url: str, langfuse_client):
-        self.redis = redis.from_url(redis_url)
-        self.pubsub = self.redis.pubsub()
-        self.pubsub.subscribe("events:orchestrator")
+    def __init__(self, message_queue: MessageQueue, langfuse_client):
+        self.queue = message_queue
         self.langfuse = langfuse_client
+        self._last_exported_tasks = set()
 
-    def run(self):
-        """Listen to Redis events and export to Langfuse."""
-        for message in self.pubsub.listen():
-            if message["type"] == "message":
-                event = json.loads(message["data"])
+    def export_new_completions(self):
+        """Export newly completed tasks to Langfuse."""
+        for task_id, task_data in self.queue._tasks.items():
+            if (
+                task_data["status"] == "complete"
+                and task_id not in self._last_exported_tasks
+            ):
+                # Export to Langfuse
+                self.langfuse.trace(
+                    name=f"task_{task_id}",
+                    metadata={
+                        "agent": task_data["recipient"].value,
+                        "type": task_data["type"].value,
+                        "duration_ms": task_data["duration_ms"],
+                        "timestamp": task_data["timestamp"].isoformat(),
+                    },
+                )
+                self._last_exported_tasks.add(task_id)
 
-                if event["event"] == "task_completed":
-                    # Export to Langfuse
-                    self.langfuse.trace(
-                        name=f"task_{event['task_id']}",
-                        metadata={
-                            "agent": event["agent"],
-                            "duration_ms": event["duration_ms"],
-                            "timestamp": datetime.now().isoformat(),
-                        },
-                    )
-
-# Start in background thread
-exporter = LangfuseExporter(redis_url, langfuse_client)
-threading.Thread(target=exporter.run, daemon=True).start()
+# Run periodically in background thread
+exporter = LangfuseExporter(message_queue, langfuse_client)
+def export_loop():
+    while True:
+        exporter.export_new_completions()
+        time.sleep(60)  # Export every 60 seconds
+threading.Thread(target=export_loop, daemon=True).start()
 ```
 
 ### Alerting Rules
@@ -1171,7 +1139,7 @@ bottleneck_alerts:
   max_queue_depth: 100  # tasks
 ```
 
-**Implementation**:
+**Implementation** (in-memory operations):
 
 ```python
 def _check_alerts(self):
@@ -1195,12 +1163,7 @@ def _check_alerts(self):
         )
 
     # Check queue depth
-    queue_depth = sum([
-        self.redis.llen(f"queue:high:{agent.value}") +
-        self.redis.llen(f"queue:normal:{agent.value}") +
-        self.redis.llen(f"queue:low:{agent.value}")
-        for agent in AgentType
-    ])
+    queue_depth = self.message_queue.size()
     if queue_depth > self.config.max_queue_depth:
         self._send_alert(
             severity="critical",
@@ -1261,9 +1224,9 @@ poetry run team-daemon metrics --agent code_developer
 # - p95 duration: 8,500ms
 # - Current queue depth: 5 (high: 2, normal: 2, low: 1)
 
-# View real-time Redis events ⭐ NEW
-poetry run team-daemon events --follow
-# Output (streaming):
+# View task completion events (in-memory log)
+poetry run team-daemon events --tail 100
+# Output (last 100 completed tasks):
 # [10:30:05] task_queued: architect.create_spec (priority=2)
 # [10:30:10] task_started: architect.create_spec
 # [10:32:45] task_completed: architect.create_spec (duration=155,000ms)
@@ -1290,11 +1253,11 @@ poetry run team-daemon stop --force
 | **Auto-Restart Time** | <5 seconds | Time from crash to restart |
 | **Work Coordination** | >90% | Tasks routed to correct agent |
 | **Resource Usage** | <500MB RAM | Total memory for all agents |
-| **Inter-Agent Latency** | <1 second | Message queue latency (Redis LPUSH/RPOP) |
-| **Message Persistence** ⭐ NEW | 100% | Messages survive daemon crashes (Redis AOF) |
+| **Inter-Agent Latency** | <100ms | Message queue latency (in-memory heapq) |
+| **Message Persistence** ⚠️ TRADE-OFF | 0% | Messages lost on daemon crash (in-memory only) |
 | **Bottleneck Detection** ⭐ NEW | <5 min | Time to identify slow tasks (p95 > 30s) |
 | **Task Duration Tracking** ⭐ NEW | 100% | All tasks have start/completion timestamps |
-| **Observability** ⭐ NEW | Real-time | Live event stream via Redis Pub/Sub |
+| **Observability** ⭐ NEW | Periodic | Export to Langfuse every 60s |
 
 ---
 
@@ -1355,17 +1318,11 @@ team:
       enabled: true
 
   message_queue:
-    backend: redis  # Production: redis, Development: memory, Testing: fakeredis
-    redis_url: redis://localhost:6379/0  # Or use REDIS_URL env var
-    # Connection pooling
-    max_connections: 50
-    socket_timeout: 5  # seconds
-    socket_connect_timeout: 5  # seconds
-    # Persistence
-    aof_enabled: true  # Append-Only File for durability
-    # Retention
-    task_ttl: 604800  # 7 days (tasks expire after 7 days)
-    max_tasks: 10000  # Max tasks in bottleneck analysis
+    backend: memory  # In-memory (stdlib only, zero dependencies)
+    # Bottleneck tracking
+    max_slowest_tasks: 100  # Keep top 100 slowest tasks for analysis
+    # Task retention (for observability)
+    max_completed_tasks: 10000  # Max completed tasks to keep in memory
 
   health_check:
     interval: 30  # seconds
@@ -1378,26 +1335,15 @@ team:
   observability:
     langfuse:
       enabled: true
-      # Subscribe to Redis Pub/Sub for real-time metrics
-      pubsub_channel: events:orchestrator
-      # Export metrics every N seconds
-      export_interval: 60
+      # Export completed tasks to Langfuse periodically
+      export_interval: 60  # seconds
 ```
 
 **Environment Variables**:
 
 ```bash
-# Redis connection (overrides config)
-export REDIS_URL="redis://localhost:6379/0"
-
-# For production (managed Redis):
-export REDIS_URL="redis://user:password@redis.example.com:6379/0"
-
-# For development (local Redis):
-export REDIS_URL="redis://localhost:6379/0"
-
-# For testing (FakeRedis, no server required):
-export REDIS_BACKEND="fakeredis"
+# No external dependencies - all configuration via YAML or code
+# (No Redis, no external services)
 ```
 
 ---
