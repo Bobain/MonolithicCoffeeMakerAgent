@@ -9,8 +9,8 @@
 
 ## Overview
 
-The **ACE (Agent Context Evolving) framework** uses three agents to create a continuous improvement loop:
-- **Generator**: Captures execution traces
+The **ACE (Agent Context Evolving) framework** uses three components to create a continuous improvement loop:
+- **trace-execution Skill**: ALL agents use this skill to capture their execution traces automatically
 - **Reflector**: Analyzes traces, extracts insights (delta items)
 - **Curator**: Maintains evolving playbooks based on insights
 
@@ -22,22 +22,28 @@ This guideline defines how the **curator participates in skill evolution** - gui
 
 ### Current ACE Implementation
 
-**1. Generator** (`docs/generator/`)
-- Captures all agent executions as traces
+**1. trace-execution Skill** (`.claude/skills/trace-execution.md`)
+- **USED BY ALL AGENTS** - Not a separate agent!
+- Automatically captures execution traces as agents work
 - Records: Task, duration, files accessed, decisions made, outcomes
-- Output: Execution trace files (timestamped)
+- Output: Execution trace files in `docs/generator/` (timestamped)
+- **Why a skill?**:
+  - Every agent generates traces automatically during their work
+  - Execution context already available (no observation needed)
+  - Simpler architecture (fewer moving parts)
+  - More accurate traces (generated at moment of execution)
 
-**2. Reflector** (`docs/reflector/`)
-- Analyzes execution traces
+**2. Reflector** (Agent - analyzes traces)
+- Analyzes execution traces from `docs/generator/`
 - Identifies patterns, inefficiencies, bottlenecks
 - Extracts delta items (insights about what worked/didn't)
-- Output: Delta items (insights files)
+- Output: Delta items (insights files) in `docs/reflector/`
 
-**3. Curator** (`docs/curator/`)
+**3. Curator** (Agent - maintains playbooks)
 - Synthesizes delta items into playbooks
 - Maintains evolving best practices
 - Recommends process improvements
-- Output: Playbooks (actionable patterns)
+- Output: Playbooks (actionable patterns) in `docs/curator/`
 
 ---
 
@@ -50,18 +56,24 @@ This guideline defines how the **curator participates in skill evolution** - gui
 │                     SKILL EVOLUTION LOOP                         │
 └─────────────────────────────────────────────────────────────────┘
 
-1. OBSERVE (Generator)
+1. OBSERVE (trace-execution Skill - MANDATORY FOR ALL AGENTS)
    ├─ Agent executes task (e.g., architect creates spec)
-   ├─ Generator captures execution trace
-   └─ Records: Time spent (117 min), steps taken, files accessed
+   ├─ Agent AUTOMATICALLY uses trace-execution skill at:
+   │  - Startup: start_execution_trace()
+   │  - During work: log_trace_event() at key points
+   │  - Shutdown: end_execution_trace()
+   ├─ trace-execution captures EXACT execution trace
+   └─ Records: Time spent (117 min), steps taken, files accessed, bottlenecks
 
-2. REFLECT (Reflector)
-   ├─ Analyzes execution traces over time
+2. REFLECT (Reflector Agent)
+   ├─ Reads execution traces from docs/generator/
+   ├─ Analyzes traces over time
    ├─ Identifies pattern: "Spec creation always takes 90-150 min"
    ├─ Compares to similar tasks: "Code search: 15-30 min of spec time"
    └─ Creates delta item: "BOTTLENECK: Spec creation - code search is manual and repetitive"
 
-3. CURATE (Curator)
+3. CURATE (Curator Agent)
+   ├─ Reads delta items from docs/reflector/
    ├─ Synthesizes multiple delta items
    ├─ Identifies skill opportunity: "Automate code discovery for specs"
    ├─ Creates playbook entry:
@@ -69,22 +81,28 @@ This guideline defines how the **curator participates in skill evolution** - gui
    │   relevant files automatically. Reduces spec time by 78%."
    └─ Recommends: "Create spec-creation-automation skill"
 
-4. PROPOSE (project_manager)
-   ├─ Reads curator playbooks
+4. PROPOSE (project_manager Agent)
+   ├─ Reads curator playbooks from docs/curator/
    ├─ Identifies top recommendations
    ├─ Collaborates with architect to design skill
    └─ Proposes skill to user for approval
 
-5. IMPLEMENT (code_developer)
+5. IMPLEMENT (code_developer Agent)
    ├─ Reads technical spec (from architect)
    ├─ Implements skill
    └─ Deploys skill for agent use
 
-6. MEASURE (Generator)
+6. MEASURE (trace-execution Skill - AUTOMATIC)
    ├─ Agent uses new skill
-   ├─ Generator captures execution trace with skill usage
-   ├─ Records: Time saved (92 min), accuracy (90%+)
+   ├─ trace-execution AUTOMATICALLY captures usage trace
+   ├─ Records: Time saved (92 min), accuracy (90%+), skill effectiveness
    └─ Loop continues (measure effectiveness, refine skill)
+
+**CRITICAL**: ALL agents MUST use trace-execution skill at EVERY execution.
+This is enforced by embedding trace-execution in startup skills:
+- architect-startup.md → calls trace-execution automatically
+- code-developer-startup.md → calls trace-execution automatically
+- project-manager-startup.md → calls trace-execution automatically
 ```
 
 ---

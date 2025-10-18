@@ -57,22 +57,32 @@ class TestSkillLoader:
         skills = get_available_skills()
 
         assert isinstance(skills, list)
-        assert len(skills) >= 10  # Should have at least 10 skills now (7 + 3 startup skills)
+        assert len(skills) >= 11  # Should have at least 11 skills now (7 + 3 startup + 1 universal)
 
-        # Should include our created skills
+        # Universal skills
+        assert SkillNames.TRACE_EXECUTION in skills
+
+        # Architect skills
         assert SkillNames.ARCHITECTURE_REUSE_CHECK in skills
         assert SkillNames.PROACTIVE_REFACTORING_ANALYSIS in skills
+        assert SkillNames.ARCHITECT_STARTUP in skills
+
+        # code_developer skills
         assert SkillNames.TEST_FAILURE_ANALYSIS in skills
-        assert SkillNames.ROADMAP_HEALTH_CHECK in skills
         assert SkillNames.DOD_VERIFICATION in skills
         assert SkillNames.GIT_WORKFLOW_AUTOMATION in skills
-        assert SkillNames.PR_MONITORING_ANALYSIS in skills
-        assert SkillNames.ARCHITECT_STARTUP in skills
         assert SkillNames.CODE_DEVELOPER_STARTUP in skills
+
+        # project_manager skills
+        assert SkillNames.ROADMAP_HEALTH_CHECK in skills
+        assert SkillNames.PR_MONITORING_ANALYSIS in skills
         assert SkillNames.PROJECT_MANAGER_STARTUP in skills
 
     def test_skill_names_enum(self):
         """Test SkillNames enum has expected values."""
+        # Universal skills
+        assert hasattr(SkillNames, "TRACE_EXECUTION")
+
         # Architect skills
         assert hasattr(SkillNames, "ARCHITECTURE_REUSE_CHECK")
         assert hasattr(SkillNames, "PROACTIVE_REFACTORING_ANALYSIS")
@@ -90,6 +100,7 @@ class TestSkillLoader:
         assert hasattr(SkillNames, "PROJECT_MANAGER_STARTUP")
 
         # Verify values
+        assert SkillNames.TRACE_EXECUTION == "trace-execution"
         assert SkillNames.ARCHITECTURE_REUSE_CHECK == "architecture-reuse-check"
         assert SkillNames.PROACTIVE_REFACTORING_ANALYSIS == "proactive-refactoring-analysis"
         assert SkillNames.ARCHITECT_STARTUP == "architect-startup"

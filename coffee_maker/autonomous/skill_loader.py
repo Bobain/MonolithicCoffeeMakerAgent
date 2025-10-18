@@ -23,6 +23,9 @@ logger = logging.getLogger(__name__)
 class SkillNames:
     """Enum-like class for skill names (prevents typos)."""
 
+    # Universal skills (ALL agents)
+    TRACE_EXECUTION = "trace-execution"  # ACE generator skill - used by ALL agents
+
     # Architect skills
     ARCHITECTURE_REUSE_CHECK = "architecture-reuse-check"
     PROACTIVE_REFACTORING_ANALYSIS = "proactive-refactoring-analysis"
