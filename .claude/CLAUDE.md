@@ -166,6 +166,79 @@ prompt = load_prompt(PromptNames.CREATE_TECHNICAL_SPEC, {
   - `milestone-*`: Major features/epics complete
   - `stable-v*.*.*`: Production-ready releases (semantic versioning)
 
+### Dependency Management ⭐ NEW (ADR-013)
+**IMPORTANT**: Three-tier dependency approval system (SPEC-070)
+
+```python
+# ❌ DON'T: code_developer cannot modify pyproject.toml directly
+subprocess.run(["poetry", "add", "some-package"])
+
+# ✅ DO: Use DependencyChecker to determine approval workflow
+from coffee_maker.utils.dependency_checker import DependencyChecker, ApprovalStatus
+
+checker = DependencyChecker()
+status = checker.get_approval_status("pytest-timeout")
+
+if status == ApprovalStatus.PRE_APPROVED:
+    # Auto-approve (2-5 min, NO user approval)
+    subprocess.run(["poetry", "add", "pytest-timeout"])
+    # Create minimal ADR (automated)
+
+elif status == ApprovalStatus.NEEDS_REVIEW:
+    # Delegate to architect for review (20-30 min)
+    # architect uses dependency-conflict-resolver skill
+    # User approval required
+
+elif status == ApprovalStatus.BANNED:
+    # Reject immediately with alternatives
+    alternatives = checker.get_alternatives("pytest-timeout")
+    print(f"Banned package. Use alternatives: {alternatives}")
+```
+
+**Three Tiers**:
+1. **PRE-APPROVED** (63 packages): Auto-add, no user approval
+   - Testing: pytest, pytest-cov, pytest-xdist, mypy, radon, etc. (17 packages)
+   - Formatting: black, autoflake, isort, ruff, pre-commit, etc. (8 packages)
+   - Observability: langfuse, opentelemetry-*, prometheus-client, etc. (6 packages)
+   - Performance: cachetools, redis, hiredis, diskcache, msgpack (5 packages)
+   - CLI: click, typer, rich, prompt-toolkit, etc. (7 packages)
+   - Data Validation: pydantic, marshmallow, jsonschema, etc. (5 packages)
+   - HTTP: requests, httpx, urllib3, aiohttp (4 packages)
+   - Date/Time: python-dateutil, pytz (2 packages)
+   - Config: python-dotenv, pyyaml, toml (3 packages)
+   - AI/ML: anthropic, openai, tiktoken, langchain, etc. (6 packages)
+
+2. **NEEDS REVIEW**: Requires architect evaluation + user approval (existing workflow)
+   - architect uses dependency-conflict-resolver skill (15 min)
+   - User approves via user_listener (5-10 min)
+   - Total: 20-30 minutes
+
+3. **BANNED**: Auto-reject with alternatives (immediate)
+   - GPL-licensed: mysql-connector-python → Use pymysql or aiomysql
+   - Unmaintained: nose → Use pytest
+   - High-CVE packages (>5 critical vulnerabilities)
+
+**CLI Command**:
+```bash
+# Check if package is pre-approved
+poetry run project-manager check-dependency pytest-timeout
+# → ✅ pytest-timeout is PRE-APPROVED (version: >=2.0,<3.0)
+```
+
+**Pre-Commit Hook**:
+- Automatically checks pyproject.toml for unapproved dependencies
+- Blocks commits with BANNED or NEEDS_REVIEW packages
+- See: `.pre-commit-config.yaml` (check-dependencies hook)
+
+**Time Savings**:
+- Pre-approved: 2-5 min (vs. 20-30 min with user approval)
+- Per month: 0.9-1.4 hours saved (3-5 pre-approved additions/month)
+- Per year: 10.8-16.8 hours saved
+
+**References**:
+- [SPEC-070: Dependency Pre-Approval Matrix](docs/architecture/specs/SPEC-070-dependency-pre-approval-matrix.md)
+- [ADR-013: Dependency Pre-Approval Matrix](docs/architecture/decisions/ADR-013-dependency-pre-approval-matrix.md)
+
 ---
 
 ## Key Workflows
