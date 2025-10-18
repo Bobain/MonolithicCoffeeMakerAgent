@@ -195,7 +195,7 @@ The daemon will skip this priority in future iterations.
 
         # PRIORITY 4: Log CFR-013 compliance
         self.status.report_activity(
-            ActivityType.INFO,
+            ActivityType.STATUS_UPDATE,
             "CFR-013 validated: On roadmap branch",
             details={"branch": "roadmap"},
         )
