@@ -105,6 +105,105 @@ PRIORITY 2: Project Manager with UI ← Current focus
 ### PRIORITY 10: Standalone user-listener UI Command ✅ Complete
 
 **UPDATE 2025-10-17**: ✅ US-045 COMPLETE - Technical spec exists, ready for implementation!
+
+---
+
+### PRIORITY 11: US-072 - Design Orchestrator Agent Architecture 📝 Planned
+
+**Status**: 📝 Planned - PHASE 1 FOUNDATION
+
+See [US-072](#us-072-design-orchestrator-agent-architecture) for full details.
+
+**Strategic Value**: Foundation for Phase 1, has SPEC-072 + POC-072 ready
+
+---
+
+### PRIORITY 12: US-047 - Enforce CFR-008 Architect-Only Spec Creation (Phase 2) 📝 Planned
+
+**Status**: 📝 Planned - CRITICAL (Role Boundaries)
+
+See [US-047](#us-047-enforce-cfr-008-architect-only-spec-creation) for full details.
+
+**Strategic Value**: CRITICAL CFR enforcement, establishes clear role boundaries
+
+---
+
+### PRIORITY 13: US-048 - Enforce CFR-009 Silent Background Agents 📝 Planned
+
+**Status**: 📝 Planned - HIGH PRIORITY (User Experience)
+
+See [US-048](#us-048-enforce-cfr-009-silent-background-agents) for full details.
+
+**Strategic Value**: User experience improvement, complements US-047
+
+---
+
+### PRIORITY 14: US-049 - Architect Continuous Spec Improvement Loop (CFR-010) 📝 Planned
+
+**Status**: 📝 Planned - HIGH PRIORITY (Quality & Efficiency)
+
+See [US-049](#us-049-architect-continuous-spec-improvement-loop-cfr-010) for full details.
+
+**Strategic Value**: Continuous quality improvement, depends on US-047
+
+**Dependencies**: US-047 must be complete
+
+---
+
+### PRIORITY 15: US-054 - Architect Daily Integration of code-searcher Findings (CFR-011) 📝 Planned
+
+**Status**: 📝 Planned - CRITICAL (CFR-011 Enforcement)
+
+See [US-054](#us-054-architect-daily-integration-of-code-searcher-findings-cfr-011) for full details.
+
+**Strategic Value**: CRITICAL CFR enforcement, quality improvement loop
+
+---
+
+### PRIORITY 16: US-050 - Architect Creates POCs for Complex Implementations 📝 Planned
+
+**Status**: 📝 Planned - HIGH PRIORITY (Quality & Risk Reduction)
+
+See [US-050](#us-050-architect-creates-pocs-for-complex-implementations) for full details.
+
+**Strategic Value**: Risk reduction, proof-of-concept validation before implementation
+
+---
+
+### PRIORITY 17: US-055 - Claude Skills Integration Phase 1 📝 Planned
+
+**Status**: 📝 Planned - HIGH PRIORITY (Infrastructure + 60-70% Time Savings)
+
+See [US-055](#us-055-claude-skills-integration---phase-1-foundation--high-value-skills) for full details.
+
+**Strategic Value**: Code Execution Tool integration, foundation for massive time savings
+
+**Note**: Different from completed ACE skills (Phase 0) - this uses Claude's Code Execution Tool
+
+---
+
+### PRIORITY 18: US-056 - Claude Skills Integration Phase 2 📝 Planned
+
+**Status**: 📝 Planned - MEDIUM-HIGH PRIORITY
+
+See [US-056](#us-056-claude-skills-integration---phase-2-medium-value-skills) for full details.
+
+**Strategic Value**: Expansion of Code Execution Tool skills
+
+**Dependencies**: US-055 (Phase 1) must be complete
+
+---
+
+### PRIORITY 19: US-057 - Claude Skills Integration Phase 3 📝 Planned
+
+**Status**: 📝 Planned - MEDIUM PRIORITY (Polish + Optimization)
+
+See [US-057](#us-057-claude-skills-integration---phase-3-polish--optimization) for full details.
+
+**Strategic Value**: Polish and optimization of Code Execution Tool integration
+
+**Dependencies**: US-056 (Phase 2) must be complete
+
 ```
 
 **Remember**: The daemon trusts this roadmap completely. Keep it organized, prioritized, and up-to-date! 🎯
@@ -112,6 +211,8 @@ PRIORITY 2: Project Manager with UI ← Current focus
 ---
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
+
+**CURRENT PRIORITY**: PRIORITY 11 - US-072 Design Orchestrator Agent Architecture
 
 **PHASE 0: MAXIMUM code_developer EFFICIENCY** ⚡ ✅ **COMPLETE!**
 
@@ -26354,6 +26455,8 @@ This priority addresses the architectural mismatch between documentation (user_l
 
 ### US-047: Enforce CFR-008 Architect-Only Spec Creation
 
+**PRIORITY**: 12 (CRITICAL - Role Boundaries)
+
 **Status**: 📝 Planned - CRITICAL (Role Boundaries)
 
 **Created**: 2025-10-16
@@ -26515,6 +26618,8 @@ This is a **Critical Functional Requirement** that must be enforced to maintain 
 
 ### US-048: Enforce CFR-009 Silent Background Agents
 
+**PRIORITY**: 13 (HIGH - User Experience)
+
 **Status**: 📝 Planned - HIGH PRIORITY (User Experience)
 
 **Created**: 2025-10-16
@@ -26666,6 +26771,8 @@ This is a quick win that significantly improves user experience. Background agen
 ---
 
 ### US-049: Architect Continuous Spec Improvement Loop (CFR-010)
+
+**PRIORITY**: 14 (HIGH - Quality & Efficiency)
 
 **Status**: 📝 Planned - HIGH PRIORITY (Quality & Efficiency)
 
@@ -26832,6 +26939,8 @@ This is the **continuous improvement loop** that ensures architectural quality d
 ---
 
 ### US-054: Architect Daily Integration of code-searcher Findings (CFR-011)
+
+**PRIORITY**: 15 (CRITICAL - CFR-011 Enforcement)
 
 **Status**: 📝 Planned - CRITICAL (CFR-011 Enforcement)
 
@@ -27069,6 +27178,8 @@ class ArchitectDailyRoutine:
 
 ### US-055: Claude Skills Integration - Phase 1 (Foundation + High-Value Skills)
 
+**PRIORITY**: 17 (HIGH - Infrastructure + 60-70% Time Savings)
+
 **Status**: 📝 Planned - HIGH PRIORITY ⭐
 
 **Created**: 2025-10-17
@@ -27227,6 +27338,8 @@ Skills **complement** prompts (not replace):
 
 ### US-056: Claude Skills Integration - Phase 2 (Medium-Value Skills)
 
+**PRIORITY**: 18 (MEDIUM-HIGH)
+
 **Status**: 📝 Planned - MEDIUM-HIGH PRIORITY
 
 **Created**: 2025-10-17
@@ -27268,6 +27381,8 @@ As an autonomous agent, I want additional skills for strategic workflows (ROADMA
 ---
 
 ### US-057: Claude Skills Integration - Phase 3 (Polish + Optimization)
+
+**PRIORITY**: 19 (MEDIUM - Polish + Optimization)
 
 **Status**: 📝 Planned - MEDIUM PRIORITY
 
@@ -29459,6 +29574,8 @@ As a project_manager agent, I need PR monitoring skill, so that I can track GitH
 
 ### US-072: Design Orchestrator Agent Architecture
 
+**PRIORITY**: 11 (PHASE 1 FOUNDATION) ⭐ **FIRST PRIORITY AFTER PHASE 0**
+
 **Status**: 📝 Planned
 
 **Priority Level**: ⭐⭐ HIGH
@@ -29710,6 +29827,8 @@ As a system architect, I need a comprehensive orchestrator agent design, so that
 
 ---
 ### US-050: Architect Creates POCs for Complex Implementations
+
+**PRIORITY**: 16 (HIGH - Quality & Risk Reduction)
 
 **Status**: 📝 Planned - HIGH PRIORITY (Quality & Risk Reduction)
 
