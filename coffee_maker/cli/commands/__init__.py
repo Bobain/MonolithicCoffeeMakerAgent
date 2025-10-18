@@ -45,20 +45,43 @@ Reference:
 # Command registry and helper functions for command lookup
 from typing import Dict, List, Optional
 
-from coffee_maker.cli.commands.all_commands import ALL_COMMANDS
 from coffee_maker.cli.commands.base import BaseCommand
 
 # Global command registry
 _COMMAND_REGISTRY: Dict[str, BaseCommand] = {}
+_REGISTRY_INITIALIZED = False
+
+
+def register_command(command_class):
+    """Decorator to register a command class.
+
+    This decorator is used by command classes to automatically register themselves
+    in the global registry.
+
+    Args:
+        command_class: The command class to register
+
+    Returns:
+        The command class (unchanged)
+    """
+    return command_class
 
 
 def _initialize_registry():
     """Initialize the command registry with all available commands."""
-    global _COMMAND_REGISTRY
-    if not _COMMAND_REGISTRY:
-        for command_class in ALL_COMMANDS:
-            cmd_instance = command_class()
-            _COMMAND_REGISTRY[cmd_instance.name] = cmd_instance
+    global _COMMAND_REGISTRY, _REGISTRY_INITIALIZED
+
+    if _REGISTRY_INITIALIZED:
+        return
+
+    # Import here to avoid circular imports
+    from coffee_maker.cli.commands.all_commands import ALL_COMMANDS
+
+    for command_class in ALL_COMMANDS:
+        cmd_instance = command_class()
+        _COMMAND_REGISTRY[cmd_instance.name] = cmd_instance
+
+    _REGISTRY_INITIALIZED = True
 
 
 def get_command_handler(command_name: str) -> Optional[BaseCommand]:
@@ -84,4 +107,4 @@ def list_commands() -> List[BaseCommand]:
     return list(_COMMAND_REGISTRY.values())
 
 
-__all__ = ["get_command_handler", "list_commands", "ALL_COMMANDS"]
+__all__ = ["register_command", "get_command_handler", "list_commands"]
