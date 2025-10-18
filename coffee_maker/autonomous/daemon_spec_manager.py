@@ -106,44 +106,17 @@ class SpecManagerMixin:
                 logger.info(f"✅ Technical spec found: {spec_file.name}")
                 return True
 
-        # Step 2: Spec missing - Try to create via architect delegation
-        logger.warning(f"⚠️  Technical spec missing for {priority_name}")
-        logger.info(f"   Attempting to delegate spec creation to architect via Claude...")
+        # Step 2: Spec missing - BLOCK and notify (CFR-008)
+        logger.error(f"❌ Technical spec REQUIRED but missing for {priority_name}")
+        logger.error(f"   CFR-008: code_developer CANNOT create specs")
+        logger.error(f"   → architect must create: docs/architecture/specs/{spec_prefix}-*.md")
+        logger.error(f"   ⛔ BLOCKING implementation until spec exists")
 
-        priority_title = priority.get("title", "Unknown")
-        priority_content = priority.get("content")
-        if not priority_content:
-            logger.warning(f"⚠️  Priority has no content description - spec creation may be limited")
+        # Create notification to alert user and architect
+        self._notify_spec_missing(priority, spec_prefix)
 
-        spec_prefix.split("-")[1] if "-" in spec_prefix else "000"
-        f"{spec_prefix}-{priority_title.lower().replace(' ', '-')}.md"
-
-        # Build and execute delegation prompt
-        prompt = self._build_architect_delegation_prompt(priority, spec_prefix)
-
-        try:
-            result = self.claude.execute_prompt(prompt)
-            if result.success:
-                logger.info(f"✅ Claude accepted delegation request")
-                # Check if spec file was created
-                if architect_spec_dir.exists():
-                    for spec_file in architect_spec_dir.glob(f"{spec_prefix}-*.md"):
-                        logger.info(f"✅ Technical spec created: {spec_file.name}")
-                        return True
-
-                # File not found - spec creation in progress
-                logger.info(f"⚠️  Spec file not yet created - architect may still be working on it")
-                return False
-            else:
-                logger.error(
-                    f"❌ Claude delegation failed: {result.error if hasattr(result, 'error') else 'Unknown error'}"
-                )
-                return False
-        except Exception as e:
-            logger.error(f"❌ Error during architect delegation: {e}", exc_info=True)
-            # Notify user and architect about the error
-            self._notify_spec_missing(priority, spec_prefix)
-            return False
+        # Return False to BLOCK implementation
+        return False
 
     def _notify_spec_missing(self, priority: dict, spec_prefix: str) -> None:
         """Notify user and architect about missing technical specification.
@@ -164,24 +137,34 @@ class SpecManagerMixin:
         """
         priority_name = priority.get("name", "Unknown Priority")
         priority_title = priority.get("title", "Unknown Title")
+        priority_effort = priority.get("estimated_effort", "Unknown")
 
-        # Create notification message
+        # Create notification message with actionable guidance
         title = f"CFR-008: Missing Spec for {priority_name}"
         message = (
-            f"Technical specification missing for '{priority_title}'.\n\n"
+            f"Technical specification REQUIRED for '{priority_title}'.\n\n"
             f"Priority: {priority_name}\n"
+            f"Title: {priority_title}\n"
+            f"Estimated Effort: {priority_effort}\n"
             f"Expected spec prefix: {spec_prefix}\n\n"
             f"CFR-008 ENFORCEMENT: code_developer cannot create specs.\n"
             f"→ architect must create: docs/architecture/specs/{spec_prefix}-<feature-name>.md\n\n"
-            f"Implementation is BLOCKED until architect creates the spec."
+            f"Implementation is BLOCKED until architect creates the spec.\n\n"
+            f"ACTIONS:\n"
+            f"1. Invoke architect agent to create technical spec\n"
+            f"2. architect reviews {priority_name} in ROADMAP.md\n"
+            f"3. architect creates comprehensive spec in docs/architecture/specs/\n"
+            f"4. code_developer will auto-resume when spec exists"
         )
 
         context = {
             "priority_name": priority_name,
             "priority_title": priority_title,
+            "priority_effort": priority_effort,
             "spec_prefix": spec_prefix,
             "enforcement": "CFR-008",
             "action_required": "architect must create technical spec",
+            "spec_directory": "docs/architecture/specs/",
         }
 
         try:
@@ -200,59 +183,3 @@ class SpecManagerMixin:
         except Exception as e:
             logger.error(f"Failed to create notification: {e}", exc_info=True)
             # Don't fail - notification is nice-to-have but not critical
-
-    def _build_architect_delegation_prompt(self, priority: dict, spec_prefix: str) -> str:
-        """Build a prompt for delegating spec creation to the architect.
-
-        Args:
-            priority: Priority dictionary
-            spec_prefix: Expected spec filename prefix (e.g., "SPEC-047")
-
-        Returns:
-            Prompt string for delegation
-        """
-        priority_name = priority.get("name", "Unknown")
-        priority_title = priority.get("title", "Unknown Title")
-        priority_content = priority.get("content", "No description provided")
-
-        prompt = f"""DELEGATION TO ARCHITECT AGENT
-
-Priority: {priority_name}
-Title: {priority_title}
-
-ARCHITECTURAL SPECIFICATION REQUIRED
-
-The code_developer has encountered a priority that requires a technical specification before implementation can proceed.
-
-Priority Details:
-- Name: {priority_name}
-- Title: {priority_title}
-- Content: {priority_content}
-
-Required Actions (for architect):
-1. Create technical specification document
-2. Save to: docs/architecture/specs/{spec_prefix}-<feature-name>.md
-3. Include architectural design, API contracts, testing strategy
-4. Commit and push to repository
-
-Specification Location: docs/architecture/specs/
-Expected filename prefix: {spec_prefix}
-
-This is an automatic delegation from code_developer to architect for technical specification creation."""
-
-        return prompt
-
-    def _build_spec_creation_prompt(self, priority: dict, spec_prefix: str) -> str:
-        """Build a prompt for spec creation (deprecated - use _build_architect_delegation_prompt).
-
-        This method is kept for backward compatibility but delegates to
-        _build_architect_delegation_prompt.
-
-        Args:
-            priority: Priority dictionary
-            spec_prefix: Expected spec filename prefix
-
-        Returns:
-            Prompt string
-        """
-        return self._build_architect_delegation_prompt(priority, spec_prefix)
