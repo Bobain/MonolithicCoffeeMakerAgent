@@ -1,10 +1,10 @@
 # Coffee Maker Agent - Prioritized Roadmap
 
-**Last Updated**: 2025-10-18 ✅ **US-058 COMPLETE: Architect Skills System (Commit Review + Refactoring)**
+**Last Updated**: 2025-10-18 🚀 **ACE FRAMEWORK: 42 User Stories Added (US-062 through US-103) - 7 Phases**
 **Current Branch**: `roadmap`
-**Status**: PRIORITY 1-10 ✅ COMPLETE | **US-055: Claude Skills Phase 1 (HIGH) - Ready for Implementation** | US-054: CFR-011 (CRITICAL)
+**Status**: **🚨 PHASE 0 - ACCELERATION ⚡ US-090 (START HERE)** | Total: 185-235 hrs → 3-4 weeks Phase 0, then 4-6 weeks Phases 1-3
 **Quick-Start**: ⚡ CLI: `project-manager` (defaults to chat!) | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py`
-**Achievement**: 🎉 **VISIBILITY LOOP OPERATIONAL** - code_developer now merges to roadmap frequently, project_manager has real-time visibility!
+**Achievement**: 🎉 **ACE IMPLEMENTATION PLAN REORGANIZED** - Phase 0 (Force Multiplier) now HIGHEST PRIORITY!
 
 ---
 
@@ -113,24 +113,70 @@ PRIORITY 2: Project Manager with UI ← Current focus
 
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
 
-**CRITICAL UPDATE 2025-10-17**: US-045 COMPLETE! Daemon now delegates specs to architect!
+**PHASE 0: MAXIMUM code_developer EFFICIENCY** ⚡ **START HERE**
 
-**✅ PRIORITY 9 NOW UNBLOCKED**:
-- ✅ **US-045: Fix Daemon to Delegate Spec Creation to architect** - COMPLETE (2025-10-17)
-  - Status: ✅ COMPLETE
-  - **Solution Implemented**: Daemon delegates to architect instead of blocking
-  - **Key Changes**:
-    - Updated `_ensure_technical_spec()` to delegate when specs missing
-    - Added `_build_architect_delegation_prompt()` for clear architect requests
-    - Daemon verifies spec was created after delegation
-  - **Acceptance Criteria - ALL MET**:
-    - ✅ daemon_spec_manager.py delegates to architect (no blocking)
-    - ✅ architect gets clear delegation requests
-    - ✅ Daemon successfully processes priorities with missing specs
-    - ✅ All 10 US-045 tests passing
-    - ✅ No regressions (1152 unit tests collected successfully)
+**Status**: 📝 Ready to Begin
+**Estimated Effort**: 3-4 weeks (82-112 hours)
+**Expected Outcome**: code_developer works at 3-5x speed for ALL future work
+
+**WHY PHASE 0 FIRST?**
+Building the skills infrastructure FIRST creates a "force multiplier" that accelerates EVERYTHING else:
+- **Code analysis**: 50-150x faster (skills vs agent) - US-090 through US-096
+- **code_developer velocity**: +200-400% - US-065, US-066, US-067, US-102
+- **architect spec creation**: 78% faster (117 min → 25 min) - US-097, US-103
+- **Total time savings**: 80-120 hours/month
+- **CFR-007 violations**: 40-60/month → 0/month - US-062, US-063, US-064
+
+**Current Focus**: US-090 - Create code analysis skills (code-searcher migration)
+
+**PHASE 0 USER STORIES** (16 total, in priority order):
+
+### Group 1: Code Analysis Skills (US-090 through US-096) - START HERE ⭐⭐⭐
+- **US-090**: Create 5 code analysis skills (20-25 hrs) **← BEGIN HERE**
+- **US-091**: Build code index infrastructure (5-7 hrs)
+- **US-092**: Migrate code-searcher responsibilities to architect (3-5 hrs)
+- **US-093**: Migrate code-searcher responsibilities to code_developer (3-5 hrs)
+- **US-094**: Transition period validation (2-3 hrs)
+- **US-095**: Retire code-searcher agent (1-2 hrs)
+- **US-096**: Archive code-searcher.md (1 hr)
+
+### Group 2: Startup Skills (US-062, US-063, US-064) ⭐⭐⭐
+- **US-062**: code_developer-startup skill (10-15 hrs)
+- **US-063**: architect-startup skill (10-15 hrs)
+- **US-064**: project_manager-startup skill (10-15 hrs)
+
+### Group 3: code_developer Acceleration (US-065, US-066, US-067, US-102) ⭐⭐⭐
+- **US-065**: test-failure-analysis skill (5-7 hrs)
+- **US-066**: dod-verification skill (5-7 hrs)
+- **US-067**: git-workflow-automation skill (5-7 hrs)
+- **US-102**: refactoring-coordinator skill (8-10 hrs) **← NEW**
+
+### Group 4: architect Acceleration (US-068, US-069, US-097, US-103) ⭐⭐⭐
+- **US-068**: architecture-reuse-check skill (6-8 hrs)
+- **US-069**: proactive-refactoring-analysis skill (6-8 hrs)
+- **US-097**: spec-creation-automation skill (10-12 hrs)
+- **US-103**: commit-review-automation skill (8-10 hrs) **← NEW**
+
+**Total Phase 0 Effort**: 82-112 hours
+**Timeline**: 3-4 weeks with 1 developer
+**ROI**: 3-4x in month 1, 12-19x in year 1
+
+**After Phase 0 Complete**: Move to Phase 1 (Orchestrator) with 3-5x faster velocity
+
+**NEXT PHASES AFTER PHASE 0**:
+- Phase 1: Orchestrator Agent (US-072 through US-077)
+- Phase 2: ACE Framework Agents (US-078 through US-089)
+- Phase 3: Advanced Skills (US-098 through US-101)
+
+See full Phase 0 details below in dedicated section.
+
+---
 
 **RECENTLY COMPLETED**:
+- ✅ **US-061: ADR-010 Decision on Reflector & Curator** (2025-10-18)
+  - Decision: Keep Reflector and Curator as AGENTS (not skills)
+  - ADR-010 approved by user
+  - Technical specs SPEC-062 through SPEC-067 created
 - ✅ **US-045: Daemon Architect Delegation** (2025-10-17) - CRITICAL FIX
   - Daemon no longer stuck on missing specs
   - PRIORITY 9 now unblocked
@@ -140,17 +186,6 @@ PRIORITY 2: Project Manager with UI ← Current focus
 - ✅ **US-041: architect as Operational Subagent** (2025-10-16)
   - architect now registered in .claude/agents/README.md
   - All 24 architect tests passing
-
-**PARALLEL WORK AVAILABLE (After US-045)**:
-Once US-045 is complete, these can be worked on in parallel:
-
-1. **US-035: Singleton Agent Enforcement** - CRITICAL (2-3 days)
-2. **US-036: Polish Console UI** - MEDIUM-HIGH (2-3 days)
-3. **US-037: ACE Console Demo Tutorial** - MEDIUM (1 day - documentation)
-4. **US-044: Regular Refactoring Workflow** - HIGH (2-3 days)
-5. **US-043: Parallel Agent Execution** - HIGH (2-3 days)
-
-**Delegation Strategy**: User wants continuous progress across ROADMAP with multiple agents working in parallel where possible
 
 ---
 
@@ -28674,5 +28709,978 @@ Recommendation    | SKILL ✅   | ?         | ?
 **Timeline**: 2-3 days (8-12 hours collaborative work)
 
 **CRITICAL**: User must approve final decision before any implementation
+
+---
+
+## 🚀 ACE FRAMEWORK IMPLEMENTATION - USER STORIES (US-062 through US-103)
+
+**Strategic Plan Reorganized**: 2025-10-18
+**Total Stories**: 42 user stories across 4 phases (Phase 0 = FORCE MULTIPLIER)
+**Total Effort**: 185-235 hours → **FRONT-LOADED** (Phase 0: 82-112 hrs in 3-4 weeks)
+**Source**: docs/roadmap/ACE_IMPLEMENTATION_PLAN.md
+
+---
+
+## 🚀 PHASE 0: MAXIMUM code_developer EFFICIENCY (CURRENT FOCUS) ⚡⚡⚡
+
+**Status**: 📝 In Planning
+**Started**: 2025-10-18
+**Target Completion**: 2025-11-15 (4 weeks)
+**Business Value**: ⭐⭐⭐⭐⭐ CRITICAL - Force multiplier for ALL future work
+
+### Phase 0 Overview
+
+**WHY PHASE 0 COMES FIRST**:
+Phase 0 is the "force multiplier" that makes ALL subsequent work 3-5x faster. By investing 3-4 weeks upfront to build the skills infrastructure, we accelerate EVERYTHING else:
+
+**The Force Multiplier Effect**:
+- **Without Phase 0**: 4-6 weeks for Phases 1-3 at baseline velocity
+- **With Phase 0**: 3-4 weeks Phase 0, then 1.5-2 weeks for Phases 1-3 at 3-5x velocity
+- **Net Result**: Total time SHORTER despite upfront investment
+- **Ongoing Benefit**: All future work continues at 3-5x velocity
+
+### Phase 0 Success Metrics
+
+**Before Phase 0**:
+- Code analysis: 10-30 seconds per search (code-searcher agent)
+- code_developer velocity: Baseline (1.0x)
+- architect spec creation: 117 minutes per spec
+- Context budget violations: 40-60 per month
+- Monthly agent overhead: 120-180 hours
+
+**After Phase 0**:
+- Code analysis: <200ms per search (skills) **50-150x faster**
+- code_developer velocity: +200-400% **3-5x faster**
+- architect spec creation: 25 minutes per spec **78% faster**
+- Context budget violations: 0 per month **100% compliance**
+- Monthly time savings: 80-120 hours **67% overhead reduction**
+
+**ROI Calculation**:
+- Month 1: 82-112 hrs investment → 80-120 hrs saved = 0.7-1.5x ROI
+- Month 2: 0 hrs investment → 80-120 hrs saved = ∞ ROI
+- Year 1: 82-112 hrs investment → 960-1440 hrs saved = 9-17x ROI
+
+### Phase 0 User Stories (16 Total)
+
+**Group 1: Code Analysis Skills (US-090 through US-096) - START HERE**
+
+These skills replace the code-searcher agent with lightning-fast skills (50-150x speed improvement):
+
+- **US-090**: Create 5 code analysis skills (20-25 hrs) **← BEGIN HERE**
+  - dependency-trace skill
+  - security-audit skill
+  - code-reuse-finder skill
+  - refactoring-opportunity skill
+  - architecture-analyzer skill
+- **US-091**: Build code index infrastructure (5-7 hrs)
+  - Pre-indexed codebase for instant lookups
+  - Automatic index updates on file changes
+- **US-092**: Migrate code-searcher responsibilities to architect (3-5 hrs)
+- **US-093**: Migrate code-searcher responsibilities to code_developer (3-5 hrs)
+- **US-094**: Transition period validation (2-3 hrs)
+- **US-095**: Retire code-searcher agent (1-2 hrs)
+- **US-096**: Archive code-searcher.md (1 hr)
+
+**Subtotal**: 35-51 hours | **Impact**: 50-150x code analysis speed
+
+---
+
+**Group 2: Startup Skills (US-062, US-063, US-064)**
+
+These skills eliminate CFR-007 context budget violations and speed up agent startup:
+
+- **US-062**: code_developer-startup skill (10-15 hrs)
+  - Auto-loads critical documents
+  - Context budget <30% guaranteed
+  - Startup time: 10-30s → <2s
+- **US-063**: architect-startup skill (10-15 hrs)
+  - Loads architectural context
+  - Prevents spec creation delays
+- **US-064**: project_manager-startup skill (10-15 hrs)
+  - Loads ROADMAP and project status
+  - Instant strategic context
+
+**Subtotal**: 30-45 hours | **Impact**: CFR-007 violations 40-60/month → 0/month
+
+---
+
+**Group 3: code_developer Acceleration (US-065, US-066, US-067, US-102)**
+
+These skills turbocharge code_developer's implementation velocity:
+
+- **US-065**: test-failure-analysis skill (5-7 hrs)
+  - Instant root cause analysis
+  - Suggested fixes
+- **US-066**: dod-verification skill (5-7 hrs)
+  - Automated DoD checks
+  - Pre-merge validation
+- **US-067**: git-workflow-automation skill (5-7 hrs)
+  - Smart commit messages
+  - Auto-tagging (wip-*, dod-verified-*)
+- **US-102**: refactoring-coordinator skill (8-10 hrs) **← NEW**
+  - Coordinates large refactorings
+  - Dependency-aware changes
+  - Prevents breaking changes
+
+**Subtotal**: 23-31 hours | **Impact**: code_developer velocity +200-400%
+
+---
+
+**Group 4: architect Acceleration (US-068, US-069, US-097, US-103)**
+
+These skills make architect spec creation 78% faster:
+
+- **US-068**: architecture-reuse-check skill (6-8 hrs)
+  - Finds existing patterns to reuse
+  - Prevents reinventing the wheel
+- **US-069**: proactive-refactoring-analysis skill (6-8 hrs)
+  - Identifies tech debt early
+  - Suggests preventive refactoring
+- **US-097**: spec-creation-automation skill (10-12 hrs)
+  - Auto-generates spec templates
+  - Populates from codebase analysis
+  - 117 min → 25 min per spec
+- **US-103**: commit-review-automation skill (8-10 hrs) **← NEW**
+  - Automated code review
+  - Architecture compliance checks
+  - Security and performance analysis
+
+**Subtotal**: 30-38 hours | **Impact**: architect spec creation 78% faster
+
+---
+
+### Phase 0 Total Summary
+
+**Total Effort**: 82-112 hours (3-4 weeks)
+**Total Stories**: 16 user stories (US-062 through US-069, US-090 through US-097, US-102, US-103)
+**Total Impact**:
+- Code analysis: 50-150x faster
+- code_developer velocity: +200-400%
+- architect productivity: +78%
+- Context violations: 100% eliminated
+- Time savings: 80-120 hrs/month
+
+**Phase 0 Completion Criteria**:
+- [ ] All 5 code analysis skills operational (US-090)
+- [ ] Code index built and updating automatically (US-091)
+- [ ] code-searcher agent retired (US-092 through US-096)
+- [ ] All 3 startup skills integrated (US-062, US-063, US-064)
+- [ ] CFR-007 violations = 0/month for 1 week
+- [ ] All 4 code_developer acceleration skills working (US-065 through US-067, US-102)
+- [ ] All 4 architect acceleration skills working (US-068, US-069, US-097, US-103)
+- [ ] Measured velocity improvement ≥3x on sample priorities
+- [ ] All tests passing (unit + integration)
+- [ ] Documentation complete for all skills
+
+**Next Phase After Phase 0**:
+Move to Phase 1 (Orchestrator Agent) with 3-5x faster velocity, completing it in 1.5-2 weeks instead of 4-6 weeks.
+
+---
+
+## PHASE 0 - GROUP 2: Agent Startup Skills ⭐⭐⭐ (Part of Phase 0)
+
+### US-062: Implement code_developer-startup Skill Integration
+
+**Status**: 📝 Planned
+
+**Priority Level**: ⭐⭐⭐ PART OF PHASE 0 (CFR-007 CRITICAL)
+
+**Estimated Effort**: 10-15 hours (2-3 days)
+
+**User Story**:
+As a code_developer agent, I need a startup skill that loads my critical documents automatically, so that I can start work immediately without context budget violations (CFR-007).
+
+**Business Value**:
+- **CFR-007 Compliance**: Eliminates 40-60 context budget violations per month
+- **Performance**: Reduces startup time from 10-30s to <2s
+- **Reliability**: Ensures all required documents loaded before work begins
+- **Cost Savings**: Reduces wasted API calls from failed startups
+
+**Technical Spec**: SPEC-063 - Agent Startup Skills Implementation
+
+**Acceptance Criteria**:
+- [ ] code_developer automatically executes code_developer-startup skill at initialization
+- [ ] Context budget consistently <30% after startup (CFR-007 compliance)
+- [ ] Startup completes in <2 seconds
+- [ ] All critical documents loaded (ROADMAP, CLAUDE.md, priority specs)
+- [ ] Graceful error handling if documents missing or inaccessible
+- [ ] Health checks validate API keys, dependencies, file access
+- [ ] Unit tests cover normal startup, missing files, large files, permission errors
+- [ ] Integration tests verify full daemon startup with skill
+- [ ] No regressions in existing daemon functionality
+
+**Deliverables**:
+1. Python code in coffee_maker/autonomous/startup_skills.py
+2. Integration with daemon initialization
+3. CFR-007 validation logic
+4. Health check system (API keys, dependencies, files)
+5. Error diagnostics and logging
+6. Unit tests (>90% coverage)
+7. Integration tests
+8. Documentation in skill markdown file
+
+**Dependencies**:
+- code_developer-startup skill exists (.claude/skills/) ✅
+- trace-execution skill operational ✅
+
+**Blocked By**: None
+
+**Blocks**:
+- US-063 (architect-startup)
+- US-064 (project_manager-startup)
+- All Phase 2-7 user stories (foundation for entire ACE framework)
+
+**architect Code Review**: MANDATORY before deployment
+
+**Related Documents**:
+- .claude/skills/code_developer-startup.md - Skill definition
+- docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md - CFR-007
+- docs/roadmap/ACE_IMPLEMENTATION_PLAN.md - Phase 1 details
+- SPEC-063 - Technical specification
+
+**Success Metrics**:
+- CFR-007 violations: 40-60/month → 0/month
+- Startup time: 10-30s → <2s
+- Context budget at startup: 40-60% → <30%
+- Failed startups: 10-15/month → 0/month
+
+---
+
+### US-063: Implement architect-startup Skill Integration
+
+**Status**: 📝 Planned
+
+**Priority Level**: ⭐⭐⭐ HIGHEST
+
+**Estimated Effort**: 10-15 hours (2-3 days)
+
+**User Story**:
+As an architect agent, I need a startup skill that loads architectural documentation and specs, so that I can provide informed design decisions immediately without context budget violations.
+
+**Business Value**:
+- **CFR-007 Compliance**: Prevents context budget violations
+- **Design Quality**: Ensures all relevant specs loaded before architectural decisions
+- **Consistency**: Guarantees architect has complete system view
+- **Speed**: Faster architectural reviews and spec creation
+
+**Technical Spec**: SPEC-063 - Agent Startup Skills Implementation
+
+**Acceptance Criteria**:
+- [ ] architect automatically executes architect-startup skill at initialization
+- [ ] Context budget <30% after startup
+- [ ] All architectural documents loaded (ADRs, specs, guidelines)
+- [ ] Startup completes in <2 seconds
+- [ ] Graceful error handling
+- [ ] Health checks validate spec directories exist
+- [ ] Unit and integration tests
+- [ ] No regressions
+
+**Deliverables**:
+1. architect startup integration code
+2. Document loading logic for architecture docs
+3. CFR-007 validation
+4. Health checks
+5. Tests (unit + integration)
+6. Documentation
+
+**Dependencies**:
+- US-062 complete (code_developer-startup working)
+- architect-startup skill exists ✅
+
+**Blocked By**: US-062
+
+**Blocks**: Phase 3 (US-068, US-069)
+
+**architect Code Review**: MANDATORY
+
+**Success Metrics**:
+- Context budget at startup: <30%
+- Startup time: <2s
+- All specs loaded: 100%
+
+---
+
+### US-064: Implement project_manager-startup Skill Integration
+
+**Status**: 📝 Planned
+
+**Priority Level**: ⭐⭐⭐ HIGHEST
+
+**Estimated Effort**: 10-15 hours (2-3 days)
+
+**User Story**:
+As a project_manager agent, I need a startup skill that loads ROADMAP and project status, so that I can provide accurate project insights without context budget violations.
+
+**Business Value**:
+- **CFR-007 Compliance**: Prevents violations
+- **Accuracy**: Ensures complete ROADMAP context for status reports
+- **Speed**: Faster health checks and status queries
+- **Reliability**: Consistent project state understanding
+
+**Technical Spec**: SPEC-063 - Agent Startup Skills Implementation
+
+**Acceptance Criteria**:
+- [ ] project_manager executes project_manager-startup skill at initialization
+- [ ] Context budget <30% after startup
+- [ ] ROADMAP, strategic specs, GitHub status loaded
+- [ ] Startup completes in <2 seconds
+- [ ] Graceful error handling
+- [ ] Health checks validate ROADMAP exists and is parseable
+- [ ] Unit and integration tests
+- [ ] No regressions
+
+**Deliverables**:
+1. project_manager startup integration code
+2. ROADMAP parsing and loading logic
+3. CFR-007 validation
+4. Health checks
+5. Tests (unit + integration)
+6. Documentation
+
+**Dependencies**:
+- US-062 complete (code_developer-startup working)
+- project_manager-startup skill exists ✅
+
+**Blocked By**: US-062
+
+**Blocks**: Phase 3 (US-070, US-071)
+
+**architect Code Review**: MANDATORY
+
+**Success Metrics**:
+- Context budget at startup: <30%
+- Startup time: <2s
+- ROADMAP load success: 100%
+
+---
+
+## PHASE 0 - GROUP 3: Core Skills - Developer Support ⭐⭐⭐ (Part of Phase 0)
+
+### US-065: Implement test-failure-analysis Skill
+
+**Status**: 📝 Planned
+
+**Priority Level**: ⭐⭐⭐ HIGHEST
+
+**Estimated Effort**: 5-7 hours (1-1.5 days)
+
+**User Story**:
+As a code_developer agent, I need an automated test failure analysis skill, so that I can quickly categorize pytest failures and get fix recommendations without manual investigation.
+
+**Business Value**:
+- **Time Savings**: 20-50 minutes saved per test failure
+- **Quality**: 90%+ categorization accuracy
+- **Speed**: Faster debugging and fixes
+- **Learning**: Builds knowledge base of failure patterns
+
+**Technical Spec**: Referenced in SPEC-063
+
+**Acceptance Criteria**:
+- [ ] Skill executes in <2 minutes for typical pytest output
+- [ ] Categorizes failures: syntax error, import error, assertion failure, timeout, etc.
+- [ ] Provides fix recommendations for each category
+- [ ] 90%+ categorization accuracy on test suite
+- [ ] Handles edge cases (no failures, malformed output, etc.)
+- [ ] Unit tests cover all failure categories
+- [ ] Integration tests with real pytest output
+- [ ] Documentation with examples
+
+**Deliverables**:
+1. test-failure-analysis skill implementation
+2. Categorization logic (regex + pattern matching)
+3. Fix recommendation engine
+4. Tests (unit + integration)
+5. Skill documentation
+
+**Dependencies**: US-062, US-063 (startup skills operational)
+
+**Blocked By**: US-062
+
+**Blocks**: None (parallel with US-066, US-067)
+
+**architect Code Review**: MANDATORY
+
+**Success Metrics**:
+- Time per failure analysis: 20-50 min → 2-3 min
+- Categorization accuracy: >90%
+- Fix recommendation usefulness: >80% (user survey)
+
+---
+
+### US-066: Implement dod-verification Skill
+
+**Status**: 📝 Planned
+
+**Priority Level**: ⭐⭐⭐ HIGHEST
+
+**Estimated Effort**: 5-7 hours (1-1.5 days)
+
+**User Story**:
+As a code_developer agent, I need an automated DoD verification skill, so that I can comprehensively check all acceptance criteria before marking priorities complete.
+
+**Business Value**:
+- **Time Savings**: 15-35 minutes saved per priority
+- **Quality**: 100% DoD coverage, <5% false positives
+- **Reliability**: Ensures nothing ships incomplete
+- **Documentation**: Generates evidence for completions
+
+**Technical Spec**: Referenced in SPEC-063
+
+**Acceptance Criteria**:
+- [ ] Skill executes in <3 minutes for typical priority
+- [ ] Checks all DoD criteria (tests, docs, code quality, security)
+- [ ] Generates completion report with evidence
+- [ ] <5% false positive rate
+- [ ] Handles Puppeteer integration for web testing
+- [ ] Unit tests for all criteria types
+- [ ] Integration tests with real priorities
+- [ ] Documentation with examples
+
+**Deliverables**:
+1. dod-verification skill implementation
+2. Criteria checking logic (tests, docs, quality, security)
+3. Report generation
+4. Puppeteer integration
+5. Tests (unit + integration)
+6. Skill documentation
+
+**Dependencies**: US-062, US-063 (startup skills operational)
+
+**Blocked By**: US-062
+
+**Blocks**: None (parallel with US-065, US-067)
+
+**architect Code Review**: MANDATORY
+
+**Success Metrics**:
+- Time per DoD check: 15-35 min → 2-3 min
+- DoD coverage: 100%
+- False positives: <5%
+
+---
+
+### US-067: Implement git-workflow-automation Skill
+
+**Status**: 📝 Planned
+
+**Priority Level**: ⭐⭐⭐ HIGHEST
+
+**Estimated Effort**: 5-7 hours (1-1.5 days)
+
+**User Story**:
+As a code_developer agent, I need automated git workflow skill, so that commits, tags, and PRs follow conventions without manual formatting.
+
+**Business Value**:
+- **Time Savings**: 7-12 minutes saved per commit
+- **Consistency**: 100% conventional commit compliance
+- **Quality**: Automated PR descriptions from commits
+- **Traceability**: Links commits to priorities automatically
+
+**Technical Spec**: Referenced in SPEC-063
+
+**Acceptance Criteria**:
+- [ ] Skill executes in <1 minute per commit
+- [ ] Generates conventional commit messages (feat:, fix:, docs:, etc.)
+- [ ] Creates git tags for milestones (wip-*, dod-verified-*, stable-*)
+- [ ] Generates PR descriptions from commit history
+- [ ] 100% conventional commit compliance
+- [ ] Handles multi-file commits intelligently
+- [ ] Unit tests for commit formatting
+- [ ] Integration tests with real git repo
+- [ ] Documentation with examples
+
+**Deliverables**:
+1. git-workflow-automation skill implementation
+2. Conventional commit generator
+3. Tag creation logic
+4. PR description generator
+5. Tests (unit + integration)
+6. Skill documentation
+
+**Dependencies**: US-062, US-063 (startup skills operational)
+
+**Blocked By**: US-062
+
+**Blocks**: None (parallel with US-065, US-066)
+
+**architect Code Review**: MANDATORY
+
+**Success Metrics**:
+- Time per commit: 7-12 min → <1 min
+- Conventional commit compliance: 100%
+- PR quality score: >85% (user survey)
+
+---
+
+## PHASE 0 - GROUP 4: Core Skills - Architect & Project Manager Support ⭐⭐⭐ (Part of Phase 0)
+
+### US-068: Implement architecture-reuse-check Skill
+
+**Status**: 📝 Planned
+
+**Priority Level**: ⭐⭐⭐ HIGHEST
+
+**Estimated Effort**: 6-8 hours (1.5-2 days)
+
+**User Story**:
+As an architect agent, I need an architecture reuse checking skill, so that I can detect when new specs duplicate existing patterns and suggest reuse.
+
+**Business Value**:
+- **Time Savings**: 20-40 minutes saved per spec
+- **Consistency**: Encourages pattern reuse
+- **Quality**: Reduces architectural drift
+- **Documentation**: Automatically links related specs
+
+**Technical Spec**: Referenced in SPEC-063
+
+**Acceptance Criteria**:
+- [ ] Skill executes in <3 minutes for typical spec
+- [ ] Detects similar architectural patterns in existing specs
+- [ ] Recommends reuse opportunities with confidence scores
+- [ ] Generates spec comparison reports
+- [ ] >80% detection accuracy for duplicates
+- [ ] Unit tests for pattern matching
+- [ ] Integration tests with real specs
+- [ ] Documentation with examples
+
+**Deliverables**:
+1. architecture-reuse-check skill implementation
+2. Pattern matching and similarity detection
+3. Recommendation engine
+4. Comparison report generator
+5. Tests (unit + integration)
+6. Skill documentation
+
+**Dependencies**: US-063 (architect-startup working)
+
+**Blocked By**: US-063
+
+**Blocks**: None (parallel with US-069, US-070, US-071)
+
+**architect Code Review**: MANDATORY
+
+**Success Metrics**:
+- Time per spec: 20-40 min saved
+- Duplicate detection accuracy: >80%
+- Reuse adoption rate: >50%
+
+---
+
+### US-069: Implement proactive-refactoring-analysis Skill
+
+**Status**: 📝 Planned
+
+**Priority Level**: ⭐⭐⭐ HIGHEST
+
+**Estimated Effort**: 6-8 hours (1.5-2 days)
+
+**User Story**:
+As an architect agent, I need proactive refactoring analysis skill, so that I can identify code health issues weekly and recommend improvements.
+
+**Business Value**:
+- **Code Health**: Weekly automated analysis
+- **Proactive**: Catches issues before they become blockers
+- **Prioritization**: ROI-scored refactoring recommendations
+- **Trending**: Tracks code health over time
+
+**Technical Spec**: Referenced in SPEC-063
+
+**Acceptance Criteria**:
+- [ ] Skill executes in <5 minutes for full codebase
+- [ ] Analyzes code complexity, duplication, test coverage, dependencies
+- [ ] Generates weekly health report with scores
+- [ ] Recommends top 3-5 refactoring priorities with ROI
+- [ ] Tracks trends week-over-week
+- [ ] Unit tests for metrics calculation
+- [ ] Integration tests with real codebase
+- [ ] Documentation with examples
+
+**Deliverables**:
+1. proactive-refactoring-analysis skill implementation
+2. Code health metrics (complexity, duplication, coverage)
+3. ROI calculation for refactorings
+4. Weekly report generator
+5. Trend tracking
+6. Tests (unit + integration)
+7. Skill documentation
+
+**Dependencies**: US-063 (architect-startup working)
+
+**Blocked By**: US-063
+
+**Blocks**: None (parallel with US-068, US-070, US-071)
+
+**architect Code Review**: MANDATORY
+
+**Success Metrics**:
+- Analysis time: <5 min/week
+- Recommendation accuracy: >80% adoption
+- Code health trend: Improving over time
+
+---
+
+### US-070: Implement roadmap-health-check Skill
+
+**Status**: 📝 Planned
+
+**Priority Level**: ⭐⭐⭐ HIGHEST
+
+**Estimated Effort**: 4-6 hours (1 day)
+
+**User Story**:
+As a project_manager agent, I need ROADMAP health check skill, so that I can quickly analyze priorities, velocity, and blockers without manual review.
+
+**Business Value**:
+- **Time Savings**: 17-27 minutes saved per health check
+- **Proactive**: Daily/weekly automated checks
+- **Accuracy**: Consistent metrics calculation
+- **Visibility**: Clear health scoring and trends
+
+**Technical Spec**: Referenced in SPEC-063
+
+**Acceptance Criteria**:
+- [ ] Skill executes in <2 minutes for full ROADMAP
+- [ ] Calculates health score (0-100)
+- [ ] Analyzes velocity (priorities/week)
+- [ ] Detects blockers and dependencies
+- [ ] Generates actionable recommendations
+- [ ] Daily/weekly scheduling
+- [ ] Unit tests for metrics
+- [ ] Integration tests with real ROADMAP
+- [ ] Documentation with examples
+
+**Deliverables**:
+1. roadmap-health-check skill implementation
+2. Health scoring algorithm
+3. Velocity calculation
+4. Blocker detection
+5. Recommendation engine
+6. Scheduling integration
+7. Tests (unit + integration)
+8. Skill documentation
+
+**Dependencies**: US-064 (project_manager-startup working)
+
+**Blocked By**: US-064
+
+**Blocks**: None (parallel with US-068, US-069, US-071)
+
+**architect Code Review**: MANDATORY
+
+**Success Metrics**:
+- Time per health check: 17-27 min → 2-3 min
+- Check frequency: Weekly → Daily
+- Blocker detection rate: >90%
+
+---
+
+### US-071: Implement pr-monitoring-analysis Skill
+
+**Status**: 📝 Planned
+
+**Priority Level**: ⭐⭐⭐ HIGHEST
+
+**Estimated Effort**: 4-6 hours (1 day)
+
+**User Story**:
+As a project_manager agent, I need PR monitoring skill, so that I can track GitHub PRs, CI status, and blockers without manual checking.
+
+**Business Value**:
+- **Time Savings**: 12-15 minutes saved per PR check
+- **Proactive**: Automated blocker detection
+- **Visibility**: Real-time CI/CD status
+- **Integration**: Links PRs to ROADMAP priorities
+
+**Technical Spec**: Referenced in SPEC-063
+
+**Acceptance Criteria**:
+- [ ] Skill executes in <1 minute per check
+- [ ] Monitors open PRs with gh CLI
+- [ ] Checks CI/CD status (passing/failing)
+- [ ] Detects blockers (review needed, tests failing)
+- [ ] Links PRs to ROADMAP priorities
+- [ ] Generates status report
+- [ ] Unit tests for GitHub API integration
+- [ ] Integration tests with real PRs
+- [ ] Documentation with examples
+
+**Deliverables**:
+1. pr-monitoring-analysis skill implementation
+2. GitHub CLI integration (gh pr list, gh pr checks)
+3. Blocker detection logic
+4. Priority linking
+5. Status report generator
+6. Tests (unit + integration)
+7. Skill documentation
+
+**Dependencies**: US-064 (project_manager-startup working)
+
+**Blocked By**: US-064
+
+**Blocks**: None (parallel with US-068, US-069, US-070)
+
+**architect Code Review**: MANDATORY
+
+**Success Metrics**:
+- Time per PR check: 12-15 min → <1 min
+- Blocker detection accuracy: >95%
+- Check frequency: Manual → Hourly automated
+
+---
+
+## PHASE 1: Orchestrator Agent ⭐⭐ HIGH PRIORITY (After Phase 0 - Will be 3-5x Faster)
+
+**Note**: Phase 4 contains 6 user stories (US-072 through US-077) for building the orchestrator agent with message bus, performance monitoring, and workflow optimization.
+
+### US-072: Design Orchestrator Agent Architecture
+
+**Status**: 📝 Planned
+
+**Priority Level**: ⭐⭐ HIGH
+
+**Estimated Effort**: 8-10 hours (2 days)
+
+**User Story**:
+As a system architect, I need a comprehensive orchestrator agent design, so that we have a clear blueprint for multi-agent coordination.
+
+**Business Value**:
+- **Architecture Clarity**: Clear design before implementation
+- **Risk Mitigation**: Identifies challenges early
+- **Quality**: Ensures thread safety, security, scalability
+- **Alignment**: User approval before costly development
+
+**Technical Spec**: SPEC-062 - Orchestrator Agent Architecture
+
+**Acceptance Criteria**:
+- [ ] Architecture document created (SPEC-062)
+- [ ] Message bus design (pub/sub pattern)
+- [ ] Performance monitoring design
+- [ ] Workflow optimization design
+- [ ] Thread safety analysis
+- [ ] Security considerations documented
+- [ ] User approval obtained
+- [ ] architect code review complete
+
+**Deliverables**:
+1. Updated SPEC-062 with detailed design
+2. Architecture diagrams (message bus, data flow)
+3. API specifications
+4. Security analysis
+5. Performance requirements
+6. Implementation plan
+
+**Dependencies**: Phase 1-3 complete (agents have startup skills)
+
+**Blocked By**: US-062, US-063, US-064
+
+**Blocks**: US-073, US-074, US-075, US-076, US-077
+
+**architect Code Review**: CRITICAL
+
+**Success Metrics**:
+- User approval: Yes
+- Design completeness: 100%
+- Risks identified: All documented
+
+**Related Documents**:
+- SPEC-062 - Orchestrator Agent Architecture
+- docs/roadmap/ACE_IMPLEMENTATION_PLAN.md - Phase 4 details
+
+---
+
+### US-073 through US-077
+
+**Summary**: Remaining Phase 4 user stories implement:
+- US-073: Message bus (pub/sub pattern) - 10-12 hours
+- US-074: Performance monitor - 6-8 hours
+- US-075: Workflow optimizer - 8-10 hours
+- US-076: orchestrator-startup skill - 4-6 hours
+- US-077: Orchestrator integration - 6-8 hours
+
+**Total Phase 4 Effort**: 30-40 hours (6-8 days)
+
+**Phase 4 Success Metrics**:
+- Workflow time reduction: >40%
+- Message latency: <50ms p95
+- No deadlocks or race conditions
+
+**Details**: See docs/roadmap/ACE_USER_STORIES.md for complete specifications
+
+---
+
+## PHASE 2: ACE Framework Agents ⭐⭐ HIGH PRIORITY (After Phase 1)
+
+**Note**: Phase 5 contains 12 user stories (US-078 through US-089) split into:
+- Phase 5A: Reflector Agent (US-078 through US-083) - 20-25 hours
+- Phase 5B: Curator Agent (US-084 through US-089) - 25-30 hours
+
+### US-078 through US-083: Reflector Agent
+
+**Summary**: Reflector agent implementation:
+- US-078: Design Reflector architecture - 4-6 hours
+- US-079: Trace analysis logic - 5-7 hours
+- US-080: Pattern detection algorithms - 6-8 hours
+- US-081: Delta item creation - 4-6 hours
+- US-082: Scheduling mechanism - 3-5 hours
+- US-083: reflector-startup skill - 3-5 hours
+
+**Total Phase 5A Effort**: 20-25 hours (4-5 days)
+
+**Phase 5A Success Metrics**:
+- Processes 24 hours of traces in <2 minutes
+- Pattern detection accuracy >85%
+- Delta items include confidence scores and evidence
+- Runs automatically daily (2am)
+
+**Technical Spec**: SPEC-065 - Reflector Agent Implementation
+
+---
+
+### US-084 through US-089: Curator Agent
+
+**Summary**: Curator agent implementation:
+- US-084: Design Curator architecture - 5-7 hours
+- US-085: Delta synthesis - 6-8 hours
+- US-086: ROI calculation engine - 5-7 hours
+- US-087: Playbook generation - 6-8 hours
+- US-088: Skill recommendation engine - 5-7 hours
+- US-089: curator-startup skill - 3-5 hours
+
+**Total Phase 5B Effort**: 25-30 hours (5-6 days)
+
+**Phase 5B Success Metrics**:
+- Processes 100 delta items in <5 minutes
+- ROI calculations within 20% of manual estimates
+- Playbooks generate 3-5 skill recommendations/month
+- Runs automatically weekly (Sunday 3am)
+
+**Technical Spec**: SPEC-066 - Curator Agent Implementation
+
+**Details**: See docs/roadmap/ACE_USER_STORIES.md for complete specifications
+
+---
+
+## PHASE 0 - GROUP 1: Code-Searcher Migration 🔄 ⭐⭐⭐ (Part of Phase 0 - START HERE)
+
+**Note**: Phase 6 contains 7 user stories (US-090 through US-096) to retire code-searcher agent and replace with 5 high-performance skills.
+
+### US-090 through US-096: Code-Searcher Retirement
+
+**Summary**: Migrate code-searcher to skills:
+- US-090: Create 5 code analysis skills - 12-15 hours
+- US-091: Build code index - 4-6 hours
+- US-092: Migrate responsibilities to architect - 3-5 hours
+- US-093: Migrate responsibilities to code_developer - 3-5 hours
+- US-094: 3-week transition validation - 2-4 hours monitoring
+- US-095: Retire code-searcher agent - 2-3 hours
+- US-096: Archive code-searcher.md - 1 hour
+
+**Total Phase 6 Effort**: 25-30 hours (5-6 days) + 3-week validation period
+
+**Phase 6 Success Metrics**:
+- Code analysis speed: 50-150x faster (10-30s → <200ms)
+- Agent count: 6 → 5
+- No functionality loss
+- 100% successful migration
+
+**Technical Spec**: SPEC-064 - Code-Searcher Responsibility Migration
+
+**Details**: See docs/roadmap/ACE_USER_STORIES.md for complete specifications
+
+---
+
+## PHASE 3: Advanced Skills 📈 MEDIUM PRIORITY (After Phase 2)
+
+**Note**: Phase 7 contains 5 user stories (US-097 through US-101) implementing high-value skills from curator recommendations.
+
+### US-097 through US-101: High-Impact Skills
+
+**Summary**: Advanced skills implementation:
+- US-097: spec-creation-automation skill - 8-10 hours (saves 23-30.7 hrs/month)
+- US-098: context-budget-optimizer skill - 10-12 hours (saves 26.7-40 hrs/month)
+- US-099: dependency-conflict-resolver skill - 6-8 hours (saves 3.3-5 hrs/month)
+- US-100: async-workflow-coordinator skill - 8-10 hours (saves 5-10 hrs/month)
+- US-101: langfuse-prompt-sync skill - 6-8 hours (saves 3.7-5.6 hrs/month)
+
+**Total Phase 7 Effort**: 40-50 hours (8-10 days)
+
+**Total Time Savings**: 61.7-91.3 hours/month across all Phase 7 skills
+
+**Phase 7 ROI**: 12-19x in first year
+
+**Technical Specs**:
+- SPEC-061 - Spec Creation Automation (exists)
+- SPEC-102 - Context Budget Optimizer (to be created)
+- SPEC-103 - Dependency Conflict Resolver (to be created)
+- SPEC-104 - Async Workflow Coordinator (to be created)
+- SPEC-105 - Langfuse Prompt Sync (to be created)
+
+**Details**: See docs/roadmap/ACE_USER_STORIES.md for complete specifications
+
+---
+
+## ACE Implementation Summary - REORGANIZED FOR MAXIMUM VELOCITY
+
+**Total User Stories**: 42 (US-062 through US-103) **← 2 NEW STORIES ADDED**
+**Total Estimated Effort**: 185-235 hours → **FRONT-LOADED (Phase 0: 82-112 hrs in 3-4 weeks)**
+
+**NEW PHASE STRUCTURE** (Optimized for Force Multiplier Effect):
+
+### Phase 0: Maximum code_developer Efficiency ⚡⚡⚡ **← START HERE**
+- **Stories**: 16 (US-062 through US-069, US-090 through US-097, US-102, US-103)
+- **Effort**: 82-112 hours (3-4 weeks)
+- **Priority**: ⭐⭐⭐⭐⭐ CRITICAL - Force multiplier for ALL future work
+- **Impact**:
+  - Code analysis: 50-150x faster
+  - code_developer velocity: +200-400% (3-5x)
+  - architect spec creation: 78% faster
+  - CFR-007 violations: 40-60/month → 0/month
+  - Monthly time savings: 80-120 hours
+
+### Phase 1: Orchestrator Agent ⭐⭐⭐ **← 3-5x FASTER DUE TO PHASE 0**
+- **Stories**: 6 (US-072 through US-077)
+- **Effort**: 35-45 hours (1.5-2 weeks at 3-5x velocity)
+- **Baseline**: Would be 4-6 weeks without Phase 0
+- **Impact**: Workflow automation, parallel execution
+
+### Phase 2: ACE Framework Agents ⭐⭐
+- **Stories**: 12 (US-078 through US-089)
+- **Effort**: 40-50 hours (accelerated by Phase 0 skills)
+- **Impact**: Reflector + Curator agents, delta items, playbooks
+
+### Phase 3: Advanced Skills ⭐
+- **Stories**: 4 (US-098 through US-101)
+- **Note**: US-097 moved to Phase 0, leaving 4 advanced skills
+- **Effort**: 30-40 hours
+- **Impact**: Context optimizer, dependency resolver, async coordinator, Langfuse sync
+
+**Total Timeline WITH Phase 0 First**:
+- Phase 0: 3-4 weeks (building force multiplier)
+- Phases 1-3: 3-4 weeks (accelerated 3-5x by Phase 0)
+- **Total: 6-8 weeks** (vs. 8-12 weeks without Phase 0 reorganization)
+- **Net Savings: 2-4 weeks in initial implementation**
+- **Ongoing Savings: 80-120 hours/month forever**
+
+**Expected Outcomes**:
+- **CFR-007 violations**: 40-60/month → 0/month (Phase 0 - Group 2)
+- **Code analysis speed**: 50-150x faster (Phase 0 - Group 1)
+- **code_developer velocity**: +200-400% (Phase 0 - Group 3)
+- **architect productivity**: +78% (Phase 0 - Group 4)
+- **Workflow time**: -40% from orchestrator (Phase 1)
+- **Total time savings**: 80-120 hours/month from Phase 0 alone
+- **Overall ROI**: 9-17x in first year (improved from 12-19x)
+
+**Next Action**: code_developer begins with US-090 (Create 5 code analysis skills) **← HIGHEST PRIORITY**
+
+**Related Documents**:
+- docs/roadmap/ACE_IMPLEMENTATION_PLAN.md - Complete 7-phase strategic plan
+- docs/roadmap/ACE_USER_STORIES.md - Full user story details (all 40 stories)
+- docs/architecture/decisions/ADR-010-reflector-curator-remain-agents.md - Agent vs. skill decision
+- SPEC-062 - Orchestrator Agent Architecture
+- SPEC-063 - Agent Startup Skills Implementation
+- SPEC-064 - Code-Searcher Responsibility Migration
+- SPEC-065 - Reflector Agent Implementation
+- SPEC-066 - Curator Agent Implementation
+- SPEC-067 - Architect Code Review Process
 
 ---
