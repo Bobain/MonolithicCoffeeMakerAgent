@@ -42,7 +42,46 @@ Reference:
     SPEC-050: docs/architecture/specs/SPEC-050-refactor-roadmap-cli-modularization.md
 """
 
-# This file will be populated as commands are moved to submodules
-# Placeholder for now - commands remain in roadmap_cli.py during migration
+# Command registry and helper functions for command lookup
+from typing import Dict, List, Optional
 
-all_commands = []
+from coffee_maker.cli.commands.all_commands import ALL_COMMANDS
+from coffee_maker.cli.commands.base import BaseCommand
+
+# Global command registry
+_COMMAND_REGISTRY: Dict[str, BaseCommand] = {}
+
+
+def _initialize_registry():
+    """Initialize the command registry with all available commands."""
+    global _COMMAND_REGISTRY
+    if not _COMMAND_REGISTRY:
+        for command_class in ALL_COMMANDS:
+            cmd_instance = command_class()
+            _COMMAND_REGISTRY[cmd_instance.name] = cmd_instance
+
+
+def get_command_handler(command_name: str) -> Optional[BaseCommand]:
+    """Get a command handler by name.
+
+    Args:
+        command_name: Name of the command (without leading slash)
+
+    Returns:
+        BaseCommand instance if found, None otherwise
+    """
+    _initialize_registry()
+    return _COMMAND_REGISTRY.get(command_name)
+
+
+def list_commands() -> List[BaseCommand]:
+    """Get list of all available commands.
+
+    Returns:
+        List of BaseCommand instances
+    """
+    _initialize_registry()
+    return list(_COMMAND_REGISTRY.values())
+
+
+__all__ = ["get_command_handler", "list_commands", "ALL_COMMANDS"]

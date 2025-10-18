@@ -1,0 +1,7 @@
+[
+  {
+    "type": "TEST_FAILURES",
+    "severity": "CRITICAL",
+    "description": "Test suite failing - check data/phase_0_monitor/test_results.txt"
+  }
+]

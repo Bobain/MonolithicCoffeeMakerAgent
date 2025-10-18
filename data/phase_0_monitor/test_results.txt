@@ -1,0 +1,30 @@
+[1m============================= test session starts ==============================[0m
+platform darwin -- Python 3.11.12, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent
+configfile: pytest.ini
+plugins: anyio-4.11.0, html-4.1.1, xdist-3.8.0, metadata-3.1.1, cov-6.3.0, langsmith-0.4.33
+collected 1305 items
+
+tests/unit/cli/test_error_handler.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[33m                      [  1%][0m
+tests/unit/skills/test_context_budget_optimizer.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[33m      [  2%][0m
+tests/unit/test_ace_api.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[33m                                [  3%][0m
+tests/unit/test_activity_db.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[33m            [  5%][0m
+tests/unit/test_agent_registry.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[33m             [  7%][0m
+tests/unit/test_agent_router.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[33m                  [  9%][0m
+tests/unit/test_analytics.py [32m.[0m[32m.[0m[32m.[0m[31mF[0m
+
+=================================== FAILURES ===================================
+[31m[1m__________________ TestExportConfig.test_missing_credentials ___________________[0m
+[1m[31mtests/unit/test_analytics.py[0m:143: in test_missing_credentials
+    [0m[94mwith[39;49;00m pytest.raises([96mValueError[39;49;00m, match=[33m"[39;49;00m[33mLANGFUSE_PUBLIC_KEY[39;49;00m[33m"[39;49;00m):[90m[39;49;00m
+[1m[31mE   Failed: DID NOT RAISE <class 'ValueError'>[0m
+[33m=============================== warnings summary ===============================[0m
+tests/unit/test_daemon_architect_delegation.py:37
+  /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/tests/unit/test_daemon_architect_delegation.py:37: PytestCollectionWarning: cannot collect test class 'TestDaemonWithArchitectDelegation' because it has a __init__ constructor (from: tests/unit/test_daemon_architect_delegation.py)
+    class TestDaemonWithArchitectDelegation(SpecManagerMixin):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/unit/test_analytics.py::[1mTestExportConfig::test_missing_credentials[0m - Failed: DID NOT RAISE <class 'ValueError'>
+[31m!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!![0m
+[31m=================== [31m[1m1 failed[0m, [32m126 passed[0m, [33m1 warning[0m[31m in 2.02s[0m[31m ===================[0m

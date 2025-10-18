@@ -34,13 +34,23 @@ class MockClaude:
         return result
 
 
+class MockNotifications:
+    """Mock NotificationDB for testing."""
+
+    def create_notification(self, **kwargs):
+        """Mock notification creation."""
+        return "mock_notification_id"
+
+
 class TestDaemonWithArchitectDelegation(SpecManagerMixin):
     """Test class that includes SpecManagerMixin for testing."""
 
-    def __init__(self, roadmap_path: Path):
+    def setup(self, roadmap_path: Path):
+        """Setup the test instance with required attributes."""
         self.roadmap_path = roadmap_path
         self.git = MockGitManager()
         self.claude = MockClaude()
+        self.notifications = MockNotifications()
 
 
 class TestArchitectDelegation:
@@ -67,7 +77,9 @@ class TestArchitectDelegation:
     def daemon_with_mixin(self, temp_roadmap_dir):
         """Create daemon instance with SpecManagerMixin."""
         roadmap_path = temp_roadmap_dir / "ROADMAP.md"
-        return TestDaemonWithArchitectDelegation(roadmap_path)
+        daemon = TestDaemonWithArchitectDelegation()
+        daemon.setup(roadmap_path)
+        return daemon
 
     def test_spec_prefix_generation_for_us_priority(self, daemon_with_mixin):
         """Test spec prefix generation for US-XXX priorities."""
@@ -269,7 +281,9 @@ class TestDeprecatedSpecCreationPrompt:
         roadmap_file = roadmap_dir / "ROADMAP.md"
         roadmap_file.write_text("# ROADMAP\n\nTest roadmap")
 
-        return TestDaemonWithArchitectDelegation(roadmap_file)
+        daemon = TestDaemonWithArchitectDelegation()
+        daemon.setup(roadmap_file)
+        return daemon
 
     def test_deprecated_method_still_works(self, daemon_with_mixin):
         """Test that deprecated _build_spec_creation_prompt still works for backwards compatibility."""
