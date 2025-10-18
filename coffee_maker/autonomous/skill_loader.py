@@ -23,8 +23,18 @@ logger = logging.getLogger(__name__)
 class SkillNames:
     """Enum-like class for skill names (prevents typos)."""
 
+    # Architect skills
     ARCHITECTURE_REUSE_CHECK = "architecture-reuse-check"
     PROACTIVE_REFACTORING_ANALYSIS = "proactive-refactoring-analysis"
+
+    # code_developer skills
+    TEST_FAILURE_ANALYSIS = "test-failure-analysis"
+    DOD_VERIFICATION = "dod-verification"
+    GIT_WORKFLOW_AUTOMATION = "git-workflow-automation"
+
+    # project_manager skills
+    ROADMAP_HEALTH_CHECK = "roadmap-health-check"
+    PR_MONITORING_ANALYSIS = "pr-monitoring-analysis"
 
 
 def load_skill(skill_name: str, variables: Optional[Dict[str, str]] = None) -> str:

@@ -57,19 +57,40 @@ class TestSkillLoader:
         skills = get_available_skills()
 
         assert isinstance(skills, list)
-        assert len(skills) > 0  # Should have at least architecture-reuse-check
+        assert len(skills) >= 7  # Should have at least 7 skills now
 
         # Should include our created skills
         assert SkillNames.ARCHITECTURE_REUSE_CHECK in skills
         assert SkillNames.PROACTIVE_REFACTORING_ANALYSIS in skills
+        assert SkillNames.TEST_FAILURE_ANALYSIS in skills
+        assert SkillNames.ROADMAP_HEALTH_CHECK in skills
+        assert SkillNames.DOD_VERIFICATION in skills
+        assert SkillNames.GIT_WORKFLOW_AUTOMATION in skills
+        assert SkillNames.PR_MONITORING_ANALYSIS in skills
 
     def test_skill_names_enum(self):
         """Test SkillNames enum has expected values."""
+        # Architect skills
         assert hasattr(SkillNames, "ARCHITECTURE_REUSE_CHECK")
         assert hasattr(SkillNames, "PROACTIVE_REFACTORING_ANALYSIS")
 
+        # code_developer skills
+        assert hasattr(SkillNames, "TEST_FAILURE_ANALYSIS")
+        assert hasattr(SkillNames, "DOD_VERIFICATION")
+        assert hasattr(SkillNames, "GIT_WORKFLOW_AUTOMATION")
+
+        # project_manager skills
+        assert hasattr(SkillNames, "ROADMAP_HEALTH_CHECK")
+        assert hasattr(SkillNames, "PR_MONITORING_ANALYSIS")
+
+        # Verify values
         assert SkillNames.ARCHITECTURE_REUSE_CHECK == "architecture-reuse-check"
         assert SkillNames.PROACTIVE_REFACTORING_ANALYSIS == "proactive-refactoring-analysis"
+        assert SkillNames.TEST_FAILURE_ANALYSIS == "test-failure-analysis"
+        assert SkillNames.ROADMAP_HEALTH_CHECK == "roadmap-health-check"
+        assert SkillNames.DOD_VERIFICATION == "dod-verification"
+        assert SkillNames.GIT_WORKFLOW_AUTOMATION == "git-workflow-automation"
+        assert SkillNames.PR_MONITORING_ANALYSIS == "pr-monitoring-analysis"
 
 
 class TestSkillContentIntegrity:
