@@ -57,7 +57,7 @@ class TestSkillLoader:
         skills = get_available_skills()
 
         assert isinstance(skills, list)
-        assert len(skills) >= 7  # Should have at least 7 skills now
+        assert len(skills) >= 10  # Should have at least 10 skills now (7 + 3 startup skills)
 
         # Should include our created skills
         assert SkillNames.ARCHITECTURE_REUSE_CHECK in skills
@@ -67,30 +67,39 @@ class TestSkillLoader:
         assert SkillNames.DOD_VERIFICATION in skills
         assert SkillNames.GIT_WORKFLOW_AUTOMATION in skills
         assert SkillNames.PR_MONITORING_ANALYSIS in skills
+        assert SkillNames.ARCHITECT_STARTUP in skills
+        assert SkillNames.CODE_DEVELOPER_STARTUP in skills
+        assert SkillNames.PROJECT_MANAGER_STARTUP in skills
 
     def test_skill_names_enum(self):
         """Test SkillNames enum has expected values."""
         # Architect skills
         assert hasattr(SkillNames, "ARCHITECTURE_REUSE_CHECK")
         assert hasattr(SkillNames, "PROACTIVE_REFACTORING_ANALYSIS")
+        assert hasattr(SkillNames, "ARCHITECT_STARTUP")
 
         # code_developer skills
         assert hasattr(SkillNames, "TEST_FAILURE_ANALYSIS")
         assert hasattr(SkillNames, "DOD_VERIFICATION")
         assert hasattr(SkillNames, "GIT_WORKFLOW_AUTOMATION")
+        assert hasattr(SkillNames, "CODE_DEVELOPER_STARTUP")
 
         # project_manager skills
         assert hasattr(SkillNames, "ROADMAP_HEALTH_CHECK")
         assert hasattr(SkillNames, "PR_MONITORING_ANALYSIS")
+        assert hasattr(SkillNames, "PROJECT_MANAGER_STARTUP")
 
         # Verify values
         assert SkillNames.ARCHITECTURE_REUSE_CHECK == "architecture-reuse-check"
         assert SkillNames.PROACTIVE_REFACTORING_ANALYSIS == "proactive-refactoring-analysis"
+        assert SkillNames.ARCHITECT_STARTUP == "architect-startup"
         assert SkillNames.TEST_FAILURE_ANALYSIS == "test-failure-analysis"
         assert SkillNames.ROADMAP_HEALTH_CHECK == "roadmap-health-check"
         assert SkillNames.DOD_VERIFICATION == "dod-verification"
         assert SkillNames.GIT_WORKFLOW_AUTOMATION == "git-workflow-automation"
         assert SkillNames.PR_MONITORING_ANALYSIS == "pr-monitoring-analysis"
+        assert SkillNames.CODE_DEVELOPER_STARTUP == "code-developer-startup"
+        assert SkillNames.PROJECT_MANAGER_STARTUP == "project-manager-startup"
 
 
 class TestSkillContentIntegrity:

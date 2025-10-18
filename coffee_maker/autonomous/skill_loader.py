@@ -26,15 +26,18 @@ class SkillNames:
     # Architect skills
     ARCHITECTURE_REUSE_CHECK = "architecture-reuse-check"
     PROACTIVE_REFACTORING_ANALYSIS = "proactive-refactoring-analysis"
+    ARCHITECT_STARTUP = "architect-startup"  # CFR-007 solution
 
     # code_developer skills
     TEST_FAILURE_ANALYSIS = "test-failure-analysis"
     DOD_VERIFICATION = "dod-verification"
     GIT_WORKFLOW_AUTOMATION = "git-workflow-automation"
+    CODE_DEVELOPER_STARTUP = "code-developer-startup"  # CFR-007 solution
 
     # project_manager skills
     ROADMAP_HEALTH_CHECK = "roadmap-health-check"
     PR_MONITORING_ANALYSIS = "pr-monitoring-analysis"
+    PROJECT_MANAGER_STARTUP = "project-manager-startup"  # CFR-007 solution
 
 
 def load_skill(skill_name: str, variables: Optional[Dict[str, str]] = None) -> str:
