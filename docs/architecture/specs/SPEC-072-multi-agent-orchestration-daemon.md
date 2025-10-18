@@ -1,14 +1,14 @@
 # SPEC-072: Multi-Agent Orchestration Daemon
 
-**Status**: Draft (Reverted to POC-072 Design)
+**Status**: Draft (SQLite-Based Architecture)
 
 **Created**: 2025-10-18
 
-**Updated**: 2025-10-18 (Reverted to zero-dependency in-memory queue)
+**Updated**: 2025-10-18 (Updated to SQLite-based message queue + metrics)
 
 **Author**: architect agent
 
-**Estimated Effort**: 2-3 days (16-24 hours) ⭐ REDUCED (simpler architecture)
+**Estimated Effort**: 2.5-3.5 days (18-26 hours) ⭐ ENHANCED (SQLite adds persistence + analytics)
 
 **Priority**: CRITICAL - Foundation for autonomous team operation
 
@@ -166,58 +166,90 @@ team-daemon (PID 1000)
     └── Bug detection
 ```
 
-### Message Queue Architecture (In-Memory, POC-072 Design)
+### Message Queue Architecture (SQLite-Based)
 
-**Decision**: Use **Python stdlib only** (multiprocessing.Queue + heapq) - **Zero external dependencies**
+**Decision**: Use **SQLite** for message queue + metrics database - **Zero external dependencies**
 
-**Rationale**: User preference for zero external dependencies, especially for working POC
+**Rationale**: User preference for leveraging existing SQLite (already used by agents), with persistence and built-in analytics
 
 **Benefits**:
-- ✅ Zero external dependencies (multiprocessing + heapq are Python stdlib)
-- ✅ POC-072 already validated (4 passing tests)
-- ✅ Simpler architecture (no Redis server to manage)
-- ✅ Faster for local development (no network overhead)
-- ✅ Easier to debug (all in-process, no external state)
+- ✅ Zero external dependencies (SQLite is Python stdlib)
+- ✅ **Persistence**: Messages survive daemon crashes
+- ✅ **Built-in Analytics**: SQL queries for bottleneck analysis
+- ✅ **Metrics Storage**: Historical data for performance tracking
+- ✅ **Thread-Safe**: WAL mode enables concurrent reads/writes
+- ✅ **Zero Configuration**: Just a file path (e.g., `data/orchestrator.db`)
+- ✅ **Simple Queries**: `SELECT * FROM tasks ORDER BY duration_ms DESC LIMIT 10`
+- ✅ **Aggregation**: `SELECT agent, AVG(duration_ms) FROM tasks GROUP BY agent`
 
 **Trade-offs Accepted**:
-- ⚠️ No persistence (messages lost on daemon crash)
-- ⚠️ Single-machine only (no distributed coordination)
-- ⚠️ Manual bottleneck tracking (no built-in sorted sets)
+- ⚠️ Single-machine only (no distributed coordination) - same as in-memory
+- ⚠️ Disk I/O overhead (minimal with WAL mode, ~1-2ms per operation)
+
+**Why SQLite > In-Memory**:
+- ✅ Survives daemon crashes (messages not lost)
+- ✅ Enables historical metrics (trend analysis over weeks)
+- ✅ SQL queries for bottlenecks (no manual heapq tracking)
+- ✅ Already available (Python 3.11 stdlib)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                 IN-MEMORY MESSAGE QUEUE                         │
-│                 (multiprocessing.Queue + heapq)                 │
+│                 SQLITE MESSAGE QUEUE + METRICS                  │
+│                 (orchestrator.db with WAL mode)                 │
 │                                                                 │
 │  ┌────────────────────────────────────────────────────────┐    │
-│  │  Priority Heap (heapq)                                 │    │
-│  │  - Messages sorted by priority (1=highest, 10=lowest) │    │
-│  │  - O(log N) insert, O(log N) pop                      │    │
-│  │  - Per-recipient filtering (get messages for agent)    │    │
-│  └────────────────────────────────────────────────────────┘    │
-│                                                                 │
-│  ┌────────────────────────────────────────────────────────┐    │
-│  │  Task Metadata (dict)                                  │    │
-│  │  task_id → {                                           │    │
-│  │    sender: AgentType,                                  │    │
-│  │    recipient: AgentType,                               │    │
-│  │    type: MessageType,                                  │    │
-│  │    payload: dict,                                      │    │
-│  │    priority: int,                                      │    │
-│  │    timestamp: datetime,                                │    │
-│  │    status: queued|running|complete|failed,             │    │
-│  │    start_time: datetime (when started),                │    │
-│  │    duration_ms: int (when completed)                   │    │
-│  │  }                                                     │    │
-│  └────────────────────────────────────────────────────────┘    │
-│                                                                 │
-│  ┌────────────────────────────────────────────────────────┐    │
-│  │  Bottleneck Tracking (heapq)                           │    │
-│  │  - Max heap of slowest tasks (by duration_ms)          │    │
-│  │  - Keep top 100 slowest tasks                          │    │
-│  │  - O(log N) insert, O(1) get max                       │    │
+│  │  TABLE: tasks (message queue + history)               │    │
+│  │  - task_id (TEXT PRIMARY KEY)                          │    │
+│  │  - sender (TEXT)                                       │    │
+│  │  - recipient (TEXT)                                    │    │
+│  │  - type (TEXT)                                         │    │
+│  │  - priority (INTEGER, indexed for fast queries)       │    │
+│  │  - status (TEXT) [queued, running, completed, failed]  │    │
+│  │  - payload (TEXT, JSON)                                │    │
+│  │  - created_at (TEXT, ISO8601)                          │    │
+│  │  - started_at (TEXT, ISO8601, nullable)                │    │
+│  │  - completed_at (TEXT, ISO8601, nullable)              │    │
+│  │  - duration_ms (INTEGER, indexed for bottleneck query) │    │
+│  │  - error_message (TEXT, nullable)                      │    │
 │  │                                                        │    │
-│  │  Query: nlargest(10, heap) → top 10 slowest tasks     │    │
+│  │  Indexes:                                              │    │
+│  │  - idx_priority (priority, created_at) for fast dequeue│    │
+│  │  - idx_duration (duration_ms DESC) for bottlenecks    │    │
+│  │  - idx_recipient (recipient, status) for agent queries│    │
+│  └────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │  TABLE: agent_metrics (performance tracking)           │    │
+│  │  - id (INTEGER PRIMARY KEY AUTOINCREMENT)              │    │
+│  │  - agent (TEXT, indexed)                               │    │
+│  │  - metric_name (TEXT) [tasks_completed, avg_duration,  │    │
+│  │                        cpu_percent, memory_mb]         │    │
+│  │  - metric_value (REAL)                                 │    │
+│  │  - timestamp (TEXT, ISO8601)                           │    │
+│  │                                                        │    │
+│  │  Indexes:                                              │    │
+│  │  - idx_agent_metric (agent, metric_name, timestamp)    │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │  VIEW: bottlenecks (materialized query)                │    │
+│  │  SELECT * FROM tasks                                   │    │
+│  │  WHERE status = 'completed'                            │    │
+│  │  ORDER BY duration_ms DESC                             │    │
+│  │  LIMIT 100;                                            │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │  VIEW: agent_performance (aggregated stats)            │    │
+│  │  SELECT recipient AS agent,                            │    │
+│  │         COUNT(*) AS total_tasks,                       │    │
+│  │         AVG(duration_ms) AS avg_duration,              │    │
+│  │         MAX(duration_ms) AS max_duration,              │    │
+│  │         SUM(CASE WHEN status='failed' THEN 1 END)      │    │
+│  │           AS failed_tasks                              │    │
+│  │  FROM tasks                                            │    │
+│  │  WHERE status IN ('completed', 'failed')               │    │
+│  │  GROUP BY recipient;                                   │    │
 │  └────────────────────────────────────────────────────────┘    │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -227,6 +259,10 @@ team-daemon (PID 1000)
 │  Subprocess  │ │ Subprocess   │ │ Subprocess   │ │  Subprocess  │
 └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
 ```
+
+**File Location**: `data/orchestrator.db` (persisted on disk)
+
+**WAL Mode**: Write-Ahead Logging enables concurrent reads while writing (thread-safe)
 
 ---
 
@@ -564,88 +600,173 @@ class AgentProcess:
 
 ---
 
-### 3. Message Queue (In-Memory, POC-072 Design)
+### 3. Message Queue (SQLite-Based)
 
 **File**: `coffee_maker/autonomous/message_queue.py`
 
-**Implementation**: **Python stdlib only** (multiprocessing.Queue + heapq + dict)
+**Implementation**: **SQLite with WAL mode** - **Zero external dependencies** (Python stdlib)
 
-**Dependencies**: **None** (multiprocessing, heapq, uuid, datetime are Python stdlib)
+**Dependencies**: **None** (sqlite3, json, uuid, datetime are Python stdlib)
 
-**API**:
+**Database**: `data/orchestrator.db` (persisted on disk)
+
+**Schema Definition**:
+
+```sql
+-- Enable WAL mode (Write-Ahead Logging) for concurrent access
+PRAGMA journal_mode = WAL;
+PRAGMA synchronous = NORMAL;  -- Balance safety and performance
+
+-- Tasks table (message queue + historical data)
+CREATE TABLE IF NOT EXISTS tasks (
+    task_id TEXT PRIMARY KEY,
+    sender TEXT NOT NULL,
+    recipient TEXT NOT NULL,
+    type TEXT NOT NULL,
+    priority INTEGER NOT NULL DEFAULT 5,  -- 1=highest, 10=lowest
+    status TEXT NOT NULL DEFAULT 'queued',  -- queued, running, completed, failed
+    payload TEXT NOT NULL,  -- JSON-encoded dict
+    created_at TEXT NOT NULL,  -- ISO8601 timestamp
+    started_at TEXT,  -- ISO8601 timestamp (nullable)
+    completed_at TEXT,  -- ISO8601 timestamp (nullable)
+    duration_ms INTEGER,  -- Duration in milliseconds (nullable)
+    error_message TEXT  -- Error details if failed (nullable)
+);
+
+-- Indexes for fast queries
+CREATE INDEX IF NOT EXISTS idx_priority ON tasks(priority, created_at);
+CREATE INDEX IF NOT EXISTS idx_duration ON tasks(duration_ms DESC);
+CREATE INDEX IF NOT EXISTS idx_recipient_status ON tasks(recipient, status);
+CREATE INDEX IF NOT EXISTS idx_status ON tasks(status);
+
+-- Agent metrics table (performance tracking)
+CREATE TABLE IF NOT EXISTS agent_metrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent TEXT NOT NULL,
+    metric_name TEXT NOT NULL,  -- tasks_completed, avg_duration, cpu_percent, memory_mb
+    metric_value REAL NOT NULL,
+    timestamp TEXT NOT NULL  -- ISO8601 timestamp
+);
+
+-- Index for metrics queries
+CREATE INDEX IF NOT EXISTS idx_agent_metric ON agent_metrics(agent, metric_name, timestamp);
+
+-- View: Top 100 slowest tasks (bottleneck analysis)
+CREATE VIEW IF NOT EXISTS bottlenecks AS
+SELECT task_id, recipient AS agent, type, duration_ms, created_at, started_at, completed_at
+FROM tasks
+WHERE status = 'completed' AND duration_ms IS NOT NULL
+ORDER BY duration_ms DESC
+LIMIT 100;
+
+-- View: Agent performance aggregates
+CREATE VIEW IF NOT EXISTS agent_performance AS
+SELECT
+    recipient AS agent,
+    COUNT(*) AS total_tasks,
+    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_tasks,
+    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_tasks,
+    AVG(CASE WHEN status = 'completed' THEN duration_ms ELSE NULL END) AS avg_duration_ms,
+    MAX(CASE WHEN status = 'completed' THEN duration_ms ELSE NULL END) AS max_duration_ms,
+    MIN(CASE WHEN status = 'completed' THEN duration_ms ELSE NULL END) AS min_duration_ms
+FROM tasks
+GROUP BY recipient;
+
+-- View: Queue depth by agent (current queued tasks)
+CREATE VIEW IF NOT EXISTS queue_depth AS
+SELECT
+    recipient AS agent,
+    COUNT(*) AS queued_tasks,
+    SUM(CASE WHEN priority <= 2 THEN 1 ELSE 0 END) AS high_priority,
+    SUM(CASE WHEN priority BETWEEN 3 AND 7 THEN 1 ELSE 0 END) AS normal_priority,
+    SUM(CASE WHEN priority >= 8 THEN 1 ELSE 0 END) AS low_priority
+FROM tasks
+WHERE status = 'queued'
+GROUP BY recipient;
+```
+
+**Python API**:
 
 ```python
-import heapq
-import multiprocessing
+import sqlite3
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional
+from pathlib import Path
 
 
+@dataclass
 class Message:
     """Inter-agent message."""
-    sender: AgentType
-    recipient: AgentType
-    type: MessageType  # TASK_DELEGATE, STATUS_UPDATE, BUG_REPORT, etc.
+    sender: str  # AgentType.value
+    recipient: str  # AgentType.value
+    type: str  # MessageType.value
     payload: dict
     priority: int = 5  # 1=highest, 10=lowest
-    timestamp: datetime = field(default_factory=datetime.now)
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     task_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-
-    def __lt__(self, other):
-        """For heapq ordering (lower priority value = higher priority)."""
-        return self.priority < other.priority
 
 
 class MessageQueue:
-    """In-memory inter-agent communication queue using Python stdlib.
+    """SQLite-based inter-agent communication queue with persistence and metrics.
 
-    Provides reliable message passing between agents with priority queuing
-    and duration tracking. Based on POC-072 validated design.
+    Provides reliable message passing between agents with:
+    - Priority queuing (SQL ORDER BY priority)
+    - Persistence (survives daemon crashes)
+    - Duration tracking (start/complete timestamps)
+    - Bottleneck analysis (SQL queries on duration_ms)
+    - Historical metrics (aggregated performance data)
 
     Features:
-    - Zero external dependencies (stdlib only)
-    - Priority queuing (heapq-based, O(log N) operations)
-    - Duration tracking (in-memory dict with task metadata)
-    - Bottleneck analysis (heapq of slowest tasks)
-    - Simple, debuggable architecture
-
-    Trade-offs:
-    - No persistence (messages lost on daemon crash)
-    - Single-machine only (no distributed coordination)
-    - Manual bottleneck tracking (no external sorted sets)
+    - Zero external dependencies (sqlite3 is Python stdlib)
+    - Thread-safe (WAL mode enables concurrent reads/writes)
+    - SQL queries for analytics (e.g., SELECT * FROM bottlenecks)
+    - Automatic cleanup (old completed tasks pruned periodically)
 
     Example:
-        >>> queue = MessageQueue()
+        >>> queue = MessageQueue(db_path="data/orchestrator.db")
         >>> queue.send(Message(
-        ...     sender=AgentType.ARCHITECT,
-        ...     recipient=AgentType.CODE_DEVELOPER,
-        ...     type=MessageType.TASK_DELEGATE,
+        ...     sender="architect",
+        ...     recipient="code_developer",
+        ...     type="task_delegate",
         ...     payload={"spec_id": "SPEC-071"},
-        ...     priority=2,  # High priority
+        ...     priority=2,
         ... ))
         >>>
         >>> # Get next task for code_developer
-        >>> message = queue.get(AgentType.CODE_DEVELOPER)
-        >>> queue.mark_started(message.task_id, agent=AgentType.CODE_DEVELOPER)
+        >>> message = queue.get("code_developer")
+        >>> queue.mark_started(message.task_id, agent="code_developer")
         >>> # ... do work ...
         >>> queue.mark_completed(message.task_id, duration_ms=1500)
     """
 
-    def __init__(self):
-        """Initialize in-memory message queue."""
-        # Priority heap: (priority, message)
-        self._heap: List[tuple] = []
+    def __init__(self, db_path: str = "data/orchestrator.db"):
+        """Initialize SQLite message queue.
 
-        # Task metadata: task_id → metadata dict
-        self._tasks: Dict[str, dict] = {}
+        Args:
+            db_path: Path to SQLite database file
+        """
+        self.db_path = Path(db_path)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Bottleneck tracking: heap of (duration_ms, task_id)
-        # Keep top 100 slowest tasks
-        self._slowest_tasks: List[tuple] = []
-        self._max_slowest_tasks = 100
+        # Initialize database and schema
+        self._init_schema()
+
+    def _init_schema(self) -> None:
+        """Initialize database schema with tables, indexes, and views."""
+        with sqlite3.connect(self.db_path) as conn:
+            # Enable WAL mode for concurrent access
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA synchronous = NORMAL")
+
+            # Create tables (see schema above)
+            conn.executescript("""
+                -- [Full schema from above would be inserted here]
+            """)
+            conn.commit()
 
     def send(self, message: Message) -> None:
         """Send message to recipient's queue with priority.
@@ -654,100 +775,119 @@ class MessageQueue:
             message: Message to send
 
         Implementation:
-            1. Generate task_id (if not already set)
-            2. Store task metadata in self._tasks
-            3. Push (priority, message) to heap
+            INSERT INTO tasks (task_id, sender, recipient, type, priority,
+                               payload, created_at, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'queued')
         """
-        task_id = message.task_id
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT INTO tasks (task_id, sender, recipient, type, priority,
+                                   payload, created_at, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'queued')
+            """, (
+                message.task_id,
+                message.sender,
+                message.recipient,
+                message.type,
+                message.priority,
+                json.dumps(message.payload),
+                message.timestamp,
+            ))
+            conn.commit()
 
-        # Store task metadata
-        self._tasks[task_id] = {
-            "sender": message.sender,
-            "recipient": message.recipient,
-            "type": message.type,
-            "payload": message.payload,
-            "priority": message.priority,
-            "timestamp": message.timestamp,
-            "status": "queued",
-            "start_time": None,
-            "duration_ms": None,
-        }
-
-        # Push to priority heap
-        heapq.heappush(self._heap, (message.priority, message))
-
-    def get(self, recipient: AgentType, timeout: float = 1.0) -> Optional[Message]:
+    def get(self, recipient: str, timeout: float = 1.0) -> Optional[Message]:
         """Get next message for recipient (highest priority first).
 
         Args:
             recipient: Agent to get messages for
-            timeout: Timeout in seconds (ignored for in-memory queue)
+            timeout: Not used (kept for API compatibility)
 
         Returns:
             Next message or None if no messages available
 
         Implementation:
-            1. Pop all messages from heap
-            2. Find messages for this recipient
-            3. Return highest priority message for recipient
-            4. Push back all other messages
+            SELECT * FROM tasks
+            WHERE recipient = ? AND status = 'queued'
+            ORDER BY priority ASC, created_at ASC
+            LIMIT 1
         """
-        found_messages = []
-        other_messages = []
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("""
+                SELECT task_id, sender, recipient, type, priority, payload, created_at
+                FROM tasks
+                WHERE recipient = ? AND status = 'queued'
+                ORDER BY priority ASC, created_at ASC
+                LIMIT 1
+            """, (recipient,))
 
-        # Extract all messages
-        while self._heap:
-            priority, msg = heapq.heappop(self._heap)
-            if msg.recipient == recipient:
-                found_messages.append((priority, msg))
-            else:
-                other_messages.append((priority, msg))
+            row = cursor.fetchone()
+            if row:
+                return Message(
+                    task_id=row["task_id"],
+                    sender=row["sender"],
+                    recipient=row["recipient"],
+                    type=row["type"],
+                    priority=row["priority"],
+                    payload=json.loads(row["payload"]),
+                    timestamp=row["created_at"],
+                )
+            return None
 
-        # Push back messages not for this recipient
-        for item in other_messages:
-            heapq.heappush(self._heap, item)
-
-        # Return highest priority message for this recipient
-        if found_messages:
-            # Get message with lowest priority value (highest priority)
-            _, message = min(found_messages, key=lambda x: x[0])
-
-            # Push back other messages for this recipient
-            for item in found_messages:
-                if item[1] != message:
-                    heapq.heappush(self._heap, item)
-
-            return message
-
-        return None
-
-    def mark_started(self, task_id: str, agent: AgentType) -> None:
+    def mark_started(self, task_id: str, agent: str) -> None:
         """Mark task as started, record start time.
 
         Args:
             task_id: Task identifier
             agent: Agent starting the task
+
+        Implementation:
+            UPDATE tasks
+            SET status = 'running', started_at = ?
+            WHERE task_id = ?
         """
-        if task_id in self._tasks:
-            self._tasks[task_id]["status"] = "running"
-            self._tasks[task_id]["start_time"] = datetime.now()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                UPDATE tasks
+                SET status = 'running', started_at = ?
+                WHERE task_id = ?
+            """, (datetime.now().isoformat(), task_id))
+            conn.commit()
 
     def mark_completed(self, task_id: str, duration_ms: int) -> None:
-        """Mark task as completed, record duration, update bottleneck metrics.
+        """Mark task as completed, record duration.
 
         Args:
             task_id: Task identifier
             duration_ms: Task duration in milliseconds
-        """
-        if task_id in self._tasks:
-            self._tasks[task_id]["status"] = "complete"
-            self._tasks[task_id]["duration_ms"] = duration_ms
-            self._tasks[task_id]["completed_at"] = datetime.now()
 
-            # Update bottleneck tracking (keep top 100 slowest tasks)
-            heapq.heappush(self._slowest_tasks, (-duration_ms, task_id))
-            if len(self._slowest_tasks) > self._max_slowest_tasks:
-                heapq.heappop(self._slowest_tasks)
+        Implementation:
+            UPDATE tasks
+            SET status = 'completed', completed_at = ?, duration_ms = ?
+            WHERE task_id = ?
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                UPDATE tasks
+                SET status = 'completed', completed_at = ?, duration_ms = ?
+                WHERE task_id = ?
+            """, (datetime.now().isoformat(), duration_ms, task_id))
+            conn.commit()
+
+    def mark_failed(self, task_id: str, error_message: str) -> None:
+        """Mark task as failed, record error message.
+
+        Args:
+            task_id: Task identifier
+            error_message: Error details
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                UPDATE tasks
+                SET status = 'failed', completed_at = ?, error_message = ?
+                WHERE task_id = ?
+            """, (datetime.now().isoformat(), error_message, task_id))
+            conn.commit()
 
     def get_slowest_tasks(self, limit: int = 10) -> List[dict]:
         """Get slowest tasks for bottleneck analysis.
@@ -757,86 +897,144 @@ class MessageQueue:
 
         Returns:
             List of task metadata sorted by duration (slowest first)
+
+        Implementation:
+            SELECT * FROM bottlenecks LIMIT ?
         """
-        import heapq
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("SELECT * FROM bottlenecks LIMIT ?", (limit,))
+            return [dict(row) for row in cursor.fetchall()]
 
-        # Get top N slowest tasks (nlargest on negative durations)
-        slowest = heapq.nsmallest(limit, self._slowest_tasks)
+    def get_agent_performance(self) -> List[dict]:
+        """Get aggregated performance metrics per agent.
 
-        results = []
-        for neg_duration, task_id in slowest:
-            duration_ms = -neg_duration
-            if task_id in self._tasks:
-                task = self._tasks[task_id]
-                results.append({
-                    "task_id": task_id,
-                    "duration_ms": duration_ms,
-                    "agent": task["recipient"].value,
-                    "type": task["type"].value,
-                    "timestamp": task["timestamp"].isoformat(),
-                })
+        Returns:
+            List of agent performance stats
 
-        return results
+        Implementation:
+            SELECT * FROM agent_performance
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("SELECT * FROM agent_performance")
+            return [dict(row) for row in cursor.fetchall()]
 
-    def has_messages(self) -> bool:
-        """Check if queue has messages."""
-        return len(self._heap) > 0
+    def get_queue_depth(self) -> List[dict]:
+        """Get current queue depth by agent and priority.
 
-    def size(self) -> int:
-        """Get queue size."""
-        return len(self._heap)
+        Returns:
+            List of queue depth stats by agent
+
+        Implementation:
+            SELECT * FROM queue_depth
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("SELECT * FROM queue_depth")
+            return [dict(row) for row in cursor.fetchall()]
+
+    def record_metric(self, agent: str, metric_name: str, metric_value: float) -> None:
+        """Record performance metric for agent.
+
+        Args:
+            agent: Agent name
+            metric_name: Metric name (e.g., "cpu_percent", "memory_mb")
+            metric_value: Metric value
+
+        Implementation:
+            INSERT INTO agent_metrics (agent, metric_name, metric_value, timestamp)
+            VALUES (?, ?, ?, ?)
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT INTO agent_metrics (agent, metric_name, metric_value, timestamp)
+                VALUES (?, ?, ?, ?)
+            """, (agent, metric_name, metric_value, datetime.now().isoformat()))
+            conn.commit()
+
+    def cleanup_old_tasks(self, days: int = 30) -> int:
+        """Clean up completed tasks older than N days.
+
+        Args:
+            days: Number of days to retain
+
+        Returns:
+            Number of tasks deleted
+
+        Implementation:
+            DELETE FROM tasks
+            WHERE status IN ('completed', 'failed')
+              AND completed_at < datetime('now', '-{days} days')
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(f"""
+                DELETE FROM tasks
+                WHERE status IN ('completed', 'failed')
+                  AND completed_at < datetime('now', '-{days} days')
+            """)
+            conn.commit()
+            return cursor.rowcount
+
+    def has_messages(self, recipient: Optional[str] = None) -> bool:
+        """Check if queue has messages.
+
+        Args:
+            recipient: Optional agent filter
+
+        Returns:
+            True if messages exist
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            if recipient:
+                cursor = conn.execute(
+                    "SELECT COUNT(*) FROM tasks WHERE recipient = ? AND status = 'queued'",
+                    (recipient,)
+                )
+            else:
+                cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE status = 'queued'")
+            count = cursor.fetchone()[0]
+            return count > 0
+
+    def size(self, recipient: Optional[str] = None) -> int:
+        """Get queue size.
+
+        Args:
+            recipient: Optional agent filter
+
+        Returns:
+            Number of queued messages
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            if recipient:
+                cursor = conn.execute(
+                    "SELECT COUNT(*) FROM tasks WHERE recipient = ? AND status = 'queued'",
+                    (recipient,)
+                )
+            else:
+                cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE status = 'queued'")
+            return cursor.fetchone()[0]
 
     def stop(self) -> None:
-        """Stop message queue (cleanup)."""
-        self._heap.clear()
-        self._tasks.clear()
-        self._slowest_tasks.clear()
+        """Stop message queue (cleanup, vacuum database)."""
+        with sqlite3.connect(self.db_path) as conn:
+            # Clean up completed tasks older than 30 days
+            self.cleanup_old_tasks(days=30)
+
+            # Vacuum database to reclaim space
+            conn.execute("VACUUM")
+            conn.commit()
 ```
 
-**In-Memory Data Structures**:
+**Benefits of SQLite Approach**:
 
-```python
-# Task Metadata (dict)
-_tasks = {
-    "task_uuid_123": {
-        "sender": AgentType.ARCHITECT,
-        "recipient": AgentType.CODE_DEVELOPER,
-        "type": MessageType.TASK_DELEGATE,
-        "payload": {"spec_id": "SPEC-071"},
-        "priority": 2,
-        "timestamp": datetime(2025, 10, 18, 10, 30, 0),
-        "status": "queued" | "running" | "complete" | "failed",
-        "start_time": datetime(2025, 10, 18, 10, 30, 5),  # when started
-        "duration_ms": 1500,  # when completed
-        "completed_at": datetime(2025, 10, 18, 10, 30, 6, 500),
-    }
-}
-
-# Priority Heap (list of tuples)
-_heap = [
-    (1, Message(...)),  # priority=1 (highest)
-    (2, Message(...)),  # priority=2
-    (5, Message(...)),  # priority=5
-]
-
-# Bottleneck Tracking (max heap of slowest tasks)
-_slowest_tasks = [
-    (-3500, "task_id_1"),  # 3500ms (slowest)
-    (-2800, "task_id_2"),  # 2800ms
-    (-1500, "task_id_3"),  # 1500ms
-]
-# Query: heapq.nsmallest(10, _slowest_tasks) → top 10 slowest
-```
-
-**POC-072 Validation**:
-
-POC-072 already validates this design with 4 passing tests:
-- ✅ Message queue priority ordering
-- ✅ Agent process lifecycle (start/stop)
-- ✅ Health monitoring (crash detection)
-- ✅ Graceful shutdown
-
-**No migration needed** - POC-072 code can be used directly as foundation
+1. **Persistence**: Messages survive daemon crashes (written to disk)
+2. **Analytics**: SQL queries for bottleneck analysis (no manual heapq tracking)
+3. **Metrics**: Historical performance data (agent_metrics table)
+4. **Thread-Safe**: WAL mode enables concurrent reads/writes
+5. **Zero Dependencies**: SQLite is Python stdlib (no external packages)
+6. **Simple Queries**: `SELECT * FROM bottlenecks LIMIT 10`
+7. **Aggregation**: `SELECT agent, AVG(duration_ms) FROM tasks GROUP BY agent`
 
 ---
 
@@ -971,14 +1169,17 @@ Each agent needs a daemon implementation:
 - Add health monitoring
 - Implement graceful shutdown
 
-**Day 3: In-Memory Message Queue** (3-4 hours) ⭐ SIMPLIFIED
-- Port POC-072 `MessageQueue` to production code
-  - Priority heap (heapq) with recipient filtering
-  - Task metadata storage (dict)
+**Day 3: SQLite Message Queue** (4-5 hours) ⭐ ENHANCED
+- Create SQLite schema (tasks, agent_metrics, views)
+- Implement `MessageQueue` class with SQLite backend
+  - Priority queuing (SQL ORDER BY priority)
+  - Task lifecycle (queued → running → completed/failed)
   - Duration tracking (`mark_started`, `mark_completed`)
-  - Bottleneck analysis (heapq of slowest tasks)
-- Add type hints and production-quality error handling
-- **Zero dependencies** - stdlib only
+  - Bottleneck analysis (SQL queries on duration_ms)
+  - Metrics recording (agent_metrics table)
+- Add indexes for fast queries
+- Enable WAL mode for thread-safe concurrent access
+- **Zero dependencies** - sqlite3 is stdlib
 
 **Day 4: Testing & Integration** (3-4 hours)
 - Unit tests for TeamDaemon (based on POC-072 tests)
@@ -1024,13 +1225,15 @@ Each agent needs a daemon implementation:
 
 **Goal**: Identify slow tasks and agent performance bottlenecks automatically
 
-**Implementation**: In-memory heapq with task metadata dict
+**Implementation**: SQL queries on SQLite database
 
 ```python
 # In TeamDaemon._coordination_loop()
 def _check_bottlenecks(self) -> None:
     """Check for performance bottlenecks every 5 minutes."""
+    # Query SQLite for slowest tasks
     slowest_tasks = self.message_queue.get_slowest_tasks(limit=10)
+    # SQL: SELECT * FROM bottlenecks LIMIT 10
 
     for task in slowest_tasks:
         if task["duration_ms"] > 30000:  # >30 seconds
@@ -1042,73 +1245,180 @@ def _check_bottlenecks(self) -> None:
             # Send notification to project_manager
             self._notify_bottleneck(task)
 
-    # Calculate percentiles (from in-memory data)
-    p50, p95, p99 = self._get_percentiles()
+    # Calculate percentiles (from SQLite)
+    p50, p95, p99 = self._get_percentiles_from_sqlite()
     logger.info(f"Task durations: p50={p50}ms, p95={p95}ms, p99={p99}ms")
+
+def _get_percentiles_from_sqlite(self) -> tuple:
+    """Calculate p50, p95, p99 from SQLite."""
+    with sqlite3.connect(self.message_queue.db_path) as conn:
+        cursor = conn.execute("""
+            SELECT
+                (SELECT duration_ms FROM tasks
+                 WHERE status = 'completed' AND duration_ms IS NOT NULL
+                 ORDER BY duration_ms
+                 LIMIT 1 OFFSET (SELECT COUNT(*) * 50 / 100 FROM tasks
+                                  WHERE status = 'completed' AND duration_ms IS NOT NULL)) AS p50,
+                (SELECT duration_ms FROM tasks
+                 WHERE status = 'completed' AND duration_ms IS NOT NULL
+                 ORDER BY duration_ms
+                 LIMIT 1 OFFSET (SELECT COUNT(*) * 95 / 100 FROM tasks
+                                  WHERE status = 'completed' AND duration_ms IS NOT NULL)) AS p95,
+                (SELECT duration_ms FROM tasks
+                 WHERE status = 'completed' AND duration_ms IS NOT NULL
+                 ORDER BY duration_ms
+                 LIMIT 1 OFFSET (SELECT COUNT(*) * 99 / 100 FROM tasks
+                                  WHERE status = 'completed' AND duration_ms IS NOT NULL)) AS p99
+        """)
+        row = cursor.fetchone()
+        return row[0] or 0, row[1] or 0, row[2] or 0
 ```
 
 ### Bottleneck Metrics Dashboard
 
-**Query Examples** (in-memory operations):
+**SQL Query Examples** (leveraging SQLite views):
 
 ```python
-# Get slowest 10 tasks (from heapq)
+# Get slowest 10 tasks
 slowest = queue.get_slowest_tasks(limit=10)
-# → [{task_id, duration_ms, agent, type, timestamp}, ...]
+# SQL: SELECT * FROM bottlenecks LIMIT 10
+# → [{task_id, agent, type, duration_ms, created_at, started_at, completed_at}, ...]
 
-# Get average duration per agent (from task metadata dict)
-for agent_type in AgentType:
-    agent_tasks = [
-        task["duration_ms"]
-        for task in queue._tasks.values()
-        if task["recipient"] == agent_type and task["duration_ms"] is not None
-    ]
-    avg_duration = sum(agent_tasks) / len(agent_tasks) if agent_tasks else 0
-    print(f"{agent_type.value}: avg={avg_duration}ms")
+# Get agent performance stats
+performance = queue.get_agent_performance()
+# SQL: SELECT * FROM agent_performance
+# → [{agent, total_tasks, completed_tasks, failed_tasks,
+#      avg_duration_ms, max_duration_ms, min_duration_ms}, ...]
 
-# Get 95th percentile duration (from sorted slowest tasks)
-all_durations = [
-    task["duration_ms"]
-    for task in queue._tasks.values()
-    if task["duration_ms"] is not None
-]
-all_durations.sort()
-p95_index = int(len(all_durations) * 0.95)
-p95_duration = all_durations[p95_index] if all_durations else 0
-print(f"95th percentile: {p95_duration}ms")
+# Example output:
+# [
+#   {
+#     "agent": "code_developer",
+#     "total_tasks": 156,
+#     "completed_tasks": 153,
+#     "failed_tasks": 3,
+#     "avg_duration_ms": 2300,
+#     "max_duration_ms": 45000,
+#     "min_duration_ms": 120
+#   },
+#   ...
+# ]
+
+# Get queue depth by agent
+queue_depth = queue.get_queue_depth()
+# SQL: SELECT * FROM queue_depth
+# → [{agent, queued_tasks, high_priority, normal_priority, low_priority}, ...]
+
+# Example output:
+# [
+#   {
+#     "agent": "code_developer",
+#     "queued_tasks": 5,
+#     "high_priority": 2,
+#     "normal_priority": 2,
+#     "low_priority": 1
+#   },
+#   ...
+# ]
+
+# Get 95th percentile duration
+with sqlite3.connect("data/orchestrator.db") as conn:
+    cursor = conn.execute("""
+        SELECT duration_ms
+        FROM tasks
+        WHERE status = 'completed' AND duration_ms IS NOT NULL
+        ORDER BY duration_ms
+        LIMIT 1 OFFSET (
+            SELECT CAST(COUNT(*) * 0.95 AS INTEGER)
+            FROM tasks
+            WHERE status = 'completed' AND duration_ms IS NOT NULL
+        )
+    """)
+    p95 = cursor.fetchone()[0]
+    print(f"95th percentile: {p95}ms")
+
+# Analyze bottlenecks by task type
+with sqlite3.connect("data/orchestrator.db") as conn:
+    cursor = conn.execute("""
+        SELECT
+            type,
+            COUNT(*) AS total,
+            AVG(duration_ms) AS avg_duration,
+            MAX(duration_ms) AS max_duration
+        FROM tasks
+        WHERE status = 'completed' AND duration_ms IS NOT NULL
+        GROUP BY type
+        ORDER BY avg_duration DESC
+    """)
+    for row in cursor.fetchall():
+        print(f"{row[0]}: avg={row[2]}ms, max={row[3]}ms ({row[1]} tasks)")
 ```
+
+**Benefits of SQLite Approach**:
+
+1. **Persistent Metrics**: Historical data survives daemon restarts
+2. **Simple Queries**: Standard SQL (no manual heapq tracking)
+3. **Flexible Analysis**: Ad-hoc queries for any time range
+4. **Trend Analysis**: Compare performance week-over-week
+5. **Views**: Pre-computed aggregates (bottlenecks, agent_performance, queue_depth)
 
 ### Langfuse Integration for Observability
 
-**In-Memory Events → Langfuse Exporter**:
+**SQLite → Langfuse Exporter**:
 
 ```python
 class LangfuseExporter:
-    """Export task completion events to Langfuse for observability."""
+    """Export task completion events from SQLite to Langfuse for observability."""
 
     def __init__(self, message_queue: MessageQueue, langfuse_client):
         self.queue = message_queue
         self.langfuse = langfuse_client
-        self._last_exported_tasks = set()
+        self._last_export_timestamp = None
 
     def export_new_completions(self):
-        """Export newly completed tasks to Langfuse."""
-        for task_id, task_data in self.queue._tasks.items():
-            if (
-                task_data["status"] == "complete"
-                and task_id not in self._last_exported_tasks
-            ):
-                # Export to Langfuse
+        """Export newly completed tasks to Langfuse.
+
+        Queries SQLite for tasks completed since last export.
+        """
+        with sqlite3.connect(self.queue.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+
+            # Query for newly completed tasks
+            if self._last_export_timestamp:
+                cursor = conn.execute("""
+                    SELECT task_id, recipient, type, duration_ms, created_at, completed_at
+                    FROM tasks
+                    WHERE status = 'completed'
+                      AND completed_at > ?
+                    ORDER BY completed_at
+                """, (self._last_export_timestamp,))
+            else:
+                cursor = conn.execute("""
+                    SELECT task_id, recipient, type, duration_ms, created_at, completed_at
+                    FROM tasks
+                    WHERE status = 'completed'
+                    ORDER BY completed_at DESC
+                    LIMIT 100
+                """)
+
+            tasks = cursor.fetchall()
+
+            # Export to Langfuse
+            for task in tasks:
                 self.langfuse.trace(
-                    name=f"task_{task_id}",
+                    name=f"task_{task['task_id']}",
                     metadata={
-                        "agent": task_data["recipient"].value,
-                        "type": task_data["type"].value,
-                        "duration_ms": task_data["duration_ms"],
-                        "timestamp": task_data["timestamp"].isoformat(),
+                        "agent": task["recipient"],
+                        "type": task["type"],
+                        "duration_ms": task["duration_ms"],
+                        "created_at": task["created_at"],
+                        "completed_at": task["completed_at"],
                     },
                 )
-                self._last_exported_tasks.add(task_id)
+
+            # Update last export timestamp
+            if tasks:
+                self._last_export_timestamp = tasks[-1]["completed_at"]
 
 # Run periodically in background thread
 exporter = LangfuseExporter(message_queue, langfuse_client)
@@ -1118,6 +1428,11 @@ def export_loop():
         time.sleep(60)  # Export every 60 seconds
 threading.Thread(target=export_loop, daemon=True).start()
 ```
+
+**Benefits**:
+- Queries SQLite for completed tasks (persistent, no lost data)
+- Incremental export (only new completions since last export)
+- Historical backfill (can re-export old tasks if needed)
 
 ### Alerting Rules
 
@@ -1139,22 +1454,26 @@ bottleneck_alerts:
   max_queue_depth: 100  # tasks
 ```
 
-**Implementation** (in-memory operations):
+**Implementation** (SQLite queries):
 
 ```python
 def _check_alerts(self):
-    """Check alerting rules and send notifications."""
-    # Check slow tasks
-    for task in self.message_queue.get_slowest_tasks(limit=100):
+    """Check alerting rules and send notifications.
+
+    Queries SQLite database for bottlenecks and performance issues.
+    """
+    # Check slow tasks (from bottlenecks view)
+    slowest_tasks = self.message_queue.get_slowest_tasks(limit=100)
+    for task in slowest_tasks:
         if task["duration_ms"] > self.config.slow_task_threshold:
             self._send_alert(
                 severity="warning",
                 title=f"Slow task detected: {task['task_id']}",
-                details=f"Duration: {task['duration_ms']}ms (threshold: {self.config.slow_task_threshold}ms)",
+                details=f"Agent: {task['agent']}, Duration: {task['duration_ms']}ms (threshold: {self.config.slow_task_threshold}ms)",
             )
 
-    # Check p95
-    p95 = self._get_p95_duration()
+    # Check p95 (from SQLite query)
+    p95 = self._get_p95_duration_from_sqlite()
     if p95 > self.config.p95_threshold:
         self._send_alert(
             severity="warning",
@@ -1162,14 +1481,27 @@ def _check_alerts(self):
             details=f"Threshold: {self.config.p95_threshold}ms",
         )
 
-    # Check queue depth
-    queue_depth = self.message_queue.size()
-    if queue_depth > self.config.max_queue_depth:
-        self._send_alert(
-            severity="critical",
-            title=f"Queue depth critical: {queue_depth} tasks",
-            details=f"Threshold: {self.config.max_queue_depth}",
-        )
+    # Check queue depth per agent (from queue_depth view)
+    queue_depths = self.message_queue.get_queue_depth()
+    for agent_queue in queue_depths:
+        if agent_queue["queued_tasks"] > self.config.max_queue_depth_per_agent:
+            self._send_alert(
+                severity="critical",
+                title=f"Queue depth critical for {agent_queue['agent']}: {agent_queue['queued_tasks']} tasks",
+                details=f"High priority: {agent_queue['high_priority']}, Normal: {agent_queue['normal_priority']}, Low: {agent_queue['low_priority']}",
+            )
+
+    # Check failed task rate (from agent_performance view)
+    performance = self.message_queue.get_agent_performance()
+    for agent_perf in performance:
+        if agent_perf["total_tasks"] > 0:
+            failure_rate = agent_perf["failed_tasks"] / agent_perf["total_tasks"]
+            if failure_rate > self.config.max_failure_rate:
+                self._send_alert(
+                    severity="critical",
+                    title=f"High failure rate for {agent_perf['agent']}: {failure_rate * 100:.1f}%",
+                    details=f"Failed: {agent_perf['failed_tasks']}, Total: {agent_perf['total_tasks']}",
+                )
 ```
 
 ---
@@ -1253,11 +1585,13 @@ poetry run team-daemon stop --force
 | **Auto-Restart Time** | <5 seconds | Time from crash to restart |
 | **Work Coordination** | >90% | Tasks routed to correct agent |
 | **Resource Usage** | <500MB RAM | Total memory for all agents |
-| **Inter-Agent Latency** | <100ms | Message queue latency (in-memory heapq) |
-| **Message Persistence** ⚠️ TRADE-OFF | 0% | Messages lost on daemon crash (in-memory only) |
-| **Bottleneck Detection** ⭐ NEW | <5 min | Time to identify slow tasks (p95 > 30s) |
-| **Task Duration Tracking** ⭐ NEW | 100% | All tasks have start/completion timestamps |
-| **Observability** ⭐ NEW | Periodic | Export to Langfuse every 60s |
+| **Inter-Agent Latency** | <5ms | Message queue latency (SQLite with WAL mode) |
+| **Message Persistence** ⭐ NEW | 100% | Messages survive daemon crashes (SQLite on disk) |
+| **Bottleneck Detection** ⭐ NEW | <5 min | Time to identify slow tasks (SQL query on duration_ms) |
+| **Task Duration Tracking** ⭐ NEW | 100% | All tasks have start/completion timestamps (SQLite) |
+| **Historical Metrics** ⭐ NEW | 30 days | Metrics retained in SQLite (configurable) |
+| **Observability** ⭐ NEW | Periodic | Export to Langfuse every 60s (from SQLite) |
+| **Analytics** ⭐ NEW | Real-time | SQL queries for bottlenecks, trends, aggregates |
 
 ---
 
@@ -1318,11 +1652,13 @@ team:
       enabled: true
 
   message_queue:
-    backend: memory  # In-memory (stdlib only, zero dependencies)
-    # Bottleneck tracking
-    max_slowest_tasks: 100  # Keep top 100 slowest tasks for analysis
+    backend: sqlite  # SQLite (stdlib only, zero dependencies)
+    db_path: data/orchestrator.db  # Database file location
     # Task retention (for observability)
-    max_completed_tasks: 10000  # Max completed tasks to keep in memory
+    cleanup_interval_days: 30  # Delete completed tasks older than 30 days
+    # WAL mode settings (for thread-safety)
+    wal_enabled: true
+    synchronous_mode: NORMAL  # Balance safety and performance
 
   health_check:
     interval: 30  # seconds
@@ -1342,8 +1678,14 @@ team:
 **Environment Variables**:
 
 ```bash
-# No external dependencies - all configuration via YAML or code
-# (No Redis, no external services)
+# SQLite database location (optional, defaults to data/orchestrator.db)
+export ORCHESTRATOR_DB_PATH="data/orchestrator.db"
+
+# Cleanup interval for old tasks (optional, defaults to 30 days)
+export ORCHESTRATOR_CLEANUP_DAYS=30
+
+# No external dependencies - SQLite is Python stdlib
+# No Redis server, no external services needed
 ```
 
 ---
