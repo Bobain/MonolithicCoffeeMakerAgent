@@ -177,6 +177,10 @@ from pathlib import Path
 from coffee_maker.autonomous.agent_registry import AgentRegistry, AgentType
 from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
 from coffee_maker.autonomous.daemon_git_ops import GitOpsMixin
+from coffee_maker.autonomous.startup_skill_executor import (
+    StartupSkillExecutor,
+    StartupError,
+)
 from coffee_maker.autonomous.daemon_implementation import ImplementationMixin
 from coffee_maker.autonomous.daemon_spec_manager import SpecManagerMixin
 from coffee_maker.autonomous.daemon_status import StatusMixin
@@ -321,12 +325,63 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         self.iterations_since_compact = 0
         self.last_compact_time = None
 
+        # US-062: Execute startup skill (CFR-007 validation, health checks)
+        self._execute_startup_skill()
+
         logger.info("DevDaemon initialized")
         logger.info(f"Roadmap: {self.roadmap_path}")
         logger.info(f"Auto-approve: {self.auto_approve}")
         logger.info(f"Create PRs: {self.create_prs}")
         logger.info(f"Max crashes: {self.max_crashes}")
         logger.info(f"Compact interval: {self.compact_interval} iterations")
+
+    def _execute_startup_skill(self) -> None:
+        """Execute code_developer startup skill (US-062).
+
+        This method:
+        1. Loads the code_developer-startup skill from .claude/skills/
+        2. Validates CFR-007 context budget compliance
+        3. Executes health checks
+        4. Initializes daemon resources
+
+        Raises:
+            StartupError: If startup skill fails (missing config, CFR-007 violation, etc.)
+        """
+        executor = StartupSkillExecutor()
+
+        logger.info("🚀 Executing code_developer startup skill...")
+
+        # Execute startup skill
+        result = executor.execute_startup_skill("code_developer")
+
+        if not result.success:
+            # Startup failed - format error message
+            error_msg = (
+                f"❌ code_developer startup failed\n"
+                f"Error: {result.error_message}\n"
+                f"Steps completed: {result.steps_completed}/{result.total_steps}\n"
+            )
+
+            if result.suggested_fixes:
+                error_msg += "\nSuggested fixes:\n"
+                for i, fix in enumerate(result.suggested_fixes, 1):
+                    error_msg += f"  {i}. {fix}\n"
+
+            logger.error(error_msg)
+            raise StartupError(error_msg)
+
+        # Startup succeeded - log metrics
+        logger.info(f"✅ code_developer startup successful")
+        logger.info(
+            f"   Context budget: {result.context_budget_pct:.1f}% (limit: {StartupSkillExecutor.CFR007_BUDGET_PCT}%)"
+        )
+        logger.info(
+            f"   Health checks: {sum(1 for h in result.health_checks if h.passed)}/{len(result.health_checks)} passed"
+        )
+        logger.info(f"   Startup time: {result.execution_time_seconds:.2f}s")
+
+        # Store result for debugging
+        self.startup_result = result
 
     def run(self):
         """Run daemon main loop.
