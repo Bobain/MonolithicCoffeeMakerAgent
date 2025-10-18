@@ -33,8 +33,8 @@ from coffee_maker.skills.code_analysis.code_forensics import CodeForensics
 from coffee_maker.skills.code_analysis.dependency_tracer import DependencyTracer
 from coffee_maker.skills.code_analysis.functional_search import FunctionalSearch
 from coffee_maker.skills.code_analysis.security_audit import SecurityAudit
-from coffee_maker.skills.code_index.indexer import CodeIndexer
-from coffee_maker.skills.code_index.query_engine import CodeIndexQueryEngine
+from coffee_maker.utils.code_index.indexer import CodeIndexer
+from coffee_maker.utils.code_index.query_engine import CodeIndexQueryEngine
 
 
 class SkillLoader:

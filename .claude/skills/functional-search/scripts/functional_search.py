@@ -13,7 +13,7 @@ Used by: architect (for spec creation), assistant (for demos and documentation)
 
 from typing import Any, Dict
 
-from coffee_maker.utils.code_index.query_engine import CodeIndexQueryEngine
+from coffee_maker.skills.code_index.query_engine import CodeIndexQueryEngine
 
 
 class FunctionalSearch:

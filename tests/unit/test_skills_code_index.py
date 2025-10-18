@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from coffee_maker.skills.code_index.indexer import CodeIndexer
-from coffee_maker.skills.code_index.query_engine import CodeIndexQueryEngine
+from coffee_maker.utils.code_index.indexer import CodeIndexer
+from coffee_maker.utils.code_index.query_engine import CodeIndexQueryEngine
 
 
 @pytest.fixture

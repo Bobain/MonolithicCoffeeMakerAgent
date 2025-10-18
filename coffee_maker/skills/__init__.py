@@ -41,7 +41,7 @@ from coffee_maker.skills.code_analysis import (
     FunctionalSearch,
     SecurityAudit,
 )
-from coffee_maker.skills.code_index import CodeIndexer, CodeIndexQueryEngine
+from coffee_maker.utils.code_index import CodeIndexer, CodeIndexQueryEngine
 from coffee_maker.skills.skill_loader import (
     SkillLoader,
     code_explainer,

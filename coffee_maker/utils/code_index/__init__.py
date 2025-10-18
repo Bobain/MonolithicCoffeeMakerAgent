@@ -13,7 +13,7 @@ Auto-maintained by:
 - Manual index rebuild (cron, manual trigger)
 """
 
-from coffee_maker.skills.code_index.indexer import CodeIndexer
-from coffee_maker.skills.code_index.query_engine import CodeIndexQueryEngine
+from coffee_maker.utils.code_index.indexer import CodeIndexer
+from coffee_maker.utils.code_index.query_engine import CodeIndexQueryEngine
 
 __all__ = ["CodeIndexer", "CodeIndexQueryEngine"]
