@@ -34,10 +34,10 @@ on:
           - user_scenarios
 
 jobs:
-  smoke-tests:
-    name: Quick Smoke Tests
+  prepare:
+    name: Prepare Environment and Cache
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -51,10 +51,26 @@ jobs:
       - name: Cache Poetry dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pypoetry
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+            .venv
           key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
             ${{ runner.os }}-poetry-
+
+      - name: Cache pytest and build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            .pytest_cache
+            .mypy_cache
+            .ruff_cache
+            build
+            dist
+          key: ${{ runner.os }}-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build-
 
       - name: Install Poetry
         run: |
@@ -63,6 +79,50 @@ jobs:
 
       - name: Install dependencies
         run: |
+          poetry config virtualenvs.in-project true
+          poetry install --no-interaction --no-ansi
+
+  smoke-tests:
+    name: Quick Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: prepare
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Restore Poetry cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+            .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .pytest_cache
+            .mypy_cache
+            .ruff_cache
+          key: ${{ runner.os }}-build-${{ github.sha }}
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies (from cache)
+        run: |
+          poetry config virtualenvs.in-project true
           poetry install --no-interaction --no-ansi
 
       - name: Run smoke tests
@@ -82,7 +142,7 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: smoke-tests
+    needs: prepare
 
     steps:
       - name: Checkout code
@@ -93,20 +153,40 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Restore Poetry cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+            .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .pytest_cache
+            .mypy_cache
+            .ruff_cache
+          key: ${{ runner.os }}-build-${{ github.sha }}
+
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies
+      - name: Install dependencies (from cache)
         run: |
+          poetry config virtualenvs.in-project true
           poetry install --no-interaction --no-ansi
 
-      - name: Run unit tests
+      - name: Run unit tests with parallelization (4 workers)
         run: |
           poetry run pytest tests/ci_tests/ -v \
             --ignore=tests/ci_tests/test_daemon_integration.py \
-            -m "not integration and not slow"
+            -m "not integration and not slow" \
+            -n 4
 
       - name: Upload test results
         if: always()
@@ -121,7 +201,7 @@ jobs:
     name: Daemon Health Check
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: unit-tests
+    needs: [prepare, unit-tests]
     if: github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     steps:
@@ -133,13 +213,32 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Restore Poetry cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+            .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .pytest_cache
+            .mypy_cache
+            .ruff_cache
+          key: ${{ runner.os }}-build-${{ github.sha }}
+
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies
+      - name: Install dependencies (from cache)
         run: |
+          poetry config virtualenvs.in-project true
           poetry install --no-interaction --no-ansi
 
       - name: Check daemon can initialize
@@ -167,7 +266,7 @@ jobs:
     name: Test Coverage Report
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: unit-tests
+    needs: [prepare, unit-tests]
 
     steps:
       - name: Checkout code
@@ -178,22 +277,42 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Restore Poetry cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+            .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .pytest_cache
+            .mypy_cache
+            .ruff_cache
+          key: ${{ runner.os }}-build-${{ github.sha }}
+
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies
+      - name: Install dependencies (from cache)
         run: |
+          poetry config virtualenvs.in-project true
           poetry install --no-interaction --no-ansi
 
-      - name: Run tests with coverage
+      - name: Run tests with coverage and parallelization (4 workers)
         run: |
           poetry run pytest tests/ci_tests/ \
             --cov=coffee_maker.autonomous \
             --cov-report=xml \
             --cov-report=html \
-            -m "not integration and not slow"
+            -m "not integration and not slow" \
+            -n 4
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
@@ -221,7 +340,7 @@ jobs:
     name: Notification System Check
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: unit-tests
+    needs: [prepare, unit-tests]
 
     steps:
       - name: Checkout code
@@ -232,13 +351,32 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Restore Poetry cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+            .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .pytest_cache
+            .mypy_cache
+            .ruff_cache
+          key: ${{ runner.os }}-build-${{ github.sha }}
+
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies
+      - name: Install dependencies (from cache)
         run: |
+          poetry config virtualenvs.in-project true
           poetry install --no-interaction --no-ansi
 
       - name: Run notification tests
@@ -252,7 +390,7 @@ jobs:
   summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [smoke-tests, unit-tests, daemon-health-check, test-coverage, notification-system-check]
+    needs: [prepare, smoke-tests, unit-tests, daemon-health-check, test-coverage, notification-system-check]
     if: always()
 
     steps:
