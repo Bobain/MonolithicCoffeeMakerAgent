@@ -27,3 +27,11 @@ repos:
     - main
     - --branch
     - master
+- repo: local
+  hooks:
+  - id: check-dependencies
+    name: Check for unapproved dependencies
+    entry: python scripts/check_dependencies.py
+    language: python
+    files: pyproject.toml
+    pass_filenames: false

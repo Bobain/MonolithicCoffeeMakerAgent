@@ -33,6 +33,7 @@ class AutoPickerLLMRefactored(BaseLLM):
     context_strategy: ContextStrategy  # Strategy for context length management
     cost_calculator: Optional[Any] = None  # CostCalculator instance
     langfuse_client: Optional[Any] = None  # Langfuse client for logging
+    enable_context_fallback: bool = True  # Enable automatic context length fallback
     stats: Dict[str, int] = {}
     _langfuse_logger: Optional[LangfuseLogger] = None  # Lazy-loaded logger
 
@@ -48,6 +49,7 @@ class AutoPickerLLMRefactored(BaseLLM):
         context_strategy: Optional[ContextStrategy] = None,
         cost_calculator: Optional[Any] = None,
         langfuse_client: Optional[Any] = None,
+        enable_context_fallback: bool = True,
         **kwargs,
     ):
         """Initialize AutoPickerLLMRefactored."""
@@ -86,6 +88,7 @@ class AutoPickerLLMRefactored(BaseLLM):
             context_strategy=context_strategy,
             cost_calculator=cost_calculator,
             langfuse_client=langfuse_client,
+            enable_context_fallback=enable_context_fallback,
             stats=stats,
             _langfuse_logger=langfuse_logger,
             **kwargs,
@@ -404,6 +407,79 @@ class AutoPickerLLMRefactored(BaseLLM):
             generations.append([Generation(text=text)])
 
         return LLMResult(generations=generations)
+
+    def _estimate_tokens(self, input_data: Any, model_name: str) -> int:
+        """Estimate token count for input data.
+
+        Args:
+            input_data: Input data (string or dict)
+            model_name: Model name for estimation
+
+        Returns:
+            Estimated token count
+        """
+        # Convert input_data to string
+        if isinstance(input_data, dict):
+            text = str(input_data.get("input", ""))
+        else:
+            text = str(input_data)
+
+        # Rough estimation: 4 characters per token
+        return max(1, len(text) // 4)
+
+    def _check_context_length(
+        self, estimated_tokens: int, model_name: str, enable_fallback: bool = True
+    ) -> Tuple[bool, Optional[int]]:
+        """Check if input fits within model's context length.
+
+        Args:
+            estimated_tokens: Estimated token count
+            model_name: Model name to check
+            enable_fallback: Whether fallback is enabled
+
+        Returns:
+            Tuple of (fits_in_context, max_context_length)
+        """
+        from coffee_maker.langfuse_observe.llm_config import (
+            get_model_context_length_from_name,
+        )
+
+        try:
+            max_context = get_model_context_length_from_name(model_name)
+            fits = estimated_tokens <= max_context
+            return fits, max_context
+        except Exception:
+            # If we can't determine context length, assume it fits
+            return True, None
+
+    def _get_large_context_models(self) -> List[Tuple[Any, str]]:
+        """Get fallback models that support larger context windows.
+
+        Returns:
+            List of (llm, model_name) tuples with larger context windows
+        """
+        from coffee_maker.langfuse_observe.llm_config import (
+            get_model_context_length_from_name,
+        )
+
+        # Get primary model's context length
+        try:
+            primary_context = get_model_context_length_from_name(self.primary_model_name)
+        except Exception:
+            primary_context = 0
+
+        # Filter fallback models that have larger context windows
+        large_models = []
+        for fallback_llm, model_name in self.fallback_llms:
+            try:
+                fallback_context = get_model_context_length_from_name(model_name)
+                if fallback_context > primary_context:
+                    large_models.append((fallback_llm, model_name))
+            except Exception:
+                # If we can't determine context length, include it as potential fallback
+                large_models.append((fallback_llm, model_name))
+
+        return large_models
 
 
 def create_auto_picker_llm_refactored(
