@@ -25,6 +25,7 @@ class SkillNames:
 
     # Universal skills (ALL agents)
     TRACE_EXECUTION = "trace-execution"  # ACE generator skill - used by ALL agents
+    CONTEXT_BUDGET_OPTIMIZER = "context-budget-optimizer"  # Phase 0 skill - used by ALL agents
 
     # Architect skills
     ARCHITECTURE_REUSE_CHECK = "architecture-reuse-check"
