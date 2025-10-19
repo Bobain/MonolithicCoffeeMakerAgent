@@ -39,44 +39,77 @@ from typing import Dict, List, Optional
 
 
 class MessageType(Enum):
-    """Types of inter-agent messages."""
+    """Types of inter-agent messages.
 
-    SPEC_CREATED = "spec_created"
-    IMPLEMENTATION_REQUEST = "implementation_request"
-    IMPLEMENTATION_COMPLETE = "implementation_complete"
-    BUG_REPORT = "bug_report"
-    DEMO_REQUEST = "demo_request"
-    DEMO_COMPLETE = "demo_complete"
-    STATUS_UPDATE = "status_update"
-    HEARTBEAT = "heartbeat"
-    TASK_DELEGATE = "task_delegate"
+    IMPORTANT: ALL inter-agent communication goes through orchestrator.
+    Agents send messages TO orchestrator with suggested_recipient.
+    Orchestrator routes to best available agent.
+    """
+
+    # User interaction messages (from/to user_listener)
+    USER_REQUEST = "user_request"  # User input → orchestrator (suggests recipient)
+    USER_RESPONSE = "user_response"  # Agent → orchestrator → user_listener
+
+    # Inter-agent task delegation (ALL go through orchestrator)
+    TASK_REQUEST = "task_request"  # Agent → orchestrator (suggests recipient + reason)
+    TASK_RESPONSE = "task_response"  # Agent → orchestrator → requesting agent
+    TASK_COMPLETE = "task_complete"  # Agent finished task → orchestrator → requester
+
+    # Legacy (deprecated - use TASK_REQUEST instead)
+    SPEC_CREATED = "spec_created"  # Deprecated: use TASK_COMPLETE
+    IMPLEMENTATION_REQUEST = "implementation_request"  # Deprecated: use TASK_REQUEST
+    IMPLEMENTATION_COMPLETE = "implementation_complete"  # Deprecated: use TASK_COMPLETE
+    BUG_REPORT = "bug_report"  # Keep for assistant → project_manager
+    DEMO_REQUEST = "demo_request"  # Keep for specific demo requests
+    DEMO_COMPLETE = "demo_complete"  # Keep for demo completion
+
+    # Coordination (system messages)
+    STATUS_UPDATE = "status_update"  # Progress updates
+    HEARTBEAT = "heartbeat"  # Health check
+    TASK_DELEGATE = "task_delegate"  # Deprecated: use TASK_REQUEST
 
 
 class AgentType(Enum):
     """Types of autonomous agents."""
 
+    USER_LISTENER = "user_listener"  # UI agent - handles user interaction
     CODE_DEVELOPER = "code_developer"
     PROJECT_MANAGER = "project_manager"
     ARCHITECT = "architect"
     ASSISTANT = "assistant"
+    CODE_SEARCHER = "code_searcher"
+    UX_DESIGN_EXPERT = "ux_design_expert"
 
 
 @dataclass
 class Message:
     """Inter-agent message for queue communication.
 
+    ARCHITECTURAL PRINCIPLE: ALL messages go TO orchestrator for routing.
+
+    For inter-agent communication:
+    - recipient: Should ALWAYS be "orchestrator"
+    - payload["suggested_recipient"]: Agent you want to handle the task
+    - Orchestrator will route to best available agent (may override suggestion)
+
+    For responses to user:
+    - recipient: "user_listener" (orchestrator routes directly)
+
     Attributes:
-        sender: Agent sending the message
-        recipient: Agent receiving the message
+        sender: Agent sending the message (AgentType.value)
+        recipient: Target for this message ("orchestrator" or "user_listener")
         type: Type of message (MessageType.value)
         payload: Message payload (dict, will be JSON-encoded)
+            - For TASK_REQUEST: {"suggested_recipient": "agent_name", "task": "...", "reason": "..."}
+            - For USER_REQUEST: {"user_input": "...", "suggested_recipient": "agent_name"}
+            - For USER_RESPONSE: {"response": "...", "original_task_id": "..."}
         priority: Message priority (1=highest, 10=lowest)
         timestamp: ISO8601 timestamp of message creation
         task_id: Unique task identifier
     """
 
     sender: str  # AgentType.value
-    recipient: str  # AgentType.value
+    recipient: str  # "orchestrator" or "user_listener" or specific agent
     type: str  # MessageType.value
     payload: dict
     priority: int = 5  # 1=highest, 10=lowest
