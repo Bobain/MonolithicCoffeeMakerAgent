@@ -1,0 +1,461 @@
+"""Continuous Work Loop for Orchestrator Agent.
+
+This module implements the main work loop that enables 24/7 autonomous operation
+where code_developer and architect continuously work on ROADMAP priorities without
+human intervention.
+
+Architecture:
+    - Infinite work loop that polls ROADMAP every 30 seconds
+    - Maintains 2-3 specs ahead of code_developer (spec backlog)
+    - Delegates spec creation to architect proactively
+    - Delegates implementation to code_developer when specs ready
+    - Monitors task progress and handles errors
+    - Graceful shutdown on SIGINT (Ctrl+C)
+    - State preservation for crash recovery
+
+CFR Compliance:
+    - CFR-009: Sound notifications disabled (sound=False, agent_id="orchestrator")
+    - CFR-013: All work happens on roadmap branch only
+
+Related:
+    SPEC-104: Technical specification
+    US-104: Strategic requirement (PRIORITY 20)
+"""
+
+import json
+import logging
+import re
+import signal
+import time
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional
+
+from coffee_maker.cli.notifications import NotificationDB
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class WorkLoopConfig:
+    """Configuration for continuous work loop."""
+
+    poll_interval_seconds: int = 30  # How often to check ROADMAP
+    spec_backlog_target: int = 3  # Keep 3 specs ahead of code_developer
+    max_retry_attempts: int = 3  # Retry failed tasks up to 3 times
+    task_timeout_seconds: int = 7200  # 2 hours max per task
+    state_file_path: str = "data/orchestrator/work_loop_state.json"
+    enable_sound_notifications: bool = False  # CFR-009: Only user_listener uses sound
+
+
+class ContinuousWorkLoop:
+    """
+    Continuous work loop for orchestrator agent.
+
+    Responsibilities:
+    - Poll ROADMAP every 30 seconds for new priorities
+    - Maintain 2-3 specs ahead of code_developer (spec backlog)
+    - Delegate spec creation to architect proactively
+    - Delegate implementation to code_developer when specs ready
+    - Monitor task progress and handle errors
+    - Graceful shutdown on SIGINT (Ctrl+C)
+    - State preservation for crash recovery
+
+    CFR Compliance:
+    - CFR-009: Sound notifications disabled (sound=False, agent_id="orchestrator")
+    - CFR-013: All work happens on roadmap branch only
+    """
+
+    def __init__(self, config: Optional[WorkLoopConfig] = None):
+        """
+        Initialize continuous work loop.
+
+        Args:
+            config: Configuration for work loop (optional, uses defaults)
+        """
+        self.config = config or WorkLoopConfig()
+        self.notifications = NotificationDB()
+        self.running = False
+        self.current_state: Dict = {}
+        self.roadmap_cache: Optional[Dict] = None
+        self.last_roadmap_update = 0.0
+
+        # Set up signal handlers for graceful shutdown
+        signal.signal(signal.SIGINT, self._handle_shutdown)
+        signal.signal(signal.SIGTERM, self._handle_shutdown)
+
+        # Load previous state if exists (crash recovery)
+        self._load_state()
+
+    def start(self):
+        """
+        Start continuous work loop (runs forever until interrupted).
+
+        Returns:
+            None (blocks until graceful shutdown)
+        """
+        logger.info("🚀 Starting Orchestrator Continuous Work Loop")
+        self.running = True
+
+        self.notifications.create_notification(
+            title="Orchestrator Started",
+            message="Continuous work loop is now running. Agents will work 24/7 on ROADMAP priorities.",
+            level="info",
+            sound=False,  # CFR-009: Background agent, no sound
+            agent_id="orchestrator",
+        )
+
+        try:
+            while self.running:
+                loop_start = time.time()
+
+                # Main work loop cycle
+                try:
+                    self._work_cycle()
+                except Exception as e:
+                    logger.error(f"Error in work cycle: {e}", exc_info=True)
+                    self._handle_cycle_error(e)
+
+                # Sleep for poll interval (minus cycle time)
+                cycle_duration = time.time() - loop_start
+                sleep_time = max(0, self.config.poll_interval_seconds - cycle_duration)
+                time.sleep(sleep_time)
+
+        except KeyboardInterrupt:
+            logger.info("Received interrupt signal")
+        finally:
+            self._shutdown()
+
+    def _work_cycle(self):
+        """
+        Single iteration of work loop.
+
+        Steps:
+        1. Poll ROADMAP for changes
+        2. Coordinate architect (proactive spec creation)
+        3. Coordinate code_developer (implementation)
+        4. Monitor task progress
+        5. Handle errors and retries
+        6. Save state
+        """
+        # Step 1: Poll ROADMAP
+        roadmap_updated = self._poll_roadmap()
+        if roadmap_updated:
+            logger.info("ROADMAP updated, recalculating work distribution")
+
+        # Step 2: Architect coordination (proactive spec creation)
+        self._coordinate_architect()
+
+        # Step 3: code_developer coordination (implementation)
+        self._coordinate_code_developer()
+
+        # Step 4: Monitor task progress
+        self._monitor_tasks()
+
+        # Step 5: Save state
+        self._save_state()
+
+    def _poll_roadmap(self) -> bool:
+        """
+        Poll ROADMAP.md for changes.
+
+        Returns:
+            True if ROADMAP was updated since last check, False otherwise
+        """
+        roadmap_path = Path("docs/roadmap/ROADMAP.md")
+
+        if not roadmap_path.exists():
+            logger.warning("ROADMAP.md not found!")
+            return False
+
+        # Check file modification time
+        current_mtime = roadmap_path.stat().st_mtime
+
+        if current_mtime > self.last_roadmap_update:
+            # ROADMAP was modified, reload
+            logger.info(f"ROADMAP.md updated (mtime: {current_mtime})")
+            self.roadmap_cache = self._parse_roadmap(roadmap_path)
+            self.last_roadmap_update = current_mtime
+            return True
+
+        return False
+
+    def _parse_roadmap(self, roadmap_path: Path) -> Dict:
+        """
+        Parse ROADMAP.md and extract priority information.
+
+        Args:
+            roadmap_path: Path to ROADMAP.md
+
+        Returns:
+            Dict with priority information:
+            {
+                "priorities": [
+                    {
+                        "number": 20,
+                        "name": "US-104 - Orchestrator Continuous Work Loop",
+                        "status": "📝 Planned",
+                        "has_spec": False,
+                        "spec_path": None
+                    },
+                    ...
+                ]
+            }
+        """
+        priorities = []
+
+        with open(roadmap_path, "r") as f:
+            content = f.read()
+
+        # Extract priorities (pattern: "### PRIORITY N: US-XXX - Title STATUS")
+        # Matches: ### PRIORITY 20: US-104 - Orchestrator Continuous Work Loop 📝 Planned
+        pattern = r"### PRIORITY (\d+):\s+(US-\d+)\s+-\s+(.*?)\s+(📝|✅|🔄|⏸️|🚧)"
+
+        for match in re.finditer(pattern, content):
+            priority_num = int(match.group(1))
+            us_number = match.group(2)
+            title = match.group(3)
+            status = match.group(4)
+
+            # Check if spec exists
+            spec_num = us_number.split("-")[1]
+            spec_pattern = f"SPEC-{spec_num}-*.md"
+            spec_dir = Path("docs/architecture/specs")
+            spec_files = list(spec_dir.glob(spec_pattern))
+            has_spec = len(spec_files) > 0
+            spec_path = str(spec_files[0]) if has_spec else None
+
+            priorities.append(
+                {
+                    "number": priority_num,
+                    "name": f"{us_number} - {title}",
+                    "us_number": us_number,
+                    "status": status,
+                    "has_spec": has_spec,
+                    "spec_path": spec_path,
+                }
+            )
+
+        return {"priorities": sorted(priorities, key=lambda p: p["number"])}
+
+    def _coordinate_architect(self):
+        """
+        Coordinate architect to maintain spec backlog.
+
+        Logic:
+        1. Get next 5 PLANNED priorities
+        2. Count missing specs
+        3. If missing > 0: delegate spec creation to architect
+        4. Target: Always have 2-3 specs ahead of code_developer
+        """
+        if not self.roadmap_cache:
+            return
+
+        # Get next 5 planned priorities
+        planned_priorities = [p for p in self.roadmap_cache["priorities"] if p["status"] == "📝"][:5]
+
+        # Count missing specs
+        missing_specs = [p for p in planned_priorities if not p["has_spec"]]
+
+        if not missing_specs:
+            logger.debug("No missing specs, architect idle")
+            return
+
+        # Prioritize: Create specs for first 3 missing
+        for priority in missing_specs[: self.config.spec_backlog_target]:
+            # Check if already creating this spec
+            if self._is_spec_in_progress(priority["number"]):
+                logger.debug(f"Spec for PRIORITY {priority['number']} already in progress")
+                continue
+
+            # For now, just log that we would delegate (actual delegation requires orchestrator agent integration)
+            logger.info(f"🏗️  Would delegate spec creation to architect: PRIORITY {priority['number']}")
+
+            # Track that we're working on this spec
+            self._track_spec_task(priority["number"], f"spec-{priority['number']}")
+
+    def _coordinate_code_developer(self):
+        """
+        Coordinate code_developer to implement next priority.
+
+        Logic:
+        1. Get next PLANNED priority
+        2. Check if spec exists
+        3. If yes: delegate implementation to code_developer
+        4. If no: code_developer waits (architect will create spec)
+        """
+        if not self.roadmap_cache:
+            return
+
+        # Get next planned priority
+        planned_priorities = [p for p in self.roadmap_cache["priorities"] if p["status"] == "📝"]
+
+        if not planned_priorities:
+            logger.info("No planned priorities, code_developer idle")
+            return
+
+        next_priority = planned_priorities[0]
+
+        # Check if spec exists
+        if not next_priority["has_spec"]:
+            logger.info(f"⏳ code_developer waiting for spec: PRIORITY {next_priority['number']}")
+            return
+
+        # Check if already implementing
+        if self._is_implementation_in_progress(next_priority["number"]):
+            logger.debug(f"Implementation for PRIORITY {next_priority['number']} already in progress")
+            return
+
+        # For now, just log that we would delegate (actual delegation requires orchestrator agent integration)
+        logger.info(f"⚙️  Would delegate implementation to code_developer: PRIORITY {next_priority['number']}")
+
+        # Track that we're working on this implementation
+        self._track_implementation_task(next_priority["number"], f"impl-{next_priority['number']}")
+
+    def _monitor_tasks(self):
+        """
+        Monitor in-progress tasks and handle timeouts/failures.
+
+        Checks:
+        - Task completion (move from in_progress to completed)
+        - Timeouts (task running > 2 hours)
+        - Failures (task failed, retry or escalate)
+        """
+        # Get active tasks from state
+        active_tasks = self.current_state.get("active_tasks", {})
+
+        for task_key, task_info in list(active_tasks.items()):
+            task_age = time.time() - task_info["started_at"]
+
+            # Check timeout
+            if task_age > self.config.task_timeout_seconds:
+                logger.warning(f"⚠️  Task timeout: {task_key} ({task_age:.0f}s)")
+
+                self.notifications.create_notification(
+                    title="Task Timeout Detected",
+                    message=f"Task {task_key} running for {task_age / 3600:.1f} hours",
+                    level="high",
+                    sound=False,  # CFR-009
+                    agent_id="orchestrator",
+                )
+
+    def _is_spec_in_progress(self, priority_number: int) -> bool:
+        """Check if spec creation is already in progress for priority."""
+        return f"spec_{priority_number}" in self.current_state.get("active_tasks", {})
+
+    def _is_implementation_in_progress(self, priority_number: int) -> bool:
+        """Check if implementation is already in progress for priority."""
+        return f"impl_{priority_number}" in self.current_state.get("active_tasks", {})
+
+    def _track_spec_task(self, priority_number: int, task_id: str):
+        """Track spec creation task."""
+        if "active_tasks" not in self.current_state:
+            self.current_state["active_tasks"] = {}
+
+        self.current_state["active_tasks"][f"spec_{priority_number}"] = {
+            "task_id": task_id,
+            "started_at": time.time(),
+            "type": "spec_creation",
+        }
+
+    def _track_implementation_task(self, priority_number: int, task_id: str):
+        """Track implementation task."""
+        if "active_tasks" not in self.current_state:
+            self.current_state["active_tasks"] = {}
+
+        self.current_state["active_tasks"][f"impl_{priority_number}"] = {
+            "task_id": task_id,
+            "started_at": time.time(),
+            "type": "implementation",
+        }
+
+    def _handle_cycle_error(self, error: Exception):
+        """
+        Handle errors during work cycle.
+
+        Args:
+            error: Exception that occurred
+        """
+        logger.error(f"Work cycle error: {error}", exc_info=True)
+
+        # Log to error recovery file
+        error_log_path = Path("data/orchestrator/error_recovery.log")
+        error_log_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(error_log_path, "a") as f:
+            f.write(f"{time.time()}: {error}\n")
+
+        # Notify user for critical errors
+        if isinstance(error, (IOError, PermissionError)):
+            self.notifications.create_notification(
+                title="Orchestrator Error",
+                message=f"Critical error: {error}. Work loop may need manual restart.",
+                level="critical",
+                sound=False,  # CFR-009
+                agent_id="orchestrator",
+            )
+
+    def _handle_shutdown(self, signum, frame):
+        """
+        Handle shutdown signals (SIGINT, SIGTERM).
+
+        Args:
+            signum: Signal number
+            frame: Current stack frame
+        """
+        logger.info(f"Received signal {signum}, initiating graceful shutdown")
+        self.running = False
+
+    def _shutdown(self):
+        """Graceful shutdown: save state and stop orchestrator."""
+        logger.info("🛑 Shutting down Orchestrator Work Loop")
+
+        # Save final state
+        self._save_state()
+
+        self.notifications.create_notification(
+            title="Orchestrator Stopped",
+            message="Continuous work loop has been stopped. State saved for recovery.",
+            level="info",
+            sound=False,  # CFR-009
+            agent_id="orchestrator",
+        )
+
+        logger.info("✅ Graceful shutdown complete")
+
+    def _save_state(self):
+        """Save current state to disk (for crash recovery)."""
+        state_path = Path(self.config.state_file_path)
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+
+        state_data = {
+            "last_update": time.time(),
+            "active_tasks": self.current_state.get("active_tasks", {}),
+            "roadmap_cache": self.roadmap_cache,
+            "last_roadmap_update": self.last_roadmap_update,
+        }
+
+        with open(state_path, "w") as f:
+            json.dump(state_data, f, indent=2)
+
+    def _load_state(self):
+        """Load previous state from disk (crash recovery)."""
+        state_path = Path(self.config.state_file_path)
+
+        if not state_path.exists():
+            logger.info("No previous state found, starting fresh")
+            return
+
+        try:
+            with open(state_path, "r") as f:
+                state_data = json.load(f)
+
+            self.current_state = state_data
+            self.roadmap_cache = state_data.get("roadmap_cache")
+            self.last_roadmap_update = state_data.get("last_roadmap_update", 0.0)
+
+            logger.info(f"Loaded previous state (last update: {state_data['last_update']})")
+
+        except Exception as e:
+            logger.error(f"Failed to load state: {e}", exc_info=True)

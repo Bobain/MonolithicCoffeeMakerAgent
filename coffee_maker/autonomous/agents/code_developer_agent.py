@@ -384,7 +384,8 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         """Find technical specification for a priority.
 
         Looks in:
-        - docs/architecture/specs/SPEC-{priority_number}-*.md
+        - docs/architecture/specs/SPEC-{us_number}-*.md (priority: US-104)
+        - docs/architecture/specs/SPEC-{priority_number}-*.md (fallback)
         - docs/roadmap/PRIORITY_{priority_number}_TECHNICAL_SPEC.md
 
         Args:
@@ -393,20 +394,40 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         Returns:
             Path to spec file if found, None otherwise
         """
+        import re
+
         priority_number = priority.get("number", "")
+        priority_title = priority.get("title", "")
+
         if not priority_number:
             return None
+
+        # Extract US number from title (e.g., "US-104" from "US-104 - Orchestrator...")
+        us_match = re.search(r"US-(\d+)", priority_title)
+        us_number = us_match.group(1) if us_match else None
 
         # Try architect's specs directory first (CFR-008)
         specs_dir = Path("docs/architecture/specs")
         if specs_dir.exists():
-            # Try multiple patterns to handle different naming conventions
-            # PRIORITY 2.6 can match SPEC-2.6-*.md, SPEC-2-6-*.md, SPEC-002-6-*.md, etc.
-            patterns = [
-                f"SPEC-{priority_number}-*.md",  # SPEC-2.6-*.md
-                f"SPEC-{priority_number.replace('.', '-')}-*.md",  # SPEC-2-6-*.md
-                f"SPEC-{priority_number.zfill(5).replace('.', '-')}-*.md",  # SPEC-002-6-*.md (padded)
-            ]
+            patterns = []
+
+            # PRIMARY: Try US number first (e.g., SPEC-104-*.md for US-104)
+            if us_number:
+                patterns.extend(
+                    [
+                        f"SPEC-{us_number}-*.md",  # SPEC-104-*.md
+                        f"SPEC-{us_number.zfill(3)}-*.md",  # SPEC-104-*.md (padded)
+                    ]
+                )
+
+            # FALLBACK: Try priority number (e.g., SPEC-20-*.md for PRIORITY 20)
+            patterns.extend(
+                [
+                    f"SPEC-{priority_number}-*.md",  # SPEC-20-*.md
+                    f"SPEC-{priority_number.replace('.', '-')}-*.md",  # SPEC-2-6-*.md
+                    f"SPEC-{priority_number.zfill(5).replace('.', '-')}-*.md",  # SPEC-002-6-*.md (padded)
+                ]
+            )
 
             # Also try without dots/dashes for edge cases
             if "." in priority_number:
