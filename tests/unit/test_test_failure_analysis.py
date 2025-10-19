@@ -63,9 +63,10 @@ FAILED tests/unit/test_auth.py::test_logout - AttributeError: 'NoneType' has no 
             # Verify skill was loaded with correct parameters
             mock_load_skill.assert_called_once()
             call_args = mock_load_skill.call_args
-            assert call_args[1]["TEST_OUTPUT"] == test_output
-            assert call_args[1]["FILES_CHANGED"] == "coffee_maker/auth/login.py"
-            assert call_args[1]["PRIORITY_NAME"] == "US-065"
+            variables = call_args.args[1] if len(call_args.args) > 1 else call_args.kwargs
+            assert variables["TEST_OUTPUT"] == test_output
+            assert variables["FILES_CHANGED"] == "coffee_maker/auth/login.py"
+            assert variables["PRIORITY_NAME"] == "US-065"
 
     def test_analyze_test_failures_no_failures(self, agent):
         """Test analysis with no test failures."""

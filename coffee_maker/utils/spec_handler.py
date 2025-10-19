@@ -235,9 +235,9 @@ class SpecHandler:
 
 ## Executive Summary
 
-**TL;DR**: {problem_statement or "TODO: Add one-sentence summary"}
+**TL;DR**: {problem_content}
 
-**User Story**: {user_story or f"As a developer, I want {title.lower()} so that the system is more effective."}
+**User Story**: {user_story_content}
 
 **Success Criteria**:
 - [ ] All unit tests passing
@@ -249,7 +249,7 @@ class SpecHandler:
 
 ## Problem Statement
 
-{problem_statement or "TODO: What problem are we solving? Why is this important?"}
+{problem_content}
 
 **Current Pain Points**:
 1. TODO: Pain point 1
@@ -263,7 +263,7 @@ class SpecHandler:
 
 ### High-Level Design
 
-{architecture or "TODO: Add architecture description"}
+{architecture_content}
 
 ```
 [Diagram or description of architecture]
@@ -285,17 +285,7 @@ class SpecHandler:
 
 ## Implementation Plan
 
-{implementation_plan or """### Phase 1: Foundation (X hours)
-- [ ] Task 1
-- [ ] Task 2
-
-### Phase 2: Core Features (X hours)
-- [ ] Task 3
-- [ ] Task 4
-
-### Phase 3: Polish (X hours)
-- [ ] Task 5
-- [ ] Task 6"""}
+{impl_plan_content}
 
 **Total Estimate**: {estimated_effort}
 
@@ -303,11 +293,7 @@ class SpecHandler:
 
 ## Testing Strategy
 
-{testing_strategy or """1. **Unit Tests**: Test individual components
-2. **Integration Tests**: Test component interactions
-3. **End-to-End Tests**: Test full workflow
-
-**Test Coverage Target**: >80%"""}
+{testing_content}
 
 ---
 
