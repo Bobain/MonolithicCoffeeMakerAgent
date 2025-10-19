@@ -26,6 +26,7 @@ import json
 import logging
 import re
 import signal
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,13 @@ from typing import Any, Dict, List, Optional
 from coffee_maker.cli.notifications import NotificationDB
 
 logger = logging.getLogger(__name__)
+
+# Import agent management skill
+skill_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "orchestrator-agent-management"
+sys.path.insert(0, str(skill_dir))
+from agent_management import OrchestratorAgentManagementSkill
+
+sys.path.pop(0)
 
 
 @dataclass
@@ -80,6 +88,9 @@ class ContinuousWorkLoop:
         self.roadmap_cache: Optional[Dict] = None
         self.last_roadmap_update = 0.0
         self.repo_root = Path.cwd()  # Repository root directory
+
+        # Initialize agent management skill
+        self.agent_mgmt = OrchestratorAgentManagementSkill()
 
         # Set up signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._handle_shutdown)
@@ -247,7 +258,7 @@ class ContinuousWorkLoop:
         Logic:
         1. Get next 5 PLANNED priorities
         2. Count missing specs
-        3. If missing > 0: delegate spec creation to architect
+        3. If missing > 0: spawn architect instances to create specs
         4. Target: Always have 2-3 specs ahead of code_developer
         """
         if not self.roadmap_cache:
@@ -270,11 +281,23 @@ class ContinuousWorkLoop:
                 logger.debug(f"Spec for PRIORITY {priority['number']} already in progress")
                 continue
 
-            # For now, just log that we would delegate (actual delegation requires orchestrator agent integration)
-            logger.info(f"🏗️  Would delegate spec creation to architect: PRIORITY {priority['number']}")
+            # Spawn architect to create spec
+            logger.info(f"🏗️  Spawning architect for PRIORITY {priority['number']} spec creation")
+
+            result = self.agent_mgmt.execute(
+                action="spawn_architect",
+                priority_number=priority["number"],
+                task_type="create_spec",
+                auto_approve=True,
+            )
+
+            if result["error"]:
+                logger.error(f"Failed to spawn architect: {result['error']}")
+                continue
 
             # Track that we're working on this spec
-            self._track_spec_task(priority["number"], f"spec-{priority['number']}")
+            agent_info = result["result"]
+            self._track_spec_task(priority["number"], agent_info["task_id"], agent_info["pid"])
 
     def _coordinate_code_developer(self):
         """
@@ -381,13 +404,14 @@ class ContinuousWorkLoop:
         """Check if implementation is already in progress for priority."""
         return f"impl_{priority_number}" in self.current_state.get("active_tasks", {})
 
-    def _track_spec_task(self, priority_number: int, task_id: str):
+    def _track_spec_task(self, priority_number: int, task_id: str, pid: Optional[int] = None):
         """Track spec creation task."""
         if "active_tasks" not in self.current_state:
             self.current_state["active_tasks"] = {}
 
         self.current_state["active_tasks"][f"spec_{priority_number}"] = {
             "task_id": task_id,
+            "pid": pid,
             "started_at": time.time(),
             "type": "spec_creation",
         }

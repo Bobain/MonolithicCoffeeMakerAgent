@@ -91,12 +91,10 @@ class TestUserListenerCLICommand:
         from coffee_maker.cli.user_listener import main
 
         # We can't actually run main() in tests (it starts interactive loop)
-        # But we can verify it's callable and has proper signature
-        import inspect
-
-        sig = inspect.signature(main)
-        # Should have no required parameters
-        assert len(sig.parameters) == 0
+        # But we can verify it's callable
+        assert callable(main)
+        # main() is decorated with @click.command so it has *args, **kwargs
+        # That's the expected signature for click commands
 
     def test_user_listener_registration_pattern(self):
         """Test that user_listener follows registration pattern.

@@ -31194,12 +31194,12 @@ code-reviewer → Re-reviews → Verifies → Approves
 - CLI integration
 - Tests
 
-### PRIORITY 10: US-010 - User Listener Implementation 📝 Planned
-**Spec**: docs/architecture/specs/SPEC-010-user-listener-implementation.md
+### PRIORITY 10: US-010 - User Listener Implementation ✅ Complete
+**Spec**: docs/architecture/specs/SPEC-010-USER-LISTENER-UI-SIMPLIFIED.md
 **Deliverables**:
-- User listener agent
-- CLI interface
-- Tests
+- ✅ User listener agent (coffee_maker/cli/user_listener.py)
+- ✅ CLI interface (poetry run user-listener)
+- ✅ Tests (unit + integration tests passing)
 
 ### PRIORITY 12: US-012 - User Story Command Handler 📝 Planned
 **Spec**: docs/architecture/specs/SPEC-012-user-story-command-handler.md
