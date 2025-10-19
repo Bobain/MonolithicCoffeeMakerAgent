@@ -254,6 +254,16 @@ See [US-104](#priority-20-us-104---orchestrator-continuous-agent-work-loop-📝-
 
 ---
 
+### PRIORITY 21: US-105 - Development Acceleration Insights Dashboard 📝 Planned
+
+**Status**: 📝 Planned - HIGH PRIORITY (User Request - Meta-Analysis)
+
+See [US-105](#priority-21-us-105---development-acceleration-insights-dashboard-📝-planned) for full details.
+
+**Strategic Value**: Identify bottlenecks and acceleration opportunities to increase development velocity
+
+---
+
 **Deliverables Completed** (PRIORITY 19):
 - ✅ Code Forensics skill (code-searcher) - 85% time savings
 - ✅ Design System skill (ux-design-expert) - 90% time savings
@@ -270,7 +280,9 @@ See [US-104](#priority-20-us-104---orchestrator-continuous-agent-work-loop-📝-
 
 ## 🔴 TOP PRIORITY FOR orchestrator (START HERE)
 
-**CURRENT PRIORITY**: PRIORITY 20 - US-104 Orchestrator Continuous Agent Work Loop 📝
+**CURRENT PRIORITY**: PRIORITY 21 - US-105 Development Acceleration Insights Dashboard 📝 (USER REQUEST - HIGHEST PRIORITY)
+
+**NEXT PRIORITY**: PRIORITY 20 - US-104 Orchestrator Continuous Agent Work Loop 📝
 
 **COMPLETED**: PRIORITY 19 - US-057 Claude Skills Integration Phase 3 ✅ (2025-10-19)
 
@@ -30056,5 +30068,189 @@ For complex tasks (estimated effort > 2 days OR technical complexity = High), ar
 This adds a new responsibility to architect: create POCs for complex tasks. This is a best practice in software architecture - validate risky decisions with working prototypes before committing to full implementation.
 
 POCs are NOT production code - they're reference implementations that prove feasibility and guide code_developer. They should be minimal (20-30% of full implementation) and focused on proving the hardest parts work.
+
+---
+
+
+---
+
+## US-105: Development Acceleration Insights Dashboard
+
+**Priority**: PRIORITY 21 (HIGH - User Request)
+
+**Status**: 📝 Planned
+
+**Created**: 2025-10-19
+
+**Estimated Effort**: 1-2 days
+
+**User Story**:
+As a user, I want a comprehensive Streamlit dashboard showing development bottlenecks, task durations, and acceleration opportunities (like adding a second developer or new skills), with curator insights displayed alongside, so that I can make informed decisions to increase development velocity.
+
+**Problem Statement**:
+Without visibility into development metrics and bottlenecks, we cannot:
+- Identify what is slowing down progress
+- Determine if adding more resources (second developer) would help
+- See which tasks take the most time and could benefit from automation/skills
+- Make data-driven decisions about process improvements
+
+**Acceptance Criteria**:
+
+✅ **Streamlit Dashboard** with the following sections:
+
+1. **Velocity Metrics**:
+   - Tasks completed per day/week/month
+   - Average task duration by priority
+   - Commit frequency trends
+   - Lines of code changed trends
+
+2. **Bottleneck Analysis**:
+   - Longest running tasks (top 10)
+   - Tasks with most retries/failures
+   - Agent idle time analysis
+   - Dependency wait times
+
+3. **Duration Breakdown**:
+   - Average time per task type (feature, bug, docs, etc.)
+   - Time distribution by agent (code_developer, architect, etc.)
+   - Spec creation vs implementation time ratio
+   - Testing time vs implementation time
+
+4. **Acceleration Opportunities**:
+   - **Second Developer Analysis**:
+     - Potential parallelizable work identified
+     - Estimated velocity increase with 2nd developer
+     - Cost/benefit analysis
+   - **New Skills Needed**:
+     - Frequent manual tasks identified
+     - Time savings if automated
+     - Suggested skills to create
+   - **Process Improvements**:
+     - Review bottlenecks
+     - Communication delays
+     - Tool/infrastructure issues
+
+5. **Curator Insights Panel** (separate sidebar):
+   - Real-time curator analysis of current bottlenecks
+   - Top 3 recommendations for acceleration
+   - Historical pattern analysis
+   - Success metrics from past improvements
+
+6. **Interactive Filters**:
+   - Date range selection
+   - Agent filter
+   - Priority level filter
+   - Task type filter
+
+✅ **Data Sources**:
+- Langfuse execution traces
+- Git commit history
+- ROADMAP status changes
+- Notification database
+- Developer status logs
+- Orchestrator database
+
+✅ **Curator Integration**:
+- curator agent analyzes metrics in real-time
+- Provides written insights displayed in sidebar
+- Updates insights every 5 minutes
+- Highlights anomalies and trends
+
+✅ **Conclusions Display**:
+- Auto-generated summary at top of dashboard
+- Key findings highlighted
+- Actionable recommendations with priority
+- Expected impact estimates (time saved, velocity increase)
+
+**Technical Implementation**:
+
+1. **Data Collection Module** (`streamlit_apps/acceleration_dashboard/data_collector.py`):
+   ```python
+   class MetricsCollector:
+       def collect_velocity_metrics(self) -> Dict
+       def collect_bottleneck_data(self) -> Dict
+       def collect_duration_stats(self) -> Dict
+       def collect_acceleration_opportunities(self) -> Dict
+   ```
+
+2. **Analytics Engine** (`streamlit_apps/acceleration_dashboard/analytics.py`):
+   ```python
+   class AccelerationAnalyzer:
+       def analyze_parallelization_opportunities(self) -> List[Task]
+       def identify_automation_candidates(self) -> List[Skill]
+       def calculate_second_developer_impact(self) -> Dict
+       def detect_bottlenecks(self) -> List[Bottleneck]
+   ```
+
+3. **Curator Integration** (`streamlit_apps/acceleration_dashboard/curator_insights.py`):
+   ```python
+   class CuratorInsightsProvider:
+       def get_real_time_insights(self) -> str
+       def get_recommendations(self) -> List[Recommendation]
+       def analyze_historical_patterns(self) -> Dict
+   ```
+
+4. **Streamlit Dashboard** (`streamlit_apps/acceleration_dashboard/app.py`):
+   - Main dashboard layout
+   - Plotly/Altair visualizations
+   - Interactive filters
+   - Auto-refresh every 30 seconds
+
+**Deliverables**:
+
+- [ ] MetricsCollector class with all data sources integrated
+- [ ] AccelerationAnalyzer with bottleneck detection
+- [ ] CuratorInsightsProvider with real-time analysis
+- [ ] Streamlit dashboard with all sections
+- [ ] Interactive visualizations (charts, graphs, heatmaps)
+- [ ] Auto-generated conclusions at dashboard top
+- [ ] Curator insights sidebar with recommendations
+- [ ] Export functionality (PDF/CSV reports)
+- [ ] Unit tests for analytics engine
+- [ ] Documentation for dashboard usage
+
+**Example Insights**:
+
+**Velocity Metrics**:
+- "Current velocity: 3.2 tasks/day (up 60% from last week)"
+- "Average task duration: 4.2 hours (down from 6.8 hours)"
+
+**Bottleneck Analysis**:
+- "Spec creation takes 25% of total time → Consider second architect or spec templates"
+- "code_developer idle 15% of time → Need more parallelizable work"
+
+**Second Developer Analysis**:
+- "Identified 12 parallelizable tasks in backlog"
+- "With 2nd developer: Est. velocity increase 70-80%"
+- "Break-even point: 2 weeks (ROI positive after that)"
+
+**New Skills Needed**:
+- "Dependency conflict resolution: 45 min/week → Automate with skill (90% savings)"
+- "Test failure analysis: 1.5 hrs/week → Create skill (85% savings)"
+- "PR review automation: 30 min/week → Create skill (80% savings)"
+
+**Curator Recommendations**:
+1. "Create dependency-conflict-resolver skill (highest ROI: 40 hrs/month saved)"
+2. "Add second code_developer for parallel work (velocity +75%)"
+3. "Optimize spec creation with templates (save 30 min per spec)"
+
+**Benefits**:
+
+- **Data-Driven Decisions**: See exactly where to invest effort
+- **ROI Clarity**: Know expected impact before making changes
+- **Continuous Improvement**: Track improvements over time
+- **Resource Planning**: Make informed hiring/tooling decisions
+- **Process Optimization**: Identify and fix inefficiencies
+
+**Dependencies**:
+- Langfuse observability (already integrated)
+- Orchestrator database (already running)
+- curator agent (existing)
+
+**Testing**:
+- Unit tests for analytics calculations
+- Integration tests with real data
+- UI tests for dashboard interactions
+- Performance tests (dashboard loads in <2s)
 
 ---
