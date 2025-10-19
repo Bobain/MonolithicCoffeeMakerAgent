@@ -29949,12 +29949,12 @@ As a code_developer agent, I need automated git workflow skill, so that commits,
 - [x] Documentation with examples
 
 **Deliverables**:
-1. ✅ git-workflow-automation skill implementation (coffee_maker/skills/git_workflow/)
-2. ✅ Conventional commit generator (commit_generator.py)
-3. ✅ Tag creation logic (semantic_versioner.py)
+1. ✅ git-workflow-automation skill implementation (.claude/skills/git-workflow-automation/scripts/)
+2. ✅ Conventional commit generator (git_commit_generator.py)
+3. ✅ Tag creation logic (semantic_tagger.py)
 4. ✅ PR description generator (pr_creator.py)
-5. ✅ Tests (unit + integration) - 28 tests passing
-6. ✅ Skill documentation (.claude/skills/git-workflow-automation/SKILL.md)
+5. ✅ Tests (unit + integration) - 51 tests passing
+6. ✅ Skill documentation (.claude/skills/git-workflow-automation/SKILL.md + scripts/README.md)
 
 **Dependencies**: US-062, US-063 (startup skills operational)
 
