@@ -392,6 +392,11 @@ class ChatSession:
         # Initialize developer status monitor for real-time updates
         self.status_monitor = DeveloperStatusMonitor(poll_interval=2.0)
 
+        # Initialize User Story Command Handler for /US command (US-012)
+        from coffee_maker.cli.commands.user_story_command import UserStoryCommandHandler
+
+        self.us_handler = UserStoryCommandHandler(ai_service=self.ai_service, roadmap_editor=self.editor)
+
         # Setup prompt-toolkit for advanced input
         self._setup_prompt_session()
 
@@ -863,6 +868,8 @@ class ChatSession:
         Routes input to appropriate handler based on whether it's
         a slash command or natural language.
 
+        US-012: If we're in a user story validation loop, route responses to handler.
+
         Args:
             user_input: User input string
 
@@ -873,6 +880,11 @@ class ChatSession:
             >>> response = session._process_input("/help")
             >>> response = session._process_input("What should we do next?")
         """
+        # US-012: If we're in a user story validation loop, route to handler
+        if self.us_handler.current_draft and not user_input.startswith("/"):
+            result = self.us_handler.handle_validation_response(user_input)
+            return result.get("message", "")
+
         # Check if it's a slash command
         if user_input.startswith("/"):
             return self._handle_command(user_input)
@@ -902,6 +914,11 @@ class ChatSession:
         args = args_str.split() if args_str else []
 
         logger.debug(f"Handling command: {cmd_name} with args: {args}")
+
+        # US-012: Handle /US command for user story creation
+        if cmd_name == "us":
+            result = self.us_handler.handle_command(command)
+            return result.get("message", "")
 
         # Handle daemon control commands
         if cmd_name == "status":

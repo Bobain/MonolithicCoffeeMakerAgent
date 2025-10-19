@@ -31201,9 +31201,10 @@ code-reviewer → Re-reviews → Verifies → Approves
 - ✅ CLI interface (poetry run user-listener)
 - ✅ Tests (unit + integration tests passing)
 
-### PRIORITY 12: US-012 - User Story Command Handler 📝 Planned
+### PRIORITY 12: US-012 - User Story Command Handler 🔄 In Progress
 **Spec**: docs/architecture/specs/SPEC-012-user-story-command-handler.md
 **Deliverables**:
-- User story command handler
-- AI service integration
-- Tests
+- ✅ User story command handler (coffee_maker/cli/commands/user_story_command.py)
+- ✅ AI service integration (prompt templates in .claude/commands/)
+- ✅ ChatSession integration
+- ✅ Tests (tests/unit/cli/test_user_story_command.py)

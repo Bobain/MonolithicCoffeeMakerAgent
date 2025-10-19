@@ -209,3 +209,9 @@ class PromptNames:
     TEST_WEB_APP = "test-web-app"
     CAPTURE_VISUAL_DOCS = "capture-visual-docs"
     VERIFY_DOD_PUPPETEER = "verify-dod-puppeteer"
+
+    # User Story Command Handler prompts (US-012)
+    EXTRACT_USER_STORY = "extract_user_story"
+    ANALYZE_SIMILARITY = "analyze_similarity"
+    SUGGEST_PRIORITIZATION = "suggest_prioritization"
+    REFINE_USER_STORY = "refine_user_story"
