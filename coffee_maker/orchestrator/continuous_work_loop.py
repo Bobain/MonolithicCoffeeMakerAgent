@@ -95,7 +95,7 @@ class ContinuousWorkLoop:
         self.agent_mgmt = OrchestratorAgentManagementSkill()
 
         # Initialize roadmap parser for all ROADMAP formats
-        self.roadmap_parser = RoadmapParser()
+        self.roadmap_parser = RoadmapParser("docs/roadmap/ROADMAP.md")
 
         # Initialize architect coordinator (spec backlog + worktree merging)
         self.architect_coordinator = ArchitectCoordinator(spec_backlog_target=self.config.spec_backlog_target)
