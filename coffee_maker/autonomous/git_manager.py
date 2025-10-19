@@ -147,6 +147,47 @@ class GitManager:
             logger.error(f"Failed to create branch: {e.stderr}")
             return False
 
+    def add(self, file_path: str) -> bool:
+        """Add a specific file to staging area.
+
+        Args:
+            file_path: Path to file to add
+
+        Returns:
+            True if successful
+
+        Example:
+            >>> git = GitManager()
+            >>> git.add("docs/README.md")
+        """
+        try:
+            self._run_git("add", file_path)
+            logger.debug(f"Added file: {file_path}")
+            return True
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to add {file_path}: {e.stderr}")
+            return False
+
+    def add_all(self) -> bool:
+        """Add all changes to staging area (git add -A).
+
+        Returns:
+            True if successful
+
+        Example:
+            >>> git = GitManager()
+            >>> git.add_all()
+        """
+        try:
+            self._run_git("add", "-A")
+            logger.debug("Added all changes")
+            return True
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to add all: {e.stderr}")
+            return False
+
     def commit(self, message: str, add_all: bool = True) -> bool:
         """Commit changes.
 
@@ -163,7 +204,7 @@ class GitManager:
         """
         try:
             if add_all:
-                self._run_git("add", "-A")
+                self.add_all()
 
             self._run_git("commit", "-m", message)
             logger.info(f"Committed: {message[:50]}...")
