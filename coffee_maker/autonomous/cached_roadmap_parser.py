@@ -49,8 +49,13 @@ class CachedRoadmapParser:
         >>> priorities = parser.get_priorities()  # Second call: cached!
     """
 
-    # Pre-compile regex pattern for priority headers (optimization)
-    _PRIORITY_PATTERN = re.compile(r"^###\s+🔴\s+\*\*PRIORITY\s+(\d+(?:\.\d+)?):([^*]+)\*\*")
+    # Pre-compile regex patterns for priority headers (optimization)
+    # Support both PRIORITY X and US-XXX formats
+    _PRIORITY_PATTERNS = [
+        re.compile(r"^###\s+🔴\s+\*\*PRIORITY\s+(\d+(?:\.\d+)?):([^*]+)\*\*"),  # Strict PRIORITY format
+        re.compile(r"^###\s+PRIORITY\s+(\d+(?:\.\d+)?):([^#]+?)(?:\s+(?:📝|🔄|✅|⏸️).*)?$"),  # Flexible PRIORITY format
+        re.compile(r"^###\s+US-(\d+):([^#]+?)(?:\s+(?:📝|🔄|✅|⏸️).*)?$"),  # User Story format (US-XXX)
+    ]
 
     def __init__(self, roadmap_path: str):
         """Initialize cached parser with roadmap path.
@@ -113,28 +118,56 @@ class CachedRoadmapParser:
         priorities = []
         lines = self._cached_lines
 
+        # Track code blocks to skip priorities inside them
+        in_code_block = False
+
         for i, line in enumerate(lines):
-            match = self._PRIORITY_PATTERN.search(line)
-            if match:
-                priority_num = match.group(1)
-                title = match.group(2).strip()
+            # Check for code fence markers
+            if line.strip().startswith("```"):
+                in_code_block = not in_code_block
+                continue
 
-                # Look for status in next few lines
-                status = self._extract_status(lines, i)
+            # Skip lines inside code blocks
+            if in_code_block:
+                continue
 
-                # Extract full section content (lazy - only when needed)
-                section_content = self._extract_section(lines, i)
+            # Try each pattern until we find a match
+            for pattern in self._PRIORITY_PATTERNS:
+                match = pattern.search(line)
+                if match:
+                    priority_num = match.group(1)
+                    title = match.group(2).strip()
 
-                priorities.append(
-                    {
-                        "name": f"PRIORITY {priority_num}",
-                        "number": priority_num,
-                        "title": title,
-                        "status": status,
-                        "section_start": i,
-                        "content": section_content,
-                    }
-                )
+                    # Clean up title (remove emojis and status if captured)
+                    title = re.sub(r"\s*(📝|🔄|✅|⏸️).*$", "", title).strip()
+
+                    # Look for status in next few lines
+                    status = self._extract_status(lines, i)
+
+                    # If status not found in **Status**: lines, try to extract from header
+                    if status == "Unknown":
+                        status = self._extract_status_from_header(line)
+
+                    # Extract full section content (lazy - only when needed)
+                    section_content = self._extract_section(lines, i)
+
+                    # Determine priority name based on format (PRIORITY or US-XXX)
+                    if "US-" in line:
+                        priority_name = f"US-{priority_num}"
+                    else:
+                        priority_name = f"PRIORITY {priority_num}"
+
+                    priorities.append(
+                        {
+                            "name": priority_name,
+                            "number": priority_num,
+                            "title": title,
+                            "status": status,
+                            "section_start": i,
+                            "content": section_content,
+                        }
+                    )
+                    break  # Found match, move to next line
 
         logger.debug(f"Parsed {len(priorities)} priorities")
         return priorities
@@ -185,6 +218,27 @@ class CachedRoadmapParser:
                 status_match = re.search(r"\*\*Status\*\*:\s*(.+?)(?:\n|$)", line)
                 if status_match:
                     return status_match.group(1).strip()
+
+        return "Unknown"
+
+    def _extract_status_from_header(self, header_line: str) -> str:
+        """Extract status emoji and text from priority header line.
+
+        Args:
+            header_line: The priority header line
+
+        Returns:
+            Status string (e.g., "complete", "planned", "in_progress", "blocked")
+        """
+        # Look for status emojis and convert to status strings
+        if "✅" in header_line or "Complete" in header_line:
+            return "complete"
+        elif "🔄" in header_line or "In Progress" in header_line:
+            return "in_progress"
+        elif "📝" in header_line or "Planned" in header_line:
+            return "planned"
+        elif "⏸️" in header_line or "Blocked" in header_line:
+            return "blocked"
 
         return "Unknown"
 

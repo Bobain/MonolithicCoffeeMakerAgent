@@ -91,9 +91,12 @@ class RoadmapParser:
         # 1. ### 🔴 **PRIORITY 1: Analytics & Observability** ⚡ FOUNDATION
         # 2. ### PRIORITY 1: Analytics 📝 Planned
         # 3. ### PRIORITY 1: Done ✅ Complete
+        # 4. ### US-062: Implement startup skill
+        # 5. ### US-062: Implement startup skill 📝 Planned
         patterns = [
-            r"^###\s+🔴\s+\*\*PRIORITY\s+(\d+(?:\.\d+)?):([^*]+)\*\*",  # Strict format
-            r"^###\s+PRIORITY\s+(\d+(?:\.\d+)?):([^#]+?)(?:\s+(?:📝|🔄|✅|⏸️).*)?$",  # Flexible format
+            r"^###\s+🔴\s+\*\*PRIORITY\s+(\d+(?:\.\d+)?):([^*]+)\*\*",  # Strict PRIORITY format
+            r"^###\s+PRIORITY\s+(\d+(?:\.\d+)?):([^#]+?)(?:\s+(?:📝|🔄|✅|⏸️).*)?$",  # Flexible PRIORITY format
+            r"^###\s+US-(\d+):([^#]+?)(?:\s+(?:📝|🔄|✅|⏸️).*)?$",  # User Story format (US-XXX)
         ]
 
         lines = self.content.split("\n")
@@ -130,9 +133,15 @@ class RoadmapParser:
                     # Extract full section content
                     section_content = self._extract_section(lines, i)
 
+                    # Determine priority name based on format (PRIORITY or US-XXX)
+                    if "US-" in line:
+                        priority_name = f"US-{priority_num}"
+                    else:
+                        priority_name = f"PRIORITY {priority_num}"
+
                     priorities.append(
                         {
-                            "name": f"PRIORITY {priority_num}",
+                            "name": priority_name,
                             "number": priority_num,
                             "title": title,
                             "status": status,
