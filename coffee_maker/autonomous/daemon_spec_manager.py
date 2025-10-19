@@ -81,9 +81,23 @@ class SpecManagerMixin:
             return False
 
         priority_name = priority["name"]
+        priority_title = priority.get("title", "")
 
-        # Extract number from priority name for spec prefix
-        if priority_name.startswith("US-"):
+        # Extract number from priority name/title for spec prefix
+        # Priority: Check if title contains US-XXX (e.g., "US-047 - Description")
+        if "US-" in priority_title:
+            # Extract US number from title
+            import re
+
+            match = re.search(r"US-(\d+)", priority_title)
+            if match:
+                spec_number = match.group(1)
+                spec_prefix = f"SPEC-{spec_number}"
+            else:
+                # Fallback to priority number
+                priority_num = priority_name.replace("PRIORITY", "").strip()
+                spec_prefix = f"SPEC-{priority_num.zfill(3)}"
+        elif priority_name.startswith("US-"):
             spec_number = priority_name.split("-")[1]
             spec_prefix = f"SPEC-{spec_number}"
         elif priority_name.startswith("PRIORITY"):
