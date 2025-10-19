@@ -274,8 +274,9 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
     def _create_spec_for_priority(self, priority: Dict):
         """Create technical specification for a priority using Claude.
 
-        MANDATORY STEP: Run architecture reuse check BEFORE creating spec.
-        This ensures we always check existing components first.
+        MANDATORY STEPS (in order):
+        1. Enforce CFR-011 (architect must read code-searcher reports + analyze codebase)
+        2. Run architecture reuse check BEFORE creating spec
 
         Args:
             priority: Priority dictionary from ROADMAP
@@ -286,6 +287,41 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
         priority_content = priority.get("content", "")
 
         logger.info(f"📝 Creating spec for {priority_name}: {priority_title}")
+
+        # CFR-011: Enforce daily integration before creating specs
+        from coffee_maker.autonomous.architect_daily_routine import ArchitectDailyRoutine, CFR011ViolationError
+
+        try:
+            routine = ArchitectDailyRoutine()
+            routine.enforce_cfr_011()
+            logger.info("✅ CFR-011 compliance verified - proceeding with spec creation")
+        except CFR011ViolationError as e:
+            logger.error(f"❌ CFR-011 violation detected: {e}")
+
+            # Create notification for user
+            try:
+                from coffee_maker.cli.notifications import NotificationDB
+
+                notifications = NotificationDB()
+                notifications.create_notification(
+                    type="cfr_violation",
+                    title=f"CFR-011 Violation: Cannot Create Spec for {priority_name}",
+                    message=str(e),
+                    priority="critical",
+                    context={
+                        "priority_name": priority_name,
+                        "enforcement": "CFR-011",
+                        "action_required": "architect must complete daily integration",
+                    },
+                    sound=False,  # CFR-009: architect is background agent
+                    agent_id="architect",
+                )
+            except Exception as notify_error:
+                logger.error(f"Failed to create notification: {notify_error}")
+
+            # Block spec creation - return early
+            logger.error(f"⛔ Blocking spec creation for {priority_name} until CFR-011 compliant")
+            return
 
         # Update current task
         self.current_task = {
