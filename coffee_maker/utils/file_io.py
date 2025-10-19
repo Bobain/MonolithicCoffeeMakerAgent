@@ -16,6 +16,7 @@ Example:
 
 import json
 import logging
+import re
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -249,3 +250,41 @@ def ensure_directory(directory: Path | str) -> None:
         logger.debug(f"Ensured directory exists: {directory}")
     except Exception as e:
         raise FileOperationError(f"Error creating directory {directory}: {e}")
+
+
+def slugify(text: str) -> str:
+    """Convert text to URL-friendly slug format.
+
+    Converts text to lowercase, replaces spaces and special characters with
+    hyphens, and removes consecutive hyphens.
+
+    Args:
+        text: Text to convert to slug
+
+    Returns:
+        Slugified text (lowercase, hyphen-separated, no special chars)
+
+    Example:
+        >>> slugify("Claude Skills Integration")
+        'claude-skills-integration'
+        >>> slugify("US-050: Architect POC Creation")
+        'us-050-architect-poc-creation'
+        >>> slugify("Multi-Agent   System!!!")
+        'multi-agent-system'
+    """
+    # Convert to lowercase
+    slug = text.lower()
+
+    # Replace spaces and underscores with hyphens
+    slug = re.sub(r"[\s_]+", "-", slug)
+
+    # Remove special characters (keep alphanumeric and hyphens)
+    slug = re.sub(r"[^a-z0-9\-]", "", slug)
+
+    # Remove consecutive hyphens
+    slug = re.sub(r"-+", "-", slug)
+
+    # Remove leading/trailing hyphens
+    slug = slug.strip("-")
+
+    return slug

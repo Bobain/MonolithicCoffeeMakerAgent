@@ -63,7 +63,11 @@ MonolithicCoffeeMakerAgent/
 │   ├── architecture/                # Technical design ⭐
 │   │   ├── specs/                   # Technical specifications (architect)
 │   │   ├── decisions/               # ADRs (architect)
-│   │   └── guidelines/              # Implementation guidelines (architect)
+│   │   ├── guidelines/              # Implementation guidelines (architect)
+│   │   ├── pocs/                    # Proof-of-Concepts (architect) ⭐ NEW
+│   │   │   ├── POC-000-template/    # Template for creating POCs
+│   │   │   └── POC-{number}-{slug}/ # Individual POCs
+│   │   └── POC_CREATION_GUIDE.md    # POC creation guide (architect)
 │   └── PROMPT_MANAGEMENT_SYSTEM.md  # Prompt system docs
 │
 ├── coffee_maker/
@@ -399,6 +403,67 @@ DoD: All priorities verified
 Status: Production ready"
 git push origin stable-v1.3.0
 ```
+
+### 5. Creating a POC for Complex Implementation ⭐ NEW
+
+**When to use**: Complex features (>16 hours + High complexity) need validation before implementation
+
+```bash
+# architect evaluates user story
+# Decision: Effort = 84 hours, Complexity = HIGH (multi-process, IPC)
+# → POC REQUIRED
+
+# 1. Create POC directory from template
+cd docs/architecture/pocs/
+cp -r POC-000-template/ POC-055-claude-skills-integration/
+cd POC-055-claude-skills-integration/
+
+# 2. Fill in README template
+# - Update header (number, name, date, time budget: 20-30% of full = 17-25h)
+# - List 3-5 concepts to prove
+# - Define what's NOT in scope
+
+# 3. Implement MINIMAL working code (20-30% scope)
+# - Focus ONLY on proving core concepts
+# - Skip error handling edge cases
+# - Use print statements for logging (OK for POC)
+
+# 4. Write basic tests
+# - One test per concept
+# - Just prove it works
+
+# 5. Run and validate
+python poc_component.py  # Should work!
+python test_poc.py       # All tests pass!
+
+# 6. Document learnings in README
+# - What worked well
+# - What needs adjustment
+# - Recommendations for code_developer
+
+# 7. Reference POC in technical spec
+# Add to SPEC-055: "See POC-055 for proof-of-concept validation"
+
+# 8. Commit to git
+git add docs/architecture/pocs/POC-055-*/
+git commit -m "feat: Add POC-055 - Claude Skills Integration
+
+Proves Code Execution Tool integration, SkillLoader, ExecutionController work correctly.
+
+Time: 4.5 hours (22% of 20-hour minimal scope)
+Scope: 25% of SPEC-055
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+```
+
+**Decision Matrix** (see `docs/architecture/POC_CREATION_GUIDE.md`):
+- Effort >16h + Complexity HIGH → **POC REQUIRED**
+- Effort >16h + Complexity MEDIUM → MAYBE (ask user)
+- All other cases → No POC
+
+**Reference**: `docs/architecture/POC_CREATION_GUIDE.md` for complete guide
 
 ---
 

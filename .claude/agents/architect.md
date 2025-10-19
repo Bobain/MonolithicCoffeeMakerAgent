@@ -272,6 +272,67 @@ You maintain:
 4. code_developer references guideline during implementation
 ```
 
+### Workflow 5: Creating POCs for Complex Implementations ⭐ NEW
+
+**When**: Complex features with high technical risk need validation BEFORE full implementation
+
+**Decision Matrix** (see `docs/architecture/POC_CREATION_GUIDE.md`):
+- Effort >16 hours (>2 days) **AND** Complexity = High → **POC REQUIRED**
+- Effort >16 hours **AND** Complexity = Medium → MAYBE (ask user)
+- All other cases → No POC needed
+
+**Complexity = HIGH** if ANY apply:
+- Novel architectural pattern (not used in project before)
+- External system integration (GitHub API, Puppeteer, databases)
+- Multi-process or async complexity
+- Performance-critical (caching, rate limiting, optimization)
+- Security-sensitive (authentication, authorization, data protection)
+- Cross-cutting concerns (affects multiple agents)
+
+**Process**:
+```
+1. YOU evaluate user story / priority
+2. YOU estimate effort (hours) and complexity (low/medium/high)
+3. YOU apply decision matrix → POC needed?
+4. If POC needed:
+   a. YOU create POC directory: docs/architecture/pocs/POC-{number}-{slug}/
+   b. YOU fill README template from POC-000-template/
+   c. YOU implement MINIMAL working code (20-30% of full feature)
+   d. YOU write basic tests proving concepts work
+   e. YOU run POC and validate it works
+   f. YOU document learnings and recommendations
+   g. YOU reference POC in technical spec
+   h. YOU commit POC to git
+5. If NO POC needed:
+   a. YOU create detailed technical spec with code examples
+   b. YOU proceed to full spec creation
+```
+
+**POC Scope**:
+- **20-30% of full implementation** (time-boxed!)
+- Proves 3-5 core technical concepts
+- Basic tests (just prove it works)
+- NOT production-ready (minimal error handling, no optimization)
+
+**Example - US-072 (POC Created)** ✅:
+- Effort: 15-20 hours, Complexity: HIGH (multi-process, IPC)
+- POC: `docs/architecture/pocs/POC-072-team-daemon/`
+- Proved: subprocess spawning, message passing, health monitoring, graceful shutdown
+- Time: 3 hours POC → Saved 3-4 hours in full implementation
+
+**Example - US-047 (No POC)** ❌:
+- Effort: 16-24 hours, Complexity: MEDIUM (workflow changes)
+- Decision: Detailed spec sufficient, no novel patterns
+- No POC created
+
+**Key Benefits**:
+- Reduces implementation risk by discovering issues early
+- Guides code_developer with concrete working examples
+- Validates technical approach before costly implementation
+- Documents what works and what needs adjustment
+
+**Reference**: `docs/architecture/POC_CREATION_GUIDE.md` (comprehensive guide)
+
 ---
 
 ## Interaction with Other Agents

@@ -397,3 +397,166 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
         # Update progress
         self.current_task["progress"] = 1.0
         self.current_task["status"] = "complete"
+
+    def _should_create_poc(self, effort_hours: float, complexity: str) -> bool:
+        """Determine if POC creation is needed using decision matrix.
+
+        Decision Matrix:
+        - Effort >16 hours (>2 days) AND Complexity = High → POC REQUIRED
+        - Effort >16 hours AND Complexity = Medium → MAYBE (default: no)
+        - All other cases → No POC
+
+        Args:
+            effort_hours: Estimated implementation effort in hours
+            complexity: Technical complexity ("low", "medium", "high")
+
+        Returns:
+            True if POC should be created, False otherwise
+
+        Example:
+            >>> agent._should_create_poc(20, "high")
+            True
+            >>> agent._should_create_poc(10, "high")
+            False
+            >>> agent._should_create_poc(20, "medium")
+            False
+        """
+        complexity_lower = complexity.lower()
+
+        # Effort > 2 days (16 hours) AND complexity = High → POC REQUIRED
+        if effort_hours > 16 and complexity_lower == "high":
+            logger.info(f"✅ POC REQUIRED: effort={effort_hours}h (>16), complexity={complexity} → Creating POC")
+            return True
+
+        # Effort > 2 days AND complexity = Medium → MAYBE (ask user in future, default: no)
+        if effort_hours > 16 and complexity_lower == "medium":
+            logger.info(f"⚠️ POC MAYBE: effort={effort_hours}h (>16), complexity={complexity} → Defaulting to NO")
+            # TODO: Ask user via user_listener (US-051 future enhancement)
+            return False
+
+        # All other cases → No POC
+        logger.info(f"❌ POC NOT NEEDED: effort={effort_hours}h, complexity={complexity}")
+        return False
+
+    def _create_poc(self, priority: Dict, requirements: Dict) -> Optional[Path]:
+        """Create POC directory and files from template.
+
+        Creates:
+        1. POC directory: docs/architecture/pocs/POC-{number}-{slug}/
+        2. README.md from template
+        3. Skeleton Python files (future enhancement)
+
+        Args:
+            priority: Priority dictionary from ROADMAP
+            requirements: Requirements dict with title, effort_hours, complexity
+
+        Returns:
+            Path to POC directory if created, None on error
+
+        Example:
+            >>> priority = {"number": "055", "name": "US-055"}
+            >>> requirements = {
+            ...     "title": "Claude Skills Integration",
+            ...     "estimated_effort_hours": 84,
+            ...     "technical_complexity": "high"
+            ... }
+            >>> poc_dir = agent._create_poc(priority, requirements)
+            >>> print(poc_dir)
+            docs/architecture/pocs/POC-055-claude-skills-integration/
+        """
+        from coffee_maker.utils.file_io import slugify
+
+        priority_number = priority.get("number", "unknown")
+        title = requirements.get("title", "unknown")
+        feature_slug = slugify(title)
+
+        # Create POC directory
+        poc_dir = Path(f"docs/architecture/pocs/POC-{priority_number}-{feature_slug}")
+
+        try:
+            poc_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"📁 Created POC directory: {poc_dir}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create POC directory: {e}")
+            return None
+
+        # Generate README from template
+        readme_content = self._generate_poc_readme(priority, requirements)
+
+        try:
+            readme_path = poc_dir / "README.md"
+            readme_path.write_text(readme_content, encoding="utf-8")
+            logger.info(f"📝 Created POC README: {readme_path}")
+        except Exception as e:
+            logger.error(f"❌ Failed to write POC README: {e}")
+            return None
+
+        # Copy template Python files
+        try:
+            template_dir = Path("docs/architecture/pocs/POC-000-template")
+            if template_dir.exists():
+                # Copy example_component.py
+                example_py = template_dir / "example_component.py"
+                if example_py.exists():
+                    dest_py = poc_dir / "example_component.py"
+                    dest_py.write_text(example_py.read_text(encoding="utf-8"), encoding="utf-8")
+                    logger.info(f"📄 Copied example_component.py to {dest_py}")
+
+                # Copy test_poc.py
+                test_py = template_dir / "test_poc.py"
+                if test_py.exists():
+                    dest_test = poc_dir / "test_poc.py"
+                    dest_test.write_text(test_py.read_text(encoding="utf-8"), encoding="utf-8")
+                    logger.info(f"📄 Copied test_poc.py to {dest_test}")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to copy template files (non-critical): {e}")
+
+        logger.info(f"✅ POC created: {poc_dir}")
+        logger.info("🔧 Next: architect should implement POC code manually")
+
+        return poc_dir
+
+    def _generate_poc_readme(self, priority: Dict, requirements: Dict) -> str:
+        """Generate README.md content for POC from template.
+
+        Args:
+            priority: Priority dictionary from ROADMAP
+            requirements: Requirements dict with title, effort_hours, complexity
+
+        Returns:
+            README.md content as string
+        """
+        from datetime import date
+
+        priority_number = priority.get("number", "unknown")
+        priority_name = priority.get("name", "unknown")
+        title = requirements.get("title", "Unknown Feature")
+        effort_hours = requirements.get("estimated_effort_hours", 0)
+        requirements.get("technical_complexity", "unknown")
+
+        # Calculate POC time budget (20-30% of full implementation)
+        poc_time_min = int(effort_hours * 0.2)
+        poc_time_max = int(effort_hours * 0.3)
+
+        # Read template
+        template_path = Path("docs/architecture/pocs/POC-000-template/README.md")
+        if not template_path.exists():
+            logger.error(f"❌ Template not found: {template_path}")
+            return "# POC README Template Missing"
+
+        template = template_path.read_text(encoding="utf-8")
+
+        # Replace placeholders
+        readme = template.replace("{number}", str(priority_number))
+        readme = readme.replace("{Feature Name}", title)
+        readme = readme.replace("{Date}", str(date.today()))
+        readme = readme.replace("{X-Y}", f"{poc_time_min}-{poc_time_max}")
+        readme = readme.replace("{Total hours for SPEC-{number}}", f"{effort_hours} hours (SPEC-{priority_number})")
+
+        # Add context about what to prove
+        readme = readme.replace(
+            "{specific technical concepts}",
+            f"core technical concepts for {priority_name} ({title})",
+        )
+
+        return readme
