@@ -1,140 +1,167 @@
-"""Unit tests for Skill Loader."""
+"""
+Unit tests for SkillLoader.
+
+Tests skill loading from .claude/skills/ directory.
+
+Author: code_developer
+Date: 2025-10-19
+Related: SPEC-055, US-055
+"""
 
 import pytest
-from coffee_maker.autonomous.skill_loader import (
-    load_skill,
-    get_available_skills,
-    SkillNames,
-)
+from coffee_maker.autonomous.skill_loader import SkillLoader
+from coffee_maker.autonomous.agent_registry import AgentType
 
 
 class TestSkillLoader:
-    """Test skill loading functionality."""
+    """Test SkillLoader functionality."""
 
-    def test_load_skill_without_variables(self):
-        """Test loading a skill without variable substitution."""
-        # Load architecture-reuse-check skill (should exist)
-        skill_content = load_skill(SkillNames.ARCHITECTURE_REUSE_CHECK)
+    def test_list_available_skills_empty_directory(self, tmp_path):
+        """Test listing skills when directory is empty."""
+        loader = SkillLoader(AgentType.CODE_DEVELOPER, skills_dir=tmp_path)
+        skills = loader.list_available_skills()
+        assert skills == []
 
-        assert skill_content is not None
-        assert len(skill_content) > 100  # Should have substantial content
-        assert "architecture" in skill_content.lower()
+    def test_list_available_skills_with_shared_skills(self, tmp_path):
+        """Test listing shared skills."""
+        # Create shared skill directory
+        shared_dir = tmp_path / "shared" / "test-skill"
+        shared_dir.mkdir(parents=True)
 
-    def test_load_skill_with_variables(self):
-        """Test loading a skill with variable substitution."""
-        # Note: architecture-reuse-check doesn't use variables currently
-        # This test verifies the variable substitution mechanism works
-        # by testing that variables would be substituted if they existed
+        # Create SKILL.md
+        skill_md = shared_dir / "SKILL.md"
+        skill_md.write_text(
+            """---
+name: test-skill
+version: 1.0.0
+agent: shared
+scope: shared
+description: Test skill
+triggers:
+  - test trigger
+requires: []
+---
 
-        # Test 1: Load without variables (should work fine)
-        skill_content_no_vars = load_skill(SkillNames.ARCHITECTURE_REUSE_CHECK)
-        assert skill_content_no_vars is not None
-        assert len(skill_content_no_vars) > 100
-
-        # Test 2: Load with variables (should not break anything)
-        skill_content_with_vars = load_skill(
-            SkillNames.ARCHITECTURE_REUSE_CHECK,
-            {
-                "PRIORITY_NAME": "PRIORITY 10",
-                "PROBLEM_DESCRIPTION": "Test problem description",
-            },
+# Test Skill
+"""
         )
-        # Should be identical since no variables exist in the skill
-        assert skill_content_with_vars == skill_content_no_vars
 
-    def test_load_nonexistent_skill(self):
-        """Test loading a skill that doesn't exist raises FileNotFoundError."""
+        loader = SkillLoader(AgentType.CODE_DEVELOPER, skills_dir=tmp_path)
+        skills = loader.list_available_skills()
+
+        assert len(skills) == 1
+        assert skills[0].name == "test-skill"
+        assert skills[0].scope == "shared"
+
+    def test_load_skill_by_name(self, tmp_path):
+        """Test loading a specific skill by name."""
+        # Create skill directory
+        skill_dir = tmp_path / "shared" / "my-skill"
+        skill_dir.mkdir(parents=True)
+
+        # Create SKILL.md
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text(
+            """---
+name: my-skill
+version: 1.0.0
+agent: shared
+scope: shared
+description: My test skill
+triggers:
+  - my trigger
+requires: []
+---
+
+# My Skill
+"""
+        )
+
+        loader = SkillLoader(AgentType.CODE_DEVELOPER, skills_dir=tmp_path)
+        skill = loader.load("my-skill")
+
+        assert skill.name == "my-skill"
+        assert skill.version == "1.0.0"
+
+    def test_load_nonexistent_skill(self, tmp_path):
+        """Test loading a skill that doesn't exist."""
+        loader = SkillLoader(AgentType.CODE_DEVELOPER, skills_dir=tmp_path)
+
         with pytest.raises(FileNotFoundError):
-            load_skill("nonexistent-skill")
+            loader.load("nonexistent-skill")
 
-    def test_load_skill_empty_name(self):
-        """Test loading a skill with empty name raises ValueError."""
-        with pytest.raises(ValueError):
-            load_skill("")
+    def test_skill_exists(self, tmp_path):
+        """Test checking if skill exists."""
+        # Create skill
+        skill_dir = tmp_path / "shared" / "exists-skill"
+        skill_dir.mkdir(parents=True)
 
-    def test_get_available_skills(self):
-        """Test getting list of available skills."""
-        skills = get_available_skills()
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text(
+            """---
+name: exists-skill
+version: 1.0.0
+agent: shared
+scope: shared
+description: Test
+triggers: []
+requires: []
+---
 
-        assert isinstance(skills, list)
-        assert len(skills) >= 11  # Should have at least 11 skills now (7 + 3 startup + 1 universal)
+# Skill
+"""
+        )
 
-        # Universal skills
-        assert SkillNames.TRACE_EXECUTION in skills
+        loader = SkillLoader(AgentType.CODE_DEVELOPER, skills_dir=tmp_path)
 
-        # Architect skills
-        assert SkillNames.ARCHITECTURE_REUSE_CHECK in skills
-        assert SkillNames.PROACTIVE_REFACTORING_ANALYSIS in skills
-        assert SkillNames.ARCHITECT_STARTUP in skills
+        assert loader.skill_exists("exists-skill") is True
+        assert loader.skill_exists("nonexistent") is False
 
-        # code_developer skills
-        assert SkillNames.TEST_FAILURE_ANALYSIS in skills
-        assert SkillNames.DOD_VERIFICATION in skills
-        assert SkillNames.GIT_WORKFLOW_AUTOMATION in skills
-        assert SkillNames.CODE_DEVELOPER_STARTUP in skills
+    def test_agent_specific_skills_precedence(self, tmp_path):
+        """Test that agent-specific skills take precedence over shared."""
+        # Create shared skill
+        shared_dir = tmp_path / "shared" / "override-skill"
+        shared_dir.mkdir(parents=True)
 
-        # project_manager skills
-        assert SkillNames.ROADMAP_HEALTH_CHECK in skills
-        assert SkillNames.PR_MONITORING_ANALYSIS in skills
-        assert SkillNames.PROJECT_MANAGER_STARTUP in skills
+        shared_md = shared_dir / "SKILL.md"
+        shared_md.write_text(
+            """---
+name: override-skill
+version: 1.0.0
+agent: shared
+scope: shared
+description: Shared version
+triggers: []
+requires: []
+---
 
-    def test_skill_names_enum(self):
-        """Test SkillNames enum has expected values."""
-        # Universal skills
-        assert hasattr(SkillNames, "TRACE_EXECUTION")
+# Shared
+"""
+        )
 
-        # Architect skills
-        assert hasattr(SkillNames, "ARCHITECTURE_REUSE_CHECK")
-        assert hasattr(SkillNames, "PROACTIVE_REFACTORING_ANALYSIS")
-        assert hasattr(SkillNames, "ARCHITECT_STARTUP")
+        # Create agent-specific skill (same name)
+        agent_dir = tmp_path / "code-developer" / "override-skill"
+        agent_dir.mkdir(parents=True)
 
-        # code_developer skills
-        assert hasattr(SkillNames, "TEST_FAILURE_ANALYSIS")
-        assert hasattr(SkillNames, "DOD_VERIFICATION")
-        assert hasattr(SkillNames, "GIT_WORKFLOW_AUTOMATION")
-        assert hasattr(SkillNames, "CODE_DEVELOPER_STARTUP")
+        agent_md = agent_dir / "SKILL.md"
+        agent_md.write_text(
+            """---
+name: override-skill
+version: 2.0.0
+agent: code-developer
+scope: agent-specific
+description: Agent-specific version
+triggers: []
+requires: []
+---
 
-        # project_manager skills
-        assert hasattr(SkillNames, "ROADMAP_HEALTH_CHECK")
-        assert hasattr(SkillNames, "PR_MONITORING_ANALYSIS")
-        assert hasattr(SkillNames, "PROJECT_MANAGER_STARTUP")
+# Agent Specific
+"""
+        )
 
-        # Verify values
-        assert SkillNames.TRACE_EXECUTION == "trace-execution"
-        assert SkillNames.ARCHITECTURE_REUSE_CHECK == "architecture-reuse-check"
-        assert SkillNames.PROACTIVE_REFACTORING_ANALYSIS == "proactive-refactoring-analysis"
-        assert SkillNames.ARCHITECT_STARTUP == "architect-startup"
-        assert SkillNames.TEST_FAILURE_ANALYSIS == "test-failure-analysis"
-        assert SkillNames.ROADMAP_HEALTH_CHECK == "roadmap-health-check"
-        assert SkillNames.DOD_VERIFICATION == "dod-verification"
-        assert SkillNames.GIT_WORKFLOW_AUTOMATION == "git-workflow-automation"
-        assert SkillNames.PR_MONITORING_ANALYSIS == "pr-monitoring-analysis"
-        assert SkillNames.CODE_DEVELOPER_STARTUP == "code-developer-startup"
-        assert SkillNames.PROJECT_MANAGER_STARTUP == "project-manager-startup"
+        loader = SkillLoader(AgentType.CODE_DEVELOPER, skills_dir=tmp_path)
+        skill = loader.load("override-skill")
 
-
-class TestSkillContentIntegrity:
-    """Test skill content integrity and structure."""
-
-    def test_architecture_reuse_check_structure(self):
-        """Test architecture-reuse-check skill has expected structure."""
-        skill = load_skill(SkillNames.ARCHITECTURE_REUSE_CHECK)
-
-        # Should have key sections
-        assert "## When to Use This Skill" in skill
-        assert "## Skill Execution Steps" in skill
-        assert "Step 1:" in skill  # Step-by-step process
-        assert "Step 2:" in skill
-        assert "decision" in skill.lower() or "Decision" in skill
-
-    def test_proactive_refactoring_analysis_structure(self):
-        """Test proactive-refactoring-analysis skill has expected structure."""
-        skill = load_skill(SkillNames.PROACTIVE_REFACTORING_ANALYSIS)
-
-        # Should have key sections
-        assert "## When to Use This Skill" in skill or "## Mission Statement" in skill
-        assert "refactoring" in skill.lower()
-        assert "analysis" in skill.lower()
-
-        # Should mention weekly execution
-        assert "weekly" in skill.lower() or "Monday" in skill
+        # Agent-specific should win
+        assert skill.version == "2.0.0"
+        assert skill.scope == "agent-specific"
