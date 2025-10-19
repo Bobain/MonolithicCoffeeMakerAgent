@@ -5,13 +5,15 @@ that completed work meets the Definition of Done before marking it complete.
 
 Architecture:
     BaseAgent
-      └── ProjectManagerAgent
+      └── ProjectManagerAgent (with StartupSkillMixin)
             ├── _do_background_work(): Monitor GitHub & verify DoD
             └── _handle_message(): Handle status queries & DoD requests
 
 Related:
     SPEC-057: Multi-agent orchestrator technical specification
+    SPEC-063: Agent Startup Skills Implementation
     US-045: Puppeteer-based Definition of Done verification
+    US-064: project_manager-startup Skill Integration
     CFR-013: All agents work on roadmap branch only
     US-057: Strategic requirement for multi-agent system
 
@@ -30,6 +32,12 @@ Message Handling:
     - dod_verification: Verify completed priority with Puppeteer
     - bug_report: Bug found during testing
     - status_query: Return current project status
+
+Startup Skill Integration (US-064):
+    - Executes project_manager-startup skill at initialization
+    - Validates CFR-007 context budget compliance (<30%)
+    - Performs health checks (ROADMAP.md exists, gh CLI available)
+    - Ensures all required resources are accessible
 """
 
 import logging
@@ -39,11 +47,12 @@ from typing import Dict
 
 from coffee_maker.autonomous.agent_registry import AgentType
 from coffee_maker.autonomous.agents.base_agent import BaseAgent
+from coffee_maker.autonomous.startup_skill_mixin import StartupSkillMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ProjectManagerAgent(BaseAgent):
+class ProjectManagerAgent(StartupSkillMixin, BaseAgent):
     """Project Manager agent - GitHub monitoring and DoD verification.
 
     Responsibilities:
@@ -62,6 +71,11 @@ class ProjectManagerAgent(BaseAgent):
         >>> agent.run_continuous()  # Runs forever
     """
 
+    @property
+    def agent_name(self) -> str:
+        """Agent name for startup skill execution (required by StartupSkillMixin)."""
+        return "project_manager"
+
     def __init__(
         self,
         status_dir: Path,
@@ -69,14 +83,28 @@ class ProjectManagerAgent(BaseAgent):
         check_interval: int = 900,  # 15 minutes for GitHub monitoring
         roadmap_file: str = "docs/roadmap/ROADMAP.md",
     ):
-        """Initialize ProjectManagerAgent.
+        """Initialize ProjectManagerAgent with startup skill execution.
 
         Args:
             status_dir: Directory for agent status files
             message_dir: Directory for inter-agent messages
             check_interval: Seconds between GitHub checks (default: 15 minutes)
             roadmap_file: Path to ROADMAP.md file
+
+        Raises:
+            StartupError: If startup skill execution fails
+            CFR007ViolationError: If context budget exceeds 30%
+            HealthCheckError: If required health checks fail
         """
+        # Execute startup skill (US-064)
+        # This validates:
+        # - CFR-007 context budget <30%
+        # - ROADMAP.md exists and is parseable
+        # - GitHub CLI (gh) is available
+        # - Required directories are accessible
+        self._execute_startup_skill()
+
+        # Initialize base agent
         super().__init__(
             agent_type=AgentType.PROJECT_MANAGER,
             status_dir=status_dir,
@@ -86,7 +114,11 @@ class ProjectManagerAgent(BaseAgent):
 
         self.roadmap_file = roadmap_file
 
-        logger.info("✅ ProjectManagerAgent initialized (GitHub monitoring + DoD verification)")
+        logger.info(
+            "✅ ProjectManagerAgent initialized "
+            f"(context budget: {self.startup_result.context_budget_pct:.1f}%, "
+            f"health checks: {sum(1 for h in self.startup_result.health_checks if h.passed)}/{len(self.startup_result.health_checks)})"
+        )
 
     def _do_background_work(self):
         """Project Manager's background work: GitHub monitoring & DoD verification.

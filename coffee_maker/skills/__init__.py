@@ -42,14 +42,24 @@ from coffee_maker.skills.code_analysis import (
     SecurityAudit,
 )
 from coffee_maker.utils.code_index import CodeIndexer, CodeIndexQueryEngine
-from coffee_maker.skills.skill_loader import (
-    SkillLoader,
+from coffee_maker.skills.analysis_loader import (
+    SkillLoader as AnalysisLoader,
     code_explainer,
     code_forensics,
     dependency_tracer,
     functional_search,
     rebuild_code_index,
     security_audit,
+)
+from coffee_maker.skills.skill_loader import (
+    StartupSkillLoader,
+    SkillResult,
+    SkillStep,
+    StartupError,
+    CFR007ViolationError,
+    HealthCheckError,
+    ContextLoadError,
+    ResourceInitializationError,
 )
 
 __all__ = [
@@ -69,6 +79,14 @@ __all__ = [
     # Infrastructure classes
     "CodeIndexer",
     "CodeIndexQueryEngine",
-    # Loader utility
-    "SkillLoader",
+    # Loader utilities
+    "AnalysisLoader",
+    "StartupSkillLoader",
+    "SkillResult",
+    "SkillStep",
+    "StartupError",
+    "CFR007ViolationError",
+    "HealthCheckError",
+    "ContextLoadError",
+    "ResourceInitializationError",
 ]
