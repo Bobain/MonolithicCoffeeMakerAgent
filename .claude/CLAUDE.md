@@ -699,6 +699,7 @@ poetry run project-manager /status
 | **docs/reflector/** | reflector | YES - Delta items (insights) | All others: READ-ONLY |
 | **docs/curator/** | curator | YES - Playbooks and curation | All others: READ-ONLY |
 | **docs/code-searcher/** | project_manager | YES - Code analysis documentation | code-searcher: Prepares findings (READ-ONLY) |
+| **docs/code-reviews/** | code-reviewer | YES - Code review reports | architect: Reads frequently via skill, All others: READ-ONLY |
 | **docs/templates/** | project_manager | YES - Documentation templates | All others: READ-ONLY |
 | **docs/tutorials/** | project_manager | YES - Tutorial content | All others: READ-ONLY |
 | **docs/user_interpret/** | project_manager | YES - Meta-docs about user_interpret | All others: READ-ONLY |
@@ -808,10 +809,13 @@ poetry run project-manager /status
    - **Dependency management**: ONLY architect can run `poetry add` (requires user consent)
    - **⭐ NEW (US-049, CFR-010)**: Continuously reviews and improves all specs
      - **Daily quick reviews** (5-10 min): Scan ROADMAP for simplification opportunities
+     - **Daily code-review checks** (2-3 min): Use code-review-history skill to review recent reports
      - **Weekly deep reviews** (1-2 hours): Read ALL specs, identify reuse patterns
+     - **Weekly trend analysis** (5-10 min): Use code-review-history skill for quality trends
      - **Automated triggers**: Daemon detects when reviews needed, creates notifications
      - **Metrics tracking**: Records simplifications, reuse, effort saved
      - **Weekly reports**: Generates improvement reports in `docs/architecture/WEEKLY_SPEC_REVIEW_*.md`
+     - **Refactoring insights**: Uses code-review-history skill to inform refactoring plans
      - **Success**: 30-87% complexity reduction typical (e.g., SPEC-009: 80h → 16h = 80% reduction)
      - See [GUIDELINE-006: Architect Review Process](docs/architecture/guidelines/GUIDELINE-006-architect-review-process.md)
    - Interacts with user through user_listener for architectural discussions
