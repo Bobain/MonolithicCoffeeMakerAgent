@@ -590,3 +590,84 @@ The technical spec should reference this POC and explain what it proves.
         )
 
         return readme
+
+    def _extract_requirements_from_priority(self, priority: Dict) -> Dict:
+        """Extract requirements from priority for POC decision.
+
+        Parses priority content to extract:
+        - title: Feature title
+        - estimated_effort_hours: Effort estimate in hours
+        - technical_complexity: low/medium/high
+
+        Args:
+            priority: Priority dictionary from ROADMAP
+
+        Returns:
+            Requirements dict with title, estimated_effort_hours, technical_complexity
+        """
+        import re
+
+        priority_content = priority.get("content", "")
+        priority_title = priority.get("title", "Unknown Feature")
+
+        # Extract estimated effort (look for patterns like "8-16 hours", "1-2 days", "84-104 hours")
+        effort_hours = 8  # Default to 8 hours (1 day)
+
+        # Look for hour estimates
+        hours_match = re.search(r"(\d+)-(\d+)\s*hours?", priority_content, re.IGNORECASE)
+        if hours_match:
+            # Use the upper bound of the estimate
+            effort_hours = int(hours_match.group(2))
+        else:
+            # Look for day estimates and convert to hours
+            days_match = re.search(r"(\d+)-(\d+)\s*days?", priority_content, re.IGNORECASE)
+            if days_match:
+                effort_hours = int(days_match.group(2)) * 8  # Upper bound in days * 8 hours
+
+        # Extract technical complexity (look for "complexity" keyword)
+        complexity = "medium"  # Default
+
+        complexity_patterns = [
+            (r"complexity[:\s]+high", "high"),
+            (r"complexity[:\s]+medium", "medium"),
+            (r"complexity[:\s]+low", "low"),
+            (r"very\s+high\s+complexity", "high"),
+            (r"high\s+complexity", "high"),
+            (r"medium\s+complexity", "medium"),
+            (r"low\s+complexity", "low"),
+        ]
+
+        for pattern, level in complexity_patterns:
+            if re.search(pattern, priority_content, re.IGNORECASE):
+                complexity = level
+                break
+
+        # Check for complexity indicators
+        high_complexity_indicators = [
+            "novel architectural pattern",
+            "external system integration",
+            "multi-process",
+            "async complexity",
+            "performance-critical",
+            "security-sensitive",
+            "cross-cutting concerns",
+            "multi-agent",
+            "orchestration",
+        ]
+
+        # If no explicit complexity found, infer from content
+        if complexity == "medium":
+            for indicator in high_complexity_indicators:
+                if indicator.lower() in priority_content.lower():
+                    complexity = "high"
+                    break
+
+        logger.info(
+            f"📊 Extracted requirements: effort={effort_hours}h, complexity={complexity}, title={priority_title}"
+        )
+
+        return {
+            "title": priority_title,
+            "estimated_effort_hours": effort_hours,
+            "technical_complexity": complexity,
+        }
