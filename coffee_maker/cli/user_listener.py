@@ -8,23 +8,34 @@ SPEC-010: User-Listener UI Command (SIMPLIFIED)
 - Enforces singleton pattern via AgentRegistry
 - Minimal code: ~250 lines, mostly copy-paste from roadmap_cli.py
 
+ENHANCED (2025-10-19): Integrated Team Daemon
+- Automatically starts team daemon in background (--with-team flag, default ON)
+- Provides /team and /agents commands to query orchestrator
+- Graceful shutdown cleans up team daemon subprocess
+
 Architecture:
-    User runs: poetry run user-listener
+    User runs: poetry run user-listener (or poetry run user-listener --with-team)
        ↓
     user_listener.py main()
+       ↓
+    Start team daemon in background subprocess
        ↓
     Register as USER_LISTENER (singleton)
        ↓
     Create ChatSession (REUSED from project_manager)
        ↓
-    Start chat loop
+    Start chat loop (with orchestrator status commands)
+       ↓
+    On exit: Stop team daemon gracefully
 
 Key Features:
     - Interactive REPL for user input
     - Rich terminal output with markdown and syntax highlighting
     - Singleton enforcement (only one instance at a time)
-    - Same functionality as project-manager chat
     - All existing commands work (/add, /update, /view, /analyze, etc.)
+    - NEW: /team - Show team daemon status
+    - NEW: /agents - Show all agent statuses
+    - NEW: Automatic team daemon lifecycle management
 
 References:
     - SPEC-010: User-Listener UI Command
@@ -32,10 +43,15 @@ References:
     - roadmap_cli.py: Source for cmd_chat() function (REUSED)
 """
 
+import atexit
+import click
 import logging
 import os
 import shutil
+import signal
+import subprocess
 import sys
+import time
 
 from coffee_maker.autonomous.agent_registry import (
     AgentAlreadyRunningError,
@@ -54,6 +70,9 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# Global team daemon process (for cleanup on exit)
+_team_daemon_process = None
 
 
 def _detect_and_validate_mode() -> tuple[bool, str]:
@@ -172,17 +191,151 @@ def _initialize_chat_components(use_claude_cli: bool, claude_path: str) -> tuple
     return editor, ai_service
 
 
-def main() -> int:
+def _start_team_daemon() -> subprocess.Popen:
+    """Start team daemon in background subprocess.
+
+    Returns:
+        Popen object for the team daemon process
+
+    Raises:
+        RuntimeError: If team daemon fails to start
+    """
+    global _team_daemon_process
+
+    print("=" * 70)
+    print("🚀 Starting Multi-Agent Team Daemon...")
+    print("=" * 70)
+    print("Launching background agents:")
+    print("  1. architect (creates specs)")
+    print("  2. code_developer (implements features)")
+    print("  3. project_manager (monitors GitHub)")
+    print("  4. assistant (creates demos, reports bugs)")
+    print("  5. code_searcher (code analysis)")
+    print("  6. ux_design_expert (design reviews)")
+    print("")
+
+    try:
+        # Start team daemon as background subprocess
+        process = subprocess.Popen(
+            ["poetry", "run", "team-daemon", "start"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,  # Line buffered
+        )
+
+        # Wait a few seconds for daemon to initialize
+        print("⏳ Initializing team daemon (3 seconds)...")
+        time.sleep(3)
+
+        # Check if process is still running
+        if process.poll() is not None:
+            # Process already exited - something went wrong
+            stdout, stderr = process.communicate()
+            print(f"❌ Team daemon failed to start!")
+            print(f"\nStdout:\n{stdout}")
+            print(f"\nStderr:\n{stderr}")
+            raise RuntimeError("Team daemon exited immediately")
+
+        _team_daemon_process = process
+
+        print("✅ Team daemon started successfully (PID: {})".format(process.pid))
+        print("=" * 70)
+        print("")
+
+        # Register cleanup handler
+        atexit.register(_stop_team_daemon)
+
+        # Handle SIGTERM/SIGINT for graceful shutdown
+        signal.signal(signal.SIGTERM, _signal_handler)
+        signal.signal(signal.SIGINT, _signal_handler)
+
+        return process
+
+    except FileNotFoundError:
+        print("❌ Error: 'poetry' command not found")
+        print("\n💡 TIP: Ensure Poetry is installed and in PATH")
+        raise RuntimeError("Poetry not available")
+
+    except Exception as e:
+        print(f"❌ Error starting team daemon: {e}")
+        raise
+
+
+def _stop_team_daemon():
+    """Stop team daemon gracefully."""
+    global _team_daemon_process
+
+    if _team_daemon_process is None:
+        return
+
+    if _team_daemon_process.poll() is not None:
+        # Already stopped
+        return
+
+    print("\n" + "=" * 70)
+    print("🛑 Stopping Multi-Agent Team Daemon...")
+    print("=" * 70)
+
+    try:
+        # Send SIGTERM for graceful shutdown
+        _team_daemon_process.terminate()
+
+        # Wait up to 10 seconds for graceful shutdown
+        try:
+            _team_daemon_process.wait(timeout=10)
+            print("✅ Team daemon stopped gracefully")
+        except subprocess.TimeoutExpired:
+            # Force kill if still alive
+            print("⚠️  Timeout - force killing team daemon...")
+            _team_daemon_process.kill()
+            _team_daemon_process.wait()
+            print("✅ Team daemon force killed")
+
+    except Exception as e:
+        logger.error(f"Error stopping team daemon: {e}")
+
+    finally:
+        _team_daemon_process = None
+
+    print("=" * 70)
+    print("")
+
+
+def _signal_handler(signum, frame):
+    """Handle SIGTERM/SIGINT for graceful shutdown."""
+    print("\n\n⚠️  Received shutdown signal...")
+    _stop_team_daemon()
+    sys.exit(0)
+
+
+@click.command()
+@click.option(
+    "--with-team/--no-team",
+    default=True,
+    help="Start multi-agent team daemon in background (default: enabled)",
+)
+@click.option(
+    "--debug",
+    is_flag=True,
+    help="Enable debug logging",
+)
+def main(with_team: bool, debug: bool) -> int:
     """Main entry point for user-listener CLI.
 
-    Command: poetry run user-listener
+    Command: poetry run user-listener [--with-team] [--no-team] [--debug]
 
     This function:
-    1. Registers as USER_LISTENER singleton
-    2. Detects and validates Claude CLI vs API mode
-    3. Sets up ChatSession with AI service
-    4. Starts interactive REPL loop
-    5. Handles errors gracefully
+    1. Optionally starts team daemon in background (default: ON)
+    2. Registers as USER_LISTENER singleton
+    3. Detects and validates Claude CLI vs API mode
+    4. Sets up ChatSession with AI service
+    5. Starts interactive REPL loop
+    6. Gracefully shuts down team daemon on exit
+
+    Args:
+        with_team: Start team daemon in background (default: True)
+        debug: Enable debug logging (default: False)
 
     Returns:
         0 on success, 1 on error
@@ -192,9 +345,29 @@ def main() -> int:
         - Add singleton registration (AgentType.USER_LISTENER)
         - Update welcome banner ("User Listener · Primary Interface")
         - Reuse all ChatSession infrastructure
+
+    ENHANCED (2025-10-19):
+        - Add --with-team flag (default ON) for background team daemon
+        - Automatic daemon lifecycle management
+        - /team and /agents commands for orchestrator queries
     """
 
+    if debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.debug("Debug logging enabled")
+
+    team_process = None
+
     try:
+        # Start team daemon in background (if requested)
+        if with_team:
+            try:
+                team_process = _start_team_daemon()
+            except Exception as e:
+                print(f"\n⚠️  Warning: Could not start team daemon: {e}")
+                print("Continuing with user-listener only...\n")
+                # Continue anyway - user can still interact without team
+
         # US-035: Register user_listener in singleton registry
         with AgentRegistry.register(AgentType.USER_LISTENER):
             logger.info("✅ user_listener registered in singleton registry")
@@ -209,7 +382,14 @@ def main() -> int:
             print("\n" + "=" * 70)
             print("User Listener · Primary Interface")
             print("=" * 70)
-            print("Powered by Claude AI\n")
+            print("Powered by Claude AI")
+            if with_team and team_process:
+                print("Multi-Agent Team: RUNNING (6 agents)")
+                print("  Type /team or /agents for status")
+            else:
+                print("Multi-Agent Team: NOT RUNNING")
+                print("  Run with --with-team to enable")
+            print("=" * 70 + "\n")
 
             # Start chat session (REUSED from project-manager chat)
             session = ChatSession(ai_service, editor)
@@ -223,10 +403,14 @@ def main() -> int:
 
     except KeyboardInterrupt:
         print("\n\nGoodbye!\n")
+        if with_team:
+            _stop_team_daemon()
         return 0
 
     except RuntimeError as e:
         logger.error(f"Runtime error: {e}")
+        if with_team:
+            _stop_team_daemon()
         return 1
 
     except ValueError as e:
@@ -234,6 +418,8 @@ def main() -> int:
         if "ANTHROPIC_API_KEY" in str(e):
             print("\n💡 TIP: Install Claude CLI for free usage (no API key needed)!")
             print("   Get it from: https://claude.ai/")
+        if with_team:
+            _stop_team_daemon()
         return 1
 
     except Exception as e:
@@ -241,7 +427,14 @@ def main() -> int:
         import traceback
 
         traceback.print_exc()
+        if with_team:
+            _stop_team_daemon()
         return 1
+
+    finally:
+        # Ensure team daemon is stopped on any exit
+        if with_team and team_process:
+            _stop_team_daemon()
 
 
 if __name__ == "__main__":

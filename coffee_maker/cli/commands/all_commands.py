@@ -15,6 +15,7 @@ from coffee_maker.cli.commands.analyze_roadmap import AnalyzeRoadmapCommand
 from coffee_maker.cli.commands.update_priority import UpdatePriorityCommand
 from coffee_maker.cli.commands.user_story import UserStoryCommand
 from coffee_maker.cli.commands.view_roadmap import ViewRoadmapCommand
+from coffee_maker.cli.commands.team import TeamStatusCommand, AgentsStatusCommand
 
 # List of all command classes
 ALL_COMMANDS: List[Type] = [
@@ -23,6 +24,8 @@ ALL_COMMANDS: List[Type] = [
     ViewRoadmapCommand,
     AnalyzeRoadmapCommand,
     UserStoryCommand,
+    TeamStatusCommand,
+    AgentsStatusCommand,
 ]
 
 __all__ = ["ALL_COMMANDS"]
