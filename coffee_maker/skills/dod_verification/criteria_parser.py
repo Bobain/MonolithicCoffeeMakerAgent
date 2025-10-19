@@ -68,16 +68,16 @@ class CriteriaParser:
     def _extract_acceptance_section(self, description: str) -> str:
         """Extract acceptance criteria section from description."""
         # Look for "Acceptance Criteria:" or "Definition of Done:" sections
-        # Stop at next section marker (**, ##, or double newline)
+        # Stop at next section marker (double newline + **) or end
         patterns = [
-            r"\*\*Acceptance Criteria\*\*:(.+?)(?=\n\n\*\*|\n\*\*|$)",
-            r"Acceptance Criteria:(.+?)(?=\n\n\*\*|\n\*\*|$)",
-            r"\*\*Definition of Done\*\*:(.+?)(?=\n\n\*\*|\n\*\*|$)",
-            r"Definition of Done:(.+?)(?=\n\n\*\*|\n\*\*|$)",
-            r"\*\*DoD\*\*:(.+?)(?=\n\n\*\*|\n\*\*|$)",
-            r"DoD:(.+?)(?=\n\n\*\*|\n\*\*|$)",
-            r"\*\*Criteria\*\*:(.+?)(?=\n\n\*\*|\n\*\*|$)",
-            r"Criteria:(.+?)(?=\n\n\*\*|\n\*\*|$)",
+            r"\*\*Acceptance Criteria\*\*:(.+?)(?=\n\s*\n\s*\*\*|$)",
+            r"Acceptance Criteria:(.+?)(?=\n\s*\n\s*\*\*|$)",
+            r"\*\*Definition of Done\*\*:(.+?)(?=\n\s*\n\s*\*\*|$)",
+            r"Definition of Done:(.+?)(?=\n\s*\n\s*\*\*|$)",
+            r"\*\*DoD\*\*:(.+?)(?=\n\s*\n\s*\*\*|$)",
+            r"DoD:(.+?)(?=\n\s*\n\s*\*\*|$)",
+            r"\*\*Criteria\*\*:(.+?)(?=\n\s*\n\s*\*\*|$)",
+            r"Criteria:(.+?)(?=\n\s*\n\s*\*\*|$)",
         ]
 
         for pattern in patterns:
