@@ -2,11 +2,14 @@
 
 Tests the delegation of technical specification creation from the daemon
 to the architect agent, ensuring proper ownership boundaries are respected.
+
+US-054 UPDATE: Tests updated to handle CFR-011 enforcement
+- Mock ArchitectDailyRoutine to be compliant
 """
 
 import logging
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -57,6 +60,16 @@ class TestArchitectDelegation:
     """Test daemon-architect delegation for technical spec creation."""
 
     @pytest.fixture
+    def mock_cfr_011_compliant(self):
+        """Mock ArchitectDailyRoutine to be CFR-011 compliant."""
+        # Patch enforce_cfr_011 to do nothing (compliant)
+        with patch("coffee_maker.autonomous.daemon_spec_manager.ArchitectDailyRoutine") as mock_routine_class:
+            mock_routine = Mock()
+            mock_routine.enforce_cfr_011.return_value = None  # No violations
+            mock_routine_class.return_value = mock_routine
+            yield mock_routine
+
+    @pytest.fixture
     def temp_roadmap_dir(self, tmp_path):
         """Create temporary roadmap directory structure."""
         # Create roadmap directory
@@ -74,7 +87,7 @@ class TestArchitectDelegation:
         return tmp_path / "docs" / "roadmap"
 
     @pytest.fixture
-    def daemon_with_mixin(self, temp_roadmap_dir):
+    def daemon_with_mixin(self, temp_roadmap_dir, mock_cfr_011_compliant):
         """Create daemon instance with SpecManagerMixin."""
         roadmap_path = temp_roadmap_dir / "ROADMAP.md"
         daemon = TestDaemonWithArchitectDelegation()

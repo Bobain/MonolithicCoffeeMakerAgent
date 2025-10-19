@@ -10,6 +10,12 @@ US-047 UPDATE: Enforces CFR-008 - ARCHITECT-ONLY SPEC CREATION
 - architect must create specs proactively in docs/architecture/specs/
 - No delegation - just blocking with clear notification
 
+US-054 UPDATE: Enforces CFR-011 - ARCHITECT DAILY INTEGRATION
+- architect MUST read code-searcher reports before creating specs
+- architect MUST analyze codebase weekly (max 7 days between analyses)
+- Spec creation BLOCKED if CFR-011 violations detected
+- Ensures continuous integration of code quality findings
+
 Classes:
     SpecManagerMixin: Mixin providing _ensure_technical_spec() and spec checking
 
@@ -27,6 +33,10 @@ Architecture:
 """
 
 import logging
+from coffee_maker.autonomous.architect_daily_routine import (
+    ArchitectDailyRoutine,
+    CFR011ViolationError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +77,11 @@ class SpecManagerMixin:
         3. If spec missing: BLOCK and notify user/architect
         4. Do NOT create specs (code_developer cannot create specs per CFR-008)
 
+        US-054: ENFORCE CFR-011 - Architect Daily Integration
+        BEFORE allowing spec check, ensure architect has:
+        - Read all code-searcher reports
+        - Performed weekly codebase analysis (<7 days ago)
+
         BUG-002 FIX: Validate priority fields before accessing them.
 
         Args:
@@ -78,6 +93,19 @@ class SpecManagerMixin:
         # BUG-002: Validate required fields
         if not priority.get("name"):
             logger.error("❌ Priority missing 'name' field - cannot check for technical spec")
+            return False
+
+        # US-054: ENFORCE CFR-011 BEFORE checking for spec
+        # This ensures architect has read all findings before ANY spec-related work
+        routine = ArchitectDailyRoutine()
+        try:
+            routine.enforce_cfr_011()
+            logger.info("✅ CFR-011 compliant - architect has integrated code-searcher findings")
+        except CFR011ViolationError as e:
+            logger.error(f"❌ CFR-011 violation detected: {e}")
+            # Notify user about CFR-011 violation
+            self._notify_cfr_011_violation(priority, str(e))
+            # BLOCK spec checking until architect complies
             return False
 
         priority_name = priority["name"]
@@ -196,4 +224,73 @@ class SpecManagerMixin:
 
         except Exception as e:
             logger.error(f"Failed to create notification: {e}", exc_info=True)
+            # Don't fail - notification is nice-to-have but not critical
+
+    def _notify_cfr_011_violation(self, priority: dict, violation_details: str) -> None:
+        """Notify user about CFR-011 violation.
+
+        CFR-011: ARCHITECT DAILY INTEGRATION
+        architect MUST read code-searcher reports and analyze codebase weekly
+        before creating specs.
+
+        Creates a notification alerting the user that architect has violated
+        CFR-011 and must complete daily integration before spec creation can proceed.
+
+        Args:
+            priority: Priority dictionary
+            violation_details: Details about the violation from CFR011ViolationError
+
+        Example:
+            >>> priority = {"name": "US-054", "title": "CFR-011 Enforcement"}
+            >>> violation = "Unread code-searcher reports: ANALYSIS.md"
+            >>> self._notify_cfr_011_violation(priority, violation)
+        """
+        priority_name = priority.get("name", "Unknown Priority")
+        priority_title = priority.get("title", "Unknown Title")
+
+        # Create notification message with actionable guidance
+        title = f"CFR-011: architect Must Review Code Findings"
+        message = (
+            f"CFR-011 violation detected for '{priority_title}'.\n\n"
+            f"Priority: {priority_name}\n"
+            f"Title: {priority_title}\n\n"
+            f"VIOLATION DETAILS:\n{violation_details}\n\n"
+            f"CFR-011 REQUIREMENT:\n"
+            f"architect MUST read all code-searcher reports AND analyze codebase weekly\n"
+            f"BEFORE creating or checking technical specifications.\n\n"
+            f"ACTIONS REQUIRED:\n"
+            f"1. Run: architect daily-integration (read code-searcher reports)\n"
+            f"2. Run: architect analyze-codebase (if >7 days since last analysis)\n"
+            f"3. Check compliance: architect cfr-011-status\n\n"
+            f"Implementation is BLOCKED until CFR-011 compliance achieved."
+        )
+
+        context = {
+            "priority_name": priority_name,
+            "priority_title": priority_title,
+            "enforcement": "CFR-011",
+            "violation_details": violation_details,
+            "action_required": "architect must complete daily integration and weekly analysis",
+            "commands": [
+                "architect daily-integration",
+                "architect analyze-codebase",
+                "architect cfr-011-status",
+            ],
+        }
+
+        try:
+            self.notifications.create_notification(
+                type="error",
+                title=title,
+                message=message,
+                priority="critical",
+                context=context,
+                sound=False,  # CFR-009: code_developer must use sound=False
+                agent_id="code_developer",  # CFR-009: identify calling agent
+            )
+
+            logger.info(f"✅ Created CFR-011 violation notification for {priority_name}")
+
+        except Exception as e:
+            logger.error(f"Failed to create CFR-011 notification: {e}", exc_info=True)
             # Don't fail - notification is nice-to-have but not critical

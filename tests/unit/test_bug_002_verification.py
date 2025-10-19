@@ -8,11 +8,14 @@ These tests verify that:
 2. No KeyError when priority dict is missing 'name' or 'content'
 3. Appropriate warnings/errors are logged
 4. Daemon continues operation without crashing
+
+US-054 UPDATE: Tests updated to handle CFR-011 enforcement
+- Mock ArchitectDailyRoutine to be compliant
 """
 
 import pytest
 import logging
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 from pathlib import Path
 
 from coffee_maker.autonomous.daemon_spec_manager import SpecManagerMixin
@@ -32,7 +35,17 @@ class TestBug002Verification:
     """Verify BUG-002 fix: graceful handling of missing priority content."""
 
     @pytest.fixture
-    def mock_daemon(self, tmp_path):
+    def mock_cfr_011_compliant(self):
+        """Mock ArchitectDailyRoutine to be CFR-011 compliant."""
+        # Patch enforce_cfr_011 to do nothing (compliant)
+        with patch("coffee_maker.autonomous.daemon_spec_manager.ArchitectDailyRoutine") as mock_routine_class:
+            mock_routine = Mock()
+            mock_routine.enforce_cfr_011.return_value = None  # No violations
+            mock_routine_class.return_value = mock_routine
+            yield mock_routine
+
+    @pytest.fixture
+    def mock_daemon(self, tmp_path, mock_cfr_011_compliant):
         """Create mock daemon instance for testing with proper directory structure."""
         # Create directory structure: tmp/docs/roadmap/ROADMAP.md
         roadmap_dir = tmp_path / "docs" / "roadmap"

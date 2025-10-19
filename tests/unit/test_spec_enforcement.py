@@ -7,11 +7,15 @@ Tests:
 - Notification created when spec missing
 - Spec exists check works correctly
 - Multiple spec naming patterns supported
+
+US-054 UPDATE: Tests updated to handle CFR-011 enforcement
+- Mock ArchitectDailyRoutine to be compliant
+- Tests run in isolated environment (no real code-searcher reports)
 """
 
 import pytest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from coffee_maker.autonomous.daemon_spec_manager import SpecManagerMixin
 
@@ -60,12 +64,22 @@ class TestSpecEnforcement:
     """Test CFR-008 spec enforcement."""
 
     @pytest.fixture
+    def mock_cfr_011_compliant(self):
+        """Mock ArchitectDailyRoutine to be CFR-011 compliant."""
+        # Patch enforce_cfr_011 to do nothing (compliant)
+        with patch("coffee_maker.autonomous.daemon_spec_manager.ArchitectDailyRoutine") as mock_routine_class:
+            mock_routine = Mock()
+            mock_routine.enforce_cfr_011.return_value = None  # No violations
+            mock_routine_class.return_value = mock_routine
+            yield mock_routine
+
+    @pytest.fixture
     def mock_notifications(self):
         """Create mock notification database."""
         return MockNotificationDB()
 
     @pytest.fixture
-    def spec_manager(self, mock_notifications, tmp_path):
+    def spec_manager(self, mock_notifications, tmp_path, mock_cfr_011_compliant):
         """Create test spec manager with temporary directories."""
         # Create directory structure
         roadmap_path = tmp_path / "docs" / "roadmap" / "ROADMAP.md"
