@@ -80,7 +80,7 @@ class AnalysisResult:
     recommended_fix_order: List[str] = field(default_factory=list)
 
 
-class TestFailureAnalyzer:
+class TestFailureAnalyzerSkill:
     """Analyze pytest failures and suggest fixes."""
 
     # Regex patterns for parsing pytest output
@@ -223,18 +223,45 @@ class TestFailureAnalyzer:
 
                 # Scan forward to find error details
                 j = i + 1
-                while j < len(lines) and j < i + 50:  # Look ahead up to 50 lines
+                found_error = False
+                in_traceback = False
+                while j < len(lines) and j < i + 100:  # Look ahead up to 100 lines
                     error_line = lines[j]
 
-                    # Extract error type and message
-                    error_match = self.ERROR_PATTERN.search(error_line)
-                    if error_match:
-                        error_type = error_match.group(1)
-                        message = error_match.group(2)
+                    # Check if we're entering the traceback section (starts with underscore or test name)
+                    if error_line.strip() and error_line.strip()[0] == "_":
+                        in_traceback = True
+
+                    # Extract error type and message (look for "E   ErrorType: message" format)
+                    if error_line.strip().startswith("E   "):
+                        error_match = self.ERROR_PATTERN.search(error_line)
+                        if error_match and not found_error:
+                            error_type = error_match.group(1)
+                            message = error_match.group(2)
+                            found_error = True
+
+                    # Also check for error on the same line as FAILED (short format)
+                    # Example: "FAILED tests/unit/test_auth.py::test_login - ImportError: cannot import name"
+                    if " - " in line and "FAILED" in line and not found_error:
+                        parts = line.split(" - ", 1)
+                        if len(parts) == 2:
+                            error_match = self.ERROR_PATTERN.search(parts[1])
+                            if error_match:
+                                error_type = error_match.group(1)
+                                message = error_match.group(2)
+                                found_error = True
+
+                    # Check for error anywhere in line (fallback)
+                    if not found_error and in_traceback:
+                        error_match = self.ERROR_PATTERN.search(error_line)
+                        if error_match and any(err in error_line for err in ["Error", "Exception"]):
+                            error_type = error_match.group(1)
+                            message = error_match.group(2)
+                            found_error = True
 
                     # Extract file and line from traceback
                     traceback_match = self.TRACEBACK_FILE_LINE_PATTERN.search(error_line)
-                    if traceback_match:
+                    if traceback_match and not line_no:
                         line_no = int(traceback_match.group(2))
 
                     # Build traceback
@@ -242,7 +269,7 @@ class TestFailureAnalyzer:
                         traceback += error_line + "\n"
 
                     # Stop at next test or end of section
-                    if "FAILED" in error_line or "PASSED" in error_line or "====" in error_line:
+                    if j > i + 5 and ("FAILED" in error_line or "PASSED" in error_line or "====" in error_line):
                         break
 
                     j += 1
@@ -525,7 +552,7 @@ class TestFailureAnalyzer:
         if priority_name:
             report.append(f"**Priority**: {priority_name}")
 
-        report.append(f"**Total Failures**: {result.total_failures}")
+        report.append(f"Total Failures: {result.total_failures}")
         report.append("")
 
         # Summary

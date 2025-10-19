@@ -33,7 +33,7 @@ from coffee_maker.skills.code_analysis.code_forensics import CodeForensics
 from coffee_maker.skills.code_analysis.dependency_tracer import DependencyTracer
 from coffee_maker.skills.code_analysis.functional_search import FunctionalSearch
 from coffee_maker.skills.code_analysis.security_audit import SecurityAudit
-from coffee_maker.skills.code_analysis.test_failure_analyzer import TestFailureAnalyzer
+from coffee_maker.skills.code_analysis.test_failure_analyzer import TestFailureAnalyzerSkill
 from coffee_maker.utils.code_index.indexer import CodeIndexer
 from coffee_maker.utils.code_index.query_engine import CodeIndexQueryEngine
 
@@ -96,12 +96,12 @@ class SkillLoader:
         return cls._explainer
 
     @classmethod
-    def get_test_failure_analyzer(cls, codebase_root: str = None) -> TestFailureAnalyzer:
+    def get_test_failure_analyzer(cls, codebase_root: str = None) -> TestFailureAnalyzerSkill:
         """Get test failure analyzer skill instance."""
         if cls._test_failure_analyzer is None or (
             codebase_root and str(cls._test_failure_analyzer.codebase_root) != codebase_root
         ):
-            cls._test_failure_analyzer = TestFailureAnalyzer(codebase_root)
+            cls._test_failure_analyzer = TestFailureAnalyzerSkill(codebase_root)
         return cls._test_failure_analyzer
 
     @classmethod

@@ -6,7 +6,7 @@ Tests all failure categories and fix recommendations.
 
 import pytest
 from coffee_maker.skills.code_analysis.test_failure_analyzer import (
-    TestFailureAnalyzer,
+    TestFailureAnalyzerSkill,
     FailureCategory,
 )
 
@@ -17,7 +17,7 @@ class TestTestFailureAnalyzer:
     @pytest.fixture
     def analyzer(self):
         """Create analyzer instance."""
-        return TestFailureAnalyzer()
+        return TestFailureAnalyzerSkill()
 
     @pytest.fixture
     def sample_import_error_output(self):
@@ -380,9 +380,7 @@ tests/unit/test_auth.py PASSED                                         [100%]
         import time
 
         start = time.time()
-        result = analyzer.analyze(
-            test_output=sample_import_error_output, files_changed=[], priority_name="US-999"
-        )
+        result = analyzer.analyze(test_output=sample_import_error_output, files_changed=[], priority_name="US-999")
         elapsed = time.time() - start
 
         assert elapsed < 2.0  # Should complete in < 2 seconds (well under 2 minute target)
@@ -503,9 +501,7 @@ This is not valid pytest output
 Some random text
 No test results here
 """
-        result = analyzer.analyze(
-            test_output=malformed_output, files_changed=[], priority_name="US-ERR"
-        )
+        result = analyzer.analyze(test_output=malformed_output, files_changed=[], priority_name="US-ERR")
 
         # Should handle gracefully
         assert result.total_failures == 0
@@ -542,7 +538,7 @@ tests/unit/test_{i}.py:10: AssertionError
         )
 
         # Check that categories match expected types
-        categories = [f.category for f in result.failures]
+        [f.category for f in result.failures]
 
         # ImportError should be categorized as IMPORT_ERROR
         import_failures = [f for f in result.failures if "ImportError" in f.error_type]

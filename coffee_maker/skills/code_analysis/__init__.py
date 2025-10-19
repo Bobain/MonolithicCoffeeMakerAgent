@@ -18,7 +18,7 @@ from coffee_maker.skills.code_analysis.dependency_tracer import DependencyTracer
 from coffee_maker.skills.code_analysis.functional_search import FunctionalSearch
 from coffee_maker.skills.code_analysis.security_audit import SecurityAudit
 from coffee_maker.skills.code_analysis.test_failure_analyzer import (
-    TestFailureAnalyzer,
+    TestFailureAnalyzerSkill as TestFailureAnalyzer,
     AnalysisResult,
     TestFailure,
     FailureCategory,
