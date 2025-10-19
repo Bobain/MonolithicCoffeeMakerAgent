@@ -359,3 +359,149 @@ def test_architect_agent_fully_operational():
     assert os.path.exists(".claude/agents/architect.md")
 
     # If all checks pass, architect is fully operational!
+
+
+class TestArchitectPOCCreation:
+    """Test POC creation functionality (US-050)."""
+
+    @pytest.fixture
+    def agent(self, tmp_path):
+        """Create ArchitectAgent with tmp directories."""
+        from coffee_maker.autonomous.agents.architect_agent import ArchitectAgent
+
+        status_dir = tmp_path / "status"
+        message_dir = tmp_path / "messages"
+        status_dir.mkdir()
+        message_dir.mkdir()
+
+        return ArchitectAgent(status_dir=status_dir, message_dir=message_dir)
+
+    def test_should_create_poc_decision_matrix_high_complexity_high_effort(self, agent):
+        """Test that POC is required for high effort + high complexity."""
+        # High effort (>16 hours) + High complexity → POC REQUIRED
+        assert agent._should_create_poc(20, "high") is True
+        assert agent._should_create_poc(84, "high") is True
+        assert agent._should_create_poc(16.1, "high") is True
+
+    def test_should_create_poc_decision_matrix_medium_complexity_high_effort(self, agent):
+        """Test that POC defaults to NO for medium complexity even with high effort."""
+        # High effort (>16 hours) + Medium complexity → MAYBE (default: NO)
+        assert agent._should_create_poc(20, "medium") is False
+        assert agent._should_create_poc(84, "medium") is False
+
+    def test_should_create_poc_decision_matrix_low_complexity(self, agent):
+        """Test that POC is not needed for low complexity regardless of effort."""
+        # Low complexity → NO POC
+        assert agent._should_create_poc(8, "low") is False
+        assert agent._should_create_poc(20, "low") is False
+        assert agent._should_create_poc(84, "low") is False
+
+    def test_should_create_poc_decision_matrix_low_effort(self, agent):
+        """Test that POC is not needed for low effort even with high complexity."""
+        # Low effort (<= 16 hours) → NO POC
+        assert agent._should_create_poc(8, "high") is False
+        assert agent._should_create_poc(16, "high") is False
+        assert agent._should_create_poc(10, "medium") is False
+
+    def test_should_create_poc_case_insensitive(self, agent):
+        """Test that complexity parameter is case-insensitive."""
+        # Case variations should work
+        assert agent._should_create_poc(20, "HIGH") is True
+        assert agent._should_create_poc(20, "High") is True
+        assert agent._should_create_poc(20, "HiGh") is True
+
+    def test_extract_requirements_from_priority_basic(self, agent):
+        """Test basic requirements extraction from priority."""
+        priority = {
+            "number": "050",
+            "name": "US-050",
+            "title": "POC Creation Framework",
+            "content": "Estimated Effort: 8-16 hours\nTechnical Complexity: High",
+        }
+
+        requirements = agent._extract_requirements_from_priority(priority)
+
+        assert "title" in requirements
+        assert "estimated_effort_hours" in requirements
+        assert "technical_complexity" in requirements
+        assert requirements["title"] == "POC Creation Framework"
+
+    def test_generate_poc_readme_replaces_placeholders(self, tmp_path):
+        """Test that POC README generation replaces template placeholders."""
+        import os
+        from pathlib import Path
+        from coffee_maker.autonomous.agents.architect_agent import ArchitectAgent
+
+        # Change to tmp directory for test
+        original_cwd = os.getcwd()
+        os.chdir(tmp_path)
+
+        try:
+            # Create template for test
+            template_dir = Path("docs/architecture/pocs/POC-000-template")
+            template_dir.mkdir(parents=True, exist_ok=True)
+            (template_dir / "README.md").write_text("# POC-{number}: {Feature Name}\n{Date}\n{X-Y}")
+
+            # Create agent
+            status_dir = tmp_path / "status"
+            message_dir = tmp_path / "messages"
+            status_dir.mkdir()
+            message_dir.mkdir()
+            agent = ArchitectAgent(status_dir=status_dir, message_dir=message_dir)
+
+            priority = {"number": "050", "name": "US-050", "title": "Test Feature"}
+            requirements = {"title": "Test Feature", "estimated_effort_hours": 20, "technical_complexity": "high"}
+
+            readme = agent._generate_poc_readme(priority, requirements)
+
+            # Verify placeholders replaced
+            assert "{number}" not in readme  # Should be replaced with "050"
+            assert "{Feature Name}" not in readme  # Should be replaced with "Test Feature"
+            assert "{Date}" not in readme  # Should be replaced with actual date
+            assert "POC-050" in readme  # Should have actual number
+
+        finally:
+            os.chdir(original_cwd)
+
+    def test_create_poc_creates_directory(self, tmp_path):
+        """Test that _create_poc creates POC directory structure."""
+        import os
+        from pathlib import Path
+        from coffee_maker.autonomous.agents.architect_agent import ArchitectAgent
+
+        # Change to tmp directory for test
+        original_cwd = os.getcwd()
+        os.chdir(tmp_path)
+
+        try:
+            # Create template directory for test
+            template_dir = Path("docs/architecture/pocs/POC-000-template")
+            template_dir.mkdir(parents=True, exist_ok=True)
+            (template_dir / "README.md").write_text("# POC-{number}: {Feature Name}\n{Date}\n{X-Y}")
+            (template_dir / "example_component.py").write_text("# Example")
+            (template_dir / "test_poc.py").write_text("# Test")
+
+            # Create agent
+            status_dir = tmp_path / "status"
+            message_dir = tmp_path / "messages"
+            status_dir.mkdir()
+            message_dir.mkdir()
+            agent = ArchitectAgent(status_dir=status_dir, message_dir=message_dir)
+
+            priority = {"number": "999", "name": "US-999", "title": "Test Feature"}
+            requirements = {"title": "Test Feature", "estimated_effort_hours": 20, "technical_complexity": "high"}
+
+            poc_dir = agent._create_poc(priority, requirements)
+
+            # Verify directory created
+            assert poc_dir is not None
+            assert poc_dir.exists()
+            assert (poc_dir / "README.md").exists()
+
+            # Verify README content
+            readme_content = (poc_dir / "README.md").read_text()
+            assert "POC-999" in readme_content
+            assert "Test Feature" in readme_content
+
+        finally:
+            os.chdir(original_cwd)
