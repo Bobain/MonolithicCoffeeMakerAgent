@@ -59,6 +59,8 @@ class OrchestratorAgentManagementSkill:
                 return self._spawn_architect(**kwargs)
             elif action == "spawn_code_developer":
                 return self._spawn_code_developer(**kwargs)
+            elif action == "spawn_project_manager":
+                return self._spawn_project_manager(**kwargs)
             elif action == "check_status":
                 return self._check_status(**kwargs)
             elif action == "get_output":
@@ -182,6 +184,58 @@ class OrchestratorAgentManagementSkill:
         self._save_state()
 
         logger.info(f"Spawned code_developer (PID {process.pid}) for PRIORITY {priority_number}")
+
+        return {"error": None, "result": agent_info}
+
+    def _spawn_project_manager(
+        self, task_type: str = "auto_planning", auto_approve: bool = True, **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Spawn project_manager instance for planning/analysis.
+
+        Args:
+            task_type: Type of task (auto_planning, roadmap_health, etc.)
+            auto_approve: Auto-approve project_manager decisions
+
+        Returns:
+            Spawn result with PID and task info
+        """
+        # Build command
+        cmd = ["poetry", "run", "project-manager"]
+
+        if task_type == "auto_planning":
+            cmd.extend(["auto-plan"])
+        elif task_type == "roadmap_health":
+            cmd.extend(["roadmap-health"])
+
+        if auto_approve:
+            cmd.append("--auto-approve")
+
+        # Spawn process
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=Path.cwd(),
+        )
+
+        # Track agent
+        task_id = f"planning-{int(time.time())}"
+        agent_info = {
+            "pid": process.pid,
+            "agent_type": "project_manager",
+            "task_id": task_id,
+            "task_type": task_type,
+            "command": " ".join(cmd),
+            "started_at": datetime.now().isoformat(),
+            "status": "running",
+        }
+
+        self.state["active_agents"][str(process.pid)] = agent_info
+        self._save_state()
+
+        logger.info(f"Spawned project_manager (PID {process.pid}) for {task_type}")
 
         return {"error": None, "result": agent_info}
 

@@ -159,6 +159,12 @@ class ContinuousWorkLoop:
         # Step 2: Architect coordination (proactive spec creation)
         self._coordinate_architect()
 
+        # Step 2.5: Architect refactoring analysis (weekly)
+        self._coordinate_refactoring_analysis()
+
+        # Step 2.6: project_manager auto-planning (weekly)
+        self._coordinate_planning()
+
         # Step 3: code_developer coordination (implementation)
         self._coordinate_code_developer()
 
@@ -298,6 +304,78 @@ class ContinuousWorkLoop:
             # Track that we're working on this spec
             agent_info = result["result"]
             self._track_spec_task(priority["number"], agent_info["task_id"], agent_info["pid"])
+
+    def _coordinate_refactoring_analysis(self):
+        """
+        Coordinate architect for weekly refactoring analysis.
+
+        Logic:
+        1. Check if 7 days since last analysis
+        2. If yes: spawn architect for proactive-refactoring-analysis
+        3. Architect analyzes codebase and code-review history
+        4. Reports refactoring opportunities to project_manager
+        """
+        # Check last refactoring analysis time
+        last_analysis = self.current_state.get("last_refactoring_analysis", 0)
+        days_since_analysis = (time.time() - last_analysis) / 86400  # seconds to days
+
+        if days_since_analysis < 7:
+            # Not time yet
+            logger.debug(f"Refactoring analysis not needed (last run {days_since_analysis:.1f} days ago)")
+            return
+
+        logger.info("🔍 Spawning architect for weekly refactoring analysis")
+
+        result = self.agent_mgmt.execute(
+            action="spawn_architect",
+            task_type="refactoring_analysis",
+            auto_approve=True,
+        )
+
+        if result["error"]:
+            logger.error(f"Failed to spawn architect for refactoring analysis: {result['error']}")
+            return
+
+        # Update last analysis time
+        self.current_state["last_refactoring_analysis"] = time.time()
+        logger.info(f"✅ Architect spawned for refactoring analysis (PID: {result['result']['pid']})")
+
+    def _coordinate_planning(self):
+        """
+        Coordinate project_manager for weekly auto-planning.
+
+        Logic:
+        1. Check ROADMAP health
+        2. If health < 80: spawn project_manager for planning
+        3. If 7 days since last planning: spawn for weekly review
+        4. project_manager analyzes gaps, creates new priorities
+        """
+        # Check last planning time
+        last_planning = self.current_state.get("last_planning", 0)
+        days_since_planning = (time.time() - last_planning) / 86400
+
+        # Weekly planning OR low health
+        needs_planning = days_since_planning >= 7
+
+        if not needs_planning:
+            logger.debug(f"Auto-planning not needed (last run {days_since_planning:.1f} days ago)")
+            return
+
+        logger.info("📋 Spawning project_manager for auto-planning")
+
+        result = self.agent_mgmt.execute(
+            action="spawn_project_manager",
+            task_type="auto_planning",
+            auto_approve=True,
+        )
+
+        if result["error"]:
+            logger.error(f"Failed to spawn project_manager for planning: {result['error']}")
+            return
+
+        # Update last planning time
+        self.current_state["last_planning"] = time.time()
+        logger.info(f"✅ project_manager spawned for planning (PID: {result['result']['pid']})")
 
     def _coordinate_code_developer(self):
         """
