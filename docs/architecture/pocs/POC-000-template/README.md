@@ -73,128 +73,63 @@ pytest test_poc.py
 
 ---
 
-## Architecture
-
-```
-{High-level architecture diagram}
-{Show components and their relationships}
-{Use ASCII art or text description}
-```
-
----
-
-## Components
-
-### 1. {component1}.py
-**Purpose**: {Brief description of what this component does}
-
-**Key Classes/Functions**:
-- `{ClassName}`: {Purpose}
-- `{function_name}()`: {Purpose}
-
-### 2. {component2}.py
-**Purpose**: {Brief description of what this component does}
-
-**Key Classes/Functions**:
-- `{ClassName}`: {Purpose}
-
-### 3. test_poc.py
-**Purpose**: Tests proving POC works
-
-**Test Cases**:
-- `test_{concept}_works`: {What it tests}
-- `test_{concept2}_works`: {What it tests}
-
----
-
-## Success Criteria
-
-This POC is successful if:
-
-- ✅ **{Criteria 1}**: {Description}
-- ✅ **{Criteria 2}**: {Description}
-- ✅ **{Criteria 3}**: {Description}
-- ✅ **All tests pass**: {Number} tests passing
-
----
-
-## Limitations
-
-**What This POC Does NOT Cover** (full implementation needed):
-
-1. **{Limitation 1}**: {Description}
-2. **{Limitation 2}**: {Description}
-3. **{Limitation 3}**: {Description}
-4. **Production Error Handling**: Basic error handling only
-5. **Comprehensive Testing**: Minimal tests to prove concept
-6. **Logging**: Basic print statements, not structured logging
-7. **Configuration**: Hardcoded values, not configurable
-8. **Observability**: No monitoring or metrics
-
----
-
-## Next Steps (Full Implementation)
-
-After POC validation, code_developer should:
-
-1. **Read SPEC-{number}** for complete requirements
-2. **Use this POC as reference** for architectural decisions
-3. **Implement full version** with:
-   - Production-ready error handling
-   - Complete test coverage (>80%)
-   - Structured logging and observability
-   - Configuration management
-   - Documentation
-4. **DO NOT copy-paste POC code** (it's minimal, not production-ready)
-5. **Reference POC for design patterns** and technical approach
-
-**Estimated Full Implementation**: {Total hours for SPEC-{number}}
-
----
-
-## Time Tracking
-
-**POC Development**:
-- Planning: {X} hours
-- {Component 1}: {Y} hours
-- {Component 2}: {Z} hours
-- Testing: {W} hours
-- Documentation: {V} hours
-
-**Total**: {Sum} hours
-
----
-
 ## Key Learnings
 
 ### What Worked Well
 - {Finding 1}
 - {Finding 2}
-- {Finding 3}
 
 ### What Needs Adjustment
 - {Finding 1} → {Recommended change for full implementation}
 - {Finding 2} → {Recommended change for full implementation}
 
-### Recommendations for code_developer
+### Recommendations for Full Implementation
 1. {Recommendation 1}
 2. {Recommendation 2}
 3. {Recommendation 3}
 
 ---
 
-## Conclusion
+## Code Structure
 
-This POC demonstrates that the core technical concepts for SPEC-{number} are viable:
+### {component1}.py
+{Brief description of what this component does}
 
-1. ✅ **{Concept 1}** - {Brief summary}
-2. ✅ **{Concept 2}** - {Brief summary}
-3. ✅ **{Concept 3}** - {Brief summary}
+**Key Classes/Functions**:
+- `{ClassName}`: {Purpose}
+- `{function_name}()`: {Purpose}
 
-**Recommendation**: {Proceed with full implementation / Need adjustments / Alternative approach}
+### {component2}.py
+{Brief description of what this component does}
+
+**Key Classes/Functions**:
+- `{ClassName}`: {Purpose}
 
 ---
 
-**Created**: {Date}
-**Author**: architect agent
-**Version**: 1.0
+## Time Spent
+
+- Planning: {X} hours
+- Implementation: {Y} hours
+- Testing: {Z} hours
+- **Total**: {X+Y+Z} hours
+
+**Estimated Full Implementation**: {Total hours for SPEC-{number}}
+
+---
+
+## Next Steps (for code_developer)
+
+1. Read this POC to understand approach
+2. Review SPEC-{number} for full requirements
+3. Implement full version with:
+   - Production error handling
+   - Complete test coverage (>80%)
+   - Logging and observability
+   - Documentation
+4. Reference POC code for architectural decisions
+5. **Do NOT copy-paste POC code** (it's minimal, not production-ready)
+
+---
+
+**End of POC-{number} README**

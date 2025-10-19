@@ -151,6 +151,52 @@ self.notifications.create_notification(
 )
 ```
 
+### POC Management (US-050, SPEC-050)
+**When to Create**: architect creates Proof of Concept (POC) implementations for complex features (>2 days OR high complexity)
+
+**POC Purpose**:
+- Validate technical approach before full implementation
+- Reduce implementation risk for complex features
+- Provide working reference code for code_developer
+- Prove feasibility of novel patterns
+
+**Decision Matrix**:
+```
+Effort >16 hours (>2 days) + Complexity = High  → ✅ POC REQUIRED
+Effort >16 hours + Complexity = Medium          → ⚠️ MAYBE (default: no)
+All other cases                                  → ❌ NO POC
+```
+
+**Complexity = High** if ANY apply:
+- Novel architectural pattern
+- External system integration (GitHub API, Puppeteer, databases)
+- Multi-process or async complexity
+- Performance-critical (caching, rate limiting)
+- Security-sensitive (auth, authorization, data protection)
+- Cross-cutting concerns (affects multiple agents)
+
+**POC Structure**:
+```
+docs/architecture/pocs/POC-{number}-{feature-slug}/
+├── README.md              # POC overview (REQUIRED)
+├── {component}.py         # Minimal implementation (20-30% scope)
+├── test_poc.py            # Basic tests proving it works (REQUIRED)
+└── requirements.txt       # POC-specific dependencies (OPTIONAL)
+```
+
+**Creating POCs**:
+```bash
+# Template available at
+docs/architecture/pocs/POC-000-template/
+
+# See full guide
+docs/architecture/POC_CREATION_GUIDE.md
+```
+
+**Example**: POC-072 (Multi-Agent Orchestration) - Proved subprocess spawning, message passing, health monitoring worked before 15-20 hour implementation
+
+**Important**: POCs are minimal (20-30% scope), NOT production code. code_developer uses POC as reference only, NOT copy-paste.
+
 ---
 
 ## 🚀 Running the System

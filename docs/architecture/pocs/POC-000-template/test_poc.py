@@ -1,58 +1,51 @@
-"""
-POC-{number}: {Feature Name} - Tests
+"""Basic tests proving POC works (NOT comprehensive).
 
-Basic tests proving POC works (NOT comprehensive).
-Full implementation needs >80% test coverage with edge cases.
+These tests validate the core concept only.
+Full implementation needs:
+- Edge case coverage
+- Error handling tests
+- Integration tests
+- Performance tests
 """
 
 import unittest
-from example_component import ExampleComponent
+from component_template import ComponentExample
 
 
 class TestPOC(unittest.TestCase):
-    """Basic tests proving POC works (NOT comprehensive)."""
+    """Basic tests proving POC works."""
 
     def setUp(self):
-        """Set up test fixtures."""
-        self.component = ExampleComponent()
+        """Set up test fixture."""
+        self.component = ComponentExample()
 
-    def test_initialization_works(self):
-        """Test that component initializes correctly."""
-        # Arrange & Act (done in setUp)
-
-        # Assert
+    def test_component_initializes(self):
+        """Test that component can be created."""
         self.assertIsNotNone(self.component)
-        self.assertIsInstance(self.component.data, dict)
+        self.assertEqual(self.component.data, {})
 
-    def test_basic_functionality_works(self):
-        """Test that core functionality works as expected."""
-        # Arrange
-        test_value = "test_input"
-
+    def test_basic_operation_works(self):
+        """Test that basic operation works as expected."""
         # Act
-        result = self.component.do_something(test_value)
+        result = self.component.do_something("test_input")
 
         # Assert
         self.assertTrue(result)
-        self.assertIn(test_value, self.component.data)
+        self.assertIn("test_input", self.component.data)
 
-    def test_concept_validation(self):
-        """Test that {specific concept} works.
-
-        This is the key test proving the POC concept.
-        """
-        # Arrange
-        test_value = "validation_test"
-
+    def test_multiple_operations(self):
+        """Test that multiple operations work."""
         # Act
-        result = self.component.do_something(test_value)
+        self.component.do_something("input1")
+        self.component.do_something("input2")
 
         # Assert
-        self.assertTrue(result, "POC concept validation failed")
-
-    # Add more tests as needed to prove POC works
+        self.assertEqual(len(self.component.data), 2)
+        self.assertTrue(self.component.data["input1"])
+        self.assertTrue(self.component.data["input2"])
 
 
 if __name__ == "__main__":
     # Run tests
+    print("Running POC tests...\n")
     unittest.main(verbosity=2)

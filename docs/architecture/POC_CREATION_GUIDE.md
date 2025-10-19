@@ -1,42 +1,14 @@
 # POC Creation Guide
 
-**Purpose**: Guide for architect to create Proof of Concept (POC) implementations for complex features
 **Last Updated**: 2025-10-19
+**Owner**: architect agent
 **Related**: SPEC-050, US-050
 
 ---
 
-## Table of Contents
+## Purpose
 
-1. [Overview](#overview)
-2. [When to Create a POC](#when-to-create-a-poc)
-3. [POC Decision Matrix](#poc-decision-matrix)
-4. [POC Structure](#poc-structure)
-5. [Step-by-Step Process](#step-by-step-process)
-6. [Best Practices](#best-practices)
-7. [Examples](#examples)
-8. [Common Pitfalls](#common-pitfalls)
-
----
-
-## Overview
-
-### What is a POC?
-
-A **Proof of Concept (POC)** is a minimal working implementation that validates technical feasibility BEFORE full implementation. POCs:
-
-- **Prove technical concepts work** (20-30% of full feature scope)
-- **Reduce implementation risk** by discovering issues early
-- **Guide code_developer** with concrete working examples
-- **Save time** by validating approaches before costly implementation
-
-### Key Principles
-
-1. **Minimal Scope**: 20-30% of full implementation
-2. **Working Code**: Must actually run and prove concepts
-3. **Basic Testing**: Just enough to validate it works
-4. **Not Production**: Explicitly NOT production-ready code
-5. **Time-Boxed**: Should take 20-30% of full implementation time
+This guide explains when and how to create Proof of Concept (POC) implementations for complex features. POCs reduce implementation risk by validating technical approaches before full code_developer implementation.
 
 ---
 
@@ -44,24 +16,21 @@ A **Proof of Concept (POC)** is a minimal working implementation that validates 
 
 ### Decision Matrix
 
-Use this matrix to decide if a POC is needed:
-
 | Estimated Effort | Technical Complexity | Create POC? | Rationale |
 |------------------|----------------------|-------------|-----------|
-| **<1 day** (<8 hours) | Low | ❌ NO | Straightforward, spec sufficient |
-| **<1 day** (<8 hours) | Medium | ❌ NO | Spec with code examples sufficient |
-| **<1 day** (<8 hours) | High | ⚠️ MAYBE | If novel pattern, consider POC |
-| **1-2 days** (8-16 hours) | Low | ❌ NO | Spec sufficient |
-| **1-2 days** (8-16 hours) | Medium | ⚠️ MAYBE | If integration risks, consider POC |
-| **1-2 days** (8-16 hours) | High | ✅ YES | **POC recommended** |
-| **>2 days** (>16 hours) | Low | ❌ NO | Spec sufficient |
-| **>2 days** (>16 hours) | Medium | ⚠️ MAYBE | If integration risks, consider POC |
-| **>2 days** (>16 hours) | High | ✅ YES | **POC REQUIRED** |
+| <1 day (< 8 hours) | Low | ❌ NO | Straightforward, spec sufficient |
+| <1 day (< 8 hours) | Medium | ❌ NO | Spec with code examples sufficient |
+| <1 day (< 8 hours) | High | ⚠️ MAYBE | If novel pattern, consider POC |
+| 1-2 days (8-16 hours) | Low | ❌ NO | Spec sufficient |
+| 1-2 days (8-16 hours) | Medium | ⚠️ MAYBE | If integration risks, consider POC |
+| 1-2 days (8-16 hours) | High | ✅ YES | POC recommended |
+| >2 days (>16 hours) | Low | ❌ NO | Spec sufficient |
+| >2 days (>16 hours) | Medium | ⚠️ MAYBE | If integration risks, consider POC |
+| >2 days (>16 hours) | High | ✅ YES | **POC REQUIRED** |
 
-### Complexity Assessment
+### Complexity Factors
 
-**Technical Complexity = HIGH** if **ANY** of these apply:
-
+**Technical Complexity = High** if ANY of these apply:
 - ✅ Novel architectural pattern (not used in project before)
 - ✅ External system integration (GitHub API, Puppeteer, databases)
 - ✅ Multi-process or async complexity
@@ -69,15 +38,13 @@ Use this matrix to decide if a POC is needed:
 - ✅ Security-sensitive (authentication, authorization, data protection)
 - ✅ Cross-cutting concerns (affects multiple agents)
 
-**Technical Complexity = MEDIUM** if **SOME** of these apply:
-
+**Technical Complexity = Medium** if SOME of these apply:
 - ⚠️ Uses existing patterns but combines them in new ways
 - ⚠️ Moderate integration (file I/O, CLI commands)
 - ⚠️ Some testing complexity
 - ⚠️ Multiple components but straightforward
 
-**Technical Complexity = LOW** if **NONE** of these apply:
-
+**Technical Complexity = Low** if NONE of these apply:
 - ℹ️ Simple refactor or code cleanup
 - ℹ️ Uses well-established patterns
 - ℹ️ Single component, no integration
@@ -87,7 +54,7 @@ Use this matrix to decide if a POC is needed:
 
 ## POC Structure
 
-### Standard Directory Layout
+### Directory Layout
 
 ```
 docs/architecture/pocs/POC-{number}-{feature-slug}/
@@ -99,212 +66,211 @@ docs/architecture/pocs/POC-{number}-{feature-slug}/
 └── data/                  # Sample data files (OPTIONAL)
 ```
 
-### Required Files
+### README Template
 
-1. **README.md**: Complete documentation (use template)
-2. **{component}.py**: Minimal working implementation
-3. **test_poc.py**: Tests that prove POC works
+See `docs/architecture/pocs/POC-000-template/README.md` for the complete template.
 
-### Optional Files
-
-1. **requirements.txt**: If POC needs dependencies not in main project
-2. **data/**: Sample data for testing
-3. **Additional .py files**: If POC has multiple components
-
----
-
-## Step-by-Step Process
-
-### Phase 1: Planning (10-15% of time)
-
-1. **Review the User Story**:
-   - Read the full user story / priority
-   - Understand business requirements
-   - Identify core technical challenges
-
-2. **Apply Decision Matrix**:
-   - Estimate effort (hours)
-   - Assess technical complexity (Low/Medium/High)
-   - Determine if POC needed
-
-3. **Define POC Scope** (if creating POC):
-   - List 3-5 technical concepts to prove
-   - Define what's OUT of scope
-   - Target 20-30% of full implementation
-   - Time-box to 20-30% of full implementation time
-
-4. **Create POC Directory**:
-   ```bash
-   cd docs/architecture/pocs/
-   cp -r POC-000-template/ POC-{number}-{feature-slug}/
-   cd POC-{number}-{feature-slug}/
-   ```
-
-### Phase 2: Implementation (60-70% of time)
-
-1. **Fill in README Template**:
-   - Update header (number, name, date, time budget)
-   - List concepts to prove
-   - Define what's NOT in scope
-   - Document expected outcomes
-
-2. **Implement Minimal Code**:
-   - Focus ONLY on proving core concepts
-   - Skip error handling edge cases
-   - Use print statements for logging (OK for POC)
-   - Add comments explaining key decisions
-   - Keep it simple and readable
-
-3. **Write Basic Tests**:
-   - One test per concept to prove
-   - Just prove it works (not comprehensive)
-   - Use unittest or pytest
-   - Tests should pass!
-
-### Phase 3: Validation (15-20% of time)
-
-1. **Run the POC**:
-   ```bash
-   python {main_file}.py
-   ```
-   - Verify output matches expectations
-   - Confirm all concepts work
-
-2. **Run the Tests**:
-   ```bash
-   python test_poc.py
-   # OR
-   pytest test_poc.py
-   ```
-   - All tests should pass
-   - If tests fail, fix POC or adjust approach
-
-3. **Document Learnings**:
-   - Update README with findings
-   - Note what worked well
-   - Note what needs adjustment
-   - Add recommendations for code_developer
-
-### Phase 4: Handoff (5-10% of time)
-
-1. **Finalize README**:
-   - Complete all sections
-   - Add time tracking
-   - Document limitations
-   - Write conclusion and recommendation
-
-2. **Link to Technical Spec**:
-   - Update SPEC-{number} to reference POC
-   - Add link: "See POC-{number} for proof-of-concept"
-
-3. **Commit to Git**:
-   ```bash
-   git add docs/architecture/pocs/POC-{number}-*/
-   git commit -m "feat: Add POC-{number} - {Feature Name}
-
-   Proves {concept 1}, {concept 2}, {concept 3} work correctly.
-
-   Time: {X} hours
-   Scope: {Y}% of SPEC-{number}
-
-   🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-   Co-Authored-By: Claude <noreply@anthropic.com>"
-   ```
-
-4. **Notify code_developer**:
-   - Create notification (if using notification system)
-   - Include POC location and key findings
+**Key Sections**:
+1. **Purpose**: What specific technical concepts are being validated
+2. **What It Proves**: Specific validation points for each concept
+3. **How to Run**: Step-by-step instructions
+4. **Key Learnings**: What worked well and what needs adjustment
+5. **Next Steps**: Guidance for code_developer
 
 ---
 
-## Best Practices
+## How to Create a POC
 
-### DO ✅
+### Step 1: Evaluate Complexity
 
-1. **Keep POCs Minimal**:
-   - 20-30% of full feature scope
-   - Prove concepts, not build production code
-   - Time-box to avoid scope creep
+Use the decision matrix above to determine if POC is needed:
 
-2. **Make POCs Runnable**:
-   - Must actually execute and work
-   - Include clear "How to Run" instructions
-   - Tests must pass
+```python
+# Example evaluation
+feature = "Multi-Agent Orchestration (US-072)"
+effort_hours = 18  # >16 hours = >2 days
+complexity = "high"  # Multi-process, IPC, fault tolerance
 
-3. **Document Learnings**:
-   - What worked well
-   - What needs adjustment
-   - Recommendations for full implementation
+# Decision: ✅ POC REQUIRED (effort >2 days AND complexity = high)
+```
 
-4. **Use POC-000-template**:
-   - Start from template for consistency
-   - Fill in all sections of README
-   - Follow standard structure
+### Step 2: Create POC Directory
 
-5. **Reference POC in Spec**:
-   - Link spec to POC directory
-   - Explain what POC proves
-   - Guide code_developer to use it
+```bash
+# Extract POC number from priority
+poc_number="072"
+feature_slug="team-daemon"
 
-### DON'T ❌
+# Create directory
+mkdir -p docs/architecture/pocs/POC-${poc_number}-${feature_slug}/
+cd docs/architecture/pocs/POC-${poc_number}-${feature_slug}/
+```
 
-1. **Don't Make POCs Production-Ready**:
-   - No comprehensive error handling needed
-   - No full test coverage needed
-   - No optimization needed
-   - Basic logging (print) is fine
+### Step 3: Copy Template
 
-2. **Don't Spend Too Much Time**:
-   - POC should be 20-30% of full time
-   - If taking longer, reduce scope
-   - Time-box ruthlessly
+```bash
+# Copy README template
+cp ../POC-000-template/README.md ./
 
-3. **Don't Skip Testing**:
-   - POC must have basic tests
-   - Tests must prove concepts work
-   - If tests fail, POC is incomplete
+# Copy Python templates
+cp ../POC-000-template/component_template.py ./{your_component}.py
+cp ../POC-000-template/test_poc.py ./
+```
 
-4. **Don't Expect code_developer to Copy-Paste**:
-   - POC is reference, not template
-   - code_developer builds production version
-   - POC guides architecture, not implementation
+### Step 4: Fill Out README
 
-5. **Don't Create POC for Everything**:
-   - Use decision matrix
-   - Only for complex/risky features
-   - Specs sufficient for most work
+Edit `README.md` and replace all placeholders:
+
+- `{number}`: POC number (e.g., "072")
+- `{Feature Name}`: Descriptive name (e.g., "Multi-Agent Orchestration")
+- `{Date}`: Creation date (YYYY-MM-DD)
+- `{X-Y}`: Time budget (e.g., "2-3")
+- `{Concept 1}`, `{Concept 2}`, etc.: Specific concepts being validated
+- `{main_file}`: Main Python file name
+- All other placeholders with actual content
+
+### Step 5: Implement Minimal Code
+
+**Scope**: 20-30% of full feature implementation
+
+**Guidelines**:
+- Core logic only (no error handling edge cases)
+- Basic logging (print statements OK)
+- Simple comments explaining decisions
+- Prove the hardest part works
+
+**Example** (from POC-072):
+```python
+class TeamDaemon:
+    """Minimal proof-of-concept for multi-agent orchestration.
+
+    This is NOT production code - it proves the concept works.
+    """
+
+    def __init__(self):
+        self.agents = {}
+        self.queue = MessageQueue()  # Simple SQLite queue
+
+    def spawn_agent(self, agent_name: str):
+        """Spawn agent subprocess (minimal version)."""
+        process = subprocess.Popen(
+            ["python", f"{agent_name}.py"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        self.agents[agent_name] = process
+        print(f"✅ {agent_name} started (PID: {process.pid})")
+```
+
+### Step 6: Write Basic Tests
+
+**Scope**: Prove concept works (NOT comprehensive)
+
+**Guidelines**:
+- Test core functionality only
+- 3-5 tests maximum
+- Use unittest or pytest
+- No edge cases, no error handling
+
+**Example**:
+```python
+import unittest
+from team_daemon import TeamDaemon
+
+class TestPOC(unittest.TestCase):
+    def test_daemon_spawns_agent(self):
+        daemon = TeamDaemon()
+        daemon.spawn_agent("test_agent")
+        self.assertIn("test_agent", daemon.agents)
+```
+
+### Step 7: Run and Validate
+
+```bash
+# Run the POC
+python {main_file}.py
+
+# Expected: Should complete without errors
+
+# Run tests
+python test_poc.py
+# OR
+pytest test_poc.py
+
+# Expected: All tests pass
+```
+
+### Step 8: Document Learnings
+
+Update README.md with:
+- **What Worked Well**: Successful validations
+- **What Needs Adjustment**: Issues discovered
+- **Recommendations**: How full implementation should differ
+
+### Step 9: Commit POC
+
+```bash
+# From repository root
+git add docs/architecture/pocs/POC-{number}-{feature-slug}/
+git commit -m "feat: Add POC-{number} for {Feature Name}
+
+Validates:
+- {Concept 1}
+- {Concept 2}
+- {Concept 3}
+
+Time: {X} hours
+Next: Create SPEC-{number} referencing this POC
+
+🤖 Generated with Claude Code
+Co-Authored-By: Claude <noreply@anthropic.com>"
+```
+
+### Step 10: Reference in Spec
+
+In `SPEC-{number}`, add a reference to the POC:
+
+```markdown
+## Proof of Concept
+
+See [POC-{number}](../pocs/POC-{number}-{feature-slug}/) for working proof-of-concept.
+
+**What It Proves**:
+- {Concept 1}: ✅ Validated
+- {Concept 2}: ✅ Validated
+- {Concept 3}: ✅ Validated
+
+**Recommendations from POC**:
+1. {Recommendation 1}
+2. {Recommendation 2}
+```
 
 ---
 
 ## Examples
 
-### Example 1: US-072 (Multi-Agent Orchestration) ✅ POC Created
+### Example 1: US-072 (Multi-Agent Orchestration)
 
 **Decision**:
-- **Effort**: 15-20 hours (>2 days)
-- **Complexity**: **HIGH** (multi-process, IPC, fault tolerance)
+- Effort: 15-20 hours (>2 days)
+- Complexity: HIGH (multi-process, IPC, fault tolerance)
 - **Result**: ✅ **POC REQUIRED**
 
-**POC**: `docs/architecture/pocs/POC-072-team-daemon/`
+**POC Created**: `docs/architecture/pocs/POC-072-team-daemon/`
 
 **What It Proved**:
 - ✅ Subprocess spawning works
-- ✅ Message passing works
+- ✅ Message passing works (SQLite queue)
 - ✅ Health monitoring works
 - ✅ Graceful shutdown works
 
-**Outcome**: Successfully validated approach, code_developer implemented full version in 24 hours (vs. estimated 32)
+**Time**: 2-3 hours POC, saved 3-4 hours in full implementation
 
-**Time Saved**: ~3-4 hours (POC caught design issues early)
-
----
-
-### Example 2: US-055 (Claude Skills Integration) ✅ POC Required
+### Example 2: US-055 (Claude Skills Phase 1)
 
 **Decision**:
-- **Effort**: 84-104 hours (>2 days)
-- **Complexity**: **VERY HIGH** (new infrastructure, Code Execution Tool, 5+ components)
+- Effort: 84-104 hours (>2 days)
+- Complexity: VERY HIGH (new infrastructure, Code Execution Tool, 5+ components)
 - **Result**: ✅ **POC REQUIRED**
 
 **POC Should Create**: `docs/architecture/pocs/POC-055-claude-skills/`
@@ -315,159 +281,140 @@ docs/architecture/pocs/POC-{number}-{feature-slug}/
 - ✅ ExecutionController API design sound
 - ✅ Security sandboxing effective
 
-**Estimated POC Time**: 4-6 hours (20-30% of minimal infrastructure)
+**Estimated POC Time**: 4-6 hours
+**Time Savings**: 8-12 hours (avoid costly mistakes in 84-104 hour implementation)
 
-**Expected Time Savings**: 8-12 hours (avoid costly mistakes in 84-104 hour implementation)
-
----
-
-### Example 3: US-047 (Architect-Only Spec Creation) ❌ No POC
+### Example 3: US-048 (Silent Background Agents)
 
 **Decision**:
-- **Effort**: 16-24 hours (1-2 days)
-- **Complexity**: **MEDIUM** (workflow changes, validation logic)
+- Effort: 4-6 hours (<1 day)
+- Complexity: LOW (parameter change)
 - **Result**: ❌ **NO POC** (spec sufficient)
 
-**Rationale**:
-- Uses existing patterns (agent validation)
-- No novel architecture
-- No external integrations
-- Straightforward workflow changes
-
-**Approach**: Detailed technical spec with code examples was sufficient
+**Rationale**: Simple change, no novel patterns, straightforward implementation
 
 ---
 
-### Example 4: US-048 (Silent Background Agents) ❌ No POC
+## Common Mistakes to Avoid
 
-**Decision**:
-- **Effort**: 4-6 hours (<1 day)
-- **Complexity**: **LOW** (parameter validation)
-- **Result**: ❌ **NO POC** (spec overkill)
+### ❌ Making POC Too Complex
+**Problem**: POC takes too long (>30% of full implementation time)
+**Solution**: Keep it minimal - 20-30% scope only
 
-**Rationale**:
-- Simple parameter change
-- Single file modification
-- Well-understood pattern
-- No risk
+### ❌ Skipping Tests
+**Problem**: Can't prove POC works without tests
+**Solution**: Always include `test_poc.py` with basic tests
 
-**Approach**: Lightweight spec with examples was sufficient
+### ❌ Production-Ready Code
+**Problem**: Spending time on error handling, edge cases, etc.
+**Solution**: Prove concept only - full implementation adds production concerns
 
----
+### ❌ Copy-Pasting POC into Production
+**Problem**: POC code lacks production quality
+**Solution**: POC is reference only - code_developer implements fresh
 
-## Common Pitfalls
-
-### Pitfall 1: POC Too Large
-
-**Problem**: POC becomes 50-80% of full implementation, takes too long
-
-**Solution**:
-- Ruthlessly scope POC to 20-30%
-- Time-box to prevent scope creep
-- Focus ONLY on proving core concepts
-- Skip edge cases, optimization, polish
-
-### Pitfall 2: POC Code Copied to Production
-
-**Problem**: code_developer copies POC code directly, inherits minimal error handling
-
-**Solution**:
-- Add clear warnings in POC README
-- Comment POC code: "NOT production ready"
-- Explain in README: "Use as reference, not template"
-- List limitations prominently
-
-### Pitfall 3: No Tests in POC
-
-**Problem**: POC claims to work but has no proof
-
-**Solution**:
-- REQUIRE test_poc.py in every POC
-- Tests must prove each concept works
-- Run tests before committing POC
-- Include test output in README
-
-### Pitfall 4: POC for Simple Features
-
-**Problem**: Creating POCs for straightforward work wastes time
-
-**Solution**:
-- Use decision matrix rigorously
-- Only create POC for HIGH complexity + >2 day effort
-- For simple work, detailed spec is sufficient
-- Don't over-engineer
-
-### Pitfall 5: POC Never Validated
-
-**Problem**: POC created but never tested, may not actually work
-
-**Solution**:
-- Run POC before finalizing
-- Execute all tests
-- Document actual output in README
-- Fix issues before handoff
+### ❌ Not Documenting Learnings
+**Problem**: Insights from POC lost
+**Solution**: Always update README with "Key Learnings" section
 
 ---
 
-## Appendix: POC Creation Checklist
+## Integration with architect Workflow
 
-### Before Creating POC
+### Updated Spec Creation Process
 
-- [ ] Reviewed user story / priority fully
-- [ ] Estimated effort >2 days (16+ hours)?
-- [ ] Technical complexity = High?
-- [ ] Decision matrix says POC required or recommended?
-- [ ] Defined 3-5 technical concepts to prove
-- [ ] Time-boxed to 20-30% of full implementation
+```python
+# Simplified workflow
+def create_technical_spec(priority_name: str):
+    """Create technical spec for priority."""
+    # 1. Run architecture-reuse-check (MANDATORY)
+    reuse_analysis = run_architecture_reuse_check(priority_name)
 
-### During POC Creation
+    # 2. Extract requirements
+    requirements = extract_requirements(priority_name)
+    effort_hours = requirements["estimated_effort_hours"]
+    complexity = requirements["technical_complexity"]
 
-- [ ] Created POC directory from template
-- [ ] Filled in README template completely
-- [ ] Implemented minimal working code (20-30% scope)
-- [ ] Added basic tests (one per concept)
-- [ ] Ran POC and verified it works
-- [ ] Ran tests and all pass
-- [ ] Documented learnings and recommendations
-- [ ] Listed clear limitations
+    # 3. Evaluate if POC needed
+    needs_poc = should_create_poc(effort_hours, complexity)
 
-### After POC Creation
+    if needs_poc:
+        # 4. Create POC first
+        poc_dir = create_poc(priority_name, requirements)
 
-- [ ] README complete and accurate
-- [ ] All tests passing
-- [ ] POC actually runs successfully
-- [ ] Referenced POC in technical spec
-- [ ] Committed POC to git
-- [ ] Linked POC in SPEC: "See POC-{number}"
-- [ ] Informed code_developer POC available
+        # 5. Validate POC works
+        if not validate_poc(poc_dir):
+            logger.error("POC validation failed!")
+            return
+
+    # 6. Create full spec (references POC if created)
+    spec = generate_spec(priority_name, requirements, poc_dir if needs_poc else None)
+```
+
+---
+
+## Success Criteria
+
+**Before POC**:
+- [ ] Estimated effort >2 days OR complexity = High?
+- [ ] Decision matrix consulted?
+- [ ] Time budget set (20-30% of full implementation)?
+
+**During POC**:
+- [ ] Directory structure follows template?
+- [ ] README filled out completely?
+- [ ] Minimal code (20-30% scope)?
+- [ ] Basic tests included?
+- [ ] POC runs successfully?
+- [ ] Tests pass?
+
+**After POC**:
+- [ ] README documents learnings?
+- [ ] POC committed to git?
+- [ ] Spec references POC?
+- [ ] code_developer informed POC available?
 
 ---
 
 ## Quick Reference
 
-**POC Required When**:
-- Effort >2 days (16+ hours) **AND**
-- Complexity = High (novel patterns, integrations, multi-process, security)
+### Command Cheat Sheet
 
-**POC Scope**:
-- 20-30% of full feature
-- Prove 3-5 core concepts
-- Time-box to 20-30% of full time
+```bash
+# Create POC directory
+mkdir -p docs/architecture/pocs/POC-{number}-{feature-slug}/
 
-**POC Files** (Required):
-- `README.md` (complete template)
-- `{component}.py` (minimal working code)
-- `test_poc.py` (basic tests, all passing)
+# Copy template
+cp docs/architecture/pocs/POC-000-template/README.md \
+   docs/architecture/pocs/POC-{number}-{feature-slug}/
 
-**POC Success Criteria**:
-- Actually runs
-- All tests pass
-- Proves stated concepts
-- Documents learnings
-- Guides code_developer
+# Run POC
+cd docs/architecture/pocs/POC-{number}-{feature-slug}/
+python {main_file}.py
+
+# Run tests
+pytest test_poc.py
+
+# Commit
+git add docs/architecture/pocs/POC-{number}-{feature-slug}/
+git commit -m "feat: Add POC-{number} for {Feature Name}"
+```
+
+### Template Locations
+
+- **README Template**: `docs/architecture/pocs/POC-000-template/README.md`
+- **Component Template**: `docs/architecture/pocs/POC-000-template/component_template.py`
+- **Test Template**: `docs/architecture/pocs/POC-000-template/test_poc.py`
 
 ---
 
-**Last Updated**: 2025-10-19
-**Maintained By**: architect agent
-**Version**: 1.0
+## Additional Resources
+
+- **SPEC-050**: Full technical specification for POC creation framework
+- **US-050**: User story for this feature
+- **POC-072**: Example POC (multi-agent orchestration)
+- **SPEC-000-template.md**: Template pattern this follows
+
+---
+
+**End of POC Creation Guide**
