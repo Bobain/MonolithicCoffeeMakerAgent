@@ -8,37 +8,53 @@ SPEC-010: User-Listener UI Command (SIMPLIFIED)
 - Enforces singleton pattern via AgentRegistry
 - Minimal code: ~250 lines, mostly copy-paste from roadmap_cli.py
 
-ENHANCED (2025-10-19): Integrated Team Daemon
-- Automatically starts team daemon in background (--with-team flag, default ON)
-- Provides /team and /agents commands to query orchestrator
-- Graceful shutdown cleans up team daemon subprocess
+ENHANCED (2025-10-19): Orchestrator Integration
+- Automatically starts orchestrator in background (--with-team flag, default ON)
+- Orchestrator launches and manages all 6 agents
+- ALL messages routed through orchestrator (no direct agent communication)
+- Velocity tracking and bottleneck detection via orchestrator metrics
+- Graceful shutdown stops orchestrator (which stops all 6 agents)
 
 Architecture:
     User runs: poetry run user-listener (or poetry run user-listener --with-team)
        ↓
     user_listener.py main()
        ↓
-    Start team daemon in background subprocess
+    Start ORCHESTRATOR in background subprocess
+       ↓
+    Orchestrator launches 6 agents (architect, code_developer, project_manager, etc.)
        ↓
     Register as USER_LISTENER (singleton)
        ↓
-    Create ChatSession (REUSED from project_manager)
+    Create UserListenerSession (ChatSession + MessageHandlerMixin)
        ↓
-    Start chat loop (with orchestrator status commands)
+    Start chat loop with orchestrator message routing:
+       - User input → orchestrator (USER_REQUEST)
+       - Orchestrator analyzes → routes to best agent
+       - Agent completes → orchestrator (TASK_RESPONSE)
+       - Orchestrator → user_listener (USER_RESPONSE)
+       - Display to user
        ↓
-    On exit: Stop team daemon gracefully
+    On exit: Stop orchestrator gracefully (stops all agents)
+
+Orchestrator Benefits:
+    - Central routing & load balancing (picks best available agent)
+    - Bottleneck detection (measures all task durations)
+    - Velocity metrics (tracks team performance)
+    - Flexibility (can override agent suggestions)
 
 Key Features:
     - Interactive REPL for user input
     - Rich terminal output with markdown and syntax highlighting
     - Singleton enforcement (only one instance at a time)
-    - All existing commands work (/add, /update, /view, /analyze, etc.)
-    - NEW: /team - Show team daemon status
-    - NEW: /agents - Show all agent statuses
-    - NEW: Automatic team daemon lifecycle management
+    - All slash commands work (/help, /exit, etc.)
+    - NEW: Message queue integration (MessageHandlerMixin)
+    - NEW: Background message polling for agent responses
+    - NEW: Orchestrator-centric architecture (all messages routed centrally)
 
 References:
     - SPEC-010: User-Listener UI Command
+    - SPEC-057: Multi-Agent Orchestrator Architecture
     - ADR-003: Simplification-First Approach
     - roadmap_cli.py: Source for cmd_chat() function (REUSED)
 """
@@ -193,20 +209,27 @@ def _initialize_chat_components(use_claude_cli: bool, claude_path: str) -> tuple
 
 
 def _start_team_daemon() -> subprocess.Popen:
-    """Start team daemon in background subprocess.
+    """Start orchestrator in background subprocess (launches all 6 agents).
+
+    The orchestrator is the 7th agent that manages and coordinates all other agents:
+    - Launches all 6 agents in priority order
+    - Monitors agent health and restarts crashed agents
+    - Routes ALL inter-agent messages
+    - Measures task durations for velocity tracking
+    - Detects bottlenecks through centralized metrics
 
     Returns:
-        Popen object for the team daemon process
+        Popen object for the orchestrator process
 
     Raises:
-        RuntimeError: If team daemon fails to start
+        RuntimeError: If orchestrator fails to start
     """
     global _team_daemon_process
 
     print("=" * 70)
-    print("🚀 Starting Multi-Agent Team Daemon...")
+    print("🚀 Starting Multi-Agent Orchestrator...")
     print("=" * 70)
-    print("Launching background agents:")
+    print("Orchestrator will launch 6 agents in priority order:")
     print("  1. architect (creates specs)")
     print("  2. code_developer (implements features)")
     print("  3. project_manager (monitors GitHub)")
@@ -214,33 +237,38 @@ def _start_team_daemon() -> subprocess.Popen:
     print("  5. code_searcher (code analysis)")
     print("  6. ux_design_expert (design reviews)")
     print("")
+    print("Architecture: ALL agents communicate through orchestrator")
+    print("Benefits: Load balancing, bottleneck detection, velocity metrics")
+    print("")
 
     try:
-        # Start team daemon as background subprocess
+        # Start orchestrator as background subprocess
+        # Orchestrator will launch all 6 agents and manage them
         process = subprocess.Popen(
-            ["poetry", "run", "team-daemon", "start"],
+            ["python", "-m", "coffee_maker.autonomous.orchestrator"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,  # Line buffered
         )
 
-        # Wait a few seconds for daemon to initialize
-        print("⏳ Initializing team daemon (3 seconds)...")
-        time.sleep(3)
+        # Wait a few seconds for orchestrator to initialize and launch agents
+        print("⏳ Orchestrator initializing and launching agents (5 seconds)...")
+        time.sleep(5)
 
         # Check if process is still running
         if process.poll() is not None:
             # Process already exited - something went wrong
             stdout, stderr = process.communicate()
-            print(f"❌ Team daemon failed to start!")
+            print(f"❌ Orchestrator failed to start!")
             print(f"\nStdout:\n{stdout}")
             print(f"\nStderr:\n{stderr}")
-            raise RuntimeError("Team daemon exited immediately")
+            raise RuntimeError("Orchestrator exited immediately")
 
         _team_daemon_process = process
 
-        print("✅ Team daemon started successfully (PID: {})".format(process.pid))
+        print("✅ Orchestrator started successfully (PID: {})".format(process.pid))
+        print("   All 6 agents should now be running in background")
         print("=" * 70)
         print("")
 
@@ -254,17 +282,17 @@ def _start_team_daemon() -> subprocess.Popen:
         return process
 
     except FileNotFoundError:
-        print("❌ Error: 'poetry' command not found")
-        print("\n💡 TIP: Ensure Poetry is installed and in PATH")
-        raise RuntimeError("Poetry not available")
+        print("❌ Error: 'python' command not found")
+        print("\n💡 TIP: Ensure Python is in PATH")
+        raise RuntimeError("Python not available")
 
     except Exception as e:
-        print(f"❌ Error starting team daemon: {e}")
+        print(f"❌ Error starting orchestrator: {e}")
         raise
 
 
 def _stop_team_daemon():
-    """Stop team daemon gracefully."""
+    """Stop orchestrator gracefully (which will stop all 6 agents)."""
     global _team_daemon_process
 
     if _team_daemon_process is None:
@@ -275,26 +303,27 @@ def _stop_team_daemon():
         return
 
     print("\n" + "=" * 70)
-    print("🛑 Stopping Multi-Agent Team Daemon...")
+    print("🛑 Stopping Multi-Agent Orchestrator...")
     print("=" * 70)
+    print("Orchestrator will shutdown all 6 agents gracefully...")
 
     try:
         # Send SIGTERM for graceful shutdown
         _team_daemon_process.terminate()
 
-        # Wait up to 10 seconds for graceful shutdown
+        # Wait up to 15 seconds for graceful shutdown (longer since it needs to stop 6 agents)
         try:
-            _team_daemon_process.wait(timeout=10)
-            print("✅ Team daemon stopped gracefully")
+            _team_daemon_process.wait(timeout=15)
+            print("✅ Orchestrator and all agents stopped gracefully")
         except subprocess.TimeoutExpired:
             # Force kill if still alive
-            print("⚠️  Timeout - force killing team daemon...")
+            print("⚠️  Timeout - force killing orchestrator...")
             _team_daemon_process.kill()
             _team_daemon_process.wait()
-            print("✅ Team daemon force killed")
+            print("✅ Orchestrator force killed")
 
     except Exception as e:
-        logger.error(f"Error stopping team daemon: {e}")
+        logger.error(f"Error stopping orchestrator: {e}")
 
     finally:
         _team_daemon_process = None
@@ -476,10 +505,16 @@ def main(with_team: bool, debug: bool) -> int:
             print("=" * 70)
             print("Powered by Claude AI")
             if with_team and team_process:
-                print("Multi-Agent Team: RUNNING (6 agents)")
-                print("  Type /team or /agents for status")
+                print("Multi-Agent Orchestrator: RUNNING")
+                print("  ✓ 6 agents launched in background")
+                print("  ✓ All messages routed through orchestrator")
+                print("  ✓ Velocity tracking enabled")
+                print("")
+                print("Architecture:")
+                print("  user_listener (you) → orchestrator → agents")
+                print("  Benefits: Load balancing, bottleneck detection")
             else:
-                print("Multi-Agent Team: NOT RUNNING")
+                print("Multi-Agent Orchestrator: NOT RUNNING")
                 print("  Run with --with-team to enable")
             print("=" * 70 + "\n")
 
