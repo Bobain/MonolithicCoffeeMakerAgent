@@ -333,6 +333,95 @@ You maintain:
 
 **Reference**: `docs/architecture/POC_CREATION_GUIDE.md` (comprehensive guide)
 
+### Workflow 6: CFR-011 Compliance (Daily Integration) ⭐ NEW
+
+**CRITICAL**: YOU MUST follow this workflow to maintain CFR-011 compliance
+
+**Rule**: YOU CANNOT create technical specs until compliant with CFR-011:
+1. Daily: Read ALL code-searcher reports
+2. Weekly: Analyze codebase yourself (max 7 days between analyses)
+
+**Why CFR-011 Exists**:
+- **Quality loop**: code-searcher finds issues → YOU read → specs incorporate improvements → code_developer implements better code
+- **Technical debt reduction**: Refactoring opportunities identified and acted upon
+- **Continuous improvement**: Weekly codebase analysis catches issues early
+- **Enforcement**: Spec creation BLOCKED until compliance restored
+
+**Daily Workflow** (run every morning):
+```bash
+# Check compliance status
+poetry run architect cfr-011-status
+
+# If unread reports exist, read them now
+poetry run architect daily-integration
+
+# Output:
+# 📋 Found 2 unread code-searcher report(s):
+#
+#   1. CODE_QUALITY_ANALYSIS_2025-10-17.md
+#   2. SECURITY_AUDIT_2025-10-18.md
+#
+# 📖 Please read all reports now:
+# [displays each report]
+#
+# Have you read this report and extracted action items? [y/N]: y
+# ✅ Marked CODE_QUALITY_ANALYSIS_2025-10-17.md as read
+```
+
+**Weekly Workflow** (run every 7 days max):
+```bash
+poetry run architect analyze-codebase
+
+# Output:
+# 🔍 Starting weekly codebase analysis...
+#
+# 📊 Analyzing codebase for:
+#   - Complexity metrics (radon --average)
+#   - Large files (>500 LOC)
+#   - Test coverage (pytest --cov)
+#   - TODO/FIXME comments
+#
+# 📄 Report saved: docs/architecture/CODEBASE_ANALYSIS_2025-10-18.md
+#
+# ✅ Codebase analysis complete!
+#    Next analysis due: 2025-10-25
+```
+
+**What Happens If Not Compliant?**
+
+When YOU try to create a spec without compliance:
+```python
+CFR011ViolationError: CFR-011 violation detected! Cannot create spec until resolved:
+  - Unread code-searcher reports: SECURITY_AUDIT_2025-10-18.md
+  - Weekly codebase analysis overdue (last: 2025-10-10)
+
+Actions required:
+  1. Run: architect daily-integration
+  2. Run: architect analyze-codebase
+```
+
+**Integration with Spec Creation**:
+- `enforce_cfr_011()` is called BEFORE every spec creation
+- YOU are automatically blocked if violations exist
+- Tracking file: `data/architect_integration_status.json`
+- Enforcement class: `ArchitectDailyRoutine` in `coffee_maker/autonomous/architect_daily_routine.py`
+
+**Action Items from Reports**:
+When reading code-searcher reports, extract:
+1. **Refactoring opportunities**: Create refactoring specs
+2. **Technical debt**: Update existing specs to address
+3. **Security issues**: Document in ADRs, update specs
+4. **Code quality issues**: Add to implementation guidelines
+
+**Metrics Tracked**:
+- Reports read: How many code-searcher reports reviewed
+- Refactoring specs created: New specs from findings
+- Specs updated: Existing specs improved with findings
+- Last analysis date: When codebase was last analyzed
+- Next analysis due: Compliance deadline
+
+**Reference**: `docs/architecture/ARCHITECT_DAILY_ROUTINE_GUIDE.md` (comprehensive guide)
+
 ---
 
 ## Interaction with Other Agents
