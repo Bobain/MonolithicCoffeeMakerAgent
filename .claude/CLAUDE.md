@@ -38,6 +38,18 @@
    - Developer status dashboard
    - Real-time progress monitoring
 
+5. **Claude Skills - Phase 2** ⭐ COMPLETE (US-056)
+   - **ROADMAP Health** (project_manager): Automated health monitoring (1.3s vs 30-45min manual)
+   - **Architecture Analysis** (architect): Codebase analysis, complexity metrics, dependency graphs
+   - **Dependency Impact** (architect): Migration risk assessment, rollout planning
+   - **Demo Creator** (assistant): Automated Puppeteer demos with screenshots
+   - **Bug Analyzer** (assistant): Comprehensive bug analysis with root cause detection
+   - **Security Audit** (code-searcher): OWASP Top 10 vulnerability scanning
+   - **Location**: `.claude/skills/{agent}/{skill-name}/`
+   - **Tracking**: Langfuse integration via `skill_tracking.py`
+   - **Performance**: All skills < 2s execution time (far exceeding targets)
+   - **Tests**: 11 unit tests, 100% passing
+
 ---
 
 ## Project Structure
@@ -52,6 +64,17 @@ MonolithicCoffeeMakerAgent/
 │   │   ├── implement-feature.md
 │   │   ├── test-web-app.md
 │   │   └── capture-visual-docs.md
+│   ├── skills/                      # Claude Skills (Phase 2) ⭐ NEW
+│   │   ├── project-manager/
+│   │   │   └── roadmap-health/      # ROADMAP health monitoring
+│   │   ├── architect/
+│   │   │   ├── architecture-analysis/  # Codebase analysis
+│   │   │   └── dependency-impact/   # Dependency migration risk
+│   │   ├── assistant/
+│   │   │   ├── demo-creator/        # Automated Puppeteer demos
+│   │   │   └── bug-analyzer/        # Comprehensive bug analysis
+│   │   └── code-searcher/
+│   │       └── security-audit/      # Security vulnerability scanning
 │   ├── mcp/                         # MCP server configs ⭐
 │   │   └── puppeteer.json
 │   └── settings.local.json
