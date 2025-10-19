@@ -31201,10 +31201,14 @@ code-reviewer → Re-reviews → Verifies → Approves
 - ✅ CLI interface (poetry run user-listener)
 - ✅ Tests (unit + integration tests passing)
 
-### PRIORITY 12: US-012 - User Story Command Handler 🔄 In Progress
+### PRIORITY 12: US-012 - User Story Command Handler ✅ Complete
 **Spec**: docs/architecture/specs/SPEC-012-user-story-command-handler.md
 **Deliverables**:
 - ✅ User story command handler (coffee_maker/cli/commands/user_story_command.py)
 - ✅ AI service integration (prompt templates in .claude/commands/)
 - ✅ ChatSession integration
-- ✅ Tests (tests/unit/cli/test_user_story_command.py)
+- ✅ Tests (18 unit tests - 100% passing)
+- ✅ Zero new dependencies (uses stdlib difflib)
+
+**Usage**: `/US [description]` in chat interface
+**Example**: `/US I want users to export reports to PDF`
