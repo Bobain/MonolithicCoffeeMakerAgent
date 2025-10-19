@@ -336,6 +336,9 @@ class ChatSession:
     Manages the interactive REPL loop, command routing, and rich terminal UI
     for the project manager CLI.
 
+    NOTE: When used in user_listener context, this class will be mixed with
+    MessageHandlerMixin to enable orchestrator-based agent communication.
+
     Attributes:
         ai_service: AIService instance for natural language processing
         editor: RoadmapEditor instance for roadmap manipulation

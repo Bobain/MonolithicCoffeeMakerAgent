@@ -60,6 +60,7 @@ from coffee_maker.autonomous.agent_registry import (
 )
 from coffee_maker.cli.ai_service import AIService
 from coffee_maker.cli.chat_interface import ChatSession
+from coffee_maker.cli.message_handler_mixin import MessageHandlerMixin
 from coffee_maker.cli.roadmap_editor import RoadmapEditor
 from coffee_maker.config import ROADMAP_PATH, ConfigManager
 
@@ -309,6 +310,97 @@ def _signal_handler(signum, frame):
     sys.exit(0)
 
 
+class UserListenerSession(MessageHandlerMixin, ChatSession):
+    """Chat session with orchestrator message queue integration.
+
+    This class combines ChatSession (interactive REPL) with MessageHandlerMixin
+    (orchestrator communication) to create a user_listener that can:
+    - Accept user input via console UI
+    - Send requests to orchestrator for routing to appropriate agents
+    - Receive and display responses from agents
+    - Poll for messages in the background
+
+    Multiple inheritance order matters: MessageHandlerMixin first for proper MRO.
+    """
+
+    def __init__(self, ai_service: AIService, editor: RoadmapEditor, enable_streaming: bool = True):
+        """Initialize user listener session with message queue support.
+
+        Args:
+            ai_service: AIService for natural language processing
+            editor: RoadmapEditor for roadmap manipulation
+            enable_streaming: Enable streaming responses (default: True)
+        """
+        # Initialize both parent classes (MessageHandlerMixin calls super().__init__)
+        super().__init__(ai_service, editor, enable_streaming)
+        logger.info("UserListenerSession initialized with orchestrator communication")
+
+        # Track pending responses (for async orchestrator responses)
+        self._pending_responses = {}
+
+    def start(self):
+        """Start interactive session with message polling.
+
+        This overrides ChatSession.start() to add background message polling.
+        """
+        logger.info("Starting user_listener session with orchestrator integration...")
+
+        # Start polling for messages in a background thread
+        import threading
+
+        self._polling_active = True
+
+        def poll_loop():
+            """Background thread for polling orchestrator messages."""
+            while self._polling_active and self.active:
+                try:
+                    self.poll_messages(timeout=0.5)
+                except Exception as e:
+                    logger.error(f"Error polling messages: {e}")
+                time.sleep(0.1)  # Poll every 100ms
+
+        self._poll_thread = threading.Thread(target=poll_loop, daemon=True)
+        self._poll_thread.start()
+        logger.info("Background message polling started")
+
+        # Call parent start() to run REPL
+        try:
+            super().start()
+        finally:
+            # Stop polling when session ends
+            self._polling_active = False
+            if hasattr(self, "_poll_thread"):
+                self._poll_thread.join(timeout=2.0)
+
+    def _handle_natural_language(self, text: str) -> str:
+        """Override parent method to route requests through orchestrator.
+
+        This intercepts natural language input and sends it to the orchestrator
+        for intelligent routing to appropriate agents. Orchestrator will analyze
+        the request and delegate to the best agent (assistant, code_developer,
+        project_manager, architect, etc.).
+
+        Args:
+            text: Natural language input from user
+
+        Returns:
+            Response message (may be from orchestrator or delegated agent)
+        """
+        logger.info(f"Sending user request to orchestrator: {text[:50]}...")
+
+        # Send request to orchestrator (which will route to appropriate agent)
+        # The orchestrator may route to assistant, code_developer, project_manager, etc.
+        # based on the content and context of the request
+        self.send_user_request(
+            user_input=text,
+            suggested_recipient="assistant",  # Suggest assistant as default (orchestrator may override)
+        )
+
+        # For now, return a confirmation message
+        # In future, we could wait for response or use async pattern
+        return "🔄 Request sent to orchestrator for processing. Response will arrive shortly..."
+
+
 @click.command()
 @click.option(
     "--with-team/--no-team",
@@ -391,8 +483,8 @@ def main(with_team: bool, debug: bool) -> int:
                 print("  Run with --with-team to enable")
             print("=" * 70 + "\n")
 
-            # Start chat session (REUSED from project-manager chat)
-            session = ChatSession(ai_service, editor)
+            # Start chat session with orchestrator integration
+            session = UserListenerSession(ai_service, editor)
             session.start()
 
             return 0

@@ -297,12 +297,14 @@ class OrchestratorAgent(BaseAgent):
         }
 
     def _do_background_work(self):
-        """Orchestrator's background work: monitor agent health and restart crashed agents.
+        """Orchestrator's background work: monitor agent health, restart crashed agents, route messages.
 
         This method is called once per check_interval (30 seconds by default) and:
-        1. Checks agent health via status files and process liveness
-        2. Handles crashed agents with exponential backoff restart
-        3. Writes orchestrator status for monitoring
+        1. Launches all agents (on first run)
+        2. Polls message queue for routing requests
+        3. Checks agent health via status files and process liveness
+        4. Handles crashed agents with exponential backoff restart
+        5. Writes orchestrator status for monitoring
 
         On first run (team_start_time is None), launches all agents.
         """
@@ -319,6 +321,9 @@ class OrchestratorAgent(BaseAgent):
             }
             return
 
+        # Poll message queue for routing (check for messages to/from orchestrator)
+        self._poll_message_queue()
+
         # Check agent health
         self._check_agent_health()
 
@@ -333,20 +338,95 @@ class OrchestratorAgent(BaseAgent):
         self.metrics["total_restarts"] = sum(self.restart_counts.values())
         self.metrics["uptime_seconds"] = (datetime.now() - self.team_start_time).total_seconds()
 
+    def _poll_message_queue(self):
+        """Poll SQLite message queue for messages to orchestrator and route them.
+
+        This method continuously checks the message queue for:
+        - USER_REQUEST: From user_listener → route to appropriate agent
+        - TASK_REQUEST: From agents → route to suggested recipient
+        - TASK_RESPONSE: From agents → route to requester
+        - USER_RESPONSE: From agents → route to user_listener
+
+        Messages are processed until queue is empty.
+        """
+        from coffee_maker.autonomous.message_queue import MessageQueue
+
+        queue = MessageQueue()
+
+        # Process all available messages (up to 100 per iteration to avoid blocking)
+        for _ in range(100):
+            message = queue.get(recipient="orchestrator", timeout=0.1)
+
+            if message is None:
+                break  # No more messages
+
+            try:
+                # Mark message as started
+                queue.mark_started(message.task_id, agent="orchestrator")
+
+                # Convert Message to dict for _handle_message
+                message_dict = {
+                    "type": message.type,
+                    "sender": message.sender,
+                    "recipient": message.recipient,
+                    "payload": message.payload,
+                    "priority": message.priority,
+                    "task_id": message.task_id,
+                }
+
+                # Route the message
+                self._handle_message(message_dict)
+
+                # Mark as completed
+                queue.mark_completed(message.task_id, duration_ms=0)
+
+            except Exception as e:
+                logger.error(f"Error routing message {message.task_id}: {e}")
+                queue.mark_failed(message.task_id, error_message=str(e))
+
     def _handle_message(self, message: Dict):
-        """Handle inter-agent messages.
+        """Handle inter-agent messages and route them to appropriate agents.
+
+        ARCHITECTURAL PRINCIPLE:
+        ALL inter-agent communication goes through orchestrator. Agents never
+        send directly to each other. This enables:
+        - Central routing & load balancing
+        - Bottleneck detection (measure task duration)
+        - Velocity metrics (track all agent performance)
+        - Flexibility (orchestrator can override suggested recipients)
 
         Message types:
+        - user_request: User input from user_listener → route to best agent
+        - task_request: Agent needs help from another agent → route intelligently
+        - task_response: Agent finished task → route to requester
+        - user_response: Agent response for user → route to user_listener
         - status_query: Return orchestrator and agent status
-        - agent_status: Update from user_listener about agent state
         - shutdown_request: Graceful shutdown request
 
         Args:
-            message: Message dictionary with 'type' and 'content'
+            message: Message dictionary with 'type', 'sender', 'payload', etc.
         """
+        from coffee_maker.autonomous.message_queue import MessageType
+
         msg_type = message.get("type")
 
-        if msg_type == "status_query":
+        if msg_type == MessageType.USER_REQUEST.value:
+            # User input from user_listener → analyze and route to appropriate agent
+            self._route_user_request(message)
+
+        elif msg_type == MessageType.TASK_REQUEST.value:
+            # Inter-agent task delegation → route based on suggestion + availability
+            self._route_task_request(message)
+
+        elif msg_type == MessageType.TASK_RESPONSE.value:
+            # Task completion response → route to original requester
+            self._route_task_response(message)
+
+        elif msg_type == MessageType.USER_RESPONSE.value:
+            # Agent response for user → route to user_listener
+            self._route_user_response(message)
+
+        elif msg_type == "status_query":
             logger.info("Status query received from user_listener")
             # Status will be written by _write_status() in next iteration
 
@@ -356,6 +436,230 @@ class OrchestratorAgent(BaseAgent):
 
         else:
             logger.warning(f"Unknown message type: {msg_type}")
+
+    def _route_user_request(self, message: Dict):
+        """Route user request to appropriate agent based on content analysis.
+
+        Routing logic:
+        1. Check payload for suggested_recipient (hint from user_listener)
+        2. Analyze user_input content to determine best agent
+        3. Check agent availability/load
+        4. Route to selected agent
+        5. Record start time for metrics
+
+        Args:
+            message: USER_REQUEST message from user_listener
+
+        Example:
+            Message payload: {
+                "user_input": "Implement feature X",
+                "suggested_recipient": "assistant"
+            }
+            → Orchestrator may route to code_developer instead if more appropriate
+        """
+        from coffee_maker.autonomous.message_queue import MessageQueue, Message, MessageType
+
+        payload = message.get("payload", {})
+        user_input = payload.get("user_input", "")
+        suggested_recipient = payload.get("suggested_recipient", "assistant")
+        sender = message.get("sender", "user_listener")
+
+        logger.info(f"Routing USER_REQUEST: '{user_input[:50]}...' (suggested: {suggested_recipient})")
+
+        # Analyze content to determine best agent
+        # For now, use simple keyword matching (future: use LLM for classification)
+        recipient = self._select_best_agent(user_input, suggested_recipient)
+
+        logger.info(f"Selected agent: {recipient}")
+
+        # Create routed task message
+        routed_message = Message(
+            sender="orchestrator",
+            recipient=recipient,
+            type=MessageType.TASK_REQUEST.value,
+            payload={
+                "task": user_input,
+                "original_sender": sender,
+                "routing_reason": f"Orchestrator routed from {sender} suggestion: {suggested_recipient}",
+            },
+            priority=1,  # High priority for user requests
+        )
+
+        # Send to selected agent
+        queue = MessageQueue()
+        queue.send(routed_message)
+
+        # Record start time for metrics
+        start_time = time.time()
+        self.metrics[f"task_{routed_message.task_id}_start"] = start_time
+
+        logger.info(f"Routed to {recipient}, task_id: {routed_message.task_id}")
+
+    def _route_task_request(self, message: Dict):
+        """Route inter-agent task request based on suggestion + availability.
+
+        Args:
+            message: TASK_REQUEST from one agent to another
+        """
+        from coffee_maker.autonomous.message_queue import MessageQueue, Message, MessageType
+
+        payload = message.get("payload", {})
+        task = payload.get("task", "")
+        suggested_recipient = payload.get("suggested_recipient")
+        reason = payload.get("reason", "")
+        sender = message.get("sender")
+
+        logger.info(f"Routing TASK_REQUEST from {sender}: '{task[:50]}...' → {suggested_recipient}")
+
+        # For now, honor the suggestion (future: check availability, load)
+        recipient = suggested_recipient
+
+        # Create routed message
+        routed_message = Message(
+            sender="orchestrator",
+            recipient=recipient,
+            type=MessageType.TASK_REQUEST.value,
+            payload={
+                "task": task,
+                "original_sender": sender,
+                "reason": reason,
+                "routing_reason": f"Orchestrator accepted suggestion from {sender}",
+            },
+            priority=message.get("priority", 5),
+        )
+
+        # Send to selected agent
+        queue = MessageQueue()
+        queue.send(routed_message)
+
+        # Record metrics
+        start_time = time.time()
+        self.metrics[f"task_{routed_message.task_id}_start"] = start_time
+
+        logger.info(f"Routed TASK_REQUEST to {recipient}, task_id: {routed_message.task_id}")
+
+    def _route_task_response(self, message: Dict):
+        """Route task response back to original requester.
+
+        Args:
+            message: TASK_RESPONSE from agent that completed work
+        """
+        from coffee_maker.autonomous.message_queue import MessageQueue, Message, MessageType
+
+        payload = message.get("payload", {})
+        response = payload.get("response", "")
+        original_task_id = payload.get("original_task_id")
+        final_recipient = payload.get("final_recipient")
+        sender = message.get("sender")
+
+        logger.info(f"Routing TASK_RESPONSE from {sender} → {final_recipient}")
+
+        # Create routed response
+        routed_message = Message(
+            sender="orchestrator",
+            recipient=final_recipient,
+            type=(
+                MessageType.TASK_RESPONSE.value
+                if final_recipient != "user_listener"
+                else MessageType.USER_RESPONSE.value
+            ),
+            payload={
+                "response": response,
+                "original_task_id": original_task_id,
+                "completed_by": sender,
+            },
+            priority=2,
+        )
+
+        # Send response
+        queue = MessageQueue()
+        queue.send(routed_message)
+
+        # Calculate and record task duration
+        if original_task_id and f"task_{original_task_id}_start" in self.metrics:
+            duration = time.time() - self.metrics[f"task_{original_task_id}_start"]
+            self.metrics[f"task_{original_task_id}_duration"] = duration
+            logger.info(f"Task {original_task_id} completed by {sender} in {duration:.2f}s")
+
+    def _route_user_response(self, message: Dict):
+        """Route agent response to user_listener for display.
+
+        Args:
+            message: USER_RESPONSE from agent with result for user
+        """
+        from coffee_maker.autonomous.message_queue import MessageQueue, Message, MessageType
+
+        payload = message.get("payload", {})
+        response = payload.get("response", "")
+        sender = message.get("sender")
+
+        logger.info(f"Routing USER_RESPONSE from {sender} → user_listener")
+
+        # Forward directly to user_listener
+        routed_message = Message(
+            sender="orchestrator",
+            recipient="user_listener",
+            type=MessageType.USER_RESPONSE.value,
+            payload={
+                "response": response,
+                "completed_by": sender,
+            },
+            priority=1,
+        )
+
+        # Send to user_listener
+        queue = MessageQueue()
+        queue.send(routed_message)
+
+    def _select_best_agent(self, user_input: str, suggested_recipient: str) -> str:
+        """Select the best agent to handle a user request.
+
+        Simple keyword-based routing (future: use LLM for intelligent classification).
+
+        Routing rules:
+        - "implement", "code", "fix bug" → code_developer
+        - "design", "ui", "ux" → ux_design_expert
+        - "spec", "architecture", "design system" → architect
+        - "github", "pr", "monitor", "verify dod" → project_manager
+        - "search", "analyze code", "find" → code_searcher
+        - "demo", "show", "test" → assistant
+        - Default → assistant (handles general questions)
+
+        Args:
+            user_input: User's natural language input
+            suggested_recipient: Hint from user_listener
+
+        Returns:
+            Agent name (string)
+        """
+        lower_input = user_input.lower()
+
+        # Code implementation keywords
+        if any(keyword in lower_input for keyword in ["implement", "code", "write", "fix bug", "create function"]):
+            return "code_developer"
+
+        # Design keywords
+        if any(keyword in lower_input for keyword in ["design", "ui", "ux", "tailwind", "component", "layout"]):
+            return "ux_design_expert"
+
+        # Architecture keywords
+        if any(keyword in lower_input for keyword in ["spec", "architecture", "system design", "dependencies"]):
+            return "architect"
+
+        # Project management keywords
+        if any(keyword in lower_input for keyword in ["github", "pr", "pull request", "monitor", "verify", "dod"]):
+            return "project_manager"
+
+        # Code search keywords
+        if any(keyword in lower_input for keyword in ["find", "search code", "analyze", "where is", "forensic"]):
+            return "code_searcher"
+
+        # Demo/testing keywords
+        if any(keyword in lower_input for keyword in ["demo", "show", "test", "try", "showcase"]):
+            return "assistant"
+
+        # Default: Use suggestion or fall back to assistant
+        return suggested_recipient if suggested_recipient else "assistant"
 
     def _enforce_cfr_013(self):
         """Ensure orchestrator is on roadmap branch (CFR-013).
