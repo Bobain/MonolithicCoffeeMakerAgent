@@ -474,6 +474,18 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
                 return True
             else:
                 logger.error(f"❌ Tests failed:\n{result.stdout}\n{result.stderr}")
+
+                # Use test-failure-analysis skill (US-065)
+                analysis = self._analyze_test_failures(
+                    test_output=result.stdout + "\n" + result.stderr,
+                    files_changed=self._get_changed_files(),
+                    priority_name=self.current_task.get("priority", "UNKNOWN") if self.current_task else "UNKNOWN",
+                )
+
+                if analysis:
+                    logger.info(f"📊 Test Failure Analysis:\n{analysis}")
+                    self._save_test_analysis(analysis)
+
                 return False
 
         except subprocess.TimeoutExpired:
@@ -482,6 +494,101 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         except Exception as e:
             logger.error(f"❌ Error running tests: {e}")
             return False
+
+    def _analyze_test_failures(self, test_output: str, files_changed: List[str], priority_name: str) -> Optional[str]:
+        """Analyze test failures using test-failure-analysis skill.
+
+        Args:
+            test_output: Full pytest output (stdout + stderr)
+            files_changed: List of files changed in current implementation
+            priority_name: Current priority being implemented
+
+        Returns:
+            Analysis report string, or None if analysis failed
+        """
+        try:
+            from coffee_maker.autonomous.skill_loader import load_skill, SkillNames
+
+            # Load test-failure-analysis skill
+            skill_content = load_skill(
+                SkillNames.TEST_FAILURE_ANALYSIS,
+                {
+                    "TEST_OUTPUT": test_output,
+                    "FILES_CHANGED": ", ".join(files_changed) if files_changed else "None",
+                    "PRIORITY_NAME": priority_name,
+                },
+            )
+
+            logger.info("📊 Analyzing test failures with skill...")
+
+            # Execute with LLM
+            from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+
+            claude = ClaudeCLIInterface()
+            result = claude.execute_prompt(skill_content)
+
+            if result and result.success:
+                return result.content
+            else:
+                logger.warning(f"Test failure analysis failed: {result.error_message if result else 'Unknown error'}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error during test failure analysis: {e}")
+            return None
+
+    def _get_changed_files(self) -> List[str]:
+        """Get list of files changed in current git working directory.
+
+        Returns:
+            List of changed file paths
+        """
+        import subprocess
+
+        try:
+            result = subprocess.run(
+                ["git", "diff", "--name-only", "HEAD"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+            if result.returncode == 0:
+                files = [f.strip() for f in result.stdout.split("\n") if f.strip()]
+                return files
+            else:
+                logger.warning("Failed to get changed files from git")
+                return []
+
+        except Exception as e:
+            logger.error(f"Error getting changed files: {e}")
+            return []
+
+    def _save_test_analysis(self, analysis: str):
+        """Save test failure analysis to file for review.
+
+        Args:
+            analysis: Analysis report string
+        """
+        try:
+            # Create analysis directory if needed
+            analysis_dir = Path("data/test_analyses")
+            analysis_dir.mkdir(parents=True, exist_ok=True)
+
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            priority_name = self.current_task.get("priority", "UNKNOWN") if self.current_task else "UNKNOWN"
+            filename = f"test_analysis_{priority_name}_{timestamp}.md"
+
+            analysis_file = analysis_dir / filename
+
+            # Write analysis
+            analysis_file.write_text(analysis)
+
+            logger.info(f"📝 Test analysis saved to: {analysis_file}")
+
+        except Exception as e:
+            logger.error(f"Error saving test analysis: {e}")
 
     def _notify_assistant_demo_needed(self, priority: Dict):
         """Notify assistant that feature is complete and needs demo.

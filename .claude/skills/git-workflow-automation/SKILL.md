@@ -602,4 +602,3 @@ Add templates to `.claude/skills/git-workflow-automation/templates/`
 **Status**: Ready for Implementation
 **Related USs**: US-065, US-066, US-067 (combined as single skill)
 **ROI**: 80% time savings on git operations (10-15 min → 2-3 min per cycle)
-

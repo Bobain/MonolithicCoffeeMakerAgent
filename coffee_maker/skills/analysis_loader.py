@@ -33,6 +33,7 @@ from coffee_maker.skills.code_analysis.code_forensics import CodeForensics
 from coffee_maker.skills.code_analysis.dependency_tracer import DependencyTracer
 from coffee_maker.skills.code_analysis.functional_search import FunctionalSearch
 from coffee_maker.skills.code_analysis.security_audit import SecurityAudit
+from coffee_maker.skills.code_analysis.test_failure_analyzer import TestFailureAnalyzer
 from coffee_maker.utils.code_index.indexer import CodeIndexer
 from coffee_maker.utils.code_index.query_engine import CodeIndexQueryEngine
 
@@ -46,6 +47,7 @@ class SkillLoader:
     _tracer = None
     _search = None
     _explainer = None
+    _test_failure_analyzer = None
     _indexer = None
     _query_engine = None
 
@@ -94,6 +96,15 @@ class SkillLoader:
         return cls._explainer
 
     @classmethod
+    def get_test_failure_analyzer(cls, codebase_root: str = None) -> TestFailureAnalyzer:
+        """Get test failure analyzer skill instance."""
+        if cls._test_failure_analyzer is None or (
+            codebase_root and str(cls._test_failure_analyzer.codebase_root) != codebase_root
+        ):
+            cls._test_failure_analyzer = TestFailureAnalyzer(codebase_root)
+        return cls._test_failure_analyzer
+
+    @classmethod
     def get_indexer(cls, codebase_root: str = None) -> CodeIndexer:
         """Get code indexer instance."""
         if cls._indexer is None or (codebase_root and str(cls._indexer.codebase_root) != codebase_root):
@@ -127,6 +138,7 @@ class SkillLoader:
         cls._tracer = None
         cls._search = None
         cls._explainer = None
+        cls._test_failure_analyzer = None
         cls._indexer = None
         cls._query_engine = None
 
@@ -273,6 +285,64 @@ def code_explainer(operation: str, params: Dict[str, Any] = None, codebase_root:
         return skill.explain_pattern(params.get("pattern_name", ""))
     else:
         return {"error": f"Unknown operation: {operation}"}
+
+
+def test_failure_analysis(
+    test_output: str,
+    files_changed: list = None,
+    priority_name: str = None,
+    codebase_root: str = None,
+) -> Dict[str, Any]:
+    """
+    Analyze pytest test failures and suggest fixes.
+
+    Args:
+        test_output: Full pytest output (stdout + stderr)
+        files_changed: List of files changed in current implementation
+        priority_name: Current priority being implemented
+        codebase_root: Optional codebase root
+
+    Returns:
+        Analysis results with failures and fix recommendations
+    """
+    skill = SkillLoader.get_test_failure_analyzer(codebase_root)
+    result = skill.analyze(test_output, files_changed or [], priority_name)
+
+    # Convert to dict for JSON serialization
+    return {
+        "total_failures": result.total_failures,
+        "critical_failures": result.critical_failures,
+        "high_failures": result.high_failures,
+        "medium_failures": result.medium_failures,
+        "low_failures": result.low_failures,
+        "estimated_total_time_min": result.estimated_total_time_min,
+        "recommended_fix_order": result.recommended_fix_order,
+        "failures": [
+            {
+                "test_name": f.test_name,
+                "file": f.file,
+                "line": f.line,
+                "error_type": f.error_type,
+                "message": f.message,
+                "category": f.category.value,
+                "correlation": f.correlation,
+                "priority": f.priority,
+            }
+            for f in result.failures
+        ],
+        "recommendations": [
+            {
+                "test_name": r.failure.test_name,
+                "root_cause": r.root_cause,
+                "quick_fix": r.quick_fix,
+                "quick_fix_time_min": r.quick_fix_time_min,
+                "deep_fix": r.deep_fix,
+                "deep_fix_time_min": r.deep_fix_time_min,
+            }
+            for r in result.recommendations
+        ],
+        "report": skill.format_analysis_report(result, priority_name),
+    }
 
 
 def rebuild_code_index(codebase_root: str = None) -> Dict[str, Any]:

@@ -50,6 +50,7 @@ from coffee_maker.skills.analysis_loader import (
     functional_search,
     rebuild_code_index,
     security_audit,
+    test_failure_analysis,
 )
 from coffee_maker.skills.skill_loader import (
     StartupSkillLoader,
@@ -69,6 +70,7 @@ __all__ = [
     "security_audit",
     "dependency_tracer",
     "code_explainer",
+    "test_failure_analysis",
     "rebuild_code_index",
     # Skill classes (for advanced use)
     "CodeForensics",
@@ -76,6 +78,7 @@ __all__ = [
     "DependencyTracer",
     "FunctionalSearch",
     "CodeExplainer",
+    "TestFailureAnalyzer",
     # Infrastructure classes
     "CodeIndexer",
     "CodeIndexQueryEngine",

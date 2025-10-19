@@ -89,7 +89,6 @@ class CFR009ViolationError(Exception):
     """
 
 
-
 def play_notification_sound(priority: str = "normal") -> bool:
     """Play system notification sound.
 

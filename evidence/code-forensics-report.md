@@ -7,8 +7,8 @@
 
 | Rank | Name | Commits | Lines Added | Lines Removed |
 |------|------|---------|-------------|---------------|
-| 1 | bobain | 344 | 81154 | 12604 |
-| 2 | Bobain | 15 | 1312 | 1196 |
+| 1 | bobain | 370 | 88110 | 13498 |
+| 2 | Bobain | 21 | 1325 | 1206 |
 
 
 ## Top 5 Code Hotspots
@@ -29,6 +29,6 @@
 
 ## Key Insights
 
-- Top contributor: bobain (344 commits, 81154 lines added)
+- Top contributor: bobain (370 commits, 88110 lines added)
 - Code hotspot: coffee_maker/{langchain_observe (changed most frequently → refactor candidate)
 - Peak commit time: 11:00 (team most active)
