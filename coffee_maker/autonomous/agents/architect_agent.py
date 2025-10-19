@@ -338,10 +338,39 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
         # Update progress
         self.current_task["progress"] = 0.3
 
+        # US-050: Extract requirements and check if POC needed
+        requirements = self._extract_requirements_from_priority(priority)
+        effort_hours = requirements.get("estimated_effort_hours", 0)
+        complexity = requirements.get("technical_complexity", "unknown")
+
+        # Check if POC should be created (US-050)
+        needs_poc = self._should_create_poc(effort_hours, complexity)
+        poc_dir = None
+
+        if needs_poc:
+            logger.info(f"🔬 POC required for {priority_name} (effort: {effort_hours}h, complexity: {complexity})")
+            poc_dir = self._create_poc(priority, requirements)
+            if poc_dir:
+                logger.info(f"✅ POC created: {poc_dir}")
+                logger.info("⚠️ Note: POC skeleton created, architect should implement POC code manually")
+            else:
+                logger.warning("⚠️ POC creation failed, continuing with spec creation")
+
         # Load prompt
         from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
 
         # Include reuse analysis in the spec creation context
+        poc_reference = ""
+        if poc_dir:
+            poc_reference = f"""
+
+## 🔬 Proof of Concept
+
+A POC has been created for this priority at: `{poc_dir}/`
+
+The technical spec should reference this POC and explain what it proves.
+"""
+
         spec_context = f"""{priority_content[:1500]}
 
 ## 🔍 Architecture Reuse Analysis
@@ -349,6 +378,7 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
 {reuse_analysis}
 
 **IMPORTANT**: Use components from the reuse analysis above when creating this spec.
+{poc_reference}
 """
 
         prompt = load_prompt(

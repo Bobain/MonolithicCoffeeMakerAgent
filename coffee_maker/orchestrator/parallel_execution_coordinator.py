@@ -473,17 +473,31 @@ class ParallelExecutionCoordinator:
             worktrees: List of WorktreeConfig objects
         """
         for worktree in worktrees:
-            self._remove_worktree(worktree.worktree_path)
+            self._remove_worktree(worktree.worktree_path, worktree.branch_name)
             logger.info(f"Cleaned up worktree: {worktree.worktree_path}")
 
-    def _remove_worktree(self, worktree_path: Path):
-        """Remove a git worktree.
+        # Prune any remaining worktree references
+        try:
+            subprocess.run(
+                ["git", "worktree", "prune"],
+                cwd=self.repo_root,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            logger.info("✅ Pruned stale worktree references")
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Failed to prune worktrees: {e.stderr}")
+
+    def _remove_worktree(self, worktree_path: Path, branch_name: str):
+        """Remove a git worktree and its branch.
 
         Args:
             worktree_path: Path to worktree directory
+            branch_name: Name of the branch to delete
         """
+        # Step 1: Remove worktree using git
         try:
-            # Remove worktree using git
             subprocess.run(
                 ["git", "worktree", "remove", "--force", str(worktree_path)],
                 cwd=self.repo_root,
@@ -491,11 +505,29 @@ class ParallelExecutionCoordinator:
                 capture_output=True,
                 text=True,
             )
+            logger.info(f"✅ Removed worktree: {worktree_path}")
         except subprocess.CalledProcessError as e:
             logger.warning(f"Git worktree remove failed: {e.stderr}, trying manual cleanup...")
-            # Fallback: manual cleanup
+            # Fallback: manual cleanup of directory
             if worktree_path.exists():
-                shutil.rmtree(worktree_path)
+                try:
+                    shutil.rmtree(worktree_path)
+                    logger.info(f"✅ Manually removed directory: {worktree_path}")
+                except Exception as dir_error:
+                    logger.error(f"Failed to remove directory {worktree_path}: {dir_error}")
+
+        # Step 2: Delete the branch
+        try:
+            subprocess.run(
+                ["git", "branch", "-D", branch_name],
+                cwd=self.repo_root,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            logger.info(f"✅ Deleted branch: {branch_name}")
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Failed to delete branch {branch_name}: {e.stderr}")
 
     def get_status(self) -> Dict[str, Any]:
         """Get current status of parallel execution.

@@ -247,6 +247,43 @@ class RoadmapParser:
         logger.info("No planned priorities found")
         return None
 
+    def get_priority_by_number(self, priority_number: int) -> Optional[Dict]:
+        """Get a specific priority by its number.
+
+        Args:
+            priority_number: The priority number to find (e.g., 9 for PRIORITY 9)
+
+        Returns:
+            Priority dict or None if not found
+
+        Example:
+            >>> parser = RoadmapParser("docs/roadmap/ROADMAP.md")
+            >>> priority = parser.get_priority_by_number(9)
+            >>> if priority:
+            ...     print(f"Found: {priority['title']}")
+        """
+        priorities = self.get_priorities()
+
+        for priority in priorities:
+            # Extract number from priority name (e.g., "PRIORITY 9" -> 9, "US-009" -> 9)
+            name = priority["name"]
+            try:
+                if name.startswith("PRIORITY "):
+                    num = int(name.replace("PRIORITY ", "").split(":")[0])
+                elif name.startswith("US-"):
+                    num = int(name.replace("US-", "").split(":")[0])
+                else:
+                    continue
+
+                if num == priority_number:
+                    logger.info(f"Found priority {priority_number}: {priority['title']}")
+                    return priority
+            except (ValueError, IndexError):
+                continue
+
+        logger.warning(f"Priority {priority_number} not found in ROADMAP")
+        return None
+
     def get_in_progress_priorities(self) -> List[Dict]:
         """Get all priorities currently in progress.
 

@@ -119,6 +119,12 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
         help="Path to claude CLI executable (default: /opt/homebrew/bin/claude)",
     )
 
+    parser.add_argument(
+        "--priority",
+        type=int,
+        help="Work on a specific priority only (used by orchestrator for parallel execution)",
+    )
+
     args = parser.parse_args()
 
     # Setup logging
@@ -244,6 +250,7 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
             model=args.model,
             use_claude_cli=use_cli_mode,
             claude_cli_path=args.claude_path,
+            specific_priority=args.priority,
         )
 
         # Write PID file after daemon is initialized

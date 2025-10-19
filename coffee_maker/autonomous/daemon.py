@@ -172,6 +172,7 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 # from coffee_maker.autonomous.activity_logger import ActivityLogger  # TODO: Re-enable when activity_logger is implemented
 from coffee_maker.autonomous.agent_registry import AgentRegistry, AgentType
@@ -248,6 +249,8 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         max_crashes: int = 3,
         crash_sleep_interval: int = 60,
         compact_interval: int = 10,
+        # Parallel execution support
+        specific_priority: Optional[int] = None,
     ) -> None:
         """Initialize development daemon.
 
@@ -262,6 +265,7 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             max_crashes: Maximum consecutive crashes before stopping (default: 3)
             crash_sleep_interval: Sleep duration after crash in seconds (default: 60)
             compact_interval: Iterations between context resets (default: 10)
+            specific_priority: Work on this specific priority only (for parallel execution)
         """
         self.roadmap_path = Path(roadmap_path)
         self.auto_approve = auto_approve
@@ -269,6 +273,7 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         self.sleep_interval = sleep_interval
         self.model = model
         self.use_claude_cli = use_claude_cli
+        self.specific_priority = specific_priority
 
         # Initialize components
         self.parser = RoadmapParser(str(self.roadmap_path))
@@ -488,7 +493,16 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 self.status.update_status(DeveloperState.THINKING, current_step="Analyzing ROADMAP.md")
 
                 # Get next task
-                next_priority = self.parser.get_next_planned_priority()
+                if self.specific_priority:
+                    # Parallel execution mode: work on specific priority only
+                    next_priority = self.parser.get_priority_by_number(self.specific_priority)
+                    if not next_priority:
+                        logger.error(f"❌ Priority {self.specific_priority} not found in ROADMAP")
+                        break
+                    logger.info(f"📋 Working on specific priority: {next_priority['name']} - {next_priority['title']}")
+                else:
+                    # Sequential mode: get next planned priority
+                    next_priority = self.parser.get_next_planned_priority()
 
                 if not next_priority:
                     logger.info("✅ No more planned priorities - all done!")
@@ -571,6 +585,13 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                         DeveloperState.IDLE,
                         current_step="Task completed, waiting for next",
                     )
+
+                    # Exit if working on specific priority (parallel execution mode)
+                    if self.specific_priority:
+                        logger.info(f"✅ Completed specific priority {self.specific_priority} - exiting")
+                        self.running = False
+                        break
+
                 else:
                     logger.warning(f"⚠️  Implementation failed for {next_priority['name']}")
                     # PRIORITY 4: Log error activity
