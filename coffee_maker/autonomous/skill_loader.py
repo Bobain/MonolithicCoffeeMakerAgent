@@ -11,14 +11,37 @@ Related: SPEC-055, US-055
 
 import logging
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import yaml
 
 from coffee_maker.autonomous.agent_registry import AgentType
 
 logger = logging.getLogger(__name__)
+
+
+class SkillNames(str, Enum):
+    """Enumeration of available skill names."""
+
+    # Architect skills
+    ARCHITECTURE_REUSE_CHECK = "architecture-reuse-check"
+    CONTINUOUS_SPEC_IMPROVEMENT = "continuous-spec-improvement"
+    CODE_REVIEW_HISTORY = "code-review-history"
+
+    # Project Manager skills
+    ROADMAP_HEALTH_CHECK = "roadmap-health-check"
+    PR_MONITORING_ANALYSIS = "pr-monitoring-analysis"
+
+    # Code Developer skills
+    TEST_DRIVEN_IMPLEMENTATION = "test-driven-implementation"
+    TEST_FAILURE_ANALYSIS = "test-failure-analysis"
+
+    # Shared skills
+    DOD_VERIFICATION = "dod-verification"
+    GIT_WORKFLOW_AUTOMATION = "git-workflow-automation"
+    CONTEXT_BUDGET_OPTIMIZER = "context-budget-optimizer"
 
 
 @dataclass
@@ -175,3 +198,70 @@ class SkillLoader:
             return True
         except FileNotFoundError:
             return False
+
+
+def load_skill(skill_name: str, variables: Optional[Dict[str, str]] = None) -> str:
+    """Load and render a skill with variable substitution.
+
+    This is a convenience function for loading skills without needing to
+    instantiate a SkillLoader. It searches in the .claude/skills/ directory
+    for the skill.
+
+    Args:
+        skill_name: Name or enum value of skill to load
+        variables: Optional dict of variables to substitute in skill
+
+    Returns:
+        Rendered skill content with variables substituted
+
+    Raises:
+        FileNotFoundError: If skill not found
+
+    Example:
+        >>> from coffee_maker.autonomous.skill_loader import load_skill, SkillNames
+        >>> skill = load_skill(SkillNames.ARCHITECTURE_REUSE_CHECK, {
+        ...     "PRIORITY_NAME": "US-104",
+        ...     "PROBLEM_DESCRIPTION": "Build orchestrator loop"
+        ... })
+    """
+    # Convert enum to string if needed
+    if isinstance(skill_name, SkillNames):
+        skill_name = skill_name.value
+
+    # Find skill in .claude/skills/
+    skills_dir = Path(".claude/skills")
+
+    # Try multiple search paths
+    possible_paths = [
+        skills_dir / skill_name / "SKILL.md",  # Agent-specific or shared
+        skills_dir / "shared" / skill_name / "SKILL.md",  # Shared
+        skills_dir / "architect" / skill_name / "SKILL.md",  # Architect
+        skills_dir / "project-manager" / skill_name / "SKILL.md",  # PM
+        skills_dir / "code-developer" / skill_name / "SKILL.md",  # Developer
+    ]
+
+    skill_content = None
+    for skill_path in possible_paths:
+        if skill_path.exists():
+            skill_content = skill_path.read_text()
+            logger.debug(f"Loaded skill from: {skill_path}")
+            break
+
+    if skill_content is None:
+        raise FileNotFoundError(
+            f"Skill '{skill_name}' not found in any of:\n" + "\n".join(f"  - {p}" for p in possible_paths)
+        )
+
+    # Skip YAML frontmatter if present
+    if skill_content.startswith("---"):
+        parts = skill_content.split("---", 2)
+        if len(parts) >= 3:
+            skill_content = parts[2].strip()
+
+    # Substitute variables
+    if variables:
+        for key, value in variables.items():
+            placeholder = f"${{{key}}}"
+            skill_content = skill_content.replace(placeholder, str(value))
+
+    return skill_content
