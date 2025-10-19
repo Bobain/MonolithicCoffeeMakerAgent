@@ -180,14 +180,18 @@ class AgentsStatusCommand(BaseCommand):
                     else:
                         status_emoji = "🟡"  # Idle
 
+                    # Format duration safely (might be None if no completed tasks)
+                    avg_duration = agent_perf["avg_duration_ms"] or 0
+                    max_duration = agent_perf["max_duration_ms"] or 0
+
                     status_lines.extend(
                         [
                             f"{status_emoji} {agent_name}:",
                             f"  Total tasks: {agent_perf['total_tasks']}",
                             f"  Completed: {agent_perf['completed_tasks']} ✅",
                             f"  Failed: {agent_perf['failed_tasks']} ❌",
-                            f"  Avg duration: {agent_perf['avg_duration_ms']:.0f}ms",
-                            f"  Max duration: {agent_perf['max_duration_ms']:.0f}ms",
+                            f"  Avg duration: {avg_duration:.0f}ms",
+                            f"  Max duration: {max_duration:.0f}ms",
                             "",
                         ]
                     )
