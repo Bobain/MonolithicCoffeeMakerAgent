@@ -134,7 +134,12 @@ class TestGitWorkflowAutomation:
     @patch("coffee_maker.skills.git_workflow.git_workflow_automation.Path.write_text")
     @patch("coffee_maker.skills.git_workflow.git_workflow_automation.Path.exists")
     def test_update_roadmap_status(
-        self, mock_exists, mock_write_text, mock_read_text, git_workflow, mock_subprocess_run
+        self,
+        mock_exists,
+        mock_write_text,
+        mock_read_text,
+        git_workflow,
+        mock_subprocess_run,
     ):
         """Test ROADMAP.md update."""
         mock_exists.return_value = True

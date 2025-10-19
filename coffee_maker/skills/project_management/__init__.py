@@ -8,6 +8,14 @@ from coffee_maker.skills.project_management.roadmap_health_checker import (
     RoadmapHealthChecker,
     VelocityMetrics,
 )
+from coffee_maker.skills.project_management.pr_monitoring import (
+    PRAnalysisReport,
+    PRHealthMetrics,
+    PRIssue,
+    PRMonitoring,
+    PRRecommendation,
+    PullRequest,
+)
 
 __all__ = [
     "RoadmapHealthChecker",
@@ -16,4 +24,10 @@ __all__ = [
     "VelocityMetrics",
     "Priority",
     "BlockerInfo",
+    "PRMonitoring",
+    "PRAnalysisReport",
+    "PRHealthMetrics",
+    "PRIssue",
+    "PRRecommendation",
+    "PullRequest",
 ]
