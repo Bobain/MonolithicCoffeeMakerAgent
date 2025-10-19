@@ -127,9 +127,9 @@ See [US-072](#us-072-design-orchestrator-agent-architecture) for full details.
 
 ---
 
-### PRIORITY 12: US-047 - Enforce CFR-008 Architect-Only Spec Creation (Phase 2) 📝 Planned
+### PRIORITY 12: US-047 - Enforce CFR-008 Architect-Only Spec Creation (Phase 2) ✅ Complete
 
-**Status**: 📝 Planned - CRITICAL (Role Boundaries)
+**Status**: ✅ Complete - CRITICAL (Role Boundaries)
 
 See [US-047](#us-047-enforce-cfr-008-architect-only-spec-creation) for full details.
 

@@ -189,6 +189,7 @@ from coffee_maker.autonomous.developer_status import (
     DeveloperState,
     DeveloperStatus,
 )
+from coffee_maker.autonomous.spec_watcher import SpecWatcher
 from coffee_maker.autonomous.git_manager import GitManager
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 from coffee_maker.autonomous.task_metrics import TaskMetricsDB
@@ -325,6 +326,11 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         self.iterations_since_compact = 0
         self.last_compact_time = None
 
+        # US-047 Phase 3: Spec watcher for proactive missing spec detection
+        self.spec_watcher = SpecWatcher(roadmap_path=self.roadmap_path)
+        self.spec_check_interval = 300  # Check every 5 minutes (300 seconds)
+        self.last_spec_check_time = None
+
         # US-062: Execute startup skill (CFR-007 validation, health checks)
         self._execute_startup_skill()
 
@@ -460,6 +466,9 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
                 # Reload roadmap
                 self.parser = RoadmapParser(str(self.roadmap_path))
+
+                # US-047 Phase 3: Periodic spec check (every 5 minutes)
+                self._check_for_missing_specs()
 
                 # PRIORITY 4: Update status - analyzing roadmap
                 self.status.update_status(DeveloperState.THINKING, current_step="Analyzing ROADMAP.md")
@@ -712,6 +721,87 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         except Exception as e:
             logger.error(f"Error resetting context: {e}")
             return False
+
+    def _check_for_missing_specs(self) -> None:
+        """Periodically check for new priorities missing specs (US-047 Phase 3).
+
+        This method implements proactive spec monitoring:
+        1. Checks if it's time for a spec check (every 5 minutes)
+        2. Uses SpecWatcher to detect new priorities without specs
+        3. Creates notifications to alert architect
+
+        CFR-008: Enforces architect-only spec creation by alerting when missing.
+        """
+        current_time = time.time()
+
+        # Check if it's time for a spec check (every 5 minutes)
+        if self.last_spec_check_time is not None:
+            elapsed = current_time - self.last_spec_check_time
+            if elapsed < self.spec_check_interval:
+                # Not time yet
+                return
+
+        logger.debug("🔍 Checking for new priorities missing specs...")
+        self.last_spec_check_time = current_time
+
+        try:
+            # Check for new priorities needing specs
+            missing_specs = self.spec_watcher.check_for_new_priorities()
+
+            if missing_specs:
+                logger.warning(f"⚠️  Found {len(missing_specs)} new priorities without specs")
+
+                # Create notification for each missing spec
+                for priority in missing_specs:
+                    self._notify_architect_missing_spec(priority)
+            else:
+                logger.debug("✅ All new priorities have specs")
+
+        except Exception as e:
+            logger.error(f"Error checking for missing specs: {e}", exc_info=True)
+
+    def _notify_architect_missing_spec(self, priority: dict) -> None:
+        """Notify architect about a new priority missing a spec.
+
+        Args:
+            priority: Priority dictionary with name, title, spec_prefix
+        """
+        title = f"CFR-008: New Priority Needs Spec - {priority['name']}"
+        message = (
+            f"A new priority was added to ROADMAP without a technical specification.\n\n"
+            f"Priority: {priority['name']}\n"
+            f"Title: {priority['title']}\n"
+            f"Expected spec: docs/architecture/specs/{priority['spec_prefix']}-<name>.md\n\n"
+            f"CFR-008 ENFORCEMENT: architect must create this spec.\n\n"
+            f"ACTIONS:\n"
+            f"1. Invoke architect agent\n"
+            f"2. architect reviews {priority['name']} in ROADMAP.md\n"
+            f"3. architect creates comprehensive spec\n"
+            f"4. code_developer will auto-resume when spec exists"
+        )
+
+        context = {
+            "priority_name": priority["name"],
+            "priority_title": priority["title"],
+            "spec_prefix": priority["spec_prefix"],
+            "enforcement": "CFR-008",
+            "action_required": "architect must create technical spec",
+        }
+
+        try:
+            self.notifications.create_notification(
+                type="warning",
+                title=title,
+                message=message,
+                priority="high",
+                context=context,
+                sound=False,  # CFR-009: code_developer uses sound=False
+                agent_id="code_developer",
+            )
+            logger.info(f"✅ Created notification for missing spec: {priority['name']}")
+
+        except Exception as e:
+            logger.error(f"Failed to create notification: {e}", exc_info=True)
 
     def stop(self):
         """Stop the daemon gracefully."""
