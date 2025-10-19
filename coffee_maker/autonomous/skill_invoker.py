@@ -3,14 +3,16 @@ Skill Invoker for Claude Skills Integration.
 
 Executes skills using Code Execution Tool with sandboxed execution.
 Supports skill composition (chaining multiple skills).
+Supports parallel execution for independent skills (Phase 3 optimization).
 
 Author: architect agent
 Date: 2025-10-19
-Related: SPEC-055, US-055
+Related: SPEC-055, SPEC-057, US-055, US-057
 """
 
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
@@ -98,6 +100,64 @@ class SkillInvoker:
             exit_code=0 if not errors else 1,
             duration=duration,
             skill_name=", ".join([s.name for s in skills]),
+            errors=errors,
+        )
+
+    def invoke_parallel(self, skills: List[SkillMetadata], context: Dict[str, Any]) -> SkillExecutionResult:
+        """Invoke multiple skills in parallel (for independent skills).
+
+        Phase 3 optimization: Execute independent skills concurrently for 2-3x speedup.
+
+        Args:
+            skills: List of independent skills to execute in parallel
+            context: Context data for skill execution (shared across all skills)
+
+        Returns:
+            SkillExecutionResult with combined outputs, errors, and total duration
+
+        Note:
+            Only use this for truly independent skills. For composed skills that
+            depend on each other's output, use invoke() instead.
+        """
+        start = time.time()
+
+        outputs = []
+        errors = []
+        skill_names = []
+
+        # Execute skills in parallel using ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(3, len(skills))) as executor:
+            # Submit all skills for execution
+            future_to_skill = {
+                executor.submit(self._execute_single_skill, skill, context.copy()): skill for skill in skills
+            }
+
+            # Collect results as they complete
+            for future in as_completed(future_to_skill):
+                skill = future_to_skill[future]
+                try:
+                    result = future.result()
+                    outputs.append(result.output)
+                    skill_names.append(skill.name)
+
+                    if not result.success:
+                        errors.extend(result.errors)
+
+                    logger.info(f"Parallel skill {skill.name} completed in {result.duration:.2f}s")
+
+                except Exception as e:
+                    logger.error(f"Parallel skill {skill.name} failed: {e}", exc_info=True)
+                    errors.append(f"{skill.name}: {str(e)}")
+
+        duration = time.time() - start
+
+        logger.info(f"Parallel execution of {len(skills)} skills completed in {duration:.2f}s")
+
+        return SkillExecutionResult(
+            output=outputs,  # List of all outputs (not just last one)
+            exit_code=0 if not errors else 1,
+            duration=duration,
+            skill_name=", ".join(skill_names),
             errors=errors,
         )
 

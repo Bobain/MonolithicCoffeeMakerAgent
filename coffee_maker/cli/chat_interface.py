@@ -1258,8 +1258,8 @@ class ChatSession:
         commands = list_commands()
 
         # Add commands to table
-        for name, handler in sorted(commands.items()):
-            table.add_row(f"/{name}", handler.description)
+        for command in sorted(commands, key=lambda c: c.name):
+            table.add_row(f"/{command.name}", command.description)
 
         # Add built-in commands
         table.add_row("/help", "Show this help message")
