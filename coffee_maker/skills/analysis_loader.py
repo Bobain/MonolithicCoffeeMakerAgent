@@ -34,6 +34,13 @@ from coffee_maker.skills.code_analysis.dependency_tracer import DependencyTracer
 from coffee_maker.skills.code_analysis.functional_search import FunctionalSearch
 from coffee_maker.skills.code_analysis.security_audit import SecurityAudit
 from coffee_maker.skills.code_analysis.test_failure_analyzer import TestFailureAnalyzerSkill
+from coffee_maker.skills.dod_verification.criteria_parser import CriteriaParser
+from coffee_maker.skills.dod_verification.automated_checks import AutomatedChecks
+from coffee_maker.skills.dod_verification.code_quality_checker import CodeQualityChecker
+from coffee_maker.skills.dod_verification.functionality_tester import FunctionalityTester
+from coffee_maker.skills.dod_verification.documentation_checker import DocumentationChecker
+from coffee_maker.skills.dod_verification.integration_verifier import IntegrationVerifier
+from coffee_maker.skills.dod_verification.report_generator import ReportGenerator
 from coffee_maker.utils.code_index.indexer import CodeIndexer
 from coffee_maker.utils.code_index.query_engine import CodeIndexQueryEngine
 
@@ -48,6 +55,7 @@ class SkillLoader:
     _search = None
     _explainer = None
     _test_failure_analyzer = None
+    _dod_verifier = None
     _indexer = None
     _query_engine = None
 
@@ -105,6 +113,27 @@ class SkillLoader:
         return cls._test_failure_analyzer
 
     @classmethod
+    def get_dod_verifier(cls, codebase_root: str = None) -> Dict[str, Any]:
+        """
+        Get DoD verifier components.
+
+        Returns a dictionary of DoD verification components.
+        """
+        from pathlib import Path
+
+        root = Path(codebase_root or Path.cwd())
+
+        return {
+            "criteria_parser": CriteriaParser(),
+            "automated_checks": AutomatedChecks(root),
+            "code_quality": CodeQualityChecker(root),
+            "functionality_tester": FunctionalityTester(root),
+            "documentation_checker": DocumentationChecker(root),
+            "integration_verifier": IntegrationVerifier(root),
+            "report_generator": ReportGenerator(),
+        }
+
+    @classmethod
     def get_indexer(cls, codebase_root: str = None) -> CodeIndexer:
         """Get code indexer instance."""
         if cls._indexer is None or (codebase_root and str(cls._indexer.codebase_root) != codebase_root):
@@ -139,6 +168,7 @@ class SkillLoader:
         cls._search = None
         cls._explainer = None
         cls._test_failure_analyzer = None
+        cls._dod_verifier = None
         cls._indexer = None
         cls._query_engine = None
 
@@ -343,6 +373,65 @@ def test_failure_analysis(
         ],
         "report": skill.format_analysis_report(result, priority_name),
     }
+
+
+def dod_verification(
+    priority: str,
+    description: str,
+    files_changed: list = None,
+    check_types: list = None,
+    app_url: str = None,
+    codebase_root: str = None,
+) -> Dict[str, Any]:
+    """
+    Verify Definition of Done for a priority.
+
+    Args:
+        priority: Priority identifier (e.g., "US-066")
+        description: Full priority description with acceptance criteria
+        files_changed: List of files changed in implementation
+        check_types: Types of checks to run (default: ["all"])
+        app_url: Application URL for Puppeteer testing
+        codebase_root: Optional codebase root
+
+    Returns:
+        DoD verification results with status and report
+    """
+    from pathlib import Path
+
+    Path(codebase_root or Path.cwd())
+    files_changed = files_changed or []
+    check_types = check_types or ["all"]
+
+    # Get DoD verifier components
+    components = SkillLoader.get_dod_verifier(codebase_root)
+
+    # Parse criteria
+    criteria = components["criteria_parser"].parse_criteria(description)
+
+    # Run checks
+    results = {"priority": priority, "criteria": len(criteria), "checks": {}}
+
+    if "all" in check_types or "automated" in check_types:
+        results["checks"]["automated"] = components["automated_checks"].run_all_checks()
+
+    if "all" in check_types or "code_quality" in check_types:
+        results["checks"]["code_quality"] = components["code_quality"].check_quality(files_changed)
+
+    if "all" in check_types or "functionality" in check_types:
+        results["checks"]["functionality"] = components["functionality_tester"].test_criteria(criteria, app_url)
+
+    if "all" in check_types or "documentation" in check_types:
+        results["checks"]["documentation"] = components["documentation_checker"].check_documentation(files_changed)
+
+    if "all" in check_types or "integration" in check_types:
+        results["checks"]["integration"] = components["integration_verifier"].verify_integration(files_changed)
+
+    # Determine overall status
+    all_pass = all(check.get("status") == "PASS" for check in results["checks"].values())
+    results["status"] = "PASS" if all_pass else "FAIL"
+
+    return results
 
 
 def rebuild_code_index(codebase_root: str = None) -> Dict[str, Any]:
