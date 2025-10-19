@@ -115,11 +115,16 @@ MonolithicCoffeeMakerAgent/
 
 ## Coding Standards
 
-### Python Style
+### Python Style ⭐ **MANDATORY**
+- **Style Guide**: `.gemini/styleguide.md` - ALL code MUST follow this guide
 - **Formatter**: Black (enforced by pre-commit hooks)
-- **Imports**: Use `autoflake` to remove unused imports
-- **Line Length**: 120 characters (Black default: 88)
-- **Type Hints**: Use where appropriate
+- **Imports**: Use `autoflake` to remove unused imports (grouped: stdlib, third-party, local)
+- **Line Length**: 120 characters (strict for docstrings/comments, flexible for code per Black)
+- **Type Hints**: REQUIRED - Use PEP 484 type hints for all functions
+- **Docstrings**: Google style with triple double quotes (`"""..."""`)
+- **Naming**: snake_case (variables, functions, modules), CamelCase (classes), UPPER_CASE (constants)
+- **Logging**: Use `logging` module with appropriate levels (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- **Error Handling**: Specific exceptions, graceful handling, try-except blocks
 
 ### Architecture Patterns
 - **Mixins**: Daemon uses composition with mixins (SpecManagerMixin, ImplementationMixin, etc.)
