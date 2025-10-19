@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from coffee_maker.cli.notifications import NotificationDB
+from coffee_maker.orchestrator.architect_coordinator import ArchitectCoordinator
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,9 @@ class ContinuousWorkLoop:
 
         # Initialize agent management skill
         self.agent_mgmt = OrchestratorAgentManagementSkill()
+
+        # Initialize architect coordinator (spec backlog + worktree merging)
+        self.architect_coordinator = ArchitectCoordinator(spec_backlog_target=self.config.spec_backlog_target)
 
         # Set up signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._handle_shutdown)
@@ -164,6 +168,9 @@ class ContinuousWorkLoop:
 
         # Step 2.6: project_manager auto-planning (weekly)
         self._coordinate_planning()
+
+        # Step 2.7: Check for completed worktrees and notify architect for merge
+        self._check_worktree_merges()
 
         # Step 3: code_developer coordination (implementation)
         self._coordinate_code_developer()
@@ -376,6 +383,26 @@ class ContinuousWorkLoop:
         # Update last planning time
         self.current_state["last_planning"] = time.time()
         logger.info(f"✅ project_manager spawned for planning (PID: {result['result']['pid']})")
+
+    def _check_worktree_merges(self):
+        """
+        Check for completed worktrees and notify architect when merges are needed.
+
+        Logic:
+        1. Detect all roadmap-* branches with completed work (commits ahead of roadmap)
+        2. For each completed worktree:
+           a. Extract US number from commit message
+           b. Create high-priority notification for architect
+           c. Include merge command in notification
+        3. Architect receives notification and uses merge-worktree-branches skill
+        4. After merge, architect notifies orchestrator
+        5. Orchestrator can then clean up worktree
+        """
+        # Use ArchitectCoordinator to check and notify
+        notifications_sent = self.architect_coordinator.check_and_notify_merges()
+
+        if notifications_sent > 0:
+            logger.info(f"📬 Sent {notifications_sent} merge notification(s) to architect")
 
     def _coordinate_code_developer(self):
         """
