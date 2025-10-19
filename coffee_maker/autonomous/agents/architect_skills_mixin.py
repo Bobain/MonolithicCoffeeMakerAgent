@@ -538,26 +538,26 @@ Output JSON:
         """
         logger.info("🔍 Running architecture-reuse-check skill (MANDATORY)...")
 
-        # Load skill
-        from coffee_maker.autonomous.skill_loader import SkillNames, load_skill
-
-        priority_name = priority.get("name", "unknown")
-        priority_content = priority.get("content", "")
-
-        skill_prompt = load_skill(
-            SkillNames.ARCHITECTURE_REUSE_CHECK,
-            {
-                "PRIORITY_NAME": priority_name,
-                "PROBLEM_DESCRIPTION": priority_content[:1000],
-            },
-        )
-
-        # Execute skill with LLM
-        from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
-
-        claude = ClaudeCLIInterface()
-
         try:
+            # Load skill
+            from coffee_maker.autonomous.skill_loader import SkillNames, load_skill
+
+            priority_name = priority.get("name", "unknown")
+            priority_content = priority.get("content", "")
+
+            skill_prompt = load_skill(
+                SkillNames.ARCHITECTURE_REUSE_CHECK,
+                {
+                    "PRIORITY_NAME": priority_name,
+                    "PROBLEM_DESCRIPTION": priority_content[:1000],
+                },
+            )
+
+            # Execute skill with LLM
+            from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+
+            claude = ClaudeCLIInterface()
+
             result = claude.execute_prompt(skill_prompt, timeout=600)
             if not result or not getattr(result, "success", False):
                 logger.warning("Architecture reuse check failed - proceeding without it")
@@ -568,6 +568,9 @@ Output JSON:
 
             return reuse_analysis
 
+        except FileNotFoundError as e:
+            logger.warning(f"⚠️  architecture-reuse-check skill not found, proceeding without it: {e}")
+            return "## 🔍 Architecture Reuse Check\n\n⚠️  Skill not yet implemented\n"
         except Exception as e:
             logger.error(f"❌ Architecture reuse check error: {e}")
             return "## 🔍 Architecture Reuse Check\n\n⚠️  Error running skill\n"
