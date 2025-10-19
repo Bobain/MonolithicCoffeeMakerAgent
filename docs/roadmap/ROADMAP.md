@@ -296,7 +296,7 @@ See [US-106](#priority-22-us-106---code-reviewer-agent-for-quality-assurance-✅
 
 ---
 
-### PRIORITY 23: US-107 - Dependency Conflict Resolver Skill 📝 Planned
+### PRIORITY 24: US-107 - Dependency Conflict Resolver Skill 📝 Planned
 
 **Status**: 📝 Planned - 🔴 CRITICAL PRIORITY (Highest ROI - 40 hrs/month saved)
 
@@ -513,7 +513,7 @@ If REVIEW: architect asks user for decision
 
 ---
 
-### PRIORITY 24: US-108 - Parallel Agent Execution with Git Worktree 📝 Planned
+### PRIORITY 23: US-108 - Parallel Agent Execution with Git Worktree 📝 Planned
 
 **Status**: 📝 Planned - 🔴 CRITICAL PRIORITY (2x-3x Velocity Increase)
 
@@ -810,8 +810,8 @@ Clean up worktrees, continue with next tasks
 **CURRENT PRIORITY**: PRIORITY 20 - US-104 Orchestrator Continuous Agent Work Loop 📝 (HIGHEST PRIORITY)
 
 **NEXT PRIORITIES**:
-- PRIORITY 23 - US-107 Dependency Conflict Resolver Skill 🔴 (CRITICAL - Highest ROI: 40 hrs/month)
-- PRIORITY 24 - US-108 Parallel Agent Execution with Git Worktree 🔴 (CRITICAL - 2x-3x Velocity)
+- PRIORITY 23 - US-108 Parallel Agent Execution with Git Worktree 🔴 (CRITICAL - 2x-3x Velocity)
+- PRIORITY 24 - US-107 Dependency Conflict Resolver Skill 🔴 (CRITICAL - Highest ROI: 40 hrs/month)
 
 **RECENTLY COMPLETED**:
 - PRIORITY 22 - US-106 Code-Reviewer Agent ✅ (2025-10-19)
