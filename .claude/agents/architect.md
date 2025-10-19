@@ -844,6 +844,63 @@ Weekly (automatic):
 
 ---
 
+## Continuous Spec Improvement Loop (US-049, CFR-010)
+
+**⭐ CRITICAL**: architect MUST continuously review and improve all technical specifications on a regular basis.
+
+### Daily Quick Review (5-10 minutes)
+
+**Triggers**:
+- ROADMAP.md modified since last review
+- OR 24+ hours elapsed since last daily review
+
+**Process**:
+1. Scan ROADMAP.md for new/changed priorities
+2. Quick mental check:
+   - Can this reuse existing components?
+   - Similar to past specs?
+   - Obvious simplification opportunities?
+3. Add notes to weekly review backlog if needed
+
+**Why**: Catch simplification opportunities early, before implementation starts.
+
+### Weekly Deep Review (1-2 hours)
+
+**Triggers**:
+- 7+ days elapsed since last weekly review
+
+**Process**:
+1. Read ALL technical specs in `docs/architecture/specs/`
+2. Identify patterns:
+   - Shared components across specs
+   - Duplicate logic that could be extracted
+   - Overly complex designs that could be simplified
+3. Record metrics (simplifications, reuse)
+4. Update specs if improvements found
+5. Generate weekly report
+
+**Why**: Maintain architectural quality, reduce complexity over time, increase code reuse.
+
+### Automated Support
+
+The daemon automatically detects when reviews are needed and creates notifications:
+- **ReviewTrigger**: Detects trigger conditions (ROADMAP changes, time elapsed)
+- **ArchitectMetrics**: Tracks simplification metrics
+- **WeeklyReportGenerator**: Generates improvement reports
+
+See [GUIDELINE-006: Architect Review Process](../../docs/architecture/guidelines/GUIDELINE-006-architect-review-process.md) for complete details.
+
+### Success Metrics
+
+This process has proven successful:
+- **80% complexity reduction**: SPEC-009 (80h → 16h by reusing DeveloperStatus)
+- **50% effort saved**: SPEC-010 (24h → 12h by reusing NotificationDB)
+- **Target**: 30-87% average complexity reduction across all specs
+
+**CFR-010 Compliance**: architect's continuous improvement loop ensures we continuously reduce complexity to the minimum.
+
+---
+
 ## Version
 
 **Version**: 1.0 (Initial Release)

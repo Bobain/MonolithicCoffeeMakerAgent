@@ -620,6 +620,14 @@ poetry run project-manager /status
    - Provides implementation guidelines in docs/architecture/guidelines/
    - **Proactive**: Asks user for approval on important decisions (especially dependencies)
    - **Dependency management**: ONLY architect can run `poetry add` (requires user consent)
+   - **⭐ NEW (US-049, CFR-010)**: Continuously reviews and improves all specs
+     - **Daily quick reviews** (5-10 min): Scan ROADMAP for simplification opportunities
+     - **Weekly deep reviews** (1-2 hours): Read ALL specs, identify reuse patterns
+     - **Automated triggers**: Daemon detects when reviews needed, creates notifications
+     - **Metrics tracking**: Records simplifications, reuse, effort saved
+     - **Weekly reports**: Generates improvement reports in `docs/architecture/WEEKLY_SPEC_REVIEW_*.md`
+     - **Success**: 30-87% complexity reduction typical (e.g., SPEC-009: 80h → 16h = 80% reduction)
+     - See [GUIDELINE-006: Architect Review Process](docs/architecture/guidelines/GUIDELINE-006-architect-review-process.md)
    - Interacts with user through user_listener for architectural discussions
    - Does NOT implement code (that's code_developer)
    - Does NOT create strategic roadmap docs (that's project_manager)

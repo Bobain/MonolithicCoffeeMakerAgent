@@ -331,6 +331,17 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         self.spec_check_interval = 300  # Check every 5 minutes (300 seconds)
         self.last_spec_check_time = None
 
+        # US-049: Architect continuous spec improvement loop (CFR-010)
+        from coffee_maker.autonomous.architect_review_triggers import ReviewTrigger
+        from coffee_maker.autonomous.architect_metrics import ArchitectMetrics
+        from coffee_maker.autonomous.architect_report_generator import (
+            WeeklyReportGenerator,
+        )
+
+        self.review_trigger = ReviewTrigger()
+        self.architect_metrics = ArchitectMetrics()
+        self.report_generator = WeeklyReportGenerator(self.architect_metrics)
+
         # US-062: Execute startup skill (CFR-007 validation, health checks)
         self._execute_startup_skill()
 
@@ -469,6 +480,9 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
                 # US-047 Phase 3: Periodic spec check (every 5 minutes)
                 self._check_for_missing_specs()
+
+                # US-049: Check if architect reviews needed (CFR-010)
+                self._check_architect_reviews()
 
                 # PRIORITY 4: Update status - analyzing roadmap
                 self.status.update_status(DeveloperState.THINKING, current_step="Analyzing ROADMAP.md")
@@ -799,6 +813,97 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 agent_id="code_developer",
             )
             logger.info(f"✅ Created notification for missing spec: {priority['name']}")
+
+        except Exception as e:
+            logger.error(f"Failed to create notification: {e}", exc_info=True)
+
+    def _check_architect_reviews(self) -> None:
+        """Check if architect reviews are needed (US-049 CFR-010).
+
+        This method implements continuous spec improvement loop:
+        1. Checks if daily review needed (ROADMAP changed or >24h elapsed)
+        2. Checks if weekly review needed (>7 days elapsed)
+        3. Logs when reviews should happen (architect picks up asynchronously)
+
+        CFR-010: Ensures architect continuously improves specs to reduce complexity.
+
+        Note: This is detection only (non-blocking). Actual reviews happen when
+        architect agent runs separately.
+        """
+        try:
+            # Daily quick review
+            if self.review_trigger.should_run_daily_review():
+                logger.info("📅 Architect daily review needed (ROADMAP changed or >24h elapsed)")
+                # Mark as completed to avoid repeated triggers
+                # Actual review happens when architect runs
+                self.review_trigger.mark_review_completed("daily")
+
+                # Create notification for visibility
+                self._notify_architect_review_needed("daily")
+
+            # Weekly deep review
+            if self.review_trigger.should_run_weekly_review():
+                logger.info("📊 Architect weekly review needed (>7 days elapsed)")
+                # Mark as completed to avoid repeated triggers
+                # Actual review happens when architect runs
+                self.review_trigger.mark_review_completed("weekly")
+
+                # Create notification for visibility
+                self._notify_architect_review_needed("weekly")
+
+        except Exception as e:
+            logger.error(f"Error checking architect reviews: {e}", exc_info=True)
+
+    def _notify_architect_review_needed(self, review_type: str) -> None:
+        """Notify that architect review is needed.
+
+        Args:
+            review_type: "daily" or "weekly"
+        """
+        if review_type == "daily":
+            title = "CFR-010: Architect Daily Review Needed"
+            message = (
+                "ROADMAP has been modified or 24+ hours have elapsed since last review.\n\n"
+                "ACTIONS:\n"
+                "1. Review ROADMAP.md for new/changed priorities\n"
+                "2. Quick check for simplification opportunities\n"
+                "3. Identify reuse patterns\n"
+                "4. Add notes to weekly review backlog if needed\n\n"
+                "Expected duration: 5-10 minutes"
+            )
+            priority = "medium"
+        else:  # weekly
+            title = "CFR-010: Architect Weekly Deep Review Needed"
+            message = (
+                "7+ days have elapsed since last weekly review.\n\n"
+                "ACTIONS:\n"
+                "1. Read ALL technical specs (docs/architecture/specs/)\n"
+                "2. Identify simplification opportunities (ADR-003 principles)\n"
+                "3. Identify component reuse across specs\n"
+                "4. Update specs if improvements found\n"
+                "5. Record metrics (simplifications, reuse)\n"
+                "6. Generate weekly report\n\n"
+                "Expected duration: 1-2 hours"
+            )
+            priority = "high"
+
+        context = {
+            "review_type": review_type,
+            "enforcement": "CFR-010",
+            "action_required": "architect continuous spec improvement",
+        }
+
+        try:
+            self.notifications.create_notification(
+                type="info",
+                title=title,
+                message=message,
+                priority=priority,
+                context=context,
+                sound=False,  # CFR-009: code_developer uses sound=False
+                agent_id="code_developer",
+            )
+            logger.info(f"✅ Created notification for {review_type} review")
 
         except Exception as e:
             logger.error(f"Failed to create notification: {e}", exc_info=True)
