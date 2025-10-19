@@ -47,7 +47,8 @@ class SpecReviewReport:
             spec_dir: Path to specs directory (defaults to docs/architecture/specs)
         """
         self.roadmap_path = roadmap_path or ROADMAP_PATH
-        self.spec_dir = spec_dir or (self.roadmap_path.parent.parent / "architecture" / "specs")
+        # ROADMAP is at docs/ROADMAP.md, so parent is docs/, then we add architecture/specs
+        self.spec_dir = spec_dir or (self.roadmap_path.parent / "architecture" / "specs")
 
     def generate_report(self) -> str:
         """Generate markdown report of spec coverage.
@@ -133,8 +134,24 @@ class SpecReviewReport:
             True if spec exists, False otherwise
         """
         priority_name = priority.get("name", "")
+        priority_title = priority.get("title", "")
 
-        # Generate expected spec prefix
+        # Priority: Check if title contains US-XXX (e.g., "US-047 - Description")
+        # This handles cases like "PRIORITY 12: US-047 - ..." where spec is SPEC-047
+        if "US-" in priority_title:
+            # Extract US number from title
+            match = re.search(r"US-(\d+)", priority_title)
+            if match:
+                spec_number = match.group(1)
+                spec_prefix = f"SPEC-{spec_number}"
+                logger.debug(f"Checking {priority_name}: Found US-{spec_number} in title, checking {spec_prefix}")
+                if self._check_spec_prefix_exists(spec_prefix):
+                    logger.debug(f"  → Found spec for {priority_name}")
+                    return True
+                else:
+                    logger.debug(f"  → No spec found for {spec_prefix}")
+
+        # Generate expected spec prefix from priority name
         if priority_name.startswith("US-"):
             spec_number = priority_name.split("-")[1]
             spec_prefix = f"SPEC-{spec_number}"
@@ -148,11 +165,33 @@ class SpecReviewReport:
         else:
             return False
 
+        logger.debug(f"Checking {priority_name}: Fallback check for {spec_prefix}")
+        result = self._check_spec_prefix_exists(spec_prefix)
+        logger.debug(f"  → Result: {result}")
+        return result
+
+    def _check_spec_prefix_exists(self, spec_prefix: str) -> bool:
+        """Check if any spec file with the given prefix exists.
+
+        Args:
+            spec_prefix: Spec prefix like "SPEC-047" or "SPEC-012"
+
+        Returns:
+            True if spec file exists, False otherwise
+        """
         # Check if spec file exists
         if not self.spec_dir.exists():
+            logger.debug(f"Spec dir does not exist: {self.spec_dir}")
             return False
 
-        for spec_file in self.spec_dir.glob(f"{spec_prefix}-*.md"):
+        pattern = f"{spec_prefix}-*.md"
+        logger.debug(f"Looking for pattern: {pattern} in {self.spec_dir}")
+
+        found_files = list(self.spec_dir.glob(pattern))
+        logger.debug(f"Found files: {[f.name for f in found_files]}")
+
+        for spec_file in found_files:
+            logger.debug(f"Matched spec file: {spec_file.name}")
             return True
 
         return False
@@ -234,7 +273,7 @@ class SpecReviewReport:
             )
 
             for i, item in enumerate(missing, 1):
-                spec_prefix = self._get_spec_prefix(item["priority"])
+                spec_prefix = self._get_spec_prefix(item["priority"], item["title"])
                 lines.extend(
                     [
                         f"### {i}. {item['priority']}: {item['title']}",
@@ -261,15 +300,25 @@ class SpecReviewReport:
 
         return "\n".join(lines)
 
-    def _get_spec_prefix(self, priority_name: str) -> str:
-        """Extract spec prefix from priority name.
+    def _get_spec_prefix(self, priority_name: str, priority_title: str = "") -> str:
+        """Extract spec prefix from priority name and title.
 
         Args:
             priority_name: Priority name like "US-047" or "PRIORITY 9"
+            priority_title: Priority title, may contain "US-XXX - Description"
 
         Returns:
             Spec prefix like "SPEC-047" or "SPEC-009"
         """
+        # Priority: Check if title contains US-XXX (e.g., "US-047 - Description")
+        # This handles cases like "PRIORITY 12: US-047 - ..." where spec is SPEC-047
+        if "US-" in priority_title:
+            match = re.search(r"US-(\d+)", priority_title)
+            if match:
+                spec_number = match.group(1)
+                return f"SPEC-{spec_number}"
+
+        # Fall back to priority name
         if priority_name.startswith("US-"):
             spec_number = priority_name.split("-")[1]
             return f"SPEC-{spec_number}"
