@@ -279,7 +279,7 @@ class ContinuousWorkLoop:
         4. Target: Always have 2-3 specs ahead of code_developer
         """
         # Load all priorities from ROADMAP
-        priorities = self.roadmap_parser.load_priorities()
+        priorities = self.roadmap_parser.get_priorities()
 
         if not priorities:
             logger.debug("No priorities found in ROADMAP")
