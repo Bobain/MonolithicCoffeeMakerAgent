@@ -28,9 +28,8 @@ import re
 import signal
 import time
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from coffee_maker.cli.notifications import NotificationDB
 

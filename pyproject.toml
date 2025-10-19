@@ -41,6 +41,7 @@ pytest-xdist = "^3.8.0"
 radon = "^6.0.1"
 pylint = "^4.0.1"
 bandit = "^1.7.0"
+safety = "^3.6.2"
 
 
 [tool.poetry.scripts]
@@ -49,6 +50,7 @@ code-developer = "coffee_maker.autonomous.daemon_cli:main"
 user-listener = "coffee_maker.cli.user_listener:main"
 architect = "coffee_maker.cli.architect_cli:architect"
 code-reviewer = "coffee_maker.autonomous.code_reviewer:main"
+orchestrator = "coffee_maker.cli.orchestrator_cli:main"
 # OLD: team-daemon (DEPRECATED - use 'poetry run user-listener' instead)
 # The new orchestrator-based architecture is started automatically via user-listener
 
