@@ -220,7 +220,9 @@ class SpecHandler:
         impl_plan_content = implementation_plan or default_impl_plan
         testing_content = testing_strategy or default_testing
         problem_content = problem_statement or "TODO: What problem are we solving? Why is this important?"
-        user_story_content = user_story or f"As a developer, I want {title.lower()} so that the system is more effective."
+        user_story_content = (
+            user_story or f"As a developer, I want {title.lower()} so that the system is more effective."
+        )
         architecture_content = architecture or "TODO: Add architecture description"
 
         return f"""# SPEC-{us_number.zfill(3)}: {title}

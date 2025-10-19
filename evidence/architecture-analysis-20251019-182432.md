@@ -1,19 +1,19 @@
 # Architecture Analysis Report
 
-**Date**: 2025-10-19 18:14
+**Date**: 2025-10-19 18:24
 
 ## Complexity Metrics
 
-- **Average Complexity**: 3.77
+- **Average Complexity**: 3.83
 - **Max Complexity**: 42.00 (dependency_analyzer.py)
-- **Files Analyzed**: 243
+- **Files Analyzed**: 252
 
 ### Complexity Distribution
 
-- **A (1-5)**: 1650 functions
-- **B (6-10)**: 309 functions
-- **C (11-20)**: 98 functions
-- **D (21-50)**: 12 functions
+- **A (1-5)**: 1703 functions
+- **B (6-10)**: 326 functions
+- **C (11-20)**: 102 functions
+- **D (21-50)**: 15 functions
 
 ## Patterns Detected
 
@@ -33,4 +33,4 @@
 
 1. Simplify dependency_analyzer.py (complexity: 42.0) by reducing branching
 2. Continue using 25 good patterns (mixins, singletons, decorators)
-3. Review 12 high-complexity functions for refactoring opportunities
+3. Review 15 high-complexity functions for refactoring opportunities
