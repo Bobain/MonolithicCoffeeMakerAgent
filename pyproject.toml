@@ -46,8 +46,9 @@ pylint = "^4.0.1"
 project-manager = "coffee_maker.cli.roadmap_cli:main"
 code-developer = "coffee_maker.autonomous.daemon_cli:main"
 user-listener = "coffee_maker.cli.user_listener:main"
-team-daemon = "coffee_maker.cli.team_daemon_cli:team_daemon_cli"
 architect = "coffee_maker.cli.architect_cli:architect"
+# OLD: team-daemon (DEPRECATED - use 'poetry run user-listener' instead)
+# The new orchestrator-based architecture is started automatically via user-listener
 
 [tool.poetry.urls]
 "Homepage" = "https://github.com/Bobain/MonolithicCoffeeMakerAgent"
