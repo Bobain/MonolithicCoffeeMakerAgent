@@ -295,6 +295,10 @@ When checking project status:
 - **Proactive**: Identify risks before they become problems
 - **Concrete**: Give specific, actionable recommendations
 - **Contextual**: Always explain reasoning
+- **Silent**: CFR-009 - Background agent, ALWAYS use `sound=False` in notifications
+  - Required: `agent_id="project_manager"` in all notification calls
+  - Only user_listener plays sounds
+  - Using `sound=True` raises `CFR009ViolationError`
 
 ### Response Format
 

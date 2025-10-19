@@ -239,6 +239,55 @@ poetry run project-manager check-dependency pytest-timeout
 - [SPEC-070: Dependency Pre-Approval Matrix](docs/architecture/specs/SPEC-070-dependency-pre-approval-matrix.md)
 - [ADR-013: Dependency Pre-Approval Matrix](docs/architecture/decisions/ADR-013-dependency-pre-approval-matrix.md)
 
+### Sound Notifications (CFR-009) ⭐ NEW
+**CRITICAL**: ONLY user_listener can use sound notifications. All background agents MUST use `sound=False`.
+
+```python
+# ✅ CORRECT (code_developer, architect, project_manager, assistant - background agents)
+self.notifications.create_notification(
+    title="Task Complete",
+    message="PRIORITY 13 implemented successfully",
+    level="info",
+    sound=False,  # Silent for background work
+    agent_id="code_developer"
+)
+
+# ✅ CORRECT (user_listener only - UI agent)
+self.notifications.create_notification(
+    title="User Action Required",
+    message="Please review PR #123",
+    level="high",
+    sound=True,  # Sound allowed for user interaction
+    agent_id="user_listener"
+)
+
+# ❌ INCORRECT (background agent trying to play sound)
+self.notifications.create_notification(
+    title="Error Occurred",
+    message="Max retries reached",
+    level="error",
+    sound=True,  # ❌ RAISES CFR009ViolationError!
+    agent_id="code_developer"
+)
+```
+
+**Why This Is Critical**:
+- **User Experience**: Only UI agent (user_listener) should interrupt users with sounds
+- **Background Work**: Autonomous agents work silently in the background
+- **Role Clarity**: user_listener is the ONLY UI agent - only it should alert user with sound
+- **Noise Prevention**: Prevents notification fatigue from multiple agents
+
+**Enforcement**:
+- `NotificationDB.create_notification()` validates `agent_id` and `sound` parameters
+- Raises `CFR009ViolationError` if background agent tries `sound=True`
+- Backward compatible: `agent_id=None` skips validation (legacy code)
+- Comprehensive test coverage: 17 tests in `tests/unit/test_cfr009_enforcement.py`
+
+**References**:
+- [CFR-009 Documentation](docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md#cfr-009-only-user_listener-uses-sound-notifications)
+- [NotificationDB Implementation](coffee_maker/cli/notifications.py:303-309)
+- [US-048: Enforce CFR-009](docs/roadmap/ROADMAP.md#us-048-enforce-cfr-009-silent-background-agents)
+
 ---
 
 ## Key Workflows

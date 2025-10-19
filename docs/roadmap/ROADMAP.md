@@ -137,13 +137,21 @@ See [US-047](#us-047-enforce-cfr-008-architect-only-spec-creation) for full deta
 
 ---
 
-### PRIORITY 13: US-048 - Enforce CFR-009 Silent Background Agents 📝 Planned
+### PRIORITY 13: US-048 - Enforce CFR-009 Silent Background Agents ✅ Complete
 
-**Status**: 📝 Planned - HIGH PRIORITY (User Experience)
+**Status**: ✅ Complete (2025-10-19)
 
 See [US-048](#us-048-enforce-cfr-009-silent-background-agents) for full details.
 
 **Strategic Value**: User experience improvement, complements US-047
+
+**Implementation Summary**:
+- ✅ NotificationDB.create_notification() enforces CFR-009 (agent_id validation)
+- ✅ All daemon code uses sound=False and agent_id="code_developer"
+- ✅ Comprehensive test suite (17 tests passing)
+- ✅ CLAUDE.md updated with CFR-009 documentation
+- ✅ All agent .md files updated (code_developer, architect, project_manager, assistant, user_listener)
+- ✅ Background agents work silently, only user_listener plays sounds
 
 ---
 

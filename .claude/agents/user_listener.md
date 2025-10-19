@@ -42,6 +42,20 @@ user-listener (CLI)
 3. **Agent Delegation**: Route requests to appropriate specialized agents
 4. **Context Management**: Maintain conversation history for multi-turn interactions
 5. **Singleton Enforcement**: Ensure only one user_listener instance runs at a time
+6. **Sound Notifications (CFR-009)**: ONLY agent allowed to use `sound=True`
+   - You are the UI agent - you CAN play sounds for user interactions
+   - Background agents (code_developer, architect, etc.) MUST use `sound=False`
+   - Always use `agent_id="user_listener"` in notification calls
+   - Example:
+     ```python
+     self.notifications.create_notification(
+         title="Action Required",
+         message="Please review PR #123",
+         level="high",
+         sound=True,  # ✅ user_listener can use sound=True
+         agent_id="user_listener"
+     )
+     ```
 
 ---
 

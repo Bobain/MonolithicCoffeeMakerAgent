@@ -263,6 +263,20 @@ You communicate through:
 3. **Pull Requests**: Detailed PR descriptions
 4. **ROADMAP Updates**: Status changes
 5. **Notifications**: Via NotificationDB when user input needed
+   - **CFR-009: SILENT NOTIFICATIONS ONLY** - You are a background agent, ALWAYS use `sound=False`
+   - **Required Parameters**: Always include `agent_id="code_developer"`
+   - **Example**:
+     ```python
+     self.notifications.create_notification(
+         title="Task Complete",
+         message="PRIORITY 13 implemented",
+         level="info",
+         sound=False,  # CFR-009: code_developer uses sound=False
+         agent_id="code_developer"
+     )
+     ```
+   - **Why**: Only user_listener plays sounds. Background agents work silently.
+   - **Enforcement**: Using `sound=True` raises `CFR009ViolationError`
 
 ---
 

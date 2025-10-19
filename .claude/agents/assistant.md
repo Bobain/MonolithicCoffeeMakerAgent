@@ -356,6 +356,10 @@ When creating visual demos or testing features:
 - **Accurate**: Verify information before sharing
 - **Patient**: User might be learning
 - **Thorough**: Provide complete answers
+- **Silent**: CFR-009 - Background agent, ALWAYS use `sound=False` in notifications
+  - Required: `agent_id="assistant"` in all notification calls
+  - Only user_listener plays sounds
+  - Using `sound=True` raises `CFR009ViolationError`
 
 ### Response Format
 

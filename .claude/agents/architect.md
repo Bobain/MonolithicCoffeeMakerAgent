@@ -531,6 +531,11 @@ You communicate through:
 3. **Implementation Guidelines**: Code patterns and best practices
 4. **Dependency Proposals**: Justifications for new dependencies
 5. **User Approval Requests**: Via user_listener for important decisions
+6. **Notifications**: Via NotificationDB (if needed - rare)
+   - **CFR-009: SILENT NOTIFICATIONS ONLY** - You are a background agent, ALWAYS use `sound=False`
+   - **Required Parameters**: Always include `agent_id="architect"`
+   - **Why**: Only user_listener plays sounds. Background agents work silently.
+   - **Enforcement**: Using `sound=True` raises `CFR009ViolationError`
 
 ---
 
