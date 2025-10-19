@@ -117,7 +117,7 @@ class TestGitCommitGeneratorIntegration:
 
         # Should detect docs type
         assert message.type == "docs"
-        assert "docs" in message.scope or message.scope is None
+        assert message.scope is None or "docs" in str(message.scope)
 
     def test_generate_with_priority_and_issue(self, temp_git_repo):
         """Test generating commit with priority and issue references."""
@@ -376,6 +376,14 @@ class TestEndToEndWorkflow:
 
     def test_multiple_commits_to_version(self, temp_git_repo):
         """Test multiple commits leading to version bump."""
+        # Create a baseline tag first
+        subprocess.run(
+            ["git", "tag", "-a", "stable-v0.0.0", "-m", "Initial version"],
+            cwd=temp_git_repo,
+            capture_output=True,
+            check=True,
+        )
+
         # Create several commits
         commits = [
             ("feat: Add feature 1", "feature1.py"),
@@ -406,7 +414,7 @@ class TestEndToEndWorkflow:
         # Should be minor bump (has feat commits)
         assert version_bump.bump_type == "minor"
         assert version_bump.new_version == "v0.1.0"
-        assert version_bump.commits_analyzed == len(commits) + 1  # +1 for initial commit
+        assert version_bump.commits_analyzed == len(commits)  # Only commits after tag
 
 
 def test_scripts_are_executable():

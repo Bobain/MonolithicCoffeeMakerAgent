@@ -325,6 +325,10 @@ class GitWorkflowAutomation:
         if file_name in self.NEVER_STAGE:
             return True
 
+        # Check file extensions
+        if file_name.endswith(".key") or file_name.endswith(".pyc") or file_name.endswith(".db"):
+            return True
+
         # Check directory patterns
         if any(pattern in file_path for pattern in ["__pycache__", ".pytest_cache", ".idea", ".vscode"]):
             return True
