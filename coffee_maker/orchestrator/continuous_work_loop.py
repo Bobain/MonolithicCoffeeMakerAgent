@@ -299,30 +299,31 @@ class ContinuousWorkLoop:
         for priority in missing_specs[: self.config.spec_backlog_target]:
             # Check if already creating this spec
             if self._is_spec_in_progress(priority["number"]):
-                logger.debug(f"Spec for PRIORITY {priority['number']} already in progress")
+                logger.debug(f"Spec for {priority['name']} already in progress")
                 continue
 
             # Spawn architect to create spec
-            us_number = priority["us_number"]
-            logger.info(f"🏗️  Spawning architect for {us_number} spec creation")
+            priority_name = priority["name"]  # e.g., "US-047" or "PRIORITY 1"
+            priority_number = priority["number"]  # e.g., "047" or "1"
+            logger.info(f"🏗️  Spawning architect for {priority_name} spec creation")
 
             result = self.agent_mgmt.execute(
                 action="spawn_architect",
-                priority_number=priority["number"],
-                us_number=us_number,
+                priority_number=priority_number,
+                priority_name=priority_name,
                 task_type="create_spec",
                 auto_approve=True,
             )
 
             if result["error"]:
-                logger.error(f"Failed to spawn architect for {us_number}: {result['error']}")
+                logger.error(f"Failed to spawn architect for {priority_name}: {result['error']}")
                 continue
 
             # Track that we're working on this spec
             agent_info = result["result"]
-            self._track_spec_task(priority["number"], agent_info["task_id"], agent_info["pid"])
+            self._track_spec_task(priority_number, agent_info["task_id"], agent_info["pid"])
             logger.info(
-                f"✅ Architect spawned for {us_number} (PID: {agent_info['pid']}, task: {agent_info['task_id']})"
+                f"✅ Architect spawned for {priority_name} (PID: {agent_info['pid']}, task: {agent_info['task_id']})"
             )
 
     def _coordinate_refactoring_analysis(self):

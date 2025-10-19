@@ -74,15 +74,16 @@ class ArchitectCoordinator:
         Check if technical spec exists for priority.
 
         Args:
-            priority: Priority dict
+            priority: Priority dict from RoadmapParser with 'name' and 'number' keys
 
         Returns:
             True if spec exists, False otherwise
         """
-        # Extract US number (e.g., "US-104 - Title" → "104")
-        us_number = priority["us_number"].split("-")[1]
+        # Extract numeric part from priority
+        # priority["number"] is already the numeric part (e.g., "104" from "US-104" or "1" from "PRIORITY 1")
+        spec_number = priority["number"]
 
-        spec_pattern = f"SPEC-{us_number}-*.md"
+        spec_pattern = f"SPEC-{spec_number}-*.md"
         spec_path = Path("docs/architecture/specs")
 
         return len(list(spec_path.glob(spec_pattern))) > 0
