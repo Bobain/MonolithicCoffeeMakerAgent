@@ -32,6 +32,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 from coffee_maker.cli.notifications import NotificationDB
 from coffee_maker.orchestrator.architect_coordinator import ArchitectCoordinator
 
@@ -92,6 +93,9 @@ class ContinuousWorkLoop:
 
         # Initialize agent management skill
         self.agent_mgmt = OrchestratorAgentManagementSkill()
+
+        # Initialize roadmap parser for all ROADMAP formats
+        self.roadmap_parser = RoadmapParser()
 
         # Initialize architect coordinator (spec backlog + worktree merging)
         self.architect_coordinator = ArchitectCoordinator(spec_backlog_target=self.config.spec_backlog_target)
@@ -269,25 +273,29 @@ class ContinuousWorkLoop:
         Coordinate architect to maintain spec backlog.
 
         Logic:
-        1. Get next 5 PLANNED priorities
-        2. Count missing specs
-        3. If missing > 0: spawn architect instances to create specs
+        1. Use RoadmapParser to get ALL priorities (handles all ROADMAP formats)
+        2. Use ArchitectCoordinator to identify missing specs
+        3. Spawn architect instances for first N missing specs (parallel execution)
         4. Target: Always have 2-3 specs ahead of code_developer
         """
-        if not self.roadmap_cache:
+        # Load all priorities from ROADMAP
+        priorities = self.roadmap_parser.load_priorities()
+
+        if not priorities:
+            logger.debug("No priorities found in ROADMAP")
             return
 
-        # Get next 5 planned priorities
-        planned_priorities = [p for p in self.roadmap_cache["priorities"] if p["status"] == "📝"][:5]
-
-        # Count missing specs
-        missing_specs = [p for p in planned_priorities if not p["has_spec"]]
+        # Use ArchitectCoordinator to get all missing specs
+        missing_specs = self.architect_coordinator.get_missing_specs(priorities)
 
         if not missing_specs:
             logger.debug("No missing specs, architect idle")
             return
 
-        # Prioritize: Create specs for first 3 missing
+        # Log how many specs are missing
+        logger.info(f"📋 Found {len(missing_specs)} priorities without specs")
+
+        # Prioritize: Create specs for first N missing (spec backlog target)
         for priority in missing_specs[: self.config.spec_backlog_target]:
             # Check if already creating this spec
             if self._is_spec_in_progress(priority["number"]):
@@ -295,22 +303,27 @@ class ContinuousWorkLoop:
                 continue
 
             # Spawn architect to create spec
-            logger.info(f"🏗️  Spawning architect for PRIORITY {priority['number']} spec creation")
+            us_number = priority["us_number"]
+            logger.info(f"🏗️  Spawning architect for {us_number} spec creation")
 
             result = self.agent_mgmt.execute(
                 action="spawn_architect",
                 priority_number=priority["number"],
+                us_number=us_number,
                 task_type="create_spec",
                 auto_approve=True,
             )
 
             if result["error"]:
-                logger.error(f"Failed to spawn architect: {result['error']}")
+                logger.error(f"Failed to spawn architect for {us_number}: {result['error']}")
                 continue
 
             # Track that we're working on this spec
             agent_info = result["result"]
             self._track_spec_task(priority["number"], agent_info["task_id"], agent_info["pid"])
+            logger.info(
+                f"✅ Architect spawned for {us_number} (PID: {agent_info['pid']}, task: {agent_info['task_id']})"
+            )
 
     def _coordinate_refactoring_analysis(self):
         """
