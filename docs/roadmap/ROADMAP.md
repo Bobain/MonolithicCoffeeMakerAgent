@@ -264,6 +264,16 @@ See [US-105](#priority-21-us-105---development-acceleration-insights-dashboard-�
 
 ---
 
+### PRIORITY 22: US-106 - Code-Reviewer Agent for Quality Assurance 📝 Planned
+
+**Status**: 📝 Planned - HIGH PRIORITY (User Request - Quality Loop)
+
+See [US-106](#priority-22-us-106---code-reviewer-agent-for-quality-assurance-📝-planned) for full details.
+
+**Strategic Value**: Automated code review with architect feedback loop to improve code quality
+
+---
+
 **Deliverables Completed** (PRIORITY 19):
 - ✅ Code Forensics skill (code-searcher) - 85% time savings
 - ✅ Design System skill (ux-design-expert) - 90% time savings
@@ -30252,5 +30262,345 @@ Without visibility into development metrics and bottlenecks, we cannot:
 - Integration tests with real data
 - UI tests for dashboard interactions
 - Performance tests (dashboard loads in <2s)
+
+---
+
+
+---
+
+## US-106: Code-Reviewer Agent for Quality Assurance
+
+**Priority**: PRIORITY 22 (HIGH - User Request - Quality Loop)
+
+**Status**: 📝 Planned
+
+**Created**: 2025-10-19
+
+**Estimated Effort**: 3-4 days
+
+**User Story**:
+As the system, I want a code-reviewer agent that reviews all code modified by code_developer and writes conclusions for architect to read, so that architect can request implementation changes via technical spec updates, ensuring continuous quality improvement.
+
+**Problem Statement**:
+Currently, code_developer implements features without automated quality review:
+- No systematic code review process
+- Architecture violations may go unnoticed
+- Best practices not consistently enforced
+- architect only sees code issues if manually checking
+- No feedback loop for continuous improvement
+
+**Agent Role**: code-reviewer
+
+**Agent Responsibilities**:
+
+1. **Automated Code Review**:
+   - Monitor commits from code_developer
+   - Review changed files automatically
+   - Apply quality checks (architecture, patterns, best practices)
+   - Generate review reports
+
+2. **Quality Analysis**:
+   - Architecture compliance (follows specs, ADRs, guidelines)
+   - Code patterns (DRY, SOLID, design patterns)
+   - Security vulnerabilities
+   - Performance concerns
+   - Test coverage adequacy
+   - Documentation completeness
+
+3. **Architect Communication**:
+   - Write review conclusions to `docs/code-reviews/REVIEW-{date}-{commit}.md`
+   - Highlight issues requiring architect attention
+   - Suggest spec improvements based on implementation learnings
+   - Track unresolved issues
+
+4. **Feedback Loop**:
+   - architect reads reviews
+   - architect updates technical specs with improvements
+   - code_developer implements changes
+   - code-reviewer verifies fixes
+
+**Workflow**:
+
+```
+1. code_developer commits code
+   ↓
+2. code-reviewer (triggered automatically):
+   - git diff to see changes
+   - Analyze changed files
+   - Run quality checks
+   - Generate review report
+   ↓
+3. code-reviewer writes to docs/code-reviews/REVIEW-{commit}.md:
+   - Summary of changes
+   - Quality score (0-100)
+   - Issues found (Critical/High/Medium/Low)
+   - Architecture compliance assessment
+   - Recommendations for architect
+   ↓
+4. code-reviewer notifies architect (high-priority notification)
+   ↓
+5. architect reads review:
+   - If OK: Approves (no action)
+   - If issues: Updates technical spec with corrections
+   - Creates follow-up task for code_developer
+   ↓
+6. code_developer implements corrections
+   ↓
+7. code-reviewer re-reviews (verification cycle)
+```
+
+**Review Report Format** (`docs/code-reviews/REVIEW-{commit}.md`):
+
+```markdown
+# Code Review Report
+
+**Commit**: abc1234
+**Date**: 2025-10-19
+**Reviewer**: code-reviewer
+**Files Changed**: 5 files (+230, -45)
+**Review Duration**: 2.3 minutes
+
+---
+
+## Summary
+
+code_developer implemented US-047 (Architect-Only Spec Creation). Overall quality is GOOD with 2 medium issues requiring attention.
+
+**Quality Score**: 85/100
+
+---
+
+## Issues Found
+
+### 🔴 CRITICAL (0)
+None
+
+### 🟠 HIGH (0)
+None
+
+### 🟡 MEDIUM (2)
+
+1. **Architecture Concern** - `daemon_spec_manager.py:45`
+   - Missing error handling for CFR-011 violations
+   - Could cause daemon crash if architect not compliant
+   - **Recommendation**: Add try-except with graceful degradation
+   - **Severity**: Medium
+   - **Effort**: 15 minutes
+
+2. **Test Coverage** - `daemon_spec_manager.py`
+   - New _ensure_technical_spec() method not fully tested
+   - Edge cases (architect offline, spec file locked) not covered
+   - **Recommendation**: Add 3 more test cases
+   - **Severity**: Medium
+   - **Effort**: 30 minutes
+
+### ⚪ LOW (1)
+
+1. **Documentation** - Missing docstring for _notify_cfr_011_violation()
+   - **Recommendation**: Add docstring with args and return value
+   - **Severity**: Low
+   - **Effort**: 5 minutes
+
+---
+
+## Architecture Compliance
+
+✅ **PASS** - Follows SPEC-047 correctly
+✅ **PASS** - CFR-008 enforced as specified
+✅ **PASS** - Uses NotificationDB with sound=False (CFR-009 compliant)
+⚠️  **WARNING** - Error handling could be more robust
+
+---
+
+## Code Patterns
+
+✅ Follows mixin pattern correctly
+✅ Uses type hints consistently
+✅ Error messages are clear
+⚠️  Missing some edge case handling
+
+---
+
+## Security
+
+✅ No security vulnerabilities detected
+✅ No secrets in code
+✅ Input validation present
+
+---
+
+## Performance
+
+✅ No obvious performance issues
+✅ Efficient file operations
+✅ No blocking calls in daemon
+
+---
+
+## Recommendations for architect
+
+1. **Update SPEC-047**:
+   - Add error handling requirements for CFR-011 violations
+   - Specify behavior when architect is offline/unavailable
+   - Define recovery strategy for spec creation failures
+
+2. **Create GUIDELINE**:
+   - Error handling patterns for CFR enforcement
+   - Template for graceful degradation scenarios
+
+3. **Follow-up Task**:
+   - Create task for code_developer to add error handling
+   - Estimate: 45 minutes
+   - Priority: Medium
+
+---
+
+## Overall Assessment
+
+**APPROVED WITH MINOR CHANGES**
+
+Implementation is solid and follows the spec correctly. The 2 medium issues should be addressed in a follow-up commit. No blocking issues.
+
+**Next Steps**:
+1. architect reviews this report
+2. architect creates follow-up task if needed
+3. code_developer addresses issues
+4. code-reviewer re-reviews after fix
+
+---
+
+**Review Confidence**: HIGH
+**Reviewed Lines**: 230 (100% coverage)
+**Automated Checks**: 15/15 passed
+```
+
+**Acceptance Criteria**:
+
+✅ **Agent Infrastructure**:
+- [ ] code-reviewer agent created (.claude/agents/code-reviewer.md)
+- [ ] Agent registered in agent_registry with singleton enforcement
+- [ ] Agent integrated with orchestrator
+- [ ] CLI command: `poetry run code-reviewer review <commit>`
+
+✅ **Review Automation**:
+- [ ] Triggered automatically after code_developer commits
+- [ ] git diff analysis to identify changed files
+- [ ] Static analysis integration (radon, mypy, bandit)
+- [ ] Architecture compliance checks against specs/ADRs
+- [ ] Test coverage analysis (pytest --cov)
+
+✅ **Review Reports**:
+- [ ] Generated in docs/code-reviews/REVIEW-{commit}.md
+- [ ] Markdown format with sections (Summary, Issues, Recommendations)
+- [ ] Quality score calculation (0-100)
+- [ ] Issue categorization (Critical/High/Medium/Low)
+- [ ] Actionable recommendations for architect
+
+✅ **Architect Integration**:
+- [ ] High-priority notifications to architect when reviews ready
+- [ ] architect can approve/request changes
+- [ ] architect can update specs based on review findings
+- [ ] Follow-up task creation workflow
+
+✅ **Verification Cycle**:
+- [ ] code-reviewer re-reviews after fixes
+- [ ] Track issue resolution status
+- [ ] Archive reviews after approval
+
+✅ **Quality Checks**:
+- [ ] Architecture compliance (follows SPEC-*, ADR-*, GUIDELINE-*)
+- [ ] Code patterns (DRY, SOLID, design patterns)
+- [ ] Security (bandit, no secrets, input validation)
+- [ ] Performance (no obvious bottlenecks)
+- [ ] Test coverage (>80% for new code)
+- [ ] Documentation (docstrings, comments, README updates)
+
+**Technical Implementation**:
+
+1. **CodeReviewerAgent** (`coffee_maker/autonomous/code_reviewer.py`):
+   ```python
+   class CodeReviewerAgent:
+       def review_commit(self, commit_sha: str) -> ReviewReport
+       def analyze_files(self, changed_files: List[str]) -> List[Issue]
+       def check_architecture_compliance(self, spec_refs: List[str]) -> bool
+       def generate_report(self, analysis: Analysis) -> str
+       def notify_architect(self, report: ReviewReport) -> None
+   ```
+
+2. **Static Analysis Integration**:
+   - radon (complexity metrics)
+   - mypy (type checking)
+   - bandit (security)
+   - pytest --cov (test coverage)
+
+3. **Architecture Compliance Checker**:
+   - Parse SPEC-*, ADR-*, GUIDELINE-* files
+   - Identify requirements for changed modules
+   - Verify implementation matches specs
+
+4. **Report Generator** (`coffee_maker/autonomous/review_report_generator.py`):
+   - Markdown formatting
+   - Issue categorization
+   - Recommendation generation
+   - Quality score calculation
+
+5. **Orchestrator Integration**:
+   - Hook into code_developer post-commit
+   - Trigger code-reviewer automatically
+   - Queue architect notification
+
+**Deliverables**:
+
+- [ ] CodeReviewerAgent class with all review logic
+- [ ] Static analysis integration
+- [ ] Architecture compliance checker
+- [ ] Review report generator
+- [ ] docs/code-reviews/ directory structure
+- [ ] Orchestrator integration (post-commit hook)
+- [ ] architect notification workflow
+- [ ] CLI commands for manual reviews
+- [ ] Unit tests (20+ tests)
+- [ ] Integration tests (code_developer → code-reviewer → architect)
+- [ ] Documentation (CLAUDE.md, code-reviewer.md)
+
+**Example Review Scenarios**:
+
+1. **Clean Code** → Quality 95/100 → Approved → No action needed
+2. **Minor Issues** → Quality 80/100 → Approved with notes → Optional follow-up
+3. **Medium Issues** → Quality 65/100 → Request changes → architect creates task
+4. **Critical Issues** → Quality 40/100 → Block merge → Immediate fix required
+
+**Benefits**:
+
+- **Quality Assurance**: Catch issues before they become problems
+- **Continuous Improvement**: Feedback loop improves specs and code
+- **architect Efficiency**: Only review flagged issues, not all code
+- **Documentation**: Review history shows quality trends over time
+- **Learning**: code_developer learns from reviews, improves over time
+
+**Integration with Existing Agents**:
+
+```
+code_developer → Implements → Commits
+       ↓
+code-reviewer → Reviews → Reports
+       ↓
+architect → Reads → Updates Specs (if needed)
+       ↓
+code_developer → Fixes → Re-commits
+       ↓
+code-reviewer → Re-reviews → Verifies → Approves
+```
+
+**Dependencies**:
+- US-072 (Orchestrator) ✅ Complete
+- architect agent ✅ Exists
+- code_developer agent ✅ Exists
+
+**Testing**:
+- Unit tests for review logic
+- Integration tests for full workflow
+- Mock reviews with known code quality
+- Performance tests (review <5 min for typical commit)
 
 ---
