@@ -361,6 +361,63 @@ class BaseAgent(ABC):
 
         return messages
 
+    def _read_messages(self, type_filter: Optional[str] = None, limit: int = 10) -> List[Dict]:
+        """Read messages from MessageQueue (SQLite-based).
+
+        This method provides a unified interface for agents to read messages
+        from the orchestrator's message queue system. It filters by recipient
+        (this agent) and optionally by message type.
+
+        Args:
+            type_filter: Optional message type to filter by
+            limit: Maximum number of messages to read (default: 10)
+
+        Returns:
+            List of message dictionaries
+
+        Example:
+            >>> messages = self._read_messages(type_filter="commit_review_request")
+            >>> for msg in messages:
+            ...     self._handle_message(msg)
+        """
+        from coffee_maker.autonomous.message_queue import MessageQueue
+
+        messages = []
+        queue = MessageQueue()
+
+        try:
+            # Read up to 'limit' messages for this agent
+            for _ in range(limit):
+                message = queue.get(recipient=self.agent_type.value, timeout=0.1)
+
+                if message is None:
+                    break  # No more messages
+
+                # Filter by type if requested
+                if type_filter and message.type != type_filter:
+                    continue
+
+                # Convert Message object to dict for compatibility
+                message_dict = {
+                    "type": message.type,
+                    "sender": message.sender,
+                    "recipient": message.recipient,
+                    "payload": message.payload,
+                    "priority": message.priority,
+                    "task_id": message.task_id,
+                    "timestamp": message.timestamp,
+                }
+
+                messages.append(message_dict)
+
+                # Mark message as started (will be marked complete after handling)
+                queue.mark_started(message.task_id, agent=self.agent_type.value)
+
+        except Exception as e:
+            logger.error(f"Error reading messages from queue: {e}")
+
+        return messages
+
     def _write_status(self, error: Optional[str] = None):
         """Write status file with current state (heartbeat).
 
