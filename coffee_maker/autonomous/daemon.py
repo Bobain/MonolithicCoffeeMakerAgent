@@ -937,12 +937,14 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
     def _validate_cfr_013(self) -> bool:
         """Validate CFR-013: Daemon must be on roadmap branch.
 
-        CFR-013 requires ALL agents to work ONLY on the 'roadmap' branch.
+        CFR-013 requires ALL agents to work ONLY on the 'roadmap' branch or
+        roadmap-based worktree branches (roadmap-*) for parallel execution.
+
         This method validates that the daemon is on the correct branch before
         starting any operations.
 
         Returns:
-            True if on roadmap branch, False otherwise
+            True if on roadmap branch or roadmap-* worktree, False otherwise
 
         Raises:
             No exceptions - logs error and returns False for graceful failure
@@ -950,19 +952,24 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         try:
             current_branch = self.git.get_current_branch()
 
-            if current_branch != "roadmap":
+            # Allow 'roadmap' or 'roadmap-*' for worktree parallel execution
+            if current_branch != "roadmap" and not current_branch.startswith("roadmap-"):
                 logger.error("")
                 logger.error("=" * 60)
                 logger.error("CFR-013 VIOLATION: Daemon must work on 'roadmap' branch ONLY")
                 logger.error("=" * 60)
                 logger.error(f"Current branch: {current_branch}")
-                logger.error(f"Expected branch: roadmap")
+                logger.error(f"Expected branch: roadmap or roadmap-*")
                 logger.error("")
                 logger.error("CFR-013 requires ALL agents to work on the roadmap branch.")
                 logger.error("This ensures:")
                 logger.error("  - Single source of truth")
                 logger.error("  - No merge conflicts between feature branches")
                 logger.error("  - All work immediately visible to team")
+                logger.error("")
+                logger.error("Parallel execution:")
+                logger.error("  - Worktree branches (roadmap-*) are allowed")
+                logger.error("  - Orchestrator manages worktree creation/cleanup")
                 logger.error("")
                 logger.error("To fix:")
                 logger.error("  1. git checkout roadmap")
@@ -971,7 +978,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 logger.error("")
                 return False
 
-            logger.info("✅ CFR-013 compliant: On 'roadmap' branch")
+            if current_branch.startswith("roadmap-"):
+                logger.info(f"✅ CFR-013 compliant: On worktree branch '{current_branch}'")
+            else:
+                logger.info("✅ CFR-013 compliant: On 'roadmap' branch")
             return True
 
         except Exception as e:
