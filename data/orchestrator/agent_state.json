@@ -1,0 +1,45 @@
+{
+  "active_agents": {
+    "14993": {
+      "pid": 14993,
+      "agent_type": "architect",
+      "task_id": "spec-20",
+      "task_type": "create_spec",
+      "priority_number": 20,
+      "command": "poetry run architect create-spec --priority=20 --auto-approve",
+      "started_at": "2025-10-19T19:43:20.588402",
+      "status": "running"
+    },
+    "14994": {
+      "pid": 14994,
+      "agent_type": "architect",
+      "task_id": "spec-21",
+      "task_type": "create_spec",
+      "priority_number": 21,
+      "command": "poetry run architect create-spec --priority=21 --auto-approve",
+      "started_at": "2025-10-19T19:43:20.591335",
+      "status": "running"
+    },
+    "14995": {
+      "pid": 14995,
+      "agent_type": "architect",
+      "task_id": "spec-20",
+      "task_type": "create_spec",
+      "priority_number": 20,
+      "command": "poetry run architect create-spec --priority=20 --auto-approve",
+      "started_at": "2025-10-19T19:43:20.595908",
+      "status": "running"
+    },
+    "14996": {
+      "pid": 14996,
+      "agent_type": "architect",
+      "task_id": "spec-21",
+      "task_type": "create_spec",
+      "priority_number": 21,
+      "command": "poetry run architect create-spec --priority=21 --auto-approve",
+      "started_at": "2025-10-19T19:43:20.598760",
+      "status": "running"
+    }
+  },
+  "completed_agents": []
+}

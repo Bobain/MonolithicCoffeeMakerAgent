@@ -128,6 +128,27 @@ def status():
 
 
 @orchestrator.command()
+@click.option("--refresh", default=3, help="Refresh interval in seconds (default: 3)")
+def dashboard(refresh):
+    """Launch real-time dashboard showing agent activities.
+
+    Displays:
+    - System overview (uptime, health, ROADMAP status)
+    - Active agents table (architect, code_developer, project_manager)
+    - Work queue (next priorities)
+    - Success metrics
+
+    Example:
+        poetry run orchestrator dashboard
+        poetry run orchestrator dashboard --refresh 5
+    """
+    from coffee_maker.orchestrator.dashboard import OrchestratorDashboard
+
+    dashboard_instance = OrchestratorDashboard()
+    dashboard_instance.run(refresh_interval=refresh)
+
+
+@orchestrator.command()
 def stop():
     """Stop orchestrator gracefully.
 
