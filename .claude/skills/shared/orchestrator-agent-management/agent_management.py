@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import subprocess
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -81,14 +82,18 @@ class OrchestratorAgentManagementSkill:
             return {"error": str(e), "result": None}
 
     def _spawn_architect(
-        self, priority_number: int, task_type: str = "create_spec", auto_approve: bool = True, **kwargs
+        self,
+        priority_number: Optional[int] = None,
+        task_type: str = "create_spec",
+        auto_approve: bool = True,
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Spawn architect instance for spec creation.
 
         Args:
-            priority_number: Priority number to work on
-            task_type: Type of task (create_spec, review_spec, etc.)
+            priority_number: Priority number to work on (optional for some task types)
+            task_type: Type of task (create_spec, refactoring_analysis, etc.)
             auto_approve: Auto-approve architect decisions
 
         Returns:
@@ -98,6 +103,8 @@ class OrchestratorAgentManagementSkill:
         cmd = ["poetry", "run", "architect"]
 
         if task_type == "create_spec":
+            if priority_number is None:
+                raise ValueError("priority_number required for create_spec task type")
             cmd.extend(["create-spec", f"--priority={priority_number}"])
 
         if auto_approve:
@@ -113,7 +120,11 @@ class OrchestratorAgentManagementSkill:
         )
 
         # Track agent
-        task_id = f"spec-{priority_number}"
+        if priority_number:
+            task_id = f"spec-{priority_number}"
+        else:
+            task_id = f"{task_type}-{int(time.time())}"
+
         agent_info = {
             "pid": process.pid,
             "agent_type": "architect",
@@ -128,7 +139,10 @@ class OrchestratorAgentManagementSkill:
         self.state["active_agents"][str(process.pid)] = agent_info
         self._save_state()
 
-        logger.info(f"Spawned architect (PID {process.pid}) for PRIORITY {priority_number}")
+        if priority_number:
+            logger.info(f"Spawned architect (PID {process.pid}) for PRIORITY {priority_number}")
+        else:
+            logger.info(f"Spawned architect (PID {process.pid}) for {task_type}")
 
         return {"error": None, "result": agent_info}
 
