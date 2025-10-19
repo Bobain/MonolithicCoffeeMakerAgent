@@ -513,6 +513,284 @@ If REVIEW: architect asks user for decision
 
 ---
 
+### PRIORITY 24: US-108 - Parallel Agent Execution with Git Worktree 📝 Planned
+
+**Status**: 📝 Planned - 🔴 CRITICAL PRIORITY (2x-3x Velocity Increase)
+
+See [US-108](#us-108-parallel-agent-execution-with-git-worktree) for full details.
+
+**Strategic Value**: Enable multiple code_developer instances to work in parallel, increasing velocity by 75-150%
+
+**Created**: 2025-10-19
+
+**Estimated Effort**: 3-4 days
+
+**User Story**:
+As orchestrator, I want the ability to spawn multiple agent instances using git worktree so that I can run multiple code_developer instances in parallel on technically separated tasks, dramatically increasing development velocity.
+
+**Problem Statement**:
+Currently, only ONE instance of each agent can run at a time (singleton enforcement):
+- One code_developer works on one task sequentially
+- Multiple parallelizable tasks sit idle in the ROADMAP
+- The Acceleration Dashboard shows 12+ parallelizable tasks available
+- Estimated velocity increase: +75% with 2nd developer (from dashboard analysis)
+- No way to leverage parallel work even when tasks are independent
+
+**Solution**:
+Use git worktree to create separate working directories for parallel agent instances:
+```bash
+# Main workspace: /path/to/MonolithicCoffeeMakerAgent (branch: roadmap)
+# Worktree 1: /path/to/MonolithicCoffeeMakerAgent-wt1 (branch: feature/us-065)
+# Worktree 2: /path/to/MonolithicCoffeeMakerAgent-wt2 (branch: feature/us-066)
+```
+
+**Agent Role**: orchestrator (skill)
+
+**Skill Responsibilities**:
+
+1. **Task Separation Analysis**:
+   - Ask architect to identify technically separated tasks
+   - Ensure tasks don't have file conflicts
+   - Verify tasks are truly independent (no shared files)
+   - Prioritize high-value parallelizable work
+
+2. **Git Worktree Management**:
+   - Create new worktrees for each parallel task
+   - Assign unique branch names (feature/us-XXX)
+   - Track active worktrees and their assigned tasks
+   - Clean up completed worktrees
+
+3. **Agent Instance Spawning**:
+   - Spawn code_developer in separate worktree directory
+   - Assign specific task from ROADMAP
+   - Monitor progress of each instance
+   - Handle errors and failures gracefully
+
+4. **Coordination & Merging**:
+   - Track completion of each instance
+   - Merge completed work back to roadmap branch
+   - Resolve conflicts if any
+   - Update ROADMAP status for all completed tasks
+
+5. **Resource Management**:
+   - Limit max concurrent instances (default: 2-3)
+   - Monitor system resources (CPU, memory)
+   - Scale down if resources constrained
+   - Prevent too many parallel tasks
+
+**Workflow**:
+
+```bash
+# 1. Orchestrator identifies work to parallelize
+orchestrator: "I see 12 parallelizable tasks. Let me ask architect..."
+
+# 2. Architect analyzes task separation
+architect task-separator --identify-parallel
+# Output: US-065 and US-066 are technically separated (no file conflicts)
+
+# 3. Orchestrator spawns parallel instances
+orchestrator parallel-execution --spawn \
+  --task1 "US-065" --task2 "US-066"
+
+# Creates:
+# Worktree 1: MonolithicCoffeeMakerAgent-wt1 (feature/us-065)
+#   - code_developer instance working on US-065
+# Worktree 2: MonolithicCoffeeMakerAgent-wt2 (feature/us-066)
+#   - code_developer instance working on US-066
+
+# 4. Both instances work independently
+# Worktree 1: Implements US-065, runs tests, commits
+# Worktree 2: Implements US-066, runs tests, commits
+
+# 5. Orchestrator monitors progress
+orchestrator parallel-execution --status
+# Worktree 1: 80% complete (testing phase)
+# Worktree 2: 60% complete (implementation phase)
+
+# 6. Instances complete, orchestrator merges
+# Worktree 1: COMPLETE ✅
+# Orchestrator: Merging feature/us-065 → roadmap
+# Worktree 2: COMPLETE ✅
+# Orchestrator: Merging feature/us-066 → roadmap
+
+# 7. Clean up worktrees
+git worktree remove MonolithicCoffeeMakerAgent-wt1
+git worktree remove MonolithicCoffeeMakerAgent-wt2
+```
+
+**Benefits**:
+
+- **Velocity Increase**: +75-150% development speed (2-3x with parallel work)
+- **Better Resource Utilization**: Leverage idle CPU time
+- **Faster Delivery**: Complete multiple tasks simultaneously
+- **Dynamic Scaling**: Spawn instances as needed, remove when done
+- **Smart Coordination**: architect ensures tasks are truly independent
+
+**Acceptance Criteria**:
+
+✅ **Architect Integration**:
+- [ ] Create task-separator skill for architect
+- [ ] Analyze ROADMAP for technically separated tasks
+- [ ] Verify no file conflicts between tasks
+- [ ] Generate separation report with confidence score
+
+✅ **Worktree Management**:
+- [ ] Create git worktrees programmatically
+- [ ] Assign unique branch names (feature/us-XXX)
+- [ ] List active worktrees
+- [ ] Remove worktrees when complete
+
+✅ **Agent Instance Spawning**:
+- [ ] Spawn code_developer in worktree directory
+- [ ] Pass task assignment via environment variable
+- [ ] Monitor instance status (running, complete, failed)
+- [ ] Handle instance crashes gracefully
+
+✅ **Orchestrator Coordination**:
+- [ ] Track multiple instances simultaneously
+- [ ] Merge completed work back to roadmap branch
+- [ ] Resolve merge conflicts (or abort if complex)
+- [ ] Update ROADMAP status for all tasks
+
+✅ **Resource Management**:
+- [ ] Limit max concurrent instances (configurable, default: 2)
+- [ ] Monitor system resources (psutil)
+- [ ] Scale down if CPU/memory constrained
+- [ ] Prevent resource exhaustion
+
+✅ **Safety & Error Handling**:
+- [ ] Verify singleton enforcement within each worktree
+- [ ] Handle failed merges gracefully
+- [ ] Clean up on orchestrator shutdown
+- [ ] Rollback on critical errors
+
+**Technical Implementation**:
+
+1. **WorktreeManager** (`coffee_maker/autonomous/worktree_manager.py`):
+   ```python
+   class WorktreeManager:
+       def create_worktree(self, task_id: str, branch_name: str) -> Path
+       def list_worktrees(self) -> List[WorktreeInfo]
+       def remove_worktree(self, worktree_path: Path) -> None
+       def get_worktree_status(self, worktree_path: Path) -> WorktreeStatus
+   ```
+
+2. **ParallelExecutor** (`coffee_maker/autonomous/parallel_executor.py`):
+   ```python
+   class ParallelExecutor:
+       def spawn_agent(self, worktree_path: Path, task_id: str) -> AgentInstance
+       def monitor_instances(self) -> List[InstanceStatus]
+       def merge_completed_work(self, instance: AgentInstance) -> MergeResult
+       def cleanup_instance(self, instance: AgentInstance) -> None
+   ```
+
+3. **Task Separator** (architect skill):
+   ```python
+   # .claude/skills/architect/task-separator/
+   # Analyzes tasks for file conflicts
+   # Generates separation confidence score (0-100)
+   # Recommends which tasks can run in parallel
+   ```
+
+4. **Orchestrator Integration**:
+   - Check for parallelizable tasks in ROADMAP
+   - Ask architect to analyze task separation
+   - Spawn instances if tasks are independent
+   - Monitor and merge completed work
+
+**Git Worktree Primer**:
+
+```bash
+# Create worktree
+git worktree add ../MonolithicCoffeeMakerAgent-wt1 -b feature/us-065
+
+# List worktrees
+git worktree list
+# /path/to/MonolithicCoffeeMakerAgent  abc123 [roadmap]
+# /path/to/MonolithicCoffeeMakerAgent-wt1  def456 [feature/us-065]
+
+# Work in worktree (completely separate working directory)
+cd ../MonolithicCoffeeMakerAgent-wt1
+# Make changes, commit
+git add .
+git commit -m "Implement US-065"
+
+# Back to main, merge
+cd ../MonolithicCoffeeMakerAgent
+git merge feature/us-065
+
+# Remove worktree when done
+git worktree remove ../MonolithicCoffeeMakerAgent-wt1
+```
+
+**Deliverables**:
+
+- [ ] WorktreeManager class with full worktree lifecycle
+- [ ] ParallelExecutor for spawning and monitoring instances
+- [ ] Task separator skill for architect (file conflict analysis)
+- [ ] Orchestrator integration (auto-spawn when parallelizable)
+- [ ] Merge strategy (automatic for clean merges, manual for conflicts)
+- [ ] Resource monitoring and scaling logic
+- [ ] CLI commands: `orchestrator parallel-execution --spawn/--status/--cleanup`
+- [ ] Skill documentation in `.claude/skills/orchestrator/parallel-execution/SKILL.md`
+- [ ] Unit tests (20+ tests)
+- [ ] Integration tests (full parallel workflow)
+
+**Example Scenarios**:
+
+1. **2 Independent Tasks** → Spawn 2 instances → Both complete → Merge both → 75% faster
+2. **3 Parallelizable Tasks** → Spawn 3 instances → All complete → 150% faster
+3. **Tasks Have Conflicts** → architect detects conflict → Run sequentially → No velocity loss
+4. **Instance Fails** → Orchestrator detects → Cleanup worktree → Re-assign task → Resilient
+
+**Integration with Existing System**:
+
+```
+orchestrator checks ROADMAP
+       ↓
+Sees 12 parallelizable tasks (from Acceleration Dashboard)
+       ↓
+Asks architect: "Can US-065 and US-066 run in parallel?"
+       ↓
+architect analyzes with task-separator skill
+       ↓
+architect: "✅ Independent (no file conflicts, confidence: 95%)"
+       ↓
+orchestrator spawns 2 code_developer instances in separate worktrees
+       ↓
+Both instances work independently
+       ↓
+Both complete, orchestrator merges → roadmap branch
+       ↓
+Clean up worktrees, continue with next tasks
+```
+
+**Safety Guarantees**:
+
+- ✅ Each worktree enforces singleton (one agent per worktree)
+- ✅ No file conflicts (architect pre-validates)
+- ✅ Clean merges or manual resolution
+- ✅ Rollback on errors
+- ✅ Resource limits prevent exhaustion
+
+**Success Metrics**:
+- Velocity increase: +75% (2 instances) to +150% (3 instances)
+- Successful merges: >90% automatic, <10% manual
+- Resource utilization: <80% CPU, <80% memory
+- Task throughput: 2-3x more tasks per day
+
+**Dependencies**:
+- Git worktree support (✅ Available in Git 2.5+)
+- Architect task-separator skill (new)
+- Orchestrator parallel coordination (new)
+
+**Risks & Mitigation**:
+- **Risk**: Merge conflicts → **Mitigation**: architect pre-validates file separation
+- **Risk**: Resource exhaustion → **Mitigation**: Limit concurrent instances, monitor resources
+- **Risk**: Instance crashes → **Mitigation**: Error handling, cleanup, task re-assignment
+
+---
+
 **Deliverables Completed** (PRIORITY 19):
 - ✅ Code Forensics skill (code-searcher) - 85% time savings
 - ✅ Design System skill (ux-design-expert) - 90% time savings
@@ -531,7 +809,9 @@ If REVIEW: architect asks user for decision
 
 **CURRENT PRIORITY**: PRIORITY 20 - US-104 Orchestrator Continuous Agent Work Loop 📝 (HIGHEST PRIORITY)
 
-**NEXT PRIORITY**: PRIORITY 23 - US-107 Dependency Conflict Resolver Skill 🔴 (CRITICAL - Highest ROI: 40 hrs/month saved)
+**NEXT PRIORITIES**:
+- PRIORITY 23 - US-107 Dependency Conflict Resolver Skill 🔴 (CRITICAL - Highest ROI: 40 hrs/month)
+- PRIORITY 24 - US-108 Parallel Agent Execution with Git Worktree 🔴 (CRITICAL - 2x-3x Velocity)
 
 **RECENTLY COMPLETED**:
 - PRIORITY 22 - US-106 Code-Reviewer Agent ✅ (2025-10-19)
