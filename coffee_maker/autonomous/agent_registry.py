@@ -46,14 +46,15 @@ logger = logging.getLogger(__name__)
 class AgentType(Enum):
     """Enumeration of valid agent types in the system.
 
-    The 7 autonomous agents that work together:
-        ORCHESTRATOR (7) - Coordinates all other 6 agents
+    The 8 autonomous agents that work together:
+        ORCHESTRATOR (8) - Coordinates all other 7 agents
         ARCHITECT (1) - Creates technical specifications
         CODE_DEVELOPER (2) - Implements priorities from ROADMAP
         PROJECT_MANAGER (3) - Monitors GitHub, verifies DoD
         ASSISTANT (4) - Creates demos, reports bugs
         CODE_SEARCHER (5) - Deep code analysis
         UX_DESIGN_EXPERT (6) - Design guidance
+        CODE_REVIEWER (7) - Quality assurance and code review
 
     Backend infrastructure:
         USER_LISTENER - Primary user interface
@@ -62,14 +63,15 @@ class AgentType(Enum):
         CURATOR - ACE framework (maintains playbooks)
     """
 
-    # Autonomous agents (7)
-    ORCHESTRATOR = "orchestrator"  # 7th agent - launches and manages all others
+    # Autonomous agents (8)
+    ORCHESTRATOR = "orchestrator"  # 8th agent - launches and manages all others
     ARCHITECT = "architect"
     CODE_DEVELOPER = "code_developer"
     PROJECT_MANAGER = "project_manager"
     ASSISTANT = "assistant"
     CODE_SEARCHER = "code-searcher"
     UX_DESIGN_EXPERT = "ux-design-expert"
+    CODE_REVIEWER = "code_reviewer"
 
     # Infrastructure
     USER_LISTENER = "user_listener"

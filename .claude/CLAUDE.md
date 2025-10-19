@@ -20,6 +20,7 @@
    - `assistant`: Documentation expert, intelligent dispatcher, demo creator, and bug reporter
    - `code-searcher`: Deep codebase analysis and forensic examination
    - `ux-design-expert`: UI/UX design guidance and Tailwind CSS
+   - `code-reviewer`: Automated quality assurance, reviews code_developer commits, notifies architect
 
 2. **Prompt Management System** ⭐ NEW
    - **Local Store**: `.claude/commands/` (centralized prompt templates)
@@ -98,6 +99,7 @@ MonolithicCoffeeMakerAgent/
 │   │   ├── daemon.py                # Main daemon orchestrator
 │   │   ├── daemon_spec_manager.py   # Spec creation (uses prompts)
 │   │   ├── daemon_implementation.py # Implementation (uses prompts)
+│   │   ├── code_reviewer.py         # Code review agent ⭐ NEW
 │   │   ├── prompt_loader.py         # Prompt loading utility ⭐ NEW
 │   │   ├── developer_status.py      # Status tracking
 │   │   └── claude_cli_interface.py  # Claude CLI integration
@@ -105,6 +107,10 @@ MonolithicCoffeeMakerAgent/
 │   │   ├── notifications.py         # Notification system
 │   │   └── roadmap_cli.py          # CLI commands
 │   └── langfuse_observe/           # Observability
+│
+├── docs/code-reviews/              # Code review reports ⭐ NEW
+│   ├── INDEX.md                    # Review index
+│   └── REVIEW-{date}-{commit}.md   # Individual reviews
 │
 └── tickets/                         # Bug tracking
     ├── BUG-001.md
