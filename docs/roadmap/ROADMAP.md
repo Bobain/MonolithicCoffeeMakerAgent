@@ -27060,7 +27060,7 @@ This priority addresses the architectural mismatch between documentation (user_l
 
 ---
 
-### US-047: Enforce CFR-008 Architect-Only Spec Creation
+### US-047: Enforce CFR-008 Architect-Only Spec Creation 📝 Planned
 
 **PRIORITY**: 12 (CRITICAL - Role Boundaries)
 
@@ -27223,7 +27223,7 @@ This is a **Critical Functional Requirement** that must be enforced to maintain 
 
 ---
 
-### US-048: Enforce CFR-009 Silent Background Agents
+### US-048: Enforce CFR-009 Silent Background Agents 📝 Planned
 
 **PRIORITY**: 13 (HIGH - User Experience)
 
@@ -27377,7 +27377,7 @@ This is a quick win that significantly improves user experience. Background agen
 
 ---
 
-### US-049: Architect Continuous Spec Improvement Loop (CFR-010)
+### US-049: Architect Continuous Spec Improvement Loop (CFR-010) 📝 Planned
 
 **PRIORITY**: 14 (HIGH - Quality & Efficiency)
 
@@ -27546,7 +27546,7 @@ This is the **continuous improvement loop** that ensures architectural quality d
 
 ---
 
-### US-054: Architect Daily Integration of code-searcher Findings (CFR-011)
+### US-054: Architect Daily Integration of code-searcher Findings (CFR-011) 📝 Planned
 
 **PRIORITY**: 15 (CRITICAL - CFR-011 Enforcement)
 
@@ -27784,7 +27784,7 @@ class ArchitectDailyRoutine:
 
 ---
 
-### US-055: Claude Skills Integration - Phase 1 (Foundation + High-Value Skills)
+### US-055: Claude Skills Integration - Phase 1 (Foundation + High-Value Skills) 📝 Planned
 
 **PRIORITY**: 17 (HIGH - Infrastructure + 60-70% Time Savings)
 
@@ -27944,7 +27944,7 @@ Skills **complement** prompts (not replace):
 
 ---
 
-### US-056: Claude Skills Integration - Phase 2 (Medium-Value Skills)
+### US-056: Claude Skills Integration - Phase 2 (Medium-Value Skills) 📝 Planned
 
 **PRIORITY**: 18 (MEDIUM-HIGH)
 
@@ -27988,7 +27988,7 @@ As an autonomous agent, I want additional skills for strategic workflows (ROADMA
 
 ---
 
-### US-057: Claude Skills Integration - Phase 3 (Polish + Optimization)
+### US-057: Claude Skills Integration - Phase 3 (Polish + Optimization) 📝 Planned
 
 **PRIORITY**: 19 (MEDIUM - Polish + Optimization)
 
@@ -28034,7 +28034,7 @@ As an autonomous agent, I want enhancement skills (code forensics, design system
 
 ---
 
-### US-058: Architect Skills System - Commit Review & Refactoring Analysis
+### US-058: Architect Skills System - Commit Review & Refactoring Analysis 📝 Planned
 
 **Status**: ✅ Complete - Integrated into agents
 
@@ -28232,7 +28232,7 @@ Spec includes "## 🔍 Architecture Reuse Check" section
 
 ---
 
-### US-056: Enforce CFR-013 - Daemon Must Work on roadmap Branch Only
+### US-056: Enforce CFR-013 - Daemon Must Work on roadmap Branch Only 📝 Planned
 
 **Status**: ✅ COMPLETE
 
@@ -28436,7 +28436,7 @@ Reason: Single source of truth, prevents branch conflicts, simplifies coordinati
 
 ---
 
-### US-057: Transform Daemon into Multi-Agent Orchestrator (Parallel Team Execution)
+### US-057: Transform Daemon into Multi-Agent Orchestrator (Parallel Team Execution) 📝 Planned
 
 **Status**: ✅ PHASE 1 COMPLETE - All 7 Agents Created (Foundation Ready for Testing)
 
@@ -28927,7 +28927,7 @@ This is the highest priority fix needed right now. Without this, the code_develo
 
 ---
 
-### US-059: Update PROPOSED_SKILLS Document with Curator Insights
+### US-059: Update PROPOSED_SKILLS Document with Curator Insights 📝 Planned
 
 **Status**: ✅ READY FOR IMPLEMENTATION - HIGHEST PRIORITY ⭐⭐⭐
 
@@ -29047,7 +29047,7 @@ The trace-execution skill (converted from generator agent) represents a major ar
 
 ---
 
-### US-060: Update Agent Definitions with Startup Skills Documentation
+### US-060: Update Agent Definitions with Startup Skills Documentation 📝 Planned
 
 **Status**: ✅ READY FOR IMPLEMENTATION - HIGHEST PRIORITY ⭐⭐⭐
 
@@ -29196,7 +29196,7 @@ Agent definition files exist (`.claude/agents/architect.md`, `code_developer.md`
 
 ---
 
-### US-061: Architect + Project_Manager: Design Decision on Reflector & Curator Agent-to-Skill Conversion
+### US-061: Architect + Project_Manager: Design Decision on Reflector & Curator Agent-to-Skill Conversion 📝 Planned
 
 **Status**: ✅ APPROVED - READY FOR IMPLEMENTATION ⭐⭐⭐
 
@@ -29628,7 +29628,7 @@ Move to Phase 1 (Orchestrator Agent) with 3-5x faster velocity, completing it in
 
 ## PHASE 0 - GROUP 2: Agent Startup Skills ⭐⭐⭐ (Part of Phase 0)
 
-### US-062: Implement code_developer-startup Skill Integration
+### US-062: Implement code_developer-startup Skill Integration 📝 Planned
 
 **Status**: ✅ Complete ✅ **VERIFIED 2025-10-19**
 
@@ -29705,7 +29705,7 @@ As a code_developer agent, I need a startup skill that loads my critical documen
 
 ---
 
-### US-063: Implement architect-startup Skill Integration
+### US-063: Implement architect-startup Skill Integration 📝 Planned
 
 **Status**: ✅ Complete
 
@@ -29759,7 +29759,7 @@ As an architect agent, I need a startup skill that loads architectural documenta
 
 ---
 
-### US-064: Implement project_manager-startup Skill Integration
+### US-064: Implement project_manager-startup Skill Integration 📝 Planned
 
 **Status**: ✅ Complete (2025-10-19)
 
@@ -29815,7 +29815,7 @@ As a project_manager agent, I need a startup skill that loads ROADMAP and projec
 
 ## PHASE 0 - GROUP 3: Core Skills - Developer Support ⭐⭐⭐ (Part of Phase 0)
 
-### US-065: Implement test-failure-analysis Skill
+### US-065: Implement test-failure-analysis Skill 📝 Planned
 
 **Status**: ✅ Complete (2025-10-19)
 
@@ -29866,7 +29866,7 @@ As a code_developer agent, I need an automated test failure analysis skill, so t
 
 ---
 
-### US-066: Implement dod-verification Skill
+### US-066: Implement dod-verification Skill 📝 Planned
 
 **Status**: ✅ Complete
 
@@ -29918,7 +29918,7 @@ As a code_developer agent, I need an automated DoD verification skill, so that I
 
 ---
 
-### US-067: Implement git-workflow-automation Skill
+### US-067: Implement git-workflow-automation Skill 📝 Planned
 
 **Status**: ✅ Complete
 
@@ -29973,7 +29973,7 @@ As a code_developer agent, I need automated git workflow skill, so that commits,
 
 ## PHASE 0 - GROUP 4: Core Skills - Architect & Project Manager Support ⭐⭐⭐ (Part of Phase 0)
 
-### US-068: Implement architecture-reuse-check Skill
+### US-068: Implement architecture-reuse-check Skill 📝 Planned
 
 **Status**: ✅ Complete (2025-10-19)
 
@@ -30035,7 +30035,7 @@ As an architect agent, I need an architecture reuse checking skill, so that I ca
 
 ---
 
-### US-069: Implement proactive-refactoring-analysis Skill
+### US-069: Implement proactive-refactoring-analysis Skill 📝 Planned
 
 **Status**: ✅ Complete
 
@@ -30098,7 +30098,7 @@ As an architect agent, I need proactive refactoring analysis skill, so that I ca
 
 ---
 
-### US-070: Implement roadmap-health-check Skill
+### US-070: Implement roadmap-health-check Skill 📝 Planned
 
 **Status**: ✅ Complete
 
@@ -30163,7 +30163,7 @@ As a project_manager agent, I need ROADMAP health check skill, so that I can qui
 
 ---
 
-### US-071: Implement pr-monitoring-analysis Skill
+### US-071: Implement pr-monitoring-analysis Skill 📝 Planned
 
 **Status**: ✅ Complete (2025-10-19)
 
@@ -30232,7 +30232,7 @@ As a project_manager agent, I need PR monitoring skill, so that I can track GitH
 
 **Note**: Phase 4 contains 6 user stories (US-072 through US-077) for building the orchestrator agent with message bus, performance monitoring, and workflow optimization.
 
-### US-072: Design Orchestrator Agent Architecture
+### US-072: Design Orchestrator Agent Architecture 📝 Planned
 
 **PRIORITY**: 11 (PHASE 1 FOUNDATION) ⭐ **FIRST PRIORITY AFTER PHASE 0**
 
@@ -30486,7 +30486,7 @@ As a system architect, I need a comprehensive orchestrator agent design, so that
 - SPEC-067 - Architect Code Review Process
 
 ---
-### US-050: Architect Creates POCs for Complex Implementations
+### US-050: Architect Creates POCs for Complex Implementations 📝 Planned
 
 **PRIORITY**: 16 (HIGH - Quality & Risk Reduction)
 
