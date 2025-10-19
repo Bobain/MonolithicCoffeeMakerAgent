@@ -4,7 +4,20 @@ This directory contains agent definitions for the MonolithicCoffeeMakerAgent pro
 
 ## Available Agents
 
-### 1. code-developer
+### 1. orchestrator
+**Purpose**: Multi-agent team coordinator managing parallel agent execution
+
+**Use When**:
+- Starting the full autonomous team (all 6 agents)
+- Monitoring team health and agent status
+- Debugging agent crashes
+- Testing specific agent combinations
+
+**Invoke**: `> Use the orchestrator subagent to start all agents`
+
+---
+
+### 2. code-developer
 **Purpose**: Autonomous software developer that implements ROADMAP priorities
 
 **Use When**:
@@ -17,7 +30,7 @@ This directory contains agent definitions for the MonolithicCoffeeMakerAgent pro
 
 ---
 
-### 2. project-manager
+### 3. project-manager
 **Purpose**: AI project manager for strategic planning and ROADMAP management
 
 **Use When**:
@@ -31,7 +44,7 @@ This directory contains agent definitions for the MonolithicCoffeeMakerAgent pro
 
 ---
 
-### 3. assistant
+### 4. assistant
 **Purpose**: General-purpose AI assistant for support and questions
 
 **Use When**:
@@ -45,7 +58,7 @@ This directory contains agent definitions for the MonolithicCoffeeMakerAgent pro
 
 ---
 
-### 4. architect
+### 5. architect
 **Purpose**: Technical design authority for architectural specifications and dependency management
 
 **Use When**:
@@ -59,7 +72,7 @@ This directory contains agent definitions for the MonolithicCoffeeMakerAgent pro
 
 ---
 
-### 5. code-searcher
+### 6. code-searcher
 **Purpose**: Deep codebase analysis and forensic examination
 
 **Use When**:
@@ -73,7 +86,7 @@ This directory contains agent definitions for the MonolithicCoffeeMakerAgent pro
 
 ---
 
-### 6. ux-design-expert
+### 7. ux-design-expert
 **Purpose**: UI/UX design guidance and Tailwind CSS expertise
 
 **Use When**:
@@ -138,6 +151,20 @@ Each agent has specific tools configured in their YAML frontmatter.
 ### 📖 Critical Documents
 
 Each agent has been configured to read specific critical documents at startup. These documents provide essential context for the agent to work effectively.
+
+#### orchestrator - Startup Documents
+
+**READ AT STARTUP (MANDATORY)**:
+1. 🔴 `.claude/CLAUDE.md` - Project instructions (read FIRST)
+2. 🔴 `docs/roadmap/ROADMAP.md` - Current priorities (read SECOND)
+3. 🔴 `.claude/agents/orchestrator.md` - Own role definition (read THIRD)
+
+**READ AS NEEDED**:
+- `coffee_maker/autonomous/orchestrator.py` - Core orchestrator implementation
+- `coffee_maker/autonomous/team_daemon.py` - Alternative daemon implementation
+- `coffee_maker/autonomous/message_queue.py` - Message queue details
+- `docs/architecture/specs/SPEC-072-multi-agent-orchestration-daemon.md` - Technical spec
+- `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` - CFR enforcement rules
 
 #### code-developer - Startup Documents
 
@@ -241,14 +268,20 @@ Agent system prompt and instructions go here...
 
 ## Version
 
-**Version**: 2.0 (US-032 - Puppeteer DoD + GitHub CLI)
-**Last Updated**: 2025-10-12
+**Version**: 2.1 (US-072 - Orchestrator Agent Added)
+**Last Updated**: 2025-10-19
 
 All agents equipped with:
 - Puppeteer MCP for browser automation
 - GitHub CLI for issue/PR management
 - DoD verification capabilities
 - Comprehensive context files
+
+**New in v2.1**:
+- ✅ Orchestrator agent configuration added
+- ✅ Multi-agent team coordination capability
+- ✅ Health monitoring and fault tolerance
+- ✅ SQLite message queue for inter-agent communication
 
 ---
 
