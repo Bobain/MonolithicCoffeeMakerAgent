@@ -99,9 +99,9 @@ class ContinuousWorkLoop:
         self.running = True
 
         self.notifications.create_notification(
+            type="info",
             title="Orchestrator Started",
             message="Continuous work loop is now running. Agents will work 24/7 on ROADMAP priorities.",
-            type="info",
             priority="normal",
             sound=False,  # CFR-009: Background agent, no sound
             agent_id="orchestrator",
@@ -365,9 +365,9 @@ class ContinuousWorkLoop:
                 logger.warning(f"⚠️  Task timeout: {task_key} ({task_age:.0f}s)")
 
                 self.notifications.create_notification(
+                    type="warning",
                     title="Task Timeout Detected",
                     message=f"Task {task_key} running for {task_age / 3600:.1f} hours",
-                    type="warning",
                     priority="high",
                     sound=False,  # CFR-009
                     agent_id="orchestrator",
@@ -489,9 +489,9 @@ class ContinuousWorkLoop:
         # Notify user for critical errors
         if isinstance(error, (IOError, PermissionError)):
             self.notifications.create_notification(
+                type="error",
                 title="Orchestrator Error",
                 message=f"Critical error: {error}. Work loop may need manual restart.",
-                type="error",
                 priority="critical",
                 sound=False,  # CFR-009
                 agent_id="orchestrator",
@@ -516,9 +516,9 @@ class ContinuousWorkLoop:
         self._save_state()
 
         self.notifications.create_notification(
+            type="info",
             title="Orchestrator Stopped",
             message="Continuous work loop has been stopped. State saved for recovery.",
-            type="info",
             priority="normal",
             sound=False,  # CFR-009
             agent_id="orchestrator",
