@@ -29,7 +29,7 @@ import signal
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from coffee_maker.cli.notifications import NotificationDB
 
@@ -79,6 +79,7 @@ class ContinuousWorkLoop:
         self.current_state: Dict = {}
         self.roadmap_cache: Optional[Dict] = None
         self.last_roadmap_update = 0.0
+        self.repo_root = Path.cwd()  # Repository root directory
 
         # Set up signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._handle_shutdown)
@@ -100,7 +101,8 @@ class ContinuousWorkLoop:
         self.notifications.create_notification(
             title="Orchestrator Started",
             message="Continuous work loop is now running. Agents will work 24/7 on ROADMAP priorities.",
-            level="info",
+            type="info",
+            priority="normal",
             sound=False,  # CFR-009: Background agent, no sound
             agent_id="orchestrator",
         )
@@ -278,35 +280,66 @@ class ContinuousWorkLoop:
         """
         Coordinate code_developer to implement next priority.
 
+        NEW: Attempts parallel execution when possible!
+
         Logic:
-        1. Get next PLANNED priority
-        2. Check if spec exists
-        3. If yes: delegate implementation to code_developer
-        4. If no: code_developer waits (architect will create spec)
+        1. Get next 2-3 PLANNED priorities with specs
+        2. Check task-separator skill for independence
+        3. If independent: spawn parallel code_developers in worktrees
+        4. If not independent: fall back to sequential execution
         """
         if not self.roadmap_cache:
             return
 
-        # Get next planned priority
-        planned_priorities = [p for p in self.roadmap_cache["priorities"] if p["status"] == "📝"]
+        # Get planned priorities with specs
+        planned_priorities = [p for p in self.roadmap_cache["priorities"] if p["status"] == "📝" and p["has_spec"]]
 
         if not planned_priorities:
-            logger.info("No planned priorities, code_developer idle")
+            logger.info("No planned priorities with specs, code_developer idle")
             return
 
+        # Check if any work already in progress
+        active_impl_count = sum(1 for key in self.current_state.get("active_tasks", {}) if key.startswith("impl_"))
+
+        if active_impl_count > 0:
+            logger.debug(f"{active_impl_count} implementations already in progress")
+            return
+
+        # Try parallel execution (2-3 priorities)
+        max_parallel = min(3, len(planned_priorities))
+
+        if max_parallel >= 2:
+            # Attempt parallel execution
+            candidate_priorities = planned_priorities[:max_parallel]
+            candidate_ids = [p["number"] for p in candidate_priorities]
+
+            logger.info(f"🔍 Checking if {len(candidate_ids)} priorities can run in parallel...")
+
+            # Call task-separator skill
+            parallel_result = self._check_parallel_viability(candidate_ids)
+
+            if parallel_result["valid"] and len(parallel_result["independent_pairs"]) > 0:
+                # Parallel execution possible!
+                logger.info(f"✅ Found {len(parallel_result['independent_pairs'])} independent pairs!")
+                logger.info(f"🚀 Spawning parallel code_developers in worktrees...")
+
+                # Use ParallelExecutionCoordinator
+                self._spawn_parallel_execution(candidate_ids)
+                return
+
+            else:
+                logger.info(f"❌ Cannot parallelize: {parallel_result.get('reason', 'file conflicts')}")
+                logger.info("📝 Falling back to sequential execution...")
+
+        # Fall back to sequential execution (original behavior)
         next_priority = planned_priorities[0]
-
-        # Check if spec exists
-        if not next_priority["has_spec"]:
-            logger.info(f"⏳ code_developer waiting for spec: PRIORITY {next_priority['number']}")
-            return
 
         # Check if already implementing
         if self._is_implementation_in_progress(next_priority["number"]):
             logger.debug(f"Implementation for PRIORITY {next_priority['number']} already in progress")
             return
 
-        # For now, just log that we would delegate (actual delegation requires orchestrator agent integration)
+        # For now, just log that we would delegate
         logger.info(f"⚙️  Would delegate implementation to code_developer: PRIORITY {next_priority['number']}")
 
         # Track that we're working on this implementation
@@ -334,7 +367,8 @@ class ContinuousWorkLoop:
                 self.notifications.create_notification(
                     title="Task Timeout Detected",
                     message=f"Task {task_key} running for {task_age / 3600:.1f} hours",
-                    level="high",
+                    type="warning",
+                    priority="high",
                     sound=False,  # CFR-009
                     agent_id="orchestrator",
                 )
@@ -369,6 +403,73 @@ class ContinuousWorkLoop:
             "type": "implementation",
         }
 
+    def _check_parallel_viability(self, priority_ids: List[int]) -> Dict[str, Any]:
+        """Check if priorities can run in parallel using task-separator skill.
+
+        Args:
+            priority_ids: List of PRIORITY numbers to check
+
+        Returns:
+            Dict with validation result from task-separator skill
+        """
+        try:
+            # Import and execute task-separator skill
+            import importlib.util
+
+            skill_path = self.repo_root / ".claude" / "skills" / "architect" / "task-separator" / "task-separator.py"
+
+            if not skill_path.exists():
+                return {"valid": False, "reason": f"task-separator skill not found: {skill_path}"}
+
+            spec = importlib.util.spec_from_file_location("task_separator", skill_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+
+            # Call skill
+            result = module.main({"priority_ids": priority_ids})
+            return result
+
+        except Exception as e:
+            logger.error(f"Error running task-separator skill: {e}", exc_info=True)
+            return {"valid": False, "reason": f"Error: {e}"}
+
+    def _spawn_parallel_execution(self, priority_ids: List[int]):
+        """Spawn parallel code_developer instances in worktrees.
+
+        Args:
+            priority_ids: List of PRIORITY numbers to execute in parallel
+        """
+        try:
+            from coffee_maker.orchestrator.parallel_execution_coordinator import ParallelExecutionCoordinator
+
+            logger.info(f"🚀 Launching ParallelExecutionCoordinator for {len(priority_ids)} priorities")
+
+            # Create coordinator
+            coordinator = ParallelExecutionCoordinator(
+                repo_root=self.repo_root, max_instances=min(len(priority_ids), 3), auto_merge=True
+            )
+
+            # Execute parallel batch
+            result = coordinator.execute_parallel_batch(priority_ids, auto_approve=True)
+
+            if result["success"]:
+                logger.info(f"✅ Parallel execution completed!")
+                logger.info(f"   Priorities executed: {result['priorities_executed']}")
+                logger.info(f"   Duration: {result['duration_seconds']:.1f}s")
+                logger.info(f"   Merge results: {result['merge_results']}")
+
+                # Track completed implementations
+                for priority_id in result["priorities_executed"]:
+                    task_key = f"impl_{priority_id}"
+                    if task_key in self.current_state.get("active_tasks", {}):
+                        del self.current_state["active_tasks"][task_key]
+
+            else:
+                logger.error(f"❌ Parallel execution failed: {result.get('error', 'Unknown error')}")
+
+        except Exception as e:
+            logger.error(f"Error spawning parallel execution: {e}", exc_info=True)
+
     def _handle_cycle_error(self, error: Exception):
         """
         Handle errors during work cycle.
@@ -390,7 +491,8 @@ class ContinuousWorkLoop:
             self.notifications.create_notification(
                 title="Orchestrator Error",
                 message=f"Critical error: {error}. Work loop may need manual restart.",
-                level="critical",
+                type="error",
+                priority="critical",
                 sound=False,  # CFR-009
                 agent_id="orchestrator",
             )
@@ -416,7 +518,8 @@ class ContinuousWorkLoop:
         self.notifications.create_notification(
             title="Orchestrator Stopped",
             message="Continuous work loop has been stopped. State saved for recovery.",
-            level="info",
+            type="info",
+            priority="normal",
             sound=False,  # CFR-009
             agent_id="orchestrator",
         )
