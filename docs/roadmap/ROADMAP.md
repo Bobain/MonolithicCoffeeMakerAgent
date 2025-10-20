@@ -28927,9 +28927,9 @@ This is the highest priority fix needed right now. Without this, the code_develo
 
 ---
 
-### US-059: Update PROPOSED_SKILLS Document with Curator Insights 📝 Planned
+### US-059: Update PROPOSED_SKILLS Document with Curator Insights 🔄 In Progress
 
-**Status**: ✅ READY FOR IMPLEMENTATION - HIGHEST PRIORITY ⭐⭐⭐
+**Status**: 🔄 In Progress - HIGHEST PRIORITY ⭐⭐⭐
 
 **Created**: 2025-10-18
 
@@ -29049,7 +29049,7 @@ The trace-execution skill (converted from generator agent) represents a major ar
 
 ### US-060: Update Agent Definitions with Startup Skills Documentation 📝 Planned
 
-**Status**: ✅ READY FOR IMPLEMENTATION - HIGHEST PRIORITY ⭐⭐⭐
+**Status**: 📝 Planned - HIGHEST PRIORITY ⭐⭐⭐
 
 **Created**: 2025-10-18
 
@@ -29198,7 +29198,7 @@ Agent definition files exist (`.claude/agents/architect.md`, `code_developer.md`
 
 ### US-061: Architect + Project_Manager: Design Decision on Reflector & Curator Agent-to-Skill Conversion 📝 Planned
 
-**Status**: ✅ APPROVED - READY FOR IMPLEMENTATION ⭐⭐⭐
+**Status**: 📝 Planned - HIGHEST PRIORITY ⭐⭐⭐
 
 **Created**: 2025-10-18
 
