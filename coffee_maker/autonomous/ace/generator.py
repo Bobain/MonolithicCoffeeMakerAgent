@@ -44,7 +44,9 @@ Key Features:
     - Thread-safe operation
 """
 
+import json
 import logging
+import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -162,11 +164,17 @@ class Generator:
         code_developer
     """
 
-    def __init__(self):
-        """Initialize Generator agent."""
+    def __init__(self, db_path: Optional[Path] = None):
+        """Initialize Generator agent.
+
+        Args:
+            db_path: Path to SQLite database (default: data/orchestrator.db)
+        """
         self.delegation_traces: list[DelegationTrace] = []
         self._file_search_traces: list[Dict[str, Any]] = []
-        logger.info("Generator initialized - file ownership enforcement active")
+        self.db_path = db_path or Path("data/orchestrator.db")
+        self._init_database()
+        logger.info("Generator initialized - file ownership enforcement active with database logging")
 
     def load_agent_context(self, agent_type: AgentType) -> Dict[str, str]:
         """Load required context files for an agent (US-042: Context-Upfront Pattern).
@@ -415,7 +423,8 @@ class Generator:
         2. Verifies ownership using FileOwnership registry
         3. Delegates to owner if violation detected
         4. Logs delegation trace for reflector
-        5. Returns result transparently
+        5. Logs to database for observability
+        6. Returns result transparently
 
         Args:
             agent_type: Agent requesting the operation
@@ -439,18 +448,33 @@ class Generator:
             >>> result.delegated
             True
         """
+        # Start database trace
+        params = {"operation": operation, "file_path": file_path}
+        if content:
+            params["content_length"] = len(content)
+        db_trace_id = self._log_trace_to_database(
+            agent_type=agent_type,
+            operation_type="file_operation",
+            operation_name=operation,
+            parameters=params,
+            file_path=file_path,
+        )
+
         # Convert operation string to enum
         try:
             op_type = FileOperationType(operation.lower())
         except ValueError:
+            error_msg = f"Invalid operation type: {operation}"
+            self._complete_trace_in_database(db_trace_id, exit_code=1, error_message=error_msg)
             return OperationResult(
                 success=False,
-                error_message=f"Invalid operation type: {operation}",
+                error_message=error_msg,
             )
 
         # Read operations don't need ownership check
         if op_type == FileOperationType.READ:
             logger.debug(f"Read operation allowed: {agent_type.value} → {file_path}")
+            self._complete_trace_in_database(db_trace_id, exit_code=0)
             return OperationResult(success=True, delegated=False)
 
         # Check ownership for write/edit/delete operations
@@ -459,12 +483,14 @@ class Generator:
         except OwnershipUnclearError:
             # Ownership unclear - log warning and allow (fail open)
             logger.warning(f"Ownership unclear for {file_path}, allowing {agent_type.value} to proceed")
+            self._complete_trace_in_database(db_trace_id, exit_code=0)
             return OperationResult(success=True, delegated=False)
 
         # Check if agent owns the file
         if agent_type == owner:
             # Agent owns file - allow operation
             logger.debug(f"Operation allowed: {agent_type.value} owns {file_path}")
+            self._complete_trace_in_database(db_trace_id, exit_code=0)
             return OperationResult(success=True, delegated=False)
 
         # Ownership violation - auto-delegate to owner
@@ -494,6 +520,15 @@ class Generator:
         # Log delegation trace
         self.delegation_traces.append(trace)
         logger.info(f"Delegation trace logged: {trace.trace_id}")
+
+        # Complete database trace with delegation info
+        self._complete_trace_in_database(
+            db_trace_id,
+            exit_code=0,
+            result={"delegated": True, "delegated_to": owner.value},
+            delegated=True,
+            delegated_to=owner,
+        )
 
         return result
 
@@ -606,6 +641,216 @@ class Generator:
             "delegations_by_owner": by_owner,
             "most_common_violations": [{"pattern": p, "count": c} for p, c in most_common],
         }
+
+    def _init_database(self) -> None:
+        """Initialize database connection and verify schema."""
+        if not self.db_path.exists():
+            logger.warning(f"Database not found at {self.db_path}, database logging disabled")
+            return
+
+        try:
+            with sqlite3.connect(str(self.db_path)) as conn:
+                cursor = conn.cursor()
+                # Verify generator_traces table exists
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='generator_traces'")
+                if not cursor.fetchone():
+                    logger.warning("generator_traces table not found, database logging disabled")
+                    logger.info("Run migration: python coffee_maker/orchestrator/migrate_add_generator_traces.py")
+                else:
+                    logger.debug("Database logging initialized successfully")
+        except sqlite3.Error as e:
+            logger.error(f"Failed to initialize database: {e}, database logging disabled")
+
+    def _log_trace_to_database(
+        self,
+        agent_type: AgentType,
+        operation_type: str,
+        operation_name: str,
+        parameters: Optional[Dict[str, Any]] = None,
+        file_path: Optional[str] = None,
+        task_id: Optional[str] = None,
+        priority_number: Optional[int] = None,
+    ) -> Optional[int]:
+        """Start logging a trace to database and return trace_id.
+
+        Args:
+            agent_type: Agent performing the operation
+            operation_type: Type of operation (tool/skill/command/file_operation)
+            operation_name: Name of the specific operation
+            parameters: Operation parameters (will be JSON-encoded)
+            file_path: File being operated on (if applicable)
+            task_id: Task ID for linking
+            priority_number: ROADMAP priority (if applicable)
+
+        Returns:
+            trace_id (int) if successful, None if database logging disabled
+        """
+        if not self.db_path.exists():
+            return None
+
+        try:
+            with sqlite3.connect(str(self.db_path)) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO generator_traces
+                    (agent_type, operation_type, operation_name, started_at, status,
+                     parameters, file_path, task_id, priority_number)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                    (
+                        agent_type.value,
+                        operation_type,
+                        operation_name,
+                        datetime.now().isoformat(),
+                        "running",
+                        json.dumps(parameters) if parameters else None,
+                        file_path,
+                        task_id,
+                        priority_number,
+                    ),
+                )
+                conn.commit()
+                trace_id = cursor.lastrowid
+                logger.debug(f"Started trace {trace_id}: {operation_type}/{operation_name}")
+                return trace_id
+        except sqlite3.Error as e:
+            logger.error(f"Failed to log trace start: {e}")
+            return None
+
+    def _complete_trace_in_database(
+        self,
+        trace_id: Optional[int],
+        exit_code: int = 0,
+        error_message: Optional[str] = None,
+        result: Optional[Dict[str, Any]] = None,
+        delegated: bool = False,
+        delegated_to: Optional[AgentType] = None,
+    ) -> None:
+        """Complete a trace in the database with final status.
+
+        Args:
+            trace_id: Trace ID from _log_trace_to_database
+            exit_code: 0 for success, non-zero for error
+            error_message: Error details if failed
+            result: Operation result (will be JSON-encoded)
+            delegated: Whether operation was delegated
+            delegated_to: Agent delegated to (if applicable)
+        """
+        if trace_id is None or not self.db_path.exists():
+            return
+
+        try:
+            with sqlite3.connect(str(self.db_path)) as conn:
+                cursor = conn.cursor()
+
+                # Get started_at to calculate duration
+                cursor.execute("SELECT started_at FROM generator_traces WHERE trace_id = ?", (trace_id,))
+                row = cursor.fetchone()
+                if not row:
+                    logger.warning(f"Trace {trace_id} not found in database")
+                    return
+
+                started_at = datetime.fromisoformat(row[0])
+                duration_ms = int((datetime.now() - started_at).total_seconds() * 1000)
+
+                status = "failed" if exit_code != 0 else "completed"
+
+                cursor.execute(
+                    """
+                    UPDATE generator_traces
+                    SET completed_at = ?, duration_ms = ?, status = ?, exit_code = ?,
+                        error_message = ?, result = ?, delegated = ?, delegated_to = ?
+                    WHERE trace_id = ?
+                """,
+                    (
+                        datetime.now().isoformat(),
+                        duration_ms,
+                        status,
+                        exit_code,
+                        error_message,
+                        json.dumps(result) if result else None,
+                        1 if delegated else 0,
+                        delegated_to.value if delegated_to else None,
+                        trace_id,
+                    ),
+                )
+                conn.commit()
+                logger.debug(f"Completed trace {trace_id}: {status} (exit_code={exit_code}, duration={duration_ms}ms)")
+        except sqlite3.Error as e:
+            logger.error(f"Failed to complete trace {trace_id}: {e}")
+
+    def log_tool_usage(
+        self,
+        agent_type: AgentType,
+        tool_name: str,
+        parameters: Optional[Dict[str, Any]] = None,
+        file_path: Optional[str] = None,
+    ) -> Optional[int]:
+        """Log tool usage to database.
+
+        Args:
+            agent_type: Agent using the tool
+            tool_name: Name of the tool (Read, Write, Bash, etc.)
+            parameters: Tool parameters
+            file_path: File being operated on (if applicable)
+
+        Returns:
+            trace_id for completing the trace later
+        """
+        return self._log_trace_to_database(
+            agent_type=agent_type,
+            operation_type="tool",
+            operation_name=tool_name,
+            parameters=parameters,
+            file_path=file_path,
+        )
+
+    def log_skill_usage(
+        self,
+        agent_type: AgentType,
+        skill_name: str,
+        parameters: Optional[Dict[str, Any]] = None,
+    ) -> Optional[int]:
+        """Log skill usage to database.
+
+        Args:
+            agent_type: Agent using the skill
+            skill_name: Name of the skill
+            parameters: Skill parameters
+
+        Returns:
+            trace_id for completing the trace later
+        """
+        return self._log_trace_to_database(
+            agent_type=agent_type,
+            operation_type="skill",
+            operation_name=skill_name,
+            parameters=parameters,
+        )
+
+    def log_command_usage(
+        self,
+        agent_type: AgentType,
+        command: str,
+        parameters: Optional[Dict[str, Any]] = None,
+    ) -> Optional[int]:
+        """Log command usage to database.
+
+        Args:
+            agent_type: Agent running the command
+            command: Command being executed
+            parameters: Command parameters
+
+        Returns:
+            trace_id for completing the trace later
+        """
+        return self._log_trace_to_database(
+            agent_type=agent_type,
+            operation_type="command",
+            operation_name=command,
+            parameters=parameters,
+        )
 
     def clear_traces(self) -> None:
         """Clear delegation traces (useful for testing).
