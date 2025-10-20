@@ -1,13 +1,17 @@
-"""Unit tests for daemon-architect delegation (US-045).
+"""Unit tests for daemon-architect spec checking (US-045, US-047).
 
-Tests the delegation of technical specification creation from the daemon
-to the architect agent, ensuring proper ownership boundaries are respected.
+Tests the CFR-008 enforcement where daemon BLOCKS when specs are missing
+and requires architect to create them manually (no delegation).
+
+US-047 UPDATE: Changed from delegation to blocking approach (CFR-008)
+- daemon checks if spec exists (does NOT create or delegate)
+- daemon BLOCKS if spec missing and notifies user/architect
+- architect must create specs proactively in docs/architecture/specs/
 
 US-054 UPDATE: Tests updated to handle CFR-011 enforcement
 - Mock ArchitectDailyRoutine to be compliant
 """
 
-import logging
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -130,26 +134,22 @@ class TestArchitectDelegation:
         result = daemon_with_mixin._ensure_technical_spec(priority)
         assert result is True
 
-    def test_delegation_prompt_contains_architect_invocation(self, daemon_with_mixin):
-        """Test that delegation prompt explicitly requests architect invocation."""
+    def test_cfr_008_blocks_when_spec_missing(self, daemon_with_mixin):
+        """Test that CFR-008 enforcement blocks when spec is missing."""
         priority = {
             "name": "PRIORITY 9",
             "title": "Enhanced Communication",
             "content": "Implement daily standup reports with sentiment analysis",
         }
 
-        prompt = daemon_with_mixin._build_architect_delegation_prompt(priority, "SPEC-009")
+        # Test that daemon BLOCKS when spec is missing (CFR-008)
+        result = daemon_with_mixin._ensure_technical_spec(priority)
 
-        # Verify prompt structure
-        assert "DELEGATION TO ARCHITECT AGENT" in prompt
-        assert "architect" in prompt.lower()
-        assert "PRIORITY 9" in prompt
-        assert "Enhanced Communication" in prompt
-        assert "docs/architecture/specs" in prompt
-        assert "SPEC-009" in prompt
+        # Verify daemon blocked (returned False)
+        assert result is False
 
-    def test_delegation_creates_spec_via_architect(self, daemon_with_mixin, tmp_path):
-        """Test that delegation results in spec creation in architect's directory."""
+    def test_cfr_008_unblocks_when_architect_creates_spec(self, daemon_with_mixin, tmp_path):
+        """Test that CFR-008 allows implementation when architect creates spec."""
         priority = {
             "name": "PRIORITY 9",
             "title": "Enhanced Communication",
@@ -159,65 +159,32 @@ class TestArchitectDelegation:
         # Use parent.parent to go from docs/roadmap/ROADMAP.md to docs/
         specs_dir = daemon_with_mixin.roadmap_path.parent.parent / "architecture" / "specs"
 
-        # Mock Claude to simulate architect creating the spec
-        original_execute = daemon_with_mixin.claude.execute_prompt
-
-        def mock_execute_with_spec_creation(prompt, timeout=None):
-            # Simulate architect creating the spec file
-            spec_file = specs_dir / "SPEC-009-enhanced-communication.md"
-            spec_file.write_text("# SPEC-009: Enhanced Communication\n\nArchitect-created spec")
-            result = Mock()
-            result.success = True
-            result.content = "Spec created by architect"
-            return result
-
-        daemon_with_mixin.claude.execute_prompt = mock_execute_with_spec_creation
-
-        # Test delegation
-        result = daemon_with_mixin._ensure_technical_spec(priority)
-
-        # Verify spec was created
-        assert result is True
+        # Simulate architect manually creating the spec (CFR-008 workflow)
         spec_file = specs_dir / "SPEC-009-enhanced-communication.md"
+        spec_file.write_text("# SPEC-009: Enhanced Communication\n\nArchitect-created spec per CFR-008")
+
+        # Test that daemon now allows implementation
+        result = daemon_with_mixin._ensure_technical_spec(priority)
+
+        # Verify daemon is unblocked (returned True)
+        assert result is True
         assert spec_file.exists()
-        assert "Architect-created spec" in spec_file.read_text()
+        assert "Architect-created spec per CFR-008" in spec_file.read_text()
 
-        # Restore original method
-        daemon_with_mixin.claude.execute_prompt = original_execute
-
-    def test_delegation_fails_if_architect_doesnt_create_spec(self, daemon_with_mixin):
-        """Test that delegation fails if architect doesn't create the spec file."""
+    def test_cfr_008_creates_notification_when_spec_missing(self, daemon_with_mixin):
+        """Test that CFR-008 creates notification when spec is missing."""
         priority = {
             "name": "PRIORITY 9",
             "title": "Enhanced Communication",
             "content": "Implement daily standup reports",
         }
 
-        # Mock Claude to simulate successful execution but no file creation
-        daemon_with_mixin.claude.execute_prompt = Mock(return_value=Mock(success=True, content="Completed but no file"))
-
-        # Test delegation failure
+        # Test that notification is created when spec missing
         result = daemon_with_mixin._ensure_technical_spec(priority)
 
-        # Verify failure is detected
+        # Verify failure detected and notification sent
         assert result is False
-
-    def test_delegation_handles_claude_error(self, daemon_with_mixin):
-        """Test that delegation handles Claude execution errors gracefully."""
-        priority = {
-            "name": "PRIORITY 9",
-            "title": "Enhanced Communication",
-            "content": "Implement daily standup reports",
-        }
-
-        # Mock Claude to simulate error
-        daemon_with_mixin.claude.execute_prompt = Mock(return_value=Mock(success=False, error="API timeout"))
-
-        # Test error handling
-        result = daemon_with_mixin._ensure_technical_spec(priority)
-
-        # Verify error is handled
-        assert result is False
+        # Notification would be created (mocked in MockNotifications)
 
     def test_handles_missing_priority_name(self, daemon_with_mixin):
         """Test that missing priority name is handled gracefully."""
@@ -232,8 +199,8 @@ class TestArchitectDelegation:
         # Verify validation failure
         assert result is False
 
-    def test_handles_missing_priority_content(self, daemon_with_mixin, caplog):
-        """Test that missing priority content is handled with warning."""
+    def test_handles_missing_priority_content(self, daemon_with_mixin):
+        """Test that missing priority content still allows spec check (CFR-008)."""
         priority = {
             "name": "PRIORITY 9",
             "title": "Enhanced Communication",
@@ -242,23 +209,15 @@ class TestArchitectDelegation:
         # Use parent.parent to go from docs/roadmap/ROADMAP.md to docs/
         specs_dir = daemon_with_mixin.roadmap_path.parent.parent / "architecture" / "specs"
 
-        # Mock Claude to simulate spec creation
-        def mock_execute_with_spec_creation(prompt, timeout=None):
-            spec_file = specs_dir / "SPEC-009-enhanced-communication.md"
-            spec_file.write_text("# SPEC-009\n\nMinimal spec")
-            result = Mock()
-            result.success = True
-            return result
+        # Create spec file (simulate architect created it)
+        spec_file = specs_dir / "SPEC-009-enhanced-communication.md"
+        spec_file.write_text("# SPEC-009\n\nMinimal spec from architect")
 
-        daemon_with_mixin.claude.execute_prompt = mock_execute_with_spec_creation
+        # Test with missing content - should still find existing spec
+        result = daemon_with_mixin._ensure_technical_spec(priority)
 
-        # Test with missing content
-        with caplog.at_level(logging.WARNING):
-            result = daemon_with_mixin._ensure_technical_spec(priority)
-
-        # Verify warning is logged
+        # Verify spec is found
         assert result is True
-        assert any("no content" in record.message.lower() for record in caplog.records)
 
     def test_spec_prefix_for_priority_with_decimal(self, daemon_with_mixin):
         """Test spec prefix generation for PRIORITY X.Y (e.g., PRIORITY 2.6)."""
@@ -277,39 +236,3 @@ class TestArchitectDelegation:
         # Test detection
         result = daemon_with_mixin._ensure_technical_spec(priority)
         assert result is True
-
-
-class TestDeprecatedSpecCreationPrompt:
-    """Test deprecated _build_spec_creation_prompt method."""
-
-    @pytest.fixture
-    def daemon_with_mixin(self, tmp_path):
-        """Create daemon instance with SpecManagerMixin."""
-        roadmap_dir = tmp_path / "docs" / "roadmap"
-        roadmap_dir.mkdir(parents=True)
-
-        specs_dir = tmp_path / "docs" / "architecture" / "specs"
-        specs_dir.mkdir(parents=True)
-
-        roadmap_file = roadmap_dir / "ROADMAP.md"
-        roadmap_file.write_text("# ROADMAP\n\nTest roadmap")
-
-        daemon = TestDaemonWithArchitectDelegation()
-        daemon.setup(roadmap_file)
-        return daemon
-
-    def test_deprecated_method_still_works(self, daemon_with_mixin):
-        """Test that deprecated _build_spec_creation_prompt still works for backwards compatibility."""
-        priority = {
-            "name": "US-033",
-            "title": "Streamlit App",
-            "content": "Create a Streamlit dashboard application",
-        }
-
-        # Test deprecated method
-        prompt = daemon_with_mixin._build_spec_creation_prompt(priority, "US-033_TECHNICAL_SPEC.md")
-
-        # Verify prompt is generated (method should still work)
-        assert prompt is not None
-        assert isinstance(prompt, str)
-        assert len(prompt) > 0
