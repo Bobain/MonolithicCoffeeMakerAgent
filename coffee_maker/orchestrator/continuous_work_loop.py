@@ -597,7 +597,7 @@ class ContinuousWorkLoop:
                 logger.info(f"❌ Cannot parallelize: {parallel_result.get('reason', 'file conflicts')}")
                 logger.info("📝 Falling back to sequential execution...")
 
-        # Fall back to sequential execution (original behavior)
+        # Fall back to sequential execution (with MANDATORY worktree - CFR-013)
         next_priority = planned_priorities[0]
 
         # Check if already implementing
@@ -605,23 +605,53 @@ class ContinuousWorkLoop:
             logger.debug(f"Implementation for PRIORITY {next_priority['number']} already in progress")
             return
 
-        # Spawn code_developer for implementation
+        # CFR-013 MANDATORY ISOLATION: Create worktree for code_developer
+        # NO TWO code_developers can EVER work in the same directory
         priority_name = next_priority.get("us_id") or f"PRIORITY {next_priority['number']}"
-        logger.info(f"⚙️  Spawning code_developer for {priority_name} implementation")
+        logger.info(f"⚙️  Creating worktree for {priority_name} implementation (CFR-013 compliance)")
+
+        # Generate unique worktree ID
+        worktree_id = self._generate_worktree_id()
+        worktree_path = f"../worktree-{worktree_id}"
+        worktree_branch = f"roadmap-{worktree_id}"
+
+        # Create worktree
+        try:
+            result = subprocess.run(
+                ["git", "worktree", "add", worktree_path, "-b", worktree_branch],
+                cwd=self.repo_root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            logger.info(f"✅ Created worktree: {worktree_path} (branch: {worktree_branch})")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to create worktree: {e.stderr}")
+            return
+
+        # Spawn code_developer IN worktree
+        logger.info(f"⚙️  Spawning code_developer for {priority_name} in worktree {worktree_path}")
 
         result = self.agent_mgmt.execute(
             action="spawn_code_developer",
             priority_number=next_priority["number"],
+            worktree_path=worktree_path,
             auto_approve=True,
         )
 
         if result.get("error"):
             logger.error(f"Failed to spawn code_developer for {priority_name}: {result['error']}")
+            # Cleanup worktree on spawn failure
+            try:
+                subprocess.run(["git", "worktree", "remove", worktree_path, "--force"], cwd=self.repo_root)
+                subprocess.run(["git", "branch", "-D", worktree_branch], cwd=self.repo_root)
+            except Exception:
+                pass
             return
 
         agent_info = result["result"]
 
-        # Track implementation task
+        # Track implementation task (with worktree info)
         if "active_tasks" not in self.current_state:
             self.current_state["active_tasks"] = {}
 
@@ -632,9 +662,13 @@ class ContinuousWorkLoop:
             "started_at": time.time(),
             "type": "implementation",
             "priority_number": next_priority["number"],
+            "worktree_path": worktree_path,
+            "worktree_branch": worktree_branch,
         }
 
-        logger.info(f"✅ code_developer spawned for {priority_name} (PID: {agent_info['pid']})")
+        logger.info(
+            f"✅ code_developer spawned for {priority_name} (PID: {agent_info['pid']}, worktree: {worktree_path})"
+        )
 
     def _monitor_tasks(self):
         """

@@ -1,95 +1,101 @@
-# Console UI Guide - MonolithicCoffeeMakerAgent
+# Console UI Guide - Coffee Maker Project Manager
 
-**Related**: US-036: Polish Console UI to Claude-CLI Quality
-**Status**: ✅ Complete
 **Last Updated**: 2025-10-20
-
-## Overview
-
-MonolithicCoffeeMakerAgent features a polished, professional console UI that rivals claude-cli in quality and user experience. This guide documents the UI features, implementation, and best practices.
-
-## Table of Contents
-
-1. [Key Features](#key-features)
-2. [Color Scheme & Visual Language](#color-scheme--visual-language)
-3. [Interactive Features](#interactive-features)
-4. [Usage Examples](#usage-examples)
-5. [Developer Guide](#developer-guide)
-6. [Keyboard Shortcuts](#keyboard-shortcuts)
-7. [Troubleshooting](#troubleshooting)
+**Status**: Production Ready ✅
+**US-036**: Polish Console UI to Claude-CLI Quality
 
 ---
 
-## Key Features
+## Table of Contents
 
-### 1. Rich Text Formatting
+1. [Overview](#overview)
+2. [Color Scheme & Visual Language](#color-scheme--visual-language)
+3. [Interactive Features](#interactive-features)
+4. [Message Types](#message-types)
+5. [Developer Guide](#developer-guide)
+6. [Troubleshooting](#troubleshooting)
+7. [Terminal Compatibility](#terminal-compatibility)
 
-The UI uses the `rich` library for professional terminal output:
+---
 
-- **Color-coded messages**: Info (blue), Success (green), Warning (yellow), Error (red)
-- **Status symbols**: ✓ ✗ ⚠ ℹ ⚙ 🧠 💤
-- **Tables and panels**: Structured data display
-- **Progress indicators**: Spinners and progress bars
-- **Markdown rendering**: Rich text responses
+## Overview
 
-### 2. Advanced Input Handling
+The Coffee Maker console UI provides a professional, polished terminal interface matching claude-cli quality standards. Built with the `rich` library for advanced formatting and `prompt_toolkit` for interactive input, the UI delivers a smooth, responsive user experience.
 
-Using `prompt_toolkit` for sophisticated input:
+### Key Features
 
-- **Command history**: Navigate with ↑/↓ arrows
-- **Auto-suggestions**: Based on command history
-- **TAB completion**: Command and argument completion
-- **Multi-line input**: For complex prompts
-- **Keyboard shortcuts**: Ctrl+C, Ctrl+D, Ctrl+L, Ctrl+R
+- **Consistent Color Scheme**: Professional color palette across all outputs
+- **Rich Formatting**: Tables, panels, progress bars, and syntax highlighting
+- **Interactive Input**: Command history, auto-completion, multi-line support
+- **Real-time Status**: Live daemon status monitoring in bottom toolbar
+- **Keyboard Shortcuts**: Intuitive shortcuts for power users
+- **Responsive Design**: Graceful handling of terminal resize and theme switching
 
-### 3. Real-time Status Monitoring
+### Design Philosophy
 
-Background status monitor displays:
-
-- Current task and priority
-- Iteration count
-- Time elapsed and ETA
-- Progress visualization
+The UI follows these principles:
+1. **Clarity**: Clear, scannable information hierarchy
+2. **Consistency**: Unified visual language across all components
+3. **Responsiveness**: Smooth streaming and real-time updates
+4. **Accessibility**: Support for both light and dark themes
+5. **Professional**: Clean, minimal design without clutter
 
 ---
 
 ## Color Scheme & Visual Language
 
-### Color Palette
+### Primary Colors
+
+The console UI uses a consistent color scheme defined in `coffee_maker/cli/console_ui.py:40`:
 
 ```python
 COLORS = {
-    "info": "blue",        # Informational messages
-    "success": "green",    # Successful operations
-    "warning": "yellow",   # Warnings and cautions
-    "error": "red",        # Errors and failures
-    "muted": "dim white",  # Secondary information
-    "highlight": "cyan",   # Highlighted text
-    "accent": "magenta",   # Accent elements
+    "info": "blue",       # Informational messages
+    "success": "green",   # Success states
+    "warning": "yellow",  # Warning messages
+    "error": "red",       # Error messages
+    "muted": "dim white", # Secondary text
+    "highlight": "cyan",  # Highlighted elements
+    "accent": "magenta",  # Accent elements
 }
 ```
 
 ### Status Symbols
 
+Visual symbols provide quick status recognition (`coffee_maker/cli/console_ui.py:51`):
+
 ```python
 SYMBOLS = {
-    "success": "✓",      # Successful completion
-    "error": "✗",        # Errors
-    "warning": "⚠",      # Warnings
-    "info": "ℹ",         # Information
-    "working": "⚙",      # In progress
-    "thinking": "🧠",    # Processing
-    "idle": "💤",        # Waiting/idle
+    "success": "✓",    # Completed successfully
+    "error": "✗",      # Failed or error
+    "warning": "⚠",    # Warning or caution
+    "info": "ℹ",       # Informational
+    "working": "⚙",    # In progress
+    "thinking": "🧠",  # AI processing
+    "idle": "💤",      # Idle state
 }
 ```
 
-### Visual Hierarchy
+### Usage Examples
 
-1. **Section Headers**: Bold cyan with horizontal rules
-2. **Primary Content**: Normal weight, high contrast
-3. **Secondary Content**: Muted (dim white)
-4. **Status Messages**: Color-coded with symbols
-5. **Error Messages**: Red with suggestions in blue
+**Success Message**:
+```
+✓ Task completed successfully!
+  Details: 3 files updated
+```
+
+**Error with Suggestion**:
+```
+✗ Error: Configuration file not found
+  💡 Suggestion: Run `project-manager init` to create configuration
+  Details: Missing .project_manager/config.json
+```
+
+**Warning**:
+```
+⚠ Warning: Large roadmap file detected (5MB)
+  💡 Suggestion: Consider archiving completed priorities
+```
 
 ---
 
@@ -97,185 +103,168 @@ SYMBOLS = {
 
 ### Command History
 
-History is persisted to `.project_manager_history`:
+Navigate through previous commands using arrow keys:
 
-```bash
-# Navigate history
-↑   # Previous command
-↓   # Next command
+- **↑ (Up Arrow)**: Previous command
+- **↓ (Down Arrow)**: Next command
+- **Ctrl+R**: Reverse search through history
 
-# Search history
-Ctrl+R  # Reverse search through history
-```
-
-**Example**:
-```
-> /roadmap
-> /status
-> chat What's the current priority?
-
-# Press ↑ to get: chat What's the current priority?
-# Press ↑ again to get: /status
-```
+History is persisted to `~/.project_manager/chat_history.txt` (configured in `coffee_maker/cli/chat_interface.py:418`).
 
 ### Auto-completion
 
-TAB completion for commands and arguments:
+Press **Tab** to trigger auto-completion for:
 
-```bash
-# Type /ro and press TAB
-> /ro<TAB>
-> /roadmap
+1. **Slash Commands**: `/help`, `/view`, `/status`, etc.
+2. **Priority Names**: `PRIORITY 1`, `PRIORITY 2`, etc.
+3. **Context-aware**: Suggests relevant completions based on input
 
-# Available commands:
-/roadmap, /status, /notifications, /verify-dod,
-/github-status, /help, /exit, /standup
+Example:
 ```
+You: /vi[TAB]
+  → /view
+
+You: view PRIO[TAB]
+  → PRIORITY 1
+  → PRIORITY 2
+  → PRIORITY 3
+```
+
+Implementation in `coffee_maker/cli/chat_interface.py:263` (`ProjectManagerCompleter` class).
 
 ### Multi-line Input
 
-For long prompts, use natural line breaks:
+Support for long prompts and formatted text:
+
+- **Alt+Enter**: Insert newline (continue on next line)
+- **Enter**: Submit input
+- **Continuation prompt**: `... ` shows multi-line mode
+
+Example:
+```
+You
+› Can you help me with the following:
+... 1. Review PRIORITY 3
+... 2. Check daemon status
+... 3. Generate standup report
+```
+
+Configured in `coffee_maker/cli/chat_interface.py:428` (escape + enter key binding).
+
+### Real-time Status Bar
+
+The bottom toolbar shows live daemon status (updates every 2 seconds):
 
 ```
-> chat Please analyze the current roadmap
-... and identify the top 3 priorities
-... that we should focus on this week
-
-# Lines continue until you press Enter twice
+🟢 Implement Authentication System
+▸ PRIORITY 8 | Iteration 3 | Time: 2h 15m | ETA: ~4h 30m
+▸ Tasks:
+   ✓ Read specifications: 5m (est: 10m)
+   🔄 Implement auth middleware: 1h 20m / 2h
+   ⏳ Write tests (est: 1h)
+   ⏳ Update documentation (est: 30m)
+▸ Progress: [████████████░░░░░░░░] 60%
 ```
+
+**Status Indicators**:
+- 🟢 Active - Daemon working on task
+- 🟡 Idle - Daemon waiting for tasks
+- ⚫ Not running - Daemon stopped
+
+Implementation in `coffee_maker/cli/chat_interface.py:56` (`DeveloperStatusMonitor` class).
 
 ---
 
-## Usage Examples
+## Message Types
 
-### 1. Starting a Chat Session
+### Success Messages
 
-```bash
-$ poetry run project-manager chat
+Used for completed actions and positive confirmations.
 
-╭─────────────────────────────────────────────────╮
-│    MonolithicCoffeeMakerAgent Project Manager  │
-│                                                 │
-│    Type /help for commands                     │
-│    Type 'exit' or press Ctrl+D to quit        │
-╰─────────────────────────────────────────────────╯
-
-⚫ code_developer: Not running
-
->
-```
-
-### 1b. Available Commands (Real Examples)
-
-```bash
-# View roadmap
-$ poetry run project-manager view
-
-# Show daemon status
-$ poetry run project-manager status
-
-# Show developer status dashboard
-$ poetry run project-manager developer-status
-
-# Check notifications
-$ poetry run project-manager notifications
-
-# Respond to notification
-$ poetry run project-manager respond 5 approve
-
-# Generate technical specification
-$ poetry run project-manager spec PRIORITY-2.8
-
-# Show spec metrics
-$ poetry run project-manager spec-metrics
-
-# Start interactive AI chat
-$ poetry run project-manager chat
-```
-
-### 2. Success Message Example
-
+**API** (`coffee_maker/cli/console_ui.py:62`):
 ```python
 from coffee_maker.cli.console_ui import success
 
-success("Priority PRIORITY-2.6 completed!",
-        details="All tests passed, documentation updated")
+success("Priority added successfully", details="PRIORITY 10: Authentication")
 ```
 
 **Output**:
 ```
-✓ Priority PRIORITY-2.6 completed!
-   All tests passed, documentation updated
+✓ Priority added successfully
+  PRIORITY 10: Authentication
 ```
 
-### 3. Error Message with Suggestions
+### Error Messages
 
+Used for failures and errors with actionable suggestions.
+
+**API** (`coffee_maker/cli/console_ui.py:75`):
 ```python
 from coffee_maker.cli.console_ui import error
 
-error("Failed to read ROADMAP.md",
-      suggestion="Check that the file exists in docs/roadmap/",
-      details="FileNotFoundError: No such file or directory")
-```
-
-**Output**:
-```
-✗ Error: Failed to read ROADMAP.md
-   💡 Suggestion: Check that the file exists in docs/roadmap/
-   Details: FileNotFoundError: No such file or directory
-```
-
-### 4. Progress Indicator
-
-```python
-from coffee_maker.cli.console_ui import progress_context
-
-with progress_context("Analyzing roadmap...") as progress:
-    task = progress.add_task("Processing", total=100)
-    for i in range(100):
-        # Do work
-        progress.update(task, advance=1)
-```
-
-**Output**:
-```
-⠋ Processing ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  45% 0:00:12
-```
-
-### 5. Formatted Table
-
-```python
-from coffee_maker.cli.console_ui import create_table, console
-
-table = create_table(
-    title="Current Priorities",
-    columns=["ID", "Title", "Status", "Effort"]
+error(
+    "Database connection failed",
+    suggestion="Check that the daemon is running",
+    details="Connection timeout after 30s"
 )
-table.add_row("PRIORITY-2.6", "ACE Framework", "✅ Complete", "3 days")
-table.add_row("PRIORITY-2.7", "UI Polish", "🔄 In Progress", "2 days")
-console.print(table)
 ```
 
 **Output**:
 ```
-         Current Priorities
-┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━┓
-┃ ID          ┃ Title       ┃ Status      ┃ Effort┃
-┡━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━┩
-│ PRIORITY-2.6│ ACE Framework│ ✅ Complete│ 3 days│
-│ PRIORITY-2.7│ UI Polish   │ 🔄 In Progress│ 2 days│
-└─────────────┴─────────────┴─────────────┴───────┘
+✗ Error: Database connection failed
+  💡 Suggestion: Check that the daemon is running
+  Details: Connection timeout after 30s
 ```
 
-### 6. Notification Display
+### Warning Messages
 
+Used for non-critical issues that need attention.
+
+**API** (`coffee_maker/cli/console_ui.py:94`):
+```python
+from coffee_maker.cli.console_ui import warning
+
+warning(
+    "Context window nearing limit",
+    suggestion="Consider compacting conversation history"
+)
+```
+
+**Output**:
+```
+⚠ Warning: Context window nearing limit
+  💡 Suggestion: Consider compacting conversation history
+```
+
+### Info Messages
+
+Used for general information and status updates.
+
+**API** (`coffee_maker/cli/console_ui.py:109`):
+```python
+from coffee_maker.cli.console_ui import info
+
+info("Daemon started", details="PID: 12345")
+```
+
+**Output**:
+```
+ℹ Daemon started
+  PID: 12345
+```
+
+### Notifications
+
+Formatted panels for important messages from daemon.
+
+**API** (`coffee_maker/cli/console_ui.py:319`):
 ```python
 from coffee_maker.cli.console_ui import format_notification, console
 
 panel = format_notification(
     notif_type="question",
     title="Approval Required",
-    message="Ready to implement PRIORITY-2.8?",
+    message="Should I proceed with implementation of PRIORITY 8?",
     priority="high",
     created_at="2025-10-20 14:30:00"
 )
@@ -284,14 +273,83 @@ console.print(panel)
 
 **Output**:
 ```
-╭─ QUESTION ───────────────────────────────────────╮
-│ ‼️  Approval Required                             │
-│                                                  │
-│ Ready to implement PRIORITY-2.8?                 │
-│                                                  │
-│ Created: 2025-10-20 14:30:00                    │
-╰──────────────────────────────────────────────────╯
+┌──────────── QUESTION ────────────┐
+│ ‼️ Approval Required             │
+│                                   │
+│ Should I proceed with            │
+│ implementation of PRIORITY 8?    │
+│                                   │
+│ Created: 2025-10-20 14:30:00     │
+└───────────────────────────────────┘
 ```
+
+### Tables
+
+Structured data display with consistent formatting.
+
+**API** (`coffee_maker/cli/console_ui.py:153`):
+```python
+from coffee_maker.cli.console_ui import create_table, console
+
+table = create_table(
+    title="Active Priorities",
+    columns=["ID", "Title", "Status", "Progress"]
+)
+table.add_row("PRIORITY 8", "Authentication", "In Progress", "60%")
+table.add_row("PRIORITY 9", "Email Notifications", "Planned", "0%")
+console.print(table)
+```
+
+**Output**:
+```
+          Active Priorities
+┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ ID        ┃ Title              ┃ Status      ┃ Progress ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ PRIORITY 8│ Authentication     │ In Progress │ 60%      │
+│ PRIORITY 9│ Email Notifications│ Planned     │ 0%       │
+└───────────┴────────────────────┴─────────────┴──────────┘
+```
+
+### Progress Indicators
+
+Visual feedback for long-running operations.
+
+**Spinner** (`coffee_maker/cli/console_ui.py:203`):
+```python
+from coffee_maker.cli.console_ui import progress_context
+import time
+
+with progress_context("Loading priorities...") as progress:
+    task = progress.add_task("Loading...", total=100)
+    for i in range(100):
+        time.sleep(0.01)
+        progress.update(task, advance=1)
+```
+
+**Output** (animated):
+```
+⠋ Loading priorities... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 45% 0:00:03
+```
+
+### Syntax Highlighting
+
+Code blocks with automatic language detection and highlighting (implementation in `coffee_maker/cli/chat_interface.py:1211`).
+
+**Automatic Detection**:
+````
+```python
+def calculate_progress(completed, total):
+    return (completed / total) * 100
+```
+````
+
+**Output**:
+```python
+ 1 │ def calculate_progress(completed, total):
+ 2 │     return (completed / total) * 100
+```
+(with syntax highlighting in Monokai theme)
 
 ---
 
@@ -299,295 +357,315 @@ console.print(panel)
 
 ### Using Console UI in Your Code
 
-Import the centralized console UI utilities:
+#### Import the Module
 
 ```python
 from coffee_maker.cli.console_ui import (
-    console,           # Shared console instance
-    success,           # Success messages
-    error,             # Error messages
-    warning,           # Warning messages
-    info,              # Info messages
-    section_header,    # Section headers
-    create_table,      # Create tables
-    create_panel,      # Create panels
-    progress_context,  # Progress indicators
+    console,        # Shared Console instance
+    success,        # Success messages
+    error,          # Error messages
+    warning,        # Warning messages
+    info,           # Info messages
+    create_table,   # Create formatted tables
+    create_panel,   # Create formatted panels
+    COLORS,         # Color constants
+    SYMBOLS,        # Symbol constants
 )
 ```
 
-### Best Practices
+#### Best Practices
 
-#### 1. Consistent Messaging
+1. **Use Shared Console Instance**:
+   ```python
+   # Good
+   from coffee_maker.cli.console_ui import console
+   console.print("[bold]Hello[/]")
 
+   # Bad - creates separate console instance
+   from rich.console import Console
+   Console().print("[bold]Hello[/]")
+   ```
+
+2. **Use Helper Functions**:
+   ```python
+   # Good - consistent formatting
+   success("Task completed")
+
+   # Bad - manual formatting
+   console.print("[green]✓ Task completed[/]")
+   ```
+
+3. **Provide Actionable Suggestions**:
+   ```python
+   # Good - tells user what to do
+   error(
+       "Invalid priority ID",
+       suggestion="Use /view to see available priorities"
+   )
+
+   # Bad - just the error
+   error("Invalid priority ID")
+   ```
+
+4. **Use Appropriate Message Types**:
+   ```python
+   # Good - correct severity
+   info("Loading roadmap...")      # Informational
+   warning("Large file detected")  # Worth noting
+   error("Database unavailable")   # Action required
+
+   # Bad - wrong severity
+   error("Loading roadmap...")     # Not an error!
+   ```
+
+#### Creating Custom Components
+
+**Custom Panel** (using `coffee_maker/cli/console_ui.py:183`):
 ```python
-# ✅ Good: Use helper functions
-success("Task completed successfully!")
+from coffee_maker.cli.console_ui import create_panel, console
 
-# ❌ Bad: Direct console.print with manual styling
-console.print("[green]✓[/green] Task completed successfully!")
+content = """
+**Next Steps**:
+1. Review the specification
+2. Implement the feature
+3. Write tests
+"""
+
+panel = create_panel(
+    content,
+    title="Action Items",
+    border_style="cyan"
+)
+console.print(panel)
 ```
 
-#### 2. Helpful Error Messages
-
+**Custom Table**:
 ```python
-# ✅ Good: Include suggestions
-error("Database connection failed",
-      suggestion="Check DATABASE_URL in .env file",
-      details=str(e))
+from coffee_maker.cli.console_ui import create_table, console
 
-# ❌ Bad: Generic error
-console.print(f"[red]Error: {e}[/red]")
+table = create_table(
+    title="Daemon Statistics",
+    columns=["Metric", "Value"]
+)
+table.add_row("Uptime", "12h 34m")
+table.add_row("Tasks Completed", "8")
+table.add_row("CPU Usage", "15%")
+console.print(table)
 ```
 
-#### 3. Visual Hierarchy
-
+**Error Panel with Suggestions** (`coffee_maker/cli/console_ui.py:282`):
 ```python
-# ✅ Good: Use section headers
-section_header("Roadmap Analysis", "Analyzing current priorities")
-# ... content ...
+from coffee_maker.cli.console_ui import format_error_with_suggestions, console
 
-# ❌ Bad: No visual separation
-console.print("Roadmap Analysis")
-# ... content ...
+panel = format_error_with_suggestions(
+    error_message="Failed to parse ROADMAP.md",
+    suggestions=[
+        "Check for unclosed markdown blocks",
+        "Verify file encoding is UTF-8",
+        "Run: git diff docs/roadmap/ROADMAP.md"
+    ],
+    error_details="Line 1234: Unexpected end of file"
+)
+console.print(panel)
 ```
 
-#### 4. Progress Feedback
+### Streaming Responses
+
+For AI responses, use character-by-character streaming (`coffee_maker/cli/chat_interface.py:1327`):
 
 ```python
-# ✅ Good: Show progress for long operations
-with progress_context("Analyzing roadmap...") as progress:
-    task = progress.add_task("Processing", total=len(items))
-    for item in items:
-        # Process item
-        progress.update(task, advance=1)
+def stream_response(text_generator):
+    """Stream AI response smoothly."""
+    console.print("\n[bold]Claude[/]")
 
-# ❌ Bad: No feedback during long operations
-for item in items:
-    # Process item (user sees nothing)
-    pass
+    for chunk in text_generator:
+        console.print(chunk, end="")
+
+    console.print()  # Final newline
 ```
 
-### Architecture
+### Markdown Rendering
 
-**Location**: `coffee_maker/cli/console_ui.py:1`
+Render markdown content with rich formatting:
 
-**Dependencies**:
-- `rich>=13.0.0`: Rich text formatting
-- `prompt_toolkit>=3.0.47`: Advanced input handling
+```python
+from rich.markdown import Markdown
+from coffee_maker.cli.console_ui import console
 
-**Key Components**:
+markdown_text = """
+# Heading
 
-1. **Shared Console Instance** (`console`): Single console for consistent output
-2. **Helper Functions**: `success()`, `error()`, `warning()`, `info()`
-3. **Formatting Functions**: `create_table()`, `create_panel()`, `format_list()`
-4. **Progress Utilities**: `progress_context()`
-5. **Color Scheme**: Consistent color palette across all commands
+**Bold text** and *italic text*
 
----
+- List item 1
+- List item 2
 
-## Keyboard Shortcuts
+```python
+code_block()
+```
+"""
 
-### Input Navigation
-
-| Shortcut | Action |
-|----------|--------|
-| `↑` | Previous command in history |
-| `↓` | Next command in history |
-| `Ctrl+A` | Move cursor to beginning of line |
-| `Ctrl+E` | Move cursor to end of line |
-| `Ctrl+K` | Delete from cursor to end of line |
-| `Ctrl+U` | Delete from cursor to beginning of line |
-| `Ctrl+W` | Delete word before cursor |
-| `Alt+B` | Move cursor back one word |
-| `Alt+F` | Move cursor forward one word |
-
-### Command Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+C` | Graceful exit (with confirmation) |
-| `Ctrl+D` | Exit (standard Unix convention) |
-| `Ctrl+L` | Clear screen |
-| `Ctrl+R` | Reverse search through history |
-| `TAB` | Command/argument autocomplete |
-
-### Multi-line Input
-
-| Shortcut | Action |
-|----------|--------|
-| `Enter` | Submit single-line input |
-| `Shift+Enter` | Continue to next line (multi-line mode) |
-| `Enter` twice | Submit multi-line input |
+md = Markdown(markdown_text)
+console.print(md)
+```
 
 ---
 
 ## Troubleshooting
 
-### Issue: Colors Not Displaying
+### Common Issues
 
-**Symptoms**: Text appears without colors, formatting looks broken
+#### Colors Not Showing
 
-**Causes**:
-- Terminal doesn't support colors
-- `NO_COLOR` environment variable is set
-- Output is piped/redirected
+**Symptom**: Plain text without colors
 
 **Solutions**:
-```bash
-# Check terminal capabilities
-echo $TERM
-# Should show: xterm-256color, screen-256color, etc.
+1. Check terminal supports colors:
+   ```bash
+   echo $TERM  # Should be xterm-256color or similar
+   ```
 
-# Unset NO_COLOR if set
-unset NO_COLOR
+2. Force color output:
+   ```bash
+   export FORCE_COLOR=1
+   poetry run project-manager
+   ```
 
-# Use a modern terminal emulator
-# Recommended: iTerm2 (macOS), Windows Terminal, GNOME Terminal
-```
+3. Update terminal emulator to modern version
 
-### Issue: Command History Not Working
+#### Unicode Symbols Not Displaying
 
-**Symptoms**: ↑/↓ arrows don't navigate history
-
-**Causes**:
-- History file not writable
-- `prompt_toolkit` not installed correctly
+**Symptom**: Boxes or question marks instead of symbols
 
 **Solutions**:
-```bash
-# Check history file permissions
-ls -la ~/.coffee_maker/.project_manager_history
-chmod 644 ~/.coffee_maker/.project_manager_history
+1. Use UTF-8 encoding:
+   ```bash
+   export LC_ALL=en_US.UTF-8
+   export LANG=en_US.UTF-8
+   ```
 
-# Reinstall prompt_toolkit
-poetry install --sync
-```
+2. Install a font with good Unicode support:
+   - macOS: SF Mono, Menlo
+   - Linux: JetBrains Mono, Fira Code
+   - Windows: Cascadia Code, Consolas
 
-### Issue: Unicode Symbols Not Displaying
+#### Progress Bar Flickering
 
-**Symptoms**: Status symbols show as `?` or boxes
-
-**Causes**:
-- Terminal encoding not set to UTF-8
-- Font doesn't support Unicode
+**Symptom**: Status bar updates cause screen flicker
 
 **Solutions**:
-```bash
-# Check encoding
-locale
-# Should show: LANG=en_US.UTF-8
+1. Disable status monitoring:
+   ```bash
+   export PROJECT_MANAGER_NO_STATUS=1
+   poetry run project-manager
+   ```
 
-# Set UTF-8 encoding
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
+2. Increase refresh interval (edit `chat_interface.py:443`):
+   ```python
+   refresh_interval=5,  # Change from 2 to 5 seconds
+   ```
 
-# Use a font with Unicode support
-# Recommended: Fira Code, JetBrains Mono, Cascadia Code
-```
+#### Terminal Too Small
 
-### Issue: Terminal Resize Breaks Formatting
-
-**Symptoms**: Tables and panels don't resize correctly
-
-**Causes**:
-- Rich library needs to detect resize
-- Terminal emulator doesn't send SIGWINCH
+**Symptom**: Text wrapping or truncation
 
 **Solutions**:
-```bash
-# Restart the chat session
-# The console will recalculate dimensions on startup
+1. Resize terminal to minimum 80×24
+2. Use full-screen mode (Cmd+Enter on macOS)
+3. Reduce font size
 
-# If persistent, try a different terminal emulator
-```
+#### Slow Rendering
 
-### Issue: Autocomplete Not Working
-
-**Symptoms**: TAB key inserts tab character instead of completing
-
-**Causes**:
-- `prompt_toolkit` completer not configured
-- Terminal in raw mode
+**Symptom**: Lag when displaying large outputs
 
 **Solutions**:
-```bash
-# Restart the application
-poetry run project-manager chat
+1. Limit table rows:
+   ```python
+   for priority in priorities[:20]:  # Limit to 20 rows
+       table.add_row(...)
+   ```
 
-# If persistent, check for conflicting readline configuration
-# Remove or rename ~/.inputrc
+2. Disable streaming for large responses:
+   ```bash
+   export PROJECT_MANAGER_NO_STREAMING=1
+   ```
+
+### Debug Mode
+
+Enable debug logging to troubleshoot issues:
+
+```bash
+export LOG_LEVEL=DEBUG
+poetry run project-manager
 ```
+
+Check logs in:
+- `~/.coffee_maker/logs/project_manager.log`
 
 ---
 
-## Performance Considerations
+## Terminal Compatibility
 
-### Memory Usage
+### Fully Supported
 
-The console UI is designed to be lightweight:
+| Terminal | macOS | Linux | Windows | Notes |
+|----------|-------|-------|---------|-------|
+| iTerm2 | ✅ | - | - | Recommended on macOS |
+| Terminal.app | ✅ | - | - | Default macOS terminal |
+| Alacritty | ✅ | ✅ | ✅ | Fast, minimal |
+| Kitty | ✅ | ✅ | - | Advanced features |
+| GNOME Terminal | - | ✅ | - | Default on Ubuntu |
+| Konsole | - | ✅ | - | KDE default |
+| Windows Terminal | - | - | ✅ | Recommended on Windows |
 
-- **Shared console instance**: Single instance across all commands
-- **Lazy rendering**: Tables and panels only rendered when printed
-- **Stream processing**: Large outputs streamed, not buffered
+### Partially Supported
 
-### Terminal Compatibility
+| Terminal | Limitations |
+|----------|-------------|
+| tmux | Status bar may conflict with tmux status |
+| screen | Limited Unicode support |
+| SSH (slow connection) | Disable streaming for better performance |
 
-Tested on:
-- ✅ iTerm2 (macOS)
-- ✅ Terminal.app (macOS)
-- ✅ VS Code integrated terminal
-- ✅ Windows Terminal
-- ✅ GNOME Terminal (Linux)
-- ✅ Konsole (KDE)
-- ⚠️ Basic terminals (limited color support)
+### Not Supported
 
-### Responsive Design
+- Command Prompt (cmd.exe) - Use Windows Terminal or PowerShell
+- Very old terminal emulators (pre-2015)
 
-The UI adapts to terminal size:
+### Recommended Settings
 
-- **Minimum size**: 80x24 (standard terminal)
-- **Recommended size**: 120x40 or larger
-- **Automatic wrapping**: Long lines wrap gracefully
-- **Table overflow**: Tables adapt to available width
+**iTerm2** (macOS):
+- Profile → Terminal → Report Terminal Type: `xterm-256color`
+- Profile → Text → Font: SF Mono 12pt
+- Profile → Colors → Color Presets: Solarized Dark/Light
 
----
+**GNOME Terminal** (Linux):
+- Preferences → Profiles → Colors → Built-in schemes: Tango Dark/Light
+- Preferences → Profiles → Text → Custom font: JetBrains Mono 11pt
 
-## Related Documentation
-
-- **Technical Specification**: `docs/architecture/specs/SPEC-036-console-ui-polish.md`
-- **Implementation**: `coffee_maker/cli/console_ui.py:1`
-- **Chat Interface**: `coffee_maker/cli/chat_interface.py:1`
-- **ROADMAP Entry**: `docs/roadmap/ROADMAP.md:23698` (US-036)
-
----
-
-## Future Enhancements
-
-1. **Custom Themes**: User-configurable color schemes
-2. **Plugin System**: Extend UI with custom components
-3. **Voice Input**: Optional voice command support
-4. **Keyboard Macros**: Record and replay command sequences
-5. **Split Panes**: Show status in sidebar while chatting
-6. **Search**: Search through conversation history
-7. **Export**: Export conversations to markdown/HTML
+**Windows Terminal**:
+- Settings → Profiles → Defaults → Appearance → Color scheme: One Half Dark
+- Settings → Profiles → Defaults → Appearance → Font face: Cascadia Code
 
 ---
 
-## Changelog
+## Advanced Customization
 
-### 2025-10-20 - Initial Release (US-036)
-- ✅ Professional console UI matching claude-cli quality
-- ✅ Rich text formatting with consistent color scheme
-- ✅ Advanced input handling with history and autocomplete
-- ✅ Real-time status monitoring
-- ✅ Progress indicators and loading spinners
-- ✅ Helpful error messages with suggestions
-- ✅ Comprehensive keyboard shortcuts
-- ✅ Terminal resize handling
-- ✅ Multi-line input support
+See [UI_CUSTOMIZATION.md](./UI_CUSTOMIZATION.md) for detailed customization options including:
+
+- Environment variables
+- Custom color schemes
+- Terminal-specific settings
+- Performance tuning
+- Font recommendations
 
 ---
 
-**Last Updated**: 2025-10-20
-**Maintained By**: MonolithicCoffeeMakerAgent Team
-**Status**: Production Ready ✅
+## See Also
+
+- [CONSOLE_UI_EXAMPLES.md](./CONSOLE_UI_EXAMPLES.md) - Code examples and recipes
+- [KEYBOARD_SHORTCUTS_REFERENCE.md](./KEYBOARD_SHORTCUTS_REFERENCE.md) - Complete shortcut guide
+- [US-036-CONSOLE_UI_POLISH_GUIDE.md](./US-036-CONSOLE_UI_POLISH_GUIDE.md) - Technical specification
+
+---
+
+**Last Updated**: 2025-10-20 | **Status**: Production ✅
