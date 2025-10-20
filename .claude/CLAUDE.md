@@ -58,6 +58,13 @@ MonolithicCoffeeMakerAgent/
 
 ### Key Rules (CFRs)
 
+**CFR-000 - Singleton Agent Enforcement**: Each agent type MUST have only ONE running instance at a time
+- **Implementation**: `AgentRegistry` in `coffee_maker/autonomous/agent_registry.py`
+- **Usage**: Always use context manager pattern: `with AgentRegistry.register(AgentType.CODE_DEVELOPER):`
+- **Reason**: Prevents file conflicts, duplicate work, and resource waste
+- **Docs**: See [docs/AGENT_SINGLETON_ARCHITECTURE.md](../docs/AGENT_SINGLETON_ARCHITECTURE.md)
+- **Tests**: `tests/unit/test_agent_registry.py` (30+ comprehensive tests)
+
 **CFR-007 - Context Budget**: Agent core materials MUST fit in ≤30% of context window
 - See `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` for remediation strategies
 
