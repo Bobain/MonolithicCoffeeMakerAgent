@@ -319,17 +319,20 @@ def create_spec(priority: str, auto_approve: bool):
             user_story=user_story, feature_type="general", complexity="medium"
         )
 
+        # Prepare spec identifiers (can't use .replace() in f-strings)
+        spec_number = priority.replace(".", "-")
+        spec_title_slug = priority_title.lower().replace(" ", "-")[:40]
+        spec_date = datetime.now().strftime("%Y-%m-%d")
+
         # Save spec to file
-        spec_path = Path(
-            f"docs/architecture/specs/SPEC-{priority.replace('.', '-')}-{priority_title.lower().replace(' ', '-')[:40]}.md"
-        )
+        spec_path = Path(f"docs/architecture/specs/SPEC-{spec_number}-{spec_title_slug}.md")
         spec_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Format spec content
-        spec_content = f"""# SPEC-{priority.replace('.', '-')}: {priority_title}
+        spec_content = f"""# SPEC-{spec_number}: {priority_title}
 
 **Priority**: {priority_name}
-**Date**: {datetime.now().strftime('%Y-%m-%d')}
+**Date**: {spec_date}
 **Status**: Draft
 
 ## Overview
