@@ -15,6 +15,7 @@
 5. [Tutorial 5: Troubleshooting Common Issues](#tutorial-5-troubleshooting-common-issues)
 6. [Tutorial 6: Writing Effective User Stories](#tutorial-6-writing-effective-user-stories)
 7. [Tutorial 7: Code Review Workflow](#tutorial-7-code-review-workflow)
+8. [Tutorial 8: ACE Console Demo Tutorial](#tutorial-8-ace-console-demo-tutorial) ⭐ NEW
 
 ---
 
@@ -1003,17 +1004,99 @@ In chat: "Great job on US-011! Moving to next priority."
 
 ---
 
+## Tutorial 8: ACE Console Demo Tutorial
+
+**Time**: 30 minutes
+**Goal**: Master the ACE (Agentic Context Engineering) Generator system for file ownership enforcement
+
+### What is ACE?
+
+The **ACE Generator** is the guardian of file ownership in the MonolithicCoffeeMakerAgent system. It:
+
+- Intercepts all file write/edit/delete operations
+- Enforces ownership rules (CFR-001) automatically
+- Delegates operations to correct owners
+- Logs traces for analysis and optimization
+- Provides context-upfront for efficient agent execution
+
+### Quick Start
+
+```python
+from coffee_maker.autonomous.ace.generator import get_generator
+from coffee_maker.autonomous.agent_registry import AgentType
+
+# Get singleton Generator instance
+generator = get_generator()
+
+# Example: project_manager tries to write code (delegated to code_developer)
+result = generator.intercept_file_operation(
+    agent_type=AgentType.PROJECT_MANAGER,
+    file_path="coffee_maker/new_feature.py",
+    operation="write",
+    content="# New feature"
+)
+
+print(f"Delegated: {result.delegated}")  # True
+print(f"Owner: {result.delegated_to.value}")  # code_developer
+```
+
+### What You'll Learn
+
+1. **Generator Basics**: Understanding file operation interception
+2. **Ownership Enforcement**: CFR-001 automatic delegation
+3. **Delegation Traces**: Monitoring and analyzing patterns
+4. **Context-Upfront**: Efficient file access without searching
+5. **Search Monitoring**: Detecting insufficient context
+6. **Real-World Scenarios**: Debugging, optimization, cross-agent features
+7. **Database Queries**: Observability and analysis
+8. **Troubleshooting**: Common issues and solutions
+
+### Full Tutorial
+
+📖 **[ACE Console Demo Tutorial](ACE_CONSOLE_DEMO_TUTORIAL.md)** - Complete guide with examples, scenarios, and troubleshooting
+
+⚡ **[ACE Quick Reference](ACE_QUICK_REFERENCE.md)** - One-page reference card for quick lookup
+
+### Key Features
+
+| Feature | Benefit |
+|---------|---------|
+| **Automatic Delegation** | Zero-configuration ownership enforcement |
+| **Transparent Operation** | Agents don't need to know about delegation |
+| **Complete Observability** | All operations logged to database |
+| **Context-Upfront** | Faster execution, lower token usage |
+| **Search Monitoring** | Detect and fix insufficient context |
+
+### When to Use
+
+- **Every time** an agent writes/edits/deletes a file
+- When implementing **cross-agent features** (touches multiple boundaries)
+- For **debugging ownership violations**
+- When **optimizing agent context** (reducing searches)
+- During **system analysis** (understanding delegation patterns)
+
+### Next Steps
+
+1. Read the [full ACE tutorial](ACE_CONSOLE_DEMO_TUTORIAL.md)
+2. Try the examples in a Python shell
+3. Analyze delegation patterns in your system
+4. Optimize agent contexts based on search statistics
+5. Integrate Generator into your custom agents
+
+---
+
 ## 🎓 Summary & Next Steps
 
-You've completed all 7 tutorials! You now know how to:
+You've completed all 8 tutorials! You now know how to:
 
 1. ✅ Implement features autonomously with the daemon
 2. ✅ Follow daily workflow for maximum productivity
 3. ✅ Monitor and control the daemon
-4. ✅ Communicate asynchronously with the daemon (NEW ✨)
+4. ✅ Communicate asynchronously with the daemon
 5. ✅ Troubleshoot common issues
 6. ✅ Write effective user stories
 7. ✅ Review code professionally
+8. ✅ Use ACE Generator for file ownership enforcement ⭐ NEW
 
 ### Recommended Next Steps:
 
