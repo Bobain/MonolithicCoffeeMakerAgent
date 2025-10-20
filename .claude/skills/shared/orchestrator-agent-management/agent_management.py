@@ -106,9 +106,8 @@ class OrchestratorAgentManagementSkill:
             if priority_number is None:
                 raise ValueError("priority_number required for create_spec task type")
             cmd.extend(["create-spec", f"--priority={priority_number}"])
-
-        if auto_approve:
-            cmd.append("--auto-approve")
+        elif task_type == "refactoring_analysis":
+            cmd.extend(["analyze-codebase", "--force"])
 
         # Spawn process
         process = subprocess.Popen(
@@ -218,12 +217,11 @@ class OrchestratorAgentManagementSkill:
         cmd = ["poetry", "run", "project-manager"]
 
         if task_type == "auto_planning":
-            cmd.extend(["auto-plan"])
+            # Use 'view' command for now until auto-planning command is implemented
+            cmd.extend(["view"])
         elif task_type == "roadmap_health":
-            cmd.extend(["roadmap-health"])
-
-        if auto_approve:
-            cmd.append("--auto-approve")
+            # Use 'status' command for roadmap health
+            cmd.extend(["status"])
 
         # Spawn process
         process = subprocess.Popen(

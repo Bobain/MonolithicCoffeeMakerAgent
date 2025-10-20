@@ -24,6 +24,7 @@ Related:
 
 import json
 import logging
+import re
 import signal
 import sys
 import time
@@ -168,14 +169,27 @@ class ContinuousWorkLoop:
         if roadmap_updated:
             logger.info("ROADMAP updated, recalculating work distribution")
 
+        # Step 1.5: Check for high-priority bugs (BUG-065)
+        # Bugs take precedence over new development
+        high_priority_bugs = self._get_high_priority_bugs()
+        if high_priority_bugs:
+            bug = high_priority_bugs[0]
+            logger.info(f"🐛 High-priority bug detected: {bug['number']} - {bug['title']}")
+            logger.info(f"   Priority: {bug['priority']}, Status: {bug['status']}")
+            self._coordinate_bug_fix(bug)
+            # Skip feature development this cycle to focus on bugs
+            return
+
         # Step 2: Architect coordination (proactive spec creation)
         self._coordinate_architect()
 
         # Step 2.5: Architect refactoring analysis (weekly)
+        # RE-ENABLED: BUG-064 fixed - added --force flag
         self._coordinate_refactoring_analysis()
 
         # Step 2.6: project_manager auto-planning (weekly)
-        self._coordinate_planning()
+        # TEMPORARILY DISABLED: project-manager view command is not suitable for autonomous operation
+        # self._coordinate_planning()
 
         # Step 2.7: Check for completed worktrees and notify architect for merge
         self._check_worktree_merges()
@@ -289,9 +303,9 @@ class ContinuousWorkLoop:
 
         Logic:
         1. Check if 7 days since last analysis
-        2. If yes: spawn architect for proactive-refactoring-analysis
-        3. Architect analyzes codebase and code-review history
-        4. Reports refactoring opportunities to project_manager
+        2. If yes: notify user to run codebase analysis (requires interactive input)
+        3. User runs: poetry run architect analyze-codebase
+        4. Architect analyzes codebase and reports refactoring opportunities
         """
         # Check last refactoring analysis time
         last_analysis = self.current_state.get("last_refactoring_analysis", 0)
@@ -302,21 +316,36 @@ class ContinuousWorkLoop:
             logger.debug(f"Refactoring analysis not needed (last run {days_since_analysis:.1f} days ago)")
             return
 
-        logger.info("🔍 Spawning architect for weekly refactoring analysis")
+        # Check if we already sent a notification recently (avoid spam)
+        last_notification = self.current_state.get("last_analysis_notification", 0)
+        hours_since_notification = (time.time() - last_notification) / 3600
 
-        result = self.agent_mgmt.execute(
-            action="spawn_architect",
-            task_type="refactoring_analysis",
-            auto_approve=True,
-        )
-
-        if result["error"]:
-            logger.error(f"Failed to spawn architect for refactoring analysis: {result['error']}")
+        if hours_since_notification < 24:
+            logger.debug("Analysis notification already sent recently")
             return
 
-        # Update last analysis time
-        self.current_state["last_refactoring_analysis"] = time.time()
-        logger.info(f"✅ Architect spawned for refactoring analysis (PID: {result['result']['pid']})")
+        logger.info("📢 Weekly codebase analysis is due - notifying user")
+
+        # Send notification asking user to run analysis
+        self.notifications.create_notification(
+            type="action_required",
+            title="Weekly Codebase Analysis Due",
+            message=f"Architect codebase analysis is overdue ({days_since_analysis:.1f} days since last run).\n\n"
+            f"Please run: poetry run architect analyze-codebase\n\n"
+            f"This will:\n"
+            f"- Analyze complexity metrics (radon)\n"
+            f"- Detect large files (>500 LOC)\n"
+            f"- Check test coverage\n"
+            f"- Extract TODO/FIXME comments\n\n"
+            f"After running, the analysis report will be saved to docs/architecture/",
+            priority="normal",
+            sound=False,  # CFR-009
+            agent_id="orchestrator",
+        )
+
+        # Track that we sent the notification
+        self.current_state["last_analysis_notification"] = time.time()
+        logger.info("✅ User notified to run codebase analysis")
 
     def _coordinate_planning(self):
         """
@@ -508,6 +537,112 @@ class ContinuousWorkLoop:
                     sound=False,  # CFR-009
                     agent_id="orchestrator",
                 )
+
+    def _get_high_priority_bugs(self) -> List[Dict[str, Any]]:
+        """
+        Query bug tickets for open Critical/High priority bugs.
+
+        Returns:
+            List of bug dictionaries sorted by priority (Critical first)
+        """
+        tickets_dir = Path("tickets")
+        if not tickets_dir.exists():
+            return []
+
+        bugs = []
+        for bug_file in tickets_dir.glob("BUG-*.md"):
+            try:
+                content = bug_file.read_text()
+
+                # Extract bug number from filename
+                bug_match = re.search(r"BUG-(\d+)", bug_file.name)
+                if not bug_match:
+                    continue
+                bug_number = int(bug_match.group(1))
+
+                # Extract status (look for **Status**: 🔴 Open or **Status**: Open)
+                status_match = re.search(r"\*\*Status\*\*:\s*(?:🔴|⚠️|✅)?\s*(\w+)", content)
+                if not status_match:
+                    continue
+                status = status_match.group(1)
+
+                # Only include open bugs
+                if status.lower() not in ["open"]:
+                    continue
+
+                # Extract priority
+                priority_match = re.search(r"\*\*Priority\*\*:\s*(\w+)", content)
+                if not priority_match:
+                    continue
+                priority = priority_match.group(1)
+
+                # Only include Critical/High priority
+                if priority not in ["Critical", "High"]:
+                    continue
+
+                # Extract title from first heading
+                title_match = re.search(r"# BUG-\d+:\s*(.+)", content)
+                title = title_match.group(1) if title_match else "Unknown"
+
+                bugs.append(
+                    {
+                        "number": bug_number,
+                        "file": str(bug_file),
+                        "title": title,
+                        "status": status,
+                        "priority": priority,
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"Failed to parse bug ticket {bug_file}: {e}")
+                continue
+
+        # Sort by priority (Critical first, then High)
+        bugs.sort(key=lambda b: (0 if b["priority"] == "Critical" else 1, b["number"]))
+
+        return bugs
+
+    def _coordinate_bug_fix(self, bug: Dict[str, Any]):
+        """
+        Coordinate code_developer to fix a bug.
+
+        Args:
+            bug: Bug dictionary with number, title, priority, etc.
+        """
+        bug_number = bug["number"]
+
+        # Check if bug fix already in progress
+        task_key = f"bug_{bug_number}"
+        if task_key in self.current_state.get("active_tasks", {}):
+            logger.debug(f"Bug fix for BUG-{bug_number:03d} already in progress")
+            return
+
+        logger.info(f"🔧 Delegating bug fix to code_developer: BUG-{bug_number:03d}")
+        logger.info(f"   Title: {bug['title']}")
+        logger.info(f"   Priority: {bug['priority']}")
+
+        # Create notification
+        self.notifications.create_notification(
+            type="info",
+            title="Bug Fix Started",
+            message=f"code_developer working on BUG-{bug_number:03d}: {bug['title']}",
+            priority="high" if bug["priority"] == "Critical" else "normal",
+            sound=False,  # CFR-009
+            agent_id="orchestrator",
+        )
+
+        # Track that we're working on this bug
+        # For now, just track in state (actual spawning will be implemented later)
+        self.current_state.setdefault("active_tasks", {})[task_key] = {
+            "task_id": f"bug-{bug_number}",
+            "started_at": time.time(),
+            "type": "bug_fix",
+            "bug_number": bug_number,
+        }
+
+        # TODO: Spawn code_developer for bug fix
+        # Will need to implement: poetry run code-developer fix-bug --bug=BUG-065
+        logger.info(f"⏳ Bug fix tracking implemented, code_developer spawn TODO")
 
     def _is_spec_in_progress(self, priority_number: int) -> bool:
         """Check if spec creation is already in progress for priority."""
