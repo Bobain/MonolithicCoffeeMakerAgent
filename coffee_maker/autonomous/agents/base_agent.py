@@ -235,8 +235,8 @@ class BaseAgent(ABC):
 
         logger.info(f"🛑 {self.agent_type.value} stopped")
 
-        # Cleanup: Remove status file on exit
-        self._cleanup_status_file()
+        # Update status to show stopped (don't delete - keep for debugging)
+        self._write_status_stopped()
 
     def _enforce_cfr_013(self):
         """Ensure agent is on roadmap branch (CFR-013).
@@ -457,20 +457,32 @@ class BaseAgent(ABC):
         except Exception as e:
             logger.error(f"Error writing status: {e}")
 
-    def _cleanup_status_file(self):
-        """Remove status file on agent exit.
+    def _write_status_stopped(self):
+        """Update status file to show agent stopped.
 
-        This prevents stale status files from showing up in activity summaries
-        or health monitoring tools when the agent is no longer running.
+        This keeps the status file for debugging (especially crash info)
+        but marks it as stopped so activity_summary can distinguish between
+        running agents and stopped/crashed agents.
 
         Called automatically when agent stops (normal exit or KeyboardInterrupt).
         """
+        status = {
+            "agent_type": self.agent_type.value,
+            "state": "stopped",
+            "current_task": self.current_task,
+            "last_heartbeat": datetime.now().isoformat(),
+            "stopped_at": datetime.now().isoformat(),
+            "health": "stopped",
+            "pid": os.getpid(),
+            "metrics": self.metrics,
+            "error": None,
+        }
+
         try:
-            if self.status_file.exists():
-                self.status_file.unlink()
-                logger.info(f"✅ Cleaned up status file: {self.status_file}")
+            self.status_file.write_text(json.dumps(status, indent=2))
+            logger.info(f"✅ Updated status to 'stopped': {self.status_file}")
         except Exception as e:
-            logger.error(f"Error cleaning up status file: {e}")
+            logger.error(f"Error updating stopped status: {e}")
 
     def commit_changes(self, message: str, files: Optional[List[str]] = None):
         """Commit changes with agent identification.

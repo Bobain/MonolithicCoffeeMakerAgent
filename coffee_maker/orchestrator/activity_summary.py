@@ -145,16 +145,20 @@ def get_running_agents() -> List[Dict]:
 def get_agent_status_from_files() -> Dict[str, Dict]:
     """Read agent status from status files.
 
-    Filters out stale status files by checking if the PID is still running.
+    Returns all status files, categorized by whether the process is still running.
 
     Returns:
-        Dictionary mapping agent_type -> status dictionary (only active agents)
+        Dictionary with 'active' and 'recent_issues' keys containing agent statuses
     """
+    from datetime import datetime, timedelta
+    import os
+
     status_dir = Path("data/agent_status")
-    statuses = {}
+    active_agents = {}
+    recent_issues = {}
 
     if not status_dir.exists():
-        return statuses
+        return {"active": active_agents, "recent_issues": recent_issues}
 
     for status_file in status_dir.glob("*.json"):
         try:
@@ -164,24 +168,31 @@ def get_agent_status_from_files() -> Dict[str, Dict]:
             # Check if PID is still running
             pid = status.get("pid")
             if pid:
-                # Check if process exists
                 try:
-                    import os
-
-                    os.kill(pid, 0)  # Signal 0 doesn't kill, just checks if process exists
-                    # If we get here, process exists
-                    statuses[agent_type] = status
+                    os.kill(pid, 0)  # Signal 0 checks if process exists
+                    # Process exists - this is an active agent
+                    active_agents[agent_type] = status
                 except (OSError, ProcessLookupError):
-                    # Process doesn't exist - skip this stale status file
-                    continue
+                    # Process doesn't exist - check if it's a recent issue
+                    last_heartbeat = status.get("last_heartbeat")
+                    if last_heartbeat:
+                        try:
+                            heartbeat_time = datetime.fromisoformat(last_heartbeat)
+                            age = datetime.now() - heartbeat_time
+
+                            # Show errors/crashes from last 24 hours
+                            if age < timedelta(hours=24):
+                                recent_issues[agent_type] = status
+                        except Exception:
+                            pass
             else:
-                # No PID in status - include it anyway (might be old format)
-                statuses[agent_type] = status
+                # No PID - might be old format, skip
+                pass
 
         except Exception:
             continue
 
-    return statuses
+    return {"active": active_agents, "recent_issues": recent_issues}
 
 
 def get_active_worktrees() -> List[Dict]:
@@ -342,11 +353,12 @@ def generate_summary_report(
             report += f"- Priority {priority_num}: `{branch}` at `{path}`\n"
         report += "\n"
 
-    # Agent status details
+    # Agent status details (active agents only)
     agent_statuses = current_work.get("agent_statuses", {})
-    if agent_statuses:
+    active_statuses = agent_statuses.get("active", {}) if isinstance(agent_statuses, dict) else agent_statuses
+    if active_statuses:
         report += "### Agent Status Details:\n\n"
-        for agent_type, status in agent_statuses.items():
+        for agent_type, status in active_statuses.items():
             state = status.get("state", "unknown")
             task = status.get("current_task", {})
             health = status.get("health", "unknown")
@@ -359,6 +371,25 @@ def generate_summary_report(
                 if task_priority:
                     report += f" ({task_priority})"
                 report += "\n"
+            report += "\n"
+
+    # Recent agent issues (crashes, errors from last 24h)
+    recent_issues = agent_statuses.get("recent_issues", {}) if isinstance(agent_statuses, dict) else {}
+    if recent_issues:
+        report += "### ⚠️  Recent Agent Issues (Last 24 Hours):\n\n"
+        for agent_type, status in recent_issues.items():
+            state = status.get("state", "unknown")
+            health = status.get("health", "unknown")
+            error = status.get("error", "No error details")
+            last_heartbeat = status.get("last_heartbeat", "unknown")
+            stopped_at = status.get("stopped_at", last_heartbeat)
+
+            report += f"**{agent_type}**: {state} ({health})\n"
+            report += f"  - Last seen: {stopped_at}\n"
+            if error:
+                # Truncate long errors
+                error_msg = error if len(error) < 100 else error[:97] + "..."
+                report += f"  - Error: {error_msg}\n"
             report += "\n"
 
     report += "---\n\n"
