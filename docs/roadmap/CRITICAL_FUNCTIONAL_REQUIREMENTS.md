@@ -3639,6 +3639,310 @@ git push origin stable-v1.3.0
 
 **Reference**: See `docs/architecture/guidelines/GUIDELINE-004-git-tagging-strategy.md` for comprehensive tagging guidelines, examples, and best practices.
 
+### Git Worktree Workflow for Parallel Execution
+
+**Exception to CFR-013**: While all agents normally work on the `roadmap` branch, the orchestrator MAY create temporary `roadmap-*` branches for parallel execution using git worktrees.
+
+**Purpose**: Enable multiple code_developer agents to work in parallel on different priorities without conflicts.
+
+**Critical Constraint**: These `roadmap-*` branches are TEMPORARY and MUST be merged back to `roadmap` by architect, then deleted.
+
+#### Worktree Branch Lifecycle
+
+```
+1. orchestrator spawns code_developer in worktree
+   ↓
+   orchestrator: git worktree add ../worktree-us-048 -b roadmap-wt1
+   orchestrator: spawn code_developer in worktree (PID 12345)
+   ↓
+2. code_developer works on roadmap-wt1 branch
+   ↓
+   code_developer: Implements US-048
+   code_developer: Runs tests (all passing)
+   code_developer: Commits to roadmap-wt1
+   code_developer: Exits (work complete)
+   ↓
+3. orchestrator detects completion
+   ↓
+   orchestrator: Check agent PID 12345 → completed
+   orchestrator: Check tests on roadmap-wt1 → passing
+   orchestrator: Notify architect → "roadmap-wt1 ready for merge (US-048)"
+   ↓
+4. architect merges work to roadmap
+   ↓
+   architect: git checkout roadmap
+   architect: git pull origin roadmap
+   architect: git merge roadmap-wt1 --no-ff -m "Merge US-048 from roadmap-wt1"
+   architect: Run validation (tests, ROADMAP.md consistency)
+   architect: git push origin roadmap
+   architect: Notify orchestrator → "roadmap-wt1 merged successfully"
+   ↓
+5. orchestrator cleans up worktree
+   ↓
+   orchestrator: git worktree remove ../worktree-us-048
+   orchestrator: git branch -D roadmap-wt1
+   orchestrator: Record in agent_lifecycle table (completed, merged, cleaned)
+   ↓
+6. orchestrator decides next action
+   ↓
+   Option A: Assign new task to code_developer → spawn in new worktree
+   Option B: No more work → shutdown code_developer agent
+```
+
+#### Orchestrator Responsibilities
+
+**MUST**:
+1. ✅ Create worktree with `roadmap-*` branch name (e.g., roadmap-wt1, roadmap-wt2)
+2. ✅ Track worktree location and branch name in `agent_lifecycle` table
+3. ✅ Monitor code_developer completion (via PID, exit code, or status file)
+4. ✅ Verify tests pass on worktree branch before requesting merge
+5. ✅ Notify architect when work ready for merge
+6. ✅ **WAIT for architect to complete merge** before cleanup
+7. ✅ Delete worktree directory: `git worktree remove <path>`
+8. ✅ Delete branch: `git branch -D roadmap-wt1`
+9. ✅ Record lifecycle: spawned → working → completed → merged → cleaned
+10. ✅ Decide: reassign agent to new task OR shutdown agent
+
+**MUST NOT**:
+❌ Merge worktree branches yourself (architect's responsibility)
+❌ Delete worktree before architect confirms merge complete
+❌ Leave stale worktrees or branches (cleanup is mandatory)
+❌ Create worktree branches without `roadmap-` prefix
+
+#### Architect Responsibilities
+
+**MUST**:
+1. ✅ Respond to orchestrator notification: "roadmap-wt1 ready for merge"
+2. ✅ Switch to roadmap branch: `git checkout roadmap && git pull`
+3. ✅ Merge worktree branch: `git merge roadmap-wt1 --no-ff`
+4. ✅ Resolve conflicts if any (with clear resolution strategy)
+5. ✅ Validate merge:
+   - Run tests: `pytest`
+   - Check ROADMAP.md for duplicates or inconsistencies
+   - Verify no breaking changes
+6. ✅ Push to remote: `git push origin roadmap`
+7. ✅ Notify orchestrator: "roadmap-wt1 merged, ready for cleanup"
+8. ✅ Use `.claude/skills/architect/merge-worktree-branches/` skill for efficiency
+
+**MUST NOT**:
+❌ Delete worktree branches yourself (orchestrator's responsibility)
+❌ Skip validation before pushing
+❌ Merge if tests failing (request fix first)
+
+#### Orchestrator State Tracking (CFR-014 Integration)
+
+The orchestrator MUST track worktree lifecycle in `agent_lifecycle` table:
+
+```sql
+-- Example agent_lifecycle record for worktree execution
+INSERT INTO agent_lifecycle (
+    pid,
+    agent_type,
+    task_id,
+    priority_number,
+    spawned_at,
+    completed_at,
+    status,
+    worktree_path,        -- '../worktree-us-048'
+    worktree_branch,      -- 'roadmap-wt1'
+    merged_at,            -- '2025-10-20T12:30:00' (after architect merge)
+    cleaned_at,           -- '2025-10-20T12:35:00' (after worktree removal)
+    command
+) VALUES (
+    12345,
+    'code_developer',
+    'impl-048',
+    48,
+    '2025-10-20T10:00:00',
+    '2025-10-20T12:00:00',
+    'completed_merged_cleaned',
+    '../worktree-us-048',
+    'roadmap-wt1',
+    '2025-10-20T12:30:00',
+    '2025-10-20T12:35:00',
+    'poetry run code-developer --priority=48'
+);
+```
+
+**New Status Values**:
+- `spawned` → Agent process created in worktree
+- `running` → Agent working in worktree
+- `completed` → Agent finished, tests pass, awaiting merge
+- `merge_requested` → orchestrator notified architect
+- `merged` → architect merged to roadmap, awaiting cleanup
+- `completed_merged_cleaned` → Full lifecycle complete
+- `failed` → Agent failed or tests failed
+
+#### Cleanup Requirements (MANDATORY)
+
+**After architect confirms merge**, orchestrator MUST clean up:
+
+```bash
+# Step 1: Verify merge complete (check architect notification)
+# Step 2: Remove worktree directory
+git worktree remove ../worktree-us-048 --force
+
+# Step 3: Delete branch
+git branch -D roadmap-wt1
+
+# Step 4: Update agent_lifecycle table
+UPDATE agent_lifecycle
+SET status = 'completed_merged_cleaned',
+    cleaned_at = datetime('now')
+WHERE pid = 12345;
+
+# Step 5: Decide next action
+if has_more_work():
+    spawn_new_code_developer_in_new_worktree()
+else:
+    # No more work, agent lifecycle complete
+    log("Code_developer 12345 lifecycle complete, no reassignment needed")
+```
+
+#### Error Handling
+
+**Scenario 1: Tests Fail in Worktree**
+```
+code_developer completes → orchestrator checks tests → FAILED
+    ↓
+orchestrator: Do NOT notify architect
+orchestrator: Respawn code_developer in SAME worktree to fix
+orchestrator: Status = 'running' (retry)
+```
+
+**Scenario 2: Merge Conflicts**
+```
+architect attempts merge → conflicts detected
+    ↓
+architect: Resolve conflicts manually
+architect: If complex, request guidance via user_listener
+architect: git add <resolved-files> && git commit
+architect: Validate and push
+```
+
+**Scenario 3: Architect Unavailable**
+```
+orchestrator: Notify architect → no response after 1 hour
+    ↓
+orchestrator: Create high-priority notification
+orchestrator: Log warning: "Merge blocked, worktree pending"
+orchestrator: Status = 'merge_requested' (waiting)
+orchestrator: Do NOT spawn new agents until merge complete
+```
+
+**Scenario 4: Stale Worktrees (Recovery)**
+```
+orchestrator startup → detect roadmap-* branches
+    ↓
+orchestrator: Check each branch:
+    - Tests passing? → Notify architect for merge
+    - Tests failing? → Log error, request manual review
+    - No commits? → Delete branch and worktree
+```
+
+#### Benefits of This Workflow
+
+1. **Parallel Execution**: Multiple code_developers work simultaneously without conflicts
+2. **Safety**: architect validates all merges before integration
+3. **Clean History**: Non-fast-forward merges preserve parallel work history
+4. **CFR-013 Compliance**: All work eventually lands on `roadmap` branch
+5. **Resource Efficiency**: Cleanup ensures no orphaned worktrees/branches
+6. **Observability**: Full lifecycle tracked in database (CFR-014)
+
+#### Example: 3 Parallel Agents
+
+```
+Time: 10:00 AM
+orchestrator spawns 3 code_developers:
+  - Agent 1 (PID 12345) → roadmap-wt1 → US-048
+  - Agent 2 (PID 12346) → roadmap-wt2 → US-050
+  - Agent 3 (PID 12347) → roadmap-wt3 → US-052
+
+Time: 11:30 AM
+Agent 1 completes → orchestrator notifies architect
+Agent 2 still working
+Agent 3 still working
+
+Time: 11:45 AM
+architect merges roadmap-wt1 → roadmap
+orchestrator cleans up roadmap-wt1
+orchestrator spawns Agent 4 (PID 12348) → roadmap-wt4 → US-055
+
+Time: 12:00 PM
+Agent 2 completes → orchestrator notifies architect
+Agent 3 completes → orchestrator notifies architect
+Agent 4 still working
+
+Time: 12:15 PM
+architect merges roadmap-wt2 and roadmap-wt3 → roadmap (sequential)
+orchestrator cleans up both worktrees
+
+Result: 4 priorities implemented in parallel, all cleanly merged to roadmap
+```
+
+#### Integration with CFR-014
+
+Worktree lifecycle events MUST be tracked in `agent_lifecycle` table:
+
+**Additional Columns** (add to existing schema):
+```sql
+ALTER TABLE agent_lifecycle ADD COLUMN worktree_path TEXT;
+ALTER TABLE agent_lifecycle ADD COLUMN worktree_branch TEXT;
+ALTER TABLE agent_lifecycle ADD COLUMN merged_at TEXT;
+ALTER TABLE agent_lifecycle ADD COLUMN cleaned_at TEXT;
+ALTER TABLE agent_lifecycle ADD COLUMN merge_duration_ms INTEGER;  -- Time to merge
+ALTER TABLE agent_lifecycle ADD COLUMN cleanup_duration_ms INTEGER; -- Time to cleanup
+```
+
+**Queries for Monitoring**:
+```sql
+-- Find worktrees awaiting merge
+SELECT pid, worktree_branch, priority_number,
+       CAST((julianday('now') - julianday(completed_at)) * 86400000 AS INTEGER) AS wait_time_ms
+FROM agent_lifecycle
+WHERE status = 'merge_requested'
+ORDER BY wait_time_ms DESC;
+
+-- Find stale worktrees (completed >1 hour ago, not merged)
+SELECT pid, worktree_branch, priority_number
+FROM agent_lifecycle
+WHERE status IN ('completed', 'merge_requested')
+  AND CAST((julianday('now') - julianday(completed_at)) * 86400 AS INTEGER) > 1;
+
+-- Worktree merge performance
+SELECT agent_type,
+       AVG(merge_duration_ms) / 1000 AS avg_merge_seconds,
+       AVG(cleanup_duration_ms) / 1000 AS avg_cleanup_seconds
+FROM agent_lifecycle
+WHERE merged_at IS NOT NULL
+GROUP BY agent_type;
+```
+
+#### Validation Checklist
+
+Before merging any worktree branch, architect MUST verify:
+
+- [ ] All tests pass on worktree branch: `cd <worktree-path> && pytest`
+- [ ] No uncommitted changes in worktree: `git status` clean
+- [ ] ROADMAP.md updated correctly (no duplicates, correct status)
+- [ ] Commits have proper format (descriptive message + 🤖 footer)
+- [ ] No CFR violations in new code
+- [ ] Documentation updated if needed
+
+Before cleanup, orchestrator MUST verify:
+
+- [ ] architect confirmed merge complete
+- [ ] Merge commit exists on roadmap branch
+- [ ] Tests pass on roadmap branch after merge
+- [ ] No uncommitted changes in worktree
+
+#### Reference Documentation
+
+- **Orchestrator**: `coffee_maker/orchestrator/architect_coordinator.py`
+- **Skill**: `.claude/skills/architect/merge-worktree-branches/SKILL.md`
+- **Agent**: `.claude/agents/architect.md` (lines 428-477)
+- **US**: US-108 (Parallel Agent Execution with Git Worktree)
+
 ### Relationship to Other CFRs
 
 **CFR-000 (Prevent File Conflicts)**: Working on single branch reduces merge conflicts

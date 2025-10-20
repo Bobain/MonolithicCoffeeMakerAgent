@@ -103,6 +103,11 @@ class AgentLifecycleMigration:
             -- Additional context
             command TEXT NOT NULL,              -- Full CLI command executed
             worktree_path TEXT,                 -- Git worktree path (parallel exec)
+            worktree_branch TEXT,               -- Git worktree branch name (e.g., roadmap-wt1)
+            merged_at TEXT,                     -- When architect merged to roadmap (CFR-013)
+            cleaned_at TEXT,                    -- When orchestrator cleaned up worktree
+            merge_duration_ms INTEGER,          -- Time to merge (merged_at - completed_at)
+            cleanup_duration_ms INTEGER,        -- Time to cleanup (cleaned_at - merged_at)
             error_message TEXT,                 -- Error details if failed
             metadata TEXT                       -- JSON blob for extras
         );
@@ -114,6 +119,8 @@ class AgentLifecycleMigration:
         CREATE INDEX IF NOT EXISTS idx_duration ON agent_lifecycle(duration_ms DESC);
         CREATE INDEX IF NOT EXISTS idx_task_id ON agent_lifecycle(task_id);
         CREATE INDEX IF NOT EXISTS idx_pid ON agent_lifecycle(pid);
+        CREATE INDEX IF NOT EXISTS idx_worktree_branch ON agent_lifecycle(worktree_branch);
+        CREATE INDEX IF NOT EXISTS idx_merged_at ON agent_lifecycle(merged_at);
         """
 
         with sqlite3.connect(self.db_path) as conn:
