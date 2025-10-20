@@ -43,12 +43,12 @@ from rich.table import Table
 
 from coffee_maker.cli.ai_service import AIService
 from coffee_maker.cli.assistant_bridge import AssistantBridge
-from coffee_maker.cli.bug_tracker import BugTracker
 from coffee_maker.cli.commands import get_command_handler, list_commands
 from coffee_maker.cli.notifications import NotificationDB, NOTIF_PRIORITY_HIGH
 from coffee_maker.cli.roadmap_editor import RoadmapEditor
 from coffee_maker.process_manager import ProcessManager
 from coffee_maker.autonomous.standup_generator import StandupGenerator
+from coffee_maker.utils.bug_tracking_helper import get_bug_skill
 
 logger = logging.getLogger(__name__)
 
@@ -382,8 +382,8 @@ class ChatSession:
         # Initialize notification database for bidirectional communication
         self.notif_db = NotificationDB()
 
-        # Initialize bug tracker for integrated bug fixing workflow (PRIORITY 2.11)
-        self.bug_tracker = BugTracker()
+        # Initialize bug tracking skill for integrated bug fixing workflow (PRIORITY 2.11)
+        self.bug_skill = get_bug_skill()
 
         # Initialize LangChain-powered assistant for complex questions (PRIORITY 2.9.5)
         # Assistant uses tools to help with analysis, debugging, code search, etc.
@@ -1012,7 +1012,7 @@ class ChatSession:
         """
         try:
             # PRIORITY 2.11: Detect bug reports
-            if self.bug_tracker.detect_bug_report(text):
+            if self._detect_bug_report(text):
                 return self._handle_bug_report(text)
 
             # Detect daemon-related commands
@@ -1371,12 +1371,23 @@ class ChatSession:
             4. Return ticket info to user
         """
         try:
-            # Create bug ticket
-            bug_number, ticket_path = self.bug_tracker.create_bug_ticket(description=bug_description)
+            # Create bug ticket using bug tracking skill
+            result = self.bug_skill.report_bug(
+                title=bug_description[:80],  # Use first 80 chars as title
+                description=bug_description,
+                reporter="user",
+                priority=None,  # Auto-assessed
+                category=None,
+                reproduction_steps=None,
+            )
 
-            # Extract info for notification
-            title = self.bug_tracker.extract_bug_title(bug_description)
-            priority = self.bug_tracker.assess_bug_priority(bug_description)
+            bug_number = result["bug_number"]
+            ticket_path = result["ticket_file_path"]
+
+            # Get bug details from database
+            bug = self.bug_skill.get_bug_by_number(bug_number)
+            title = bug["title"]
+            priority = bug["priority"]
 
             # Create notification for code_developer
             notif_id = self.notif_db.create_notification(
@@ -1394,7 +1405,29 @@ class ChatSession:
             logger.info(f"Bug ticket {bug_number} created, notification #{notif_id} sent to daemon")
 
             # Format response for user
-            return self.bug_tracker.format_ticket_response(bug_number, ticket_path, title, priority)
+            # Format response
+            priority_emoji = {
+                "Critical": "🚨",
+                "High": "⚠️",
+                "Medium": "🔸",
+                "Low": "🔹",
+            }.get(priority, "🔸")
+
+            return f"""🐛 **Bug Ticket Created**
+
+**{priority_emoji} BUG-{bug_number:03d}**: {title}
+**Priority**: {priority}
+**Ticket**: `{ticket_path}`
+
+✅ code_developer has been notified and will:
+1. 🔍 Analyze the bug and reproduce it
+2. 📝 Write a technical specification
+3. 🔧 Implement the fix with tests
+4. 🧪 Verify all tests pass
+5. 📤 Create a PR for review
+
+You can track progress in the ticket file or ask me for updates!
+"""
 
         except Exception as e:
             logger.error(f"Failed to create bug ticket: {e}", exc_info=True)

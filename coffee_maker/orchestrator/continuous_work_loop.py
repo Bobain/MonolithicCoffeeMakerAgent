@@ -24,11 +24,12 @@ Related:
 
 import json
 import logging
-import re
 import signal
+import subprocess
 import sys
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -48,6 +49,13 @@ sys.path.pop(0)
 roadmap_mgmt_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "roadmap-management"
 sys.path.insert(0, str(roadmap_mgmt_dir))
 from roadmap_management import RoadmapManagementSkill
+
+sys.path.pop(0)
+
+# Import bug tracking skill (database-backed bug tracking)
+bug_tracking_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "bug-tracking"
+sys.path.insert(0, str(bug_tracking_dir))
+from bug_tracking import BugTrackingSkill
 
 sys.path.pop(0)
 
@@ -101,6 +109,9 @@ class ContinuousWorkLoop:
 
         # Initialize roadmap management skill (SINGLE SOURCE OF TRUTH)
         self.roadmap_skill = RoadmapManagementSkill()
+
+        # Initialize bug tracking skill (database-backed bug tracking)
+        self.bug_skill = BugTrackingSkill()
 
         # Initialize architect coordinator (spec backlog + worktree merging)
         self.architect_coordinator = ArchitectCoordinator(spec_backlog_target=self.config.spec_backlog_target)
@@ -170,15 +181,14 @@ class ContinuousWorkLoop:
             logger.info("ROADMAP updated, recalculating work distribution")
 
         # Step 1.5: Check for high-priority bugs (BUG-065)
-        # Bugs take precedence over new development
+        # Bugs are coordinated in parallel with other work
         high_priority_bugs = self._get_high_priority_bugs()
         if high_priority_bugs:
             bug = high_priority_bugs[0]
             logger.info(f"🐛 High-priority bug detected: {bug['number']} - {bug['title']}")
             logger.info(f"   Priority: {bug['priority']}, Status: {bug['status']}")
             self._coordinate_bug_fix(bug)
-            # Skip feature development this cycle to focus on bugs
-            return
+            # Continue with other work (async/parallel execution)
 
         # Step 2: Architect coordination (proactive spec creation)
         self._coordinate_architect()
@@ -188,10 +198,12 @@ class ContinuousWorkLoop:
         self._coordinate_refactoring_analysis()
 
         # Step 2.6: project_manager auto-planning (weekly)
-        # TEMPORARILY DISABLED: project-manager view command is not suitable for autonomous operation
-        # self._coordinate_planning()
+        self._coordinate_planning()
 
-        # Step 2.7: Check for completed worktrees and notify architect for merge
+        # Step 2.7: code-reviewer coordination (post-commit reviews)
+        self._coordinate_code_reviewer()
+
+        # Step 2.8: Check for completed worktrees and notify architect for merge
         self._check_worktree_merges()
 
         # Step 3: code_developer coordination (implementation)
@@ -384,6 +396,86 @@ class ContinuousWorkLoop:
         self.current_state["last_planning"] = time.time()
         logger.info(f"✅ project_manager spawned for planning (PID: {result['result']['pid']})")
 
+    def _coordinate_code_reviewer(self):
+        """
+        Coordinate code-reviewer to review recent commits.
+
+        Logic:
+        1. Get list of recent commits (last 24 hours)
+        2. Check which commits have been reviewed (docs/code-reviews/REVIEW-{commit}.md)
+        3. Spawn code-reviewer for unreviewed commits
+        4. Limit to 3 reviews at a time to avoid overwhelming
+        """
+        try:
+            # Get commits from last 24 hours on roadmap branch
+            result = subprocess.run(
+                ["git", "log", "--since='24 hours ago'", "--format=%H", "roadmap"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+            recent_commits = [sha.strip() for sha in result.stdout.strip().split("\n") if sha.strip()]
+
+            if not recent_commits:
+                logger.debug("No recent commits to review")
+                return
+
+            # Filter for unreviewed commits
+            unreviewed_commits = []
+            reviews_dir = Path("docs/code-reviews")
+            reviews_dir.mkdir(parents=True, exist_ok=True)
+
+            for commit_sha in recent_commits:
+                review_file = reviews_dir / f"REVIEW-{commit_sha[:8]}.md"
+                if not review_file.exists():
+                    unreviewed_commits.append(commit_sha)
+
+            if not unreviewed_commits:
+                logger.debug(f"All {len(recent_commits)} recent commits have been reviewed")
+                return
+
+            logger.info(f"📝 Found {len(unreviewed_commits)} unreviewed commits")
+
+            # Limit to 3 reviews at a time
+            for commit_sha in unreviewed_commits[:3]:
+                # Check if already reviewing this commit
+                task_id = f"review-{commit_sha[:8]}"
+                if task_id in self.current_state.get("active_tasks", {}):
+                    logger.debug(f"Already reviewing commit {commit_sha[:8]}")
+                    continue
+
+                logger.info(f"📝 Spawning code-reviewer for commit {commit_sha[:8]}")
+
+                result = self.agent_mgmt.execute(
+                    action="spawn_code_reviewer",
+                    commit_sha=commit_sha,
+                    auto_approve=True,
+                )
+
+                if result["error"]:
+                    logger.error(f"Failed to spawn code-reviewer for {commit_sha[:8]}: {result['error']}")
+                    continue
+
+                # Track that we're reviewing this commit
+                if "active_tasks" not in self.current_state:
+                    self.current_state["active_tasks"] = {}
+
+                self.current_state["active_tasks"][task_id] = {
+                    "task_id": task_id,
+                    "pid": result["result"]["pid"],
+                    "started_at": time.time(),
+                    "type": "code_review",
+                    "commit_sha": commit_sha,
+                }
+
+                logger.info(f"✅ code-reviewer spawned for commit {commit_sha[:8]} (PID: {result['result']['pid']})")
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to get recent commits: {e}")
+        except Exception as e:
+            logger.error(f"Error coordinating code-reviewer: {e}", exc_info=True)
+
     def _check_worktree_merges(self):
         """
         Check for completed worktrees and notify architect when merges are needed.
@@ -429,11 +521,12 @@ class ContinuousWorkLoop:
             return
 
         # Filter for planned priorities with specs
-        # NOTE: Skill returns: status="Planned" (not emoji), us_id="US-059", number="59"
+        # NOTE: Skill returns: status may include emoji and text like "📝 PLANNED - AWAITING ARCHITECT TECHNICAL SPEC"
         planned_priorities = []
         for p in priorities:
-            # Check if planned (skill returns status="Planned" without emoji)
-            if p.get("status") != "Planned":
+            # Check if planned (flexible matching for "Planned" or "PLANNED" in status)
+            status = p.get("status", "").upper()
+            if "PLANNED" not in status and "PLAN" not in status:
                 continue
 
             # Check if spec exists
@@ -504,11 +597,36 @@ class ContinuousWorkLoop:
             logger.debug(f"Implementation for PRIORITY {next_priority['number']} already in progress")
             return
 
-        # For now, just log that we would delegate
-        logger.info(f"⚙️  Would delegate implementation to code_developer: PRIORITY {next_priority['number']}")
+        # Spawn code_developer for implementation
+        priority_name = next_priority.get("us_id") or f"PRIORITY {next_priority['number']}"
+        logger.info(f"⚙️  Spawning code_developer for {priority_name} implementation")
 
-        # Track that we're working on this implementation
-        self._track_implementation_task(next_priority["number"], f"impl-{next_priority['number']}")
+        result = self.agent_mgmt.execute(
+            action="spawn_code_developer",
+            priority_number=next_priority["number"],
+            auto_approve=True,
+        )
+
+        if result.get("error"):
+            logger.error(f"Failed to spawn code_developer for {priority_name}: {result['error']}")
+            return
+
+        agent_info = result["result"]
+
+        # Track implementation task
+        if "active_tasks" not in self.current_state:
+            self.current_state["active_tasks"] = {}
+
+        task_key = f"impl_{next_priority['number']}"
+        self.current_state["active_tasks"][task_key] = {
+            "task_id": agent_info["task_id"],
+            "pid": agent_info["pid"],
+            "started_at": time.time(),
+            "type": "implementation",
+            "priority_number": next_priority["number"],
+        }
+
+        logger.info(f"✅ code_developer spawned for {priority_name} (PID: {agent_info['pid']})")
 
     def _monitor_tasks(self):
         """
@@ -519,13 +637,34 @@ class ContinuousWorkLoop:
         - Timeouts (task running > 2 hours)
         - Failures (task failed, retry or escalate)
         """
-        # Get active tasks from state
+        # Get active agents from database (auto-cleans completed agents)
+        result = self.agent_mgmt.execute(action="list_active_agents", include_completed=False)
+
+        if result.get("error"):
+            logger.error(f"Failed to list active agents: {result['error']}")
+            return
+
+        active_agents = result.get("result", {}).get("active_agents", [])
+        active_pids = {agent["pid"] for agent in active_agents}
+
+        # Clean up completed tasks from active_tasks
         active_tasks = self.current_state.get("active_tasks", {})
+        completed_tasks = []
 
         for task_key, task_info in list(active_tasks.items()):
+            # Check if PID is still active
+            task_pid = task_info.get("pid")
+
+            if task_pid and task_pid not in active_pids:
+                # Task completed, remove from active_tasks
+                completed_tasks.append(task_key)
+                logger.debug(f"✅ Task {task_key} completed (PID {task_pid} finished)")
+                del active_tasks[task_key]
+                continue
+
+            # Check timeout for still-running tasks
             task_age = time.time() - task_info["started_at"]
 
-            # Check timeout
             if task_age > self.config.task_timeout_seconds:
                 logger.warning(f"⚠️  Task timeout: {task_key} ({task_age:.0f}s)")
 
@@ -538,69 +677,43 @@ class ContinuousWorkLoop:
                     agent_id="orchestrator",
                 )
 
+        if completed_tasks:
+            logger.info(f"🧹 Cleaned up {len(completed_tasks)} completed tasks from active_tasks")
+
     def _get_high_priority_bugs(self) -> List[Dict[str, Any]]:
         """
-        Query bug tickets for open Critical/High priority bugs.
+        Query bug tickets for open Critical/High priority bugs using database.
 
         Returns:
             List of bug dictionaries sorted by priority (Critical first)
         """
-        tickets_dir = Path("tickets")
-        if not tickets_dir.exists():
-            return []
+        try:
+            # Query open Critical/High priority bugs from database
+            critical_bugs = self.bug_skill.query_bugs(status="open", priority="Critical", limit=10)
 
-        bugs = []
-        for bug_file in tickets_dir.glob("BUG-*.md"):
-            try:
-                content = bug_file.read_text()
+            high_bugs = self.bug_skill.query_bugs(status="open", priority="High", limit=10)
 
-                # Extract bug number from filename
-                bug_match = re.search(r"BUG-(\d+)", bug_file.name)
-                if not bug_match:
-                    continue
-                bug_number = int(bug_match.group(1))
-
-                # Extract status (look for **Status**: 🔴 Open or **Status**: Open)
-                status_match = re.search(r"\*\*Status\*\*:\s*(?:🔴|⚠️|✅)?\s*(\w+)", content)
-                if not status_match:
-                    continue
-                status = status_match.group(1)
-
-                # Only include open bugs
-                if status.lower() not in ["open"]:
-                    continue
-
-                # Extract priority
-                priority_match = re.search(r"\*\*Priority\*\*:\s*(\w+)", content)
-                if not priority_match:
-                    continue
-                priority = priority_match.group(1)
-
-                # Only include Critical/High priority
-                if priority not in ["Critical", "High"]:
-                    continue
-
-                # Extract title from first heading
-                title_match = re.search(r"# BUG-\d+:\s*(.+)", content)
-                title = title_match.group(1) if title_match else "Unknown"
-
+            # Combine and convert to expected format
+            bugs = []
+            for bug in critical_bugs + high_bugs:
                 bugs.append(
                     {
-                        "number": bug_number,
-                        "file": str(bug_file),
-                        "title": title,
-                        "status": status,
-                        "priority": priority,
+                        "number": bug["bug_number"],
+                        "file": bug["ticket_file_path"],
+                        "title": bug["title"],
+                        "status": bug["status"],
+                        "priority": bug["priority"],
                     }
                 )
-            except Exception as e:
-                logger.warning(f"Failed to parse bug ticket {bug_file}: {e}")
-                continue
 
-        # Sort by priority (Critical first, then High)
-        bugs.sort(key=lambda b: (0 if b["priority"] == "Critical" else 1, b["number"]))
+            # Sort by priority (Critical first, then High)
+            bugs.sort(key=lambda b: (0 if b["priority"] == "Critical" else 1, b["number"]))
 
-        return bugs
+            return bugs
+
+        except Exception as e:
+            logger.error(f"Failed to query high-priority bugs: {e}", exc_info=True)
+            return []
 
     def _coordinate_bug_fix(self, bug: Dict[str, Any]):
         """
@@ -621,6 +734,11 @@ class ContinuousWorkLoop:
         logger.info(f"   Title: {bug['title']}")
         logger.info(f"   Priority: {bug['priority']}")
 
+        # Update bug status to "in_progress" using bug tracking skill
+        self.bug_skill.update_bug_status(
+            bug_number=bug_number, status="in_progress", notes="Spawned code_developer agent"
+        )
+
         # Create notification
         self.notifications.create_notification(
             type="info",
@@ -631,18 +749,33 @@ class ContinuousWorkLoop:
             agent_id="orchestrator",
         )
 
+        # Spawn code_developer for bug fix
+        result = self.agent_mgmt.execute(
+            action="spawn_code_developer_bug_fix",
+            bug_number=bug_number,
+            bug_title=bug["title"],
+            auto_approve=True,
+        )
+
+        if result["error"]:
+            logger.error(f"Failed to spawn code_developer for BUG-{bug_number:03d}: {result['error']}")
+            # Revert bug status to open if spawn failed
+            self.bug_skill.update_bug_status(
+                bug_number=bug_number, status="open", notes=f"Failed to spawn agent: {result['error']}"
+            )
+            return
+
         # Track that we're working on this bug
-        # For now, just track in state (actual spawning will be implemented later)
+        agent_info = result["result"]
         self.current_state.setdefault("active_tasks", {})[task_key] = {
             "task_id": f"bug-{bug_number}",
             "started_at": time.time(),
             "type": "bug_fix",
             "bug_number": bug_number,
+            "pid": agent_info["pid"],
         }
 
-        # TODO: Spawn code_developer for bug fix
-        # Will need to implement: poetry run code-developer fix-bug --bug=BUG-065
-        logger.info(f"⏳ Bug fix tracking implemented, code_developer spawn TODO")
+        logger.info(f"✅ code_developer spawned for BUG-{bug_number:03d} (PID: {agent_info['pid']})")
 
     def _is_spec_in_progress(self, priority_number: int) -> bool:
         """Check if spec creation is already in progress for priority."""
@@ -799,35 +932,84 @@ class ContinuousWorkLoop:
         logger.info("✅ Graceful shutdown complete")
 
     def _save_state(self):
-        """Save current state to disk (for crash recovery)."""
-        state_path = Path(self.config.state_file_path)
-        state_path.parent.mkdir(parents=True, exist_ok=True)
-
-        state_data = {
-            "last_update": time.time(),
-            "active_tasks": self.current_state.get("active_tasks", {}),
-            "last_roadmap_update": self.last_roadmap_update,
-        }
-
-        with open(state_path, "w") as f:
-            json.dump(state_data, f, indent=2)
-
-    def _load_state(self):
-        """Load previous state from disk (crash recovery)."""
-        state_path = Path(self.config.state_file_path)
-
-        if not state_path.exists():
-            logger.info("No previous state found, starting fresh")
-            return
-
+        """Save orchestrator state to database for crash recovery (CFR-014 compliant)."""
         try:
-            with open(state_path, "r") as f:
-                state_data = json.load(f)
+            import sqlite3
 
-            self.current_state = state_data
-            self.last_roadmap_update = state_data.get("last_roadmap_update", 0.0)
+            db_path = Path("data/orchestrator.db")
+            conn = sqlite3.connect(str(db_path))
+            cursor = conn.cursor()
 
-            logger.info(f"Loaded previous state (last update: {state_data['last_update']})")
+            now = datetime.now().isoformat()
+
+            # Save configuration state to orchestrator_state table
+            config_keys = [
+                ("last_roadmap_update", str(self.last_roadmap_update)),
+                ("last_refactoring_analysis", str(self.current_state.get("last_refactoring_analysis", 0))),
+                ("last_analysis_notification", str(self.current_state.get("last_analysis_notification", 0))),
+                ("last_planning", str(self.current_state.get("last_planning", 0))),
+            ]
+
+            for key, value in config_keys:
+                cursor.execute(
+                    """
+                    INSERT OR REPLACE INTO orchestrator_state (key, value, updated_at)
+                    VALUES (?, ?, ?)
+                    """,
+                    (key, value, now),
+                )
+
+            # Save active_tasks as JSON blob (temporary until full migration)
+            active_tasks_json = json.dumps(self.current_state.get("active_tasks", {}))
+            cursor.execute(
+                """
+                INSERT OR REPLACE INTO orchestrator_state (key, value, updated_at)
+                VALUES (?, ?, ?)
+                """,
+                ("active_tasks", active_tasks_json, now),
+            )
+
+            conn.commit()
+            conn.close()
 
         except Exception as e:
-            logger.error(f"Failed to load state: {e}", exc_info=True)
+            logger.error(f"Failed to save state to database: {e}", exc_info=True)
+
+    def _load_state(self):
+        """Load orchestrator state from database after crash/restart (CFR-014 compliant)."""
+        try:
+            import sqlite3
+
+            db_path = Path("data/orchestrator.db")
+
+            if not db_path.exists():
+                logger.info("No database found, starting fresh")
+                return
+
+            conn = sqlite3.connect(str(db_path))
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # Load configuration state from orchestrator_state table
+            cursor.execute("SELECT key, value FROM orchestrator_state")
+            rows = cursor.fetchall()
+
+            for row in rows:
+                key = row["key"]
+                value = row["value"]
+
+                if key == "last_roadmap_update":
+                    self.last_roadmap_update = float(value)
+                elif key == "active_tasks":
+                    # Load active_tasks from JSON blob
+                    self.current_state["active_tasks"] = json.loads(value)
+                elif key in ["last_refactoring_analysis", "last_analysis_notification", "last_planning"]:
+                    self.current_state[key] = float(value)
+
+            conn.close()
+
+            logger.info(f"Loaded previous state from database (last_roadmap_update: {self.last_roadmap_update})")
+
+        except Exception as e:
+            logger.warning(f"Failed to load state from database: {e}, starting fresh")
+            self.current_state = {}

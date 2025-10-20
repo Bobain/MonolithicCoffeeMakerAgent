@@ -299,13 +299,27 @@ _Phase 3: Implementation - To be filled by code_developer_
 
 _Phase 4: Testing - To be filled by code_developer_
 
+## Regression Test
+
+**Test File**: _Path to test file (e.g., `tests/test_bug_066_roadmap_parser.py`)_
+
+**Test Name**: _Test function name (e.g., `test_roadmap_parser_supports_double_hash`)_
+
+**Coverage**:
+- [ ] Bug reproduction test added (fails before fix, passes after fix)
+- [ ] Edge cases covered
+- [ ] Test runs in CI/CD pipeline
+- [ ] Test documentation added
+
+**Notes**: _Additional testing notes, edge cases, or related tests_
+
 ## PR Link
 
 _Phase 5: PR Creation - To be filled by code_developer_
 
 ---
 
-**Workflow**: User → project-manager → code_developer → Analysis → Tech Spec → Implementation → Testing → PR → Done
+**Workflow**: User → project-manager → code_developer → Analysis → Tech Spec → Implementation → Testing → Regression Test → PR → Done
 """
 
     def format_ticket_response(self, bug_number: int, ticket_path: Path, title: str, priority: str) -> str:

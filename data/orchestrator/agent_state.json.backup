@@ -1,6 +1,60 @@
 {
   "active_agents": {
-    "14993": {
+    "31159": {
+      "pid": 31159,
+      "agent_type": "code_developer",
+      "task_id": "bug-66",
+      "task_type": "bug_fix",
+      "bug_number": 66,
+      "bug_title": "ROADMAP parser inconsistency - agents use different parsers and miss user stories",
+      "command": "poetry run code-developer --auto-approve",
+      "started_at": "2025-10-20T16:14:01.503788",
+      "status": "running"
+    },
+    "31280": {
+      "pid": 31280,
+      "agent_type": "architect",
+      "task_id": "spec-031",
+      "task_type": "create_spec",
+      "priority_number": "031",
+      "command": "poetry run architect create-spec --priority=031",
+      "started_at": "2025-10-20T16:14:31.581311",
+      "status": "running"
+    },
+    "31281": {
+      "pid": 31281,
+      "agent_type": "architect",
+      "task_id": "spec-105",
+      "task_type": "create_spec",
+      "priority_number": "105",
+      "command": "poetry run architect create-spec --priority=105",
+      "started_at": "2025-10-20T16:14:31.583655",
+      "status": "running"
+    },
+    "31282": {
+      "pid": 31282,
+      "agent_type": "architect",
+      "task_id": "spec-106",
+      "task_type": "create_spec",
+      "priority_number": "106",
+      "command": "poetry run architect create-spec --priority=106",
+      "started_at": "2025-10-20T16:14:31.585851",
+      "status": "running"
+    },
+    "33143": {
+      "pid": 33143,
+      "agent_type": "code_developer",
+      "task_id": "bug-68",
+      "task_type": "bug_fix",
+      "bug_number": 68,
+      "bug_title": "CFR-014 violation: orchestrator using JSON files instead of database",
+      "command": "poetry run code-developer --auto-approve",
+      "started_at": "2025-10-20T16:24:31.625327",
+      "status": "running"
+    }
+  },
+  "completed_agents": [
+    {
       "pid": 14993,
       "agent_type": "architect",
       "task_id": "spec-20",
@@ -8,9 +62,10 @@
       "priority_number": 20,
       "command": "poetry run architect create-spec --priority=20 --auto-approve",
       "started_at": "2025-10-19T19:43:20.588402",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138417"
     },
-    "14994": {
+    {
       "pid": 14994,
       "agent_type": "architect",
       "task_id": "spec-21",
@@ -18,9 +73,10 @@
       "priority_number": 21,
       "command": "poetry run architect create-spec --priority=21 --auto-approve",
       "started_at": "2025-10-19T19:43:20.591335",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138420"
     },
-    "14995": {
+    {
       "pid": 14995,
       "agent_type": "architect",
       "task_id": "spec-20",
@@ -28,9 +84,10 @@
       "priority_number": 20,
       "command": "poetry run architect create-spec --priority=20 --auto-approve",
       "started_at": "2025-10-19T19:43:20.595908",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138421"
     },
-    "14996": {
+    {
       "pid": 14996,
       "agent_type": "architect",
       "task_id": "spec-21",
@@ -38,9 +95,10 @@
       "priority_number": 21,
       "command": "poetry run architect create-spec --priority=21 --auto-approve",
       "started_at": "2025-10-19T19:43:20.598760",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138422"
     },
-    "23139": {
+    {
       "pid": 23139,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760896406",
@@ -48,18 +106,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-19T19:53:26.340345",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138423"
     },
-    "23140": {
+    {
       "pid": 23140,
       "agent_type": "project_manager",
       "task_id": "planning-1760896406",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-19T19:53:26.342309",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138424"
     },
-    "24344": {
+    {
       "pid": 24344,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760896447",
@@ -67,18 +127,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-19T19:54:07.803268",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138425"
     },
-    "24345": {
+    {
       "pid": 24345,
       "agent_type": "project_manager",
       "task_id": "planning-1760896447",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-19T19:54:07.805654",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138425"
     },
-    "28877": {
+    {
       "pid": 28877,
       "agent_type": "architect",
       "task_id": "spec-20",
@@ -86,9 +148,10 @@
       "priority_number": 20,
       "command": "poetry run architect create-spec --priority=20 --auto-approve",
       "started_at": "2025-10-19T19:59:57.902043",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138426"
     },
-    "28878": {
+    {
       "pid": 28878,
       "agent_type": "architect",
       "task_id": "spec-21",
@@ -96,9 +159,10 @@
       "priority_number": 21,
       "command": "poetry run architect create-spec --priority=21 --auto-approve",
       "started_at": "2025-10-19T19:59:57.905045",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138427"
     },
-    "28879": {
+    {
       "pid": 28879,
       "agent_type": "architect",
       "task_id": "spec-20",
@@ -106,9 +170,10 @@
       "priority_number": 20,
       "command": "poetry run architect create-spec --priority=20 --auto-approve",
       "started_at": "2025-10-19T19:59:57.909465",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138428"
     },
-    "28880": {
+    {
       "pid": 28880,
       "agent_type": "architect",
       "task_id": "spec-21",
@@ -116,9 +181,10 @@
       "priority_number": 21,
       "command": "poetry run architect create-spec --priority=21 --auto-approve",
       "started_at": "2025-10-19T19:59:57.912425",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138429"
     },
-    "35311": {
+    {
       "pid": 35311,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760900138",
@@ -126,18 +192,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-19T20:55:38.494174",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138430"
     },
-    "35312": {
+    {
       "pid": 35312,
       "agent_type": "project_manager",
       "task_id": "planning-1760900138",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-19T20:55:38.496174",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138431"
     },
-    "39983": {
+    {
       "pid": 39983,
       "agent_type": "architect",
       "task_id": "spec-042",
@@ -145,9 +213,10 @@
       "priority_number": "042",
       "command": "poetry run architect create-spec --priority=042 --auto-approve",
       "started_at": "2025-10-19T21:13:06.578781",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138431"
     },
-    "39984": {
+    {
       "pid": 39984,
       "agent_type": "architect",
       "task_id": "spec-1",
@@ -155,9 +224,10 @@
       "priority_number": "1",
       "command": "poetry run architect create-spec --priority=1 --auto-approve",
       "started_at": "2025-10-19T21:13:06.580867",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138432"
     },
-    "39985": {
+    {
       "pid": 39985,
       "agent_type": "architect",
       "task_id": "spec-1.5",
@@ -165,9 +235,10 @@
       "priority_number": "1.5",
       "command": "poetry run architect create-spec --priority=1.5 --auto-approve",
       "started_at": "2025-10-19T21:13:06.582835",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138433"
     },
-    "39986": {
+    {
       "pid": 39986,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760901186",
@@ -175,18 +246,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-19T21:13:06.585515",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138434"
     },
-    "39987": {
+    {
       "pid": 39987,
       "agent_type": "project_manager",
       "task_id": "planning-1760901186",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-19T21:13:06.589246",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138435"
     },
-    "46486": {
+    {
       "pid": 46486,
       "agent_type": "architect",
       "task_id": "spec-042",
@@ -194,9 +267,10 @@
       "priority_number": "042",
       "command": "poetry run architect create-spec --priority=042 --auto-approve",
       "started_at": "2025-10-20T08:25:07.449539",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138440"
     },
-    "46487": {
+    {
       "pid": 46487,
       "agent_type": "architect",
       "task_id": "spec-1",
@@ -204,9 +278,10 @@
       "priority_number": "1",
       "command": "poetry run architect create-spec --priority=1 --auto-approve",
       "started_at": "2025-10-20T08:25:07.451549",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138441"
     },
-    "46488": {
+    {
       "pid": 46488,
       "agent_type": "architect",
       "task_id": "spec-1.5",
@@ -214,9 +289,10 @@
       "priority_number": "1.5",
       "command": "poetry run architect create-spec --priority=1.5 --auto-approve",
       "started_at": "2025-10-20T08:25:07.453506",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138442"
     },
-    "46489": {
+    {
       "pid": 46489,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760941507",
@@ -224,18 +300,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T08:25:07.455667",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138443"
     },
-    "46490": {
+    {
       "pid": 46490,
       "agent_type": "project_manager",
       "task_id": "planning-1760941507",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T08:25:07.458205",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138444"
     },
-    "49546": {
+    {
       "pid": 49546,
       "agent_type": "architect",
       "task_id": "spec-042",
@@ -243,9 +321,10 @@
       "priority_number": "042",
       "command": "poetry run architect create-spec --priority=042 --auto-approve",
       "started_at": "2025-10-20T08:33:22.025044",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138445"
     },
-    "49547": {
+    {
       "pid": 49547,
       "agent_type": "architect",
       "task_id": "spec-1",
@@ -253,9 +332,10 @@
       "priority_number": "1",
       "command": "poetry run architect create-spec --priority=1 --auto-approve",
       "started_at": "2025-10-20T08:33:22.027386",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138446"
     },
-    "49548": {
+    {
       "pid": 49548,
       "agent_type": "architect",
       "task_id": "spec-1.5",
@@ -263,9 +343,10 @@
       "priority_number": "1.5",
       "command": "poetry run architect create-spec --priority=1.5 --auto-approve",
       "started_at": "2025-10-20T08:33:22.029893",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138446"
     },
-    "49549": {
+    {
       "pid": 49549,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760942002",
@@ -273,18 +354,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T08:33:22.033303",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138447"
     },
-    "49550": {
+    {
       "pid": 49550,
       "agent_type": "project_manager",
       "task_id": "planning-1760942002",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T08:33:22.037155",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138448"
     },
-    "50686": {
+    {
       "pid": 50686,
       "agent_type": "architect",
       "task_id": "spec-042",
@@ -292,9 +375,10 @@
       "priority_number": "042",
       "command": "poetry run architect create-spec --priority=042 --auto-approve",
       "started_at": "2025-10-20T08:35:06.042111",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138449"
     },
-    "50687": {
+    {
       "pid": 50687,
       "agent_type": "architect",
       "task_id": "spec-1",
@@ -302,9 +386,10 @@
       "priority_number": "1",
       "command": "poetry run architect create-spec --priority=1 --auto-approve",
       "started_at": "2025-10-20T08:35:06.044603",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138450"
     },
-    "50688": {
+    {
       "pid": 50688,
       "agent_type": "architect",
       "task_id": "spec-1.5",
@@ -312,9 +397,10 @@
       "priority_number": "1.5",
       "command": "poetry run architect create-spec --priority=1.5 --auto-approve",
       "started_at": "2025-10-20T08:35:06.046728",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138450"
     },
-    "50689": {
+    {
       "pid": 50689,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760942106",
@@ -322,18 +408,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T08:35:06.049693",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138451"
     },
-    "50690": {
+    {
       "pid": 50690,
       "agent_type": "project_manager",
       "task_id": "planning-1760942106",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T08:35:06.052776",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138452"
     },
-    "52205": {
+    {
       "pid": 52205,
       "agent_type": "architect",
       "task_id": "spec-10",
@@ -341,9 +429,10 @@
       "priority_number": "10",
       "command": "poetry run architect create-spec --priority=10 --auto-approve",
       "started_at": "2025-10-20T08:37:36.099104",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138453"
     },
-    "52346": {
+    {
       "pid": 52346,
       "agent_type": "architect",
       "task_id": "spec-11",
@@ -351,9 +440,10 @@
       "priority_number": "11",
       "command": "poetry run architect create-spec --priority=11 --auto-approve",
       "started_at": "2025-10-20T08:37:51.105947",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138454"
     },
-    "52432": {
+    {
       "pid": 52432,
       "agent_type": "architect",
       "task_id": "spec-1",
@@ -361,9 +451,10 @@
       "priority_number": "1",
       "command": "poetry run architect create-spec --priority=1 --auto-approve",
       "started_at": "2025-10-20T08:37:54.541243",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138455"
     },
-    "52433": {
+    {
       "pid": 52433,
       "agent_type": "architect",
       "task_id": "spec-1.5",
@@ -371,9 +462,10 @@
       "priority_number": "1.5",
       "command": "poetry run architect create-spec --priority=1.5 --auto-approve",
       "started_at": "2025-10-20T08:37:54.543603",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138455"
     },
-    "52434": {
+    {
       "pid": 52434,
       "agent_type": "architect",
       "task_id": "spec-12",
@@ -381,9 +473,10 @@
       "priority_number": "12",
       "command": "poetry run architect create-spec --priority=12 --auto-approve",
       "started_at": "2025-10-20T08:37:54.545776",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138456"
     },
-    "52435": {
+    {
       "pid": 52435,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760942274",
@@ -391,18 +484,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T08:37:54.548349",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138457"
     },
-    "52436": {
+    {
       "pid": 52436,
       "agent_type": "project_manager",
       "task_id": "planning-1760942274",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T08:37:54.550674",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138458"
     },
-    "52538": {
+    {
       "pid": 52538,
       "agent_type": "architect",
       "task_id": "spec-13",
@@ -410,9 +505,10 @@
       "priority_number": "13",
       "command": "poetry run architect create-spec --priority=13 --auto-approve",
       "started_at": "2025-10-20T08:38:09.559595",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138459"
     },
-    "52539": {
+    {
       "pid": 52539,
       "agent_type": "architect",
       "task_id": "spec-14",
@@ -420,9 +516,10 @@
       "priority_number": "14",
       "command": "poetry run architect create-spec --priority=14 --auto-approve",
       "started_at": "2025-10-20T08:38:09.562026",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138460"
     },
-    "52657": {
+    {
       "pid": 52657,
       "agent_type": "architect",
       "task_id": "spec-15",
@@ -430,9 +527,10 @@
       "priority_number": "15",
       "command": "poetry run architect create-spec --priority=15 --auto-approve",
       "started_at": "2025-10-20T08:38:24.541979",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138460"
     },
-    "52658": {
+    {
       "pid": 52658,
       "agent_type": "architect",
       "task_id": "spec-16",
@@ -440,9 +538,10 @@
       "priority_number": "16",
       "command": "poetry run architect create-spec --priority=16 --auto-approve",
       "started_at": "2025-10-20T08:38:24.544305",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138461"
     },
-    "52762": {
+    {
       "pid": 52762,
       "agent_type": "architect",
       "task_id": "spec-17",
@@ -450,9 +549,10 @@
       "priority_number": "17",
       "command": "poetry run architect create-spec --priority=17 --auto-approve",
       "started_at": "2025-10-20T08:38:39.570113",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138462"
     },
-    "52763": {
+    {
       "pid": 52763,
       "agent_type": "architect",
       "task_id": "spec-18",
@@ -460,9 +560,10 @@
       "priority_number": "18",
       "command": "poetry run architect create-spec --priority=18 --auto-approve",
       "started_at": "2025-10-20T08:38:39.572579",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138463"
     },
-    "52864": {
+    {
       "pid": 52864,
       "agent_type": "architect",
       "task_id": "spec-19",
@@ -470,9 +571,10 @@
       "priority_number": "19",
       "command": "poetry run architect create-spec --priority=19 --auto-approve",
       "started_at": "2025-10-20T08:38:54.573949",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138464"
     },
-    "52865": {
+    {
       "pid": 52865,
       "agent_type": "architect",
       "task_id": "spec-2",
@@ -480,9 +582,10 @@
       "priority_number": "2",
       "command": "poetry run architect create-spec --priority=2 --auto-approve",
       "started_at": "2025-10-20T08:38:54.576331",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138464"
     },
-    "52910": {
+    {
       "pid": 52910,
       "agent_type": "architect",
       "task_id": "spec-2.5",
@@ -490,9 +593,10 @@
       "priority_number": "2.5",
       "command": "poetry run architect create-spec --priority=2.5 --auto-approve",
       "started_at": "2025-10-20T08:39:09.589466",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138465"
     },
-    "52911": {
+    {
       "pid": 52911,
       "agent_type": "architect",
       "task_id": "spec-2.6",
@@ -500,9 +604,10 @@
       "priority_number": "2.6",
       "command": "poetry run architect create-spec --priority=2.6 --auto-approve",
       "started_at": "2025-10-20T08:39:09.591857",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138466"
     },
-    "54359": {
+    {
       "pid": 54359,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760942633",
@@ -510,18 +615,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T08:43:53.542275",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138467"
     },
-    "54360": {
+    {
       "pid": 54360,
       "agent_type": "project_manager",
       "task_id": "planning-1760942633",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T08:43:53.544662",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138468"
     },
-    "59857": {
+    {
       "pid": 59857,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760943613",
@@ -529,18 +636,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T09:00:13.773723",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138469"
     },
-    "59858": {
+    {
       "pid": 59858,
       "agent_type": "project_manager",
       "task_id": "planning-1760943613",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T09:00:13.781258",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138469"
     },
-    "61881": {
+    {
       "pid": 61881,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760943717",
@@ -548,18 +657,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T09:01:57.487588",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138470"
     },
-    "61888": {
+    {
       "pid": 61888,
       "agent_type": "project_manager",
       "task_id": "planning-1760943717",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T09:01:57.494861",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138471"
     },
-    "63038": {
+    {
       "pid": 63038,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760943773",
@@ -567,18 +678,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T09:02:53.121257",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138472"
     },
-    "63039": {
+    {
       "pid": 63039,
       "agent_type": "project_manager",
       "task_id": "planning-1760943773",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T09:02:53.127903",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138473"
     },
-    "73644": {
+    {
       "pid": 73644,
       "agent_type": "architect",
       "task_id": "spec-3",
@@ -586,9 +699,10 @@
       "priority_number": "3",
       "command": "poetry run architect create-spec --priority=3 --auto-approve",
       "started_at": "2025-10-20T09:17:21.984649",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138474"
     },
-    "73645": {
+    {
       "pid": 73645,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760944641",
@@ -596,18 +710,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T09:17:21.987167",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138474"
     },
-    "73646": {
+    {
       "pid": 73646,
       "agent_type": "project_manager",
       "task_id": "planning-1760944641",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T09:17:21.989601",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138475"
     },
-    "78710": {
+    {
       "pid": 78710,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760945396",
@@ -615,18 +731,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T09:29:56.356868",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138476"
     },
-    "78711": {
+    {
       "pid": 78711,
       "agent_type": "project_manager",
       "task_id": "planning-1760945396",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T09:29:56.359433",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138477"
     },
-    "82244": {
+    {
       "pid": 82244,
       "agent_type": "architect",
       "task_id": "spec-20",
@@ -634,9 +752,10 @@
       "priority_number": "20",
       "command": "poetry run architect create-spec --priority=20 --auto-approve",
       "started_at": "2025-10-20T09:38:42.351124",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138478"
     },
-    "82245": {
+    {
       "pid": 82245,
       "agent_type": "architect",
       "task_id": "spec-20",
@@ -644,9 +763,10 @@
       "priority_number": "20",
       "command": "poetry run architect create-spec --priority=20 --auto-approve",
       "started_at": "2025-10-20T09:38:42.375844",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138479"
     },
-    "83509": {
+    {
       "pid": 83509,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760945966",
@@ -654,18 +774,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T09:39:26.794123",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138480"
     },
-    "83510": {
+    {
       "pid": 83510,
       "agent_type": "project_manager",
       "task_id": "planning-1760945966",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T09:39:26.796461",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138480"
     },
-    "84448": {
+    {
       "pid": 84448,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760946028",
@@ -673,18 +795,20 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T09:40:28.594270",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138481"
     },
-    "84449": {
+    {
       "pid": 84449,
       "agent_type": "project_manager",
       "task_id": "planning-1760946028",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T09:40:28.596861",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138482"
     },
-    "88687": {
+    {
       "pid": 88687,
       "agent_type": "architect",
       "task_id": "refactoring_analysis-1760950112",
@@ -692,17 +816,60 @@
       "priority_number": null,
       "command": "poetry run architect --auto-approve",
       "started_at": "2025-10-20T10:48:32.742212",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138483"
     },
-    "88688": {
+    {
       "pid": 88688,
       "agent_type": "project_manager",
       "task_id": "planning-1760950112",
       "task_type": "auto_planning",
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T10:48:32.744666",
-      "status": "running"
+      "status": "completed",
+      "completed_at": "2025-10-20T12:08:59.138484"
+    },
+    {
+      "pid": 99030,
+      "agent_type": "architect",
+      "task_id": "refactoring_analysis-1760956509",
+      "task_type": "refactoring_analysis",
+      "priority_number": null,
+      "command": "poetry run architect --auto-approve",
+      "started_at": "2025-10-20T12:35:09.731809",
+      "status": "completed",
+      "completed_at": "2025-10-20T14:05:16.440382"
+    },
+    {
+      "pid": 99031,
+      "agent_type": "project_manager",
+      "task_id": "planning-1760956509",
+      "task_type": "auto_planning",
+      "command": "poetry run project-manager auto-plan --auto-approve",
+      "started_at": "2025-10-20T12:35:09.734337",
+      "status": "completed",
+      "completed_at": "2025-10-20T14:05:16.440385"
+    },
+    {
+      "pid": 2194,
+      "agent_type": "architect",
+      "task_id": "refactoring_analysis-1760958046",
+      "task_type": "refactoring_analysis",
+      "priority_number": null,
+      "command": "poetry run architect --auto-approve",
+      "started_at": "2025-10-20T13:00:46.826992",
+      "status": "completed",
+      "completed_at": "2025-10-20T14:05:16.440386"
+    },
+    {
+      "pid": 2195,
+      "agent_type": "project_manager",
+      "task_id": "planning-1760958046",
+      "task_type": "auto_planning",
+      "command": "poetry run project-manager auto-plan --auto-approve",
+      "started_at": "2025-10-20T13:00:46.829835",
+      "status": "completed",
+      "completed_at": "2025-10-20T14:05:16.440390"
     }
-  },
-  "completed_agents": []
+  ]
 }

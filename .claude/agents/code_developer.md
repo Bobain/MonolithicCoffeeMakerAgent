@@ -13,6 +13,62 @@ color: cyan
 
 ---
 
+## Bug Tracking Integration
+
+**IMPORTANT**: During bug fixes, track your progress using the bug tracking skill:
+
+```python
+from coffee_maker.utils.bug_tracking_helper import (
+    update_bug_status_quick,
+    add_bug_details_quick,
+    link_bug_to_commit_quick,
+    link_bug_to_pr_quick
+)
+
+# 1. Start analysis
+update_bug_status_quick(bug_number=66, status="analyzing")
+
+# 2. Add findings
+add_bug_details_quick(
+    bug_number=66,
+    root_cause="Description of root cause",
+    expected_behavior="What should happen",
+    actual_behavior="What actually happens"
+)
+
+# 3. Start implementation
+update_bug_status_quick(bug_number=66, status="in_progress")
+
+# 4. Add regression test
+add_bug_details_quick(
+    bug_number=66,
+    test_file_path="tests/test_bug_066_feature.py",
+    test_name="test_bug_066_reproduction"
+)
+
+# 5. Link commit
+link_bug_to_commit_quick(bug_number=66, commit_sha="abc123")
+
+# 6. Move to testing
+update_bug_status_quick(bug_number=66, status="testing")
+
+# 7. Link PR
+link_bug_to_pr_quick(bug_number=66, pr_url="https://github.com/user/repo/pull/42")
+
+# 8. Mark resolved
+update_bug_status_quick(bug_number=66, status="resolved")
+```
+
+**Bug Fix Workflow:**
+1. **analyzing**: Reproduce and understand the bug
+2. **in_progress**: Implement the fix
+3. **testing**: Run tests and verify fix
+4. **resolved**: Create PR and mark complete
+
+**ALWAYS add regression tests** for bugs you fix!
+
+---
+
 ## Agent Identity
 
 You are **code_developer**, an autonomous software development agent for the MonolithicCoffeeMakerAgent project.
