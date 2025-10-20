@@ -235,6 +235,9 @@ class BaseAgent(ABC):
 
         logger.info(f"🛑 {self.agent_type.value} stopped")
 
+        # Cleanup: Remove status file on exit
+        self._cleanup_status_file()
+
     def _enforce_cfr_013(self):
         """Ensure agent is on roadmap branch (CFR-013).
 
@@ -453,6 +456,21 @@ class BaseAgent(ABC):
             self.last_heartbeat = datetime.now()
         except Exception as e:
             logger.error(f"Error writing status: {e}")
+
+    def _cleanup_status_file(self):
+        """Remove status file on agent exit.
+
+        This prevents stale status files from showing up in activity summaries
+        or health monitoring tools when the agent is no longer running.
+
+        Called automatically when agent stops (normal exit or KeyboardInterrupt).
+        """
+        try:
+            if self.status_file.exists():
+                self.status_file.unlink()
+                logger.info(f"✅ Cleaned up status file: {self.status_file}")
+        except Exception as e:
+            logger.error(f"Error cleaning up status file: {e}")
 
     def commit_changes(self, message: str, files: Optional[List[str]] = None):
         """Commit changes with agent identification.

@@ -145,8 +145,10 @@ def get_running_agents() -> List[Dict]:
 def get_agent_status_from_files() -> Dict[str, Dict]:
     """Read agent status from status files.
 
+    Filters out stale status files by checking if the PID is still running.
+
     Returns:
-        Dictionary mapping agent_type -> status dictionary
+        Dictionary mapping agent_type -> status dictionary (only active agents)
     """
     status_dir = Path("data/agent_status")
     statuses = {}
@@ -158,7 +160,24 @@ def get_agent_status_from_files() -> Dict[str, Dict]:
         try:
             status = json.loads(status_file.read_text())
             agent_type = status.get("agent_type", status_file.stem)
-            statuses[agent_type] = status
+
+            # Check if PID is still running
+            pid = status.get("pid")
+            if pid:
+                # Check if process exists
+                try:
+                    import os
+
+                    os.kill(pid, 0)  # Signal 0 doesn't kill, just checks if process exists
+                    # If we get here, process exists
+                    statuses[agent_type] = status
+                except (OSError, ProcessLookupError):
+                    # Process doesn't exist - skip this stale status file
+                    continue
+            else:
+                # No PID in status - include it anyway (might be old format)
+                statuses[agent_type] = status
+
         except Exception:
             continue
 
