@@ -17,6 +17,7 @@ from coffee_maker.autonomous.architect_daily_routine import (
 )
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 from coffee_maker.autonomous.spec_generator import SpecGenerator
+from coffee_maker.cli.ai_service import AIService
 
 
 @click.group()
@@ -312,7 +313,8 @@ def create_spec(priority: str, auto_approve: bool):
         # Generate spec using SpecGenerator
         click.echo("Generating technical specification (this may take 1-2 minutes)...\n")
 
-        generator = SpecGenerator()
+        ai_service = AIService()
+        generator = SpecGenerator(ai_service)
         user_story = f"{priority_name}: {priority_title}\n\n{priority_content}"
 
         spec = generator.generate_spec_from_user_story(
