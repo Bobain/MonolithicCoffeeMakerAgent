@@ -29,6 +29,7 @@ class SkillNames(str, Enum):
     ARCHITECTURE_REUSE_CHECK = "architecture-reuse-check"
     CONTINUOUS_SPEC_IMPROVEMENT = "continuous-spec-improvement"
     CODE_REVIEW_HISTORY = "code-review-history"
+    PROACTIVE_REFACTORING_ANALYSIS = "proactive-refactoring-analysis"
 
     # Project Manager skills
     ROADMAP_HEALTH_CHECK = "roadmap-health-check"

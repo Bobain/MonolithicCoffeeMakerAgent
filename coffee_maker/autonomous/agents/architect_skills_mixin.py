@@ -389,7 +389,12 @@ Output JSON:
         # Load skill
         from coffee_maker.autonomous.skill_loader import SkillNames, load_skill
 
-        skill_prompt = load_skill(SkillNames.PROACTIVE_REFACTORING_ANALYSIS)
+        try:
+            skill_prompt = load_skill(SkillNames.PROACTIVE_REFACTORING_ANALYSIS)
+        except (AttributeError, FileNotFoundError) as e:
+            logger.error(f"❌ Skill not available: {e}")
+            logger.info("⏭️  Skipping refactoring analysis - skill not found")
+            return
 
         # Execute skill with LLM
         from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
@@ -568,7 +573,7 @@ Output JSON:
 
             return reuse_analysis
 
-        except FileNotFoundError as e:
+        except (AttributeError, FileNotFoundError) as e:
             logger.warning(f"⚠️  architecture-reuse-check skill not found, proceeding without it: {e}")
             return "## 🔍 Architecture Reuse Check\n\n⚠️  Skill not yet implemented\n"
         except Exception as e:
