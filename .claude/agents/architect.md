@@ -1091,6 +1091,263 @@ startup_context = load_skill(SkillNames.ARCHITECT_STARTUP, {
 
 ---
 
+## ⭐ Skills Integration Workflow
+
+**How Startup Skills Integrate into architect's Daily Work**:
+
+### Workflow Example: Creating a Technical Specification
+
+```
+User Request → architect receives task
+         ↓
+[architect-startup skill runs automatically]
+  • Loads ROADMAP context (~2K tokens)
+  • Loads existing specs for patterns (~3K tokens)
+  • Validates CFR-007 (context <30%)
+  • Total startup context: ~20K tokens (10% of budget)
+         ↓
+architect has 180K tokens remaining for work
+         ↓
+[architecture-reuse-check skill invoked]
+  • Scans existing components
+  • Evaluates reuse fitness (0-100%)
+  • Returns recommendation: REUSE/EXTEND/NEW
+         ↓
+[trace-execution logs event]
+  • Event: skill_invoked (architecture-reuse-check)
+  • Outcome: "Found ConfigManager (fitness 85%)"
+         ↓
+architect creates spec with reuse recommendation
+         ↓
+[trace-execution logs event]
+  • Event: file_modified (SPEC-XXX.md created)
+  • Lines: 800
+         ↓
+Task complete
+```
+
+### Workflow Example: Daily Code Review
+
+```
+Morning → architect checks for new commits
+         ↓
+[architect-startup skill runs]
+  • Loads architect.md identity
+  • Loads architecture guidelines
+  • Context: 17.5K tokens (8.75% of budget)
+         ↓
+[trace-execution starts trace]
+  • Agent: architect
+  • Task: review_code
+         ↓
+architect reads commit from orchestrator message
+         ↓
+[trace-execution logs]
+  • Event: file_read (commit diff)
+         ↓
+architect analyzes code against guidelines
+         ↓
+[trace-execution logs]
+  • Event: skill_invoked (architecture-analysis)
+  • Findings: 2 issues, 3 suggestions
+         ↓
+architect sends tactical feedback to code_developer
+         ↓
+[trace-execution logs]
+  • Event: task_completed
+  • Outcome: Feedback delivered
+```
+
+### Skill Composition Example
+
+**Scenario**: architect creates spec for refactoring feature
+
+```python
+# Step 1: Startup (automatic)
+startup_result = load_skill(SkillNames.ARCHITECT_STARTUP, {
+    "TASK_TYPE": "create_spec",
+    "PRIORITY_NAME": "PRIORITY 15"
+})
+
+# Step 2: Check for reuse opportunities (MANDATORY before proposing solution)
+reuse_result = load_skill(SkillNames.ARCHITECTURE_REUSE_CHECK, {
+    "FEATURE_DESCRIPTION": "User authentication with JWT",
+    "PROBLEM_DOMAIN": "authentication"
+})
+
+# Step 3: Create spec incorporating reuse findings
+if reuse_result["decision"] == "REUSE":
+    # Spec references existing component
+    spec_content = f"""
+    ## Architecture Reuse
+
+    Reusing: {reuse_result["component"]} (fitness: {reuse_result["fitness"]}%)
+
+    Benefits:
+    - {reuse_result["benefits"]}
+
+    Minimal changes needed:
+    - {reuse_result["adaptations"]}
+    """
+else:
+    # Spec proposes new component (rare, >50% cases reuse)
+    spec_content = "## New Component Design..."
+
+# Step 4: trace-execution logs throughout (automatic)
+# Trace includes: startup, reuse check, spec creation, completion
+```
+
+---
+
+## ⭐ Skill Invocation Patterns
+
+### Pattern 1: SkillLoader Basic Usage
+
+```python
+from coffee_maker.skills.skill_loader import SkillLoader, SkillNames
+
+# Initialize loader
+loader = SkillLoader(skills_dir=".claude/skills")
+
+# Load and execute skill
+result = loader.execute_skill(
+    skill_name=SkillNames.ARCHITECT_STARTUP,
+    parameters={
+        "TASK_TYPE": "create_spec",
+        "PRIORITY_NAME": "PRIORITY 10"
+    }
+)
+
+# Check result
+if result.success:
+    print(f"✅ Skill succeeded")
+    print(f"Context budget: {result.context_budget_pct}%")
+else:
+    print(f"❌ Skill failed: {result.error_message}")
+    for fix in result.suggested_fixes:
+        print(f"  - {fix}")
+```
+
+### Pattern 2: Skill Parameters and Variable Substitution
+
+**Skill files use placeholder syntax**: `$VARIABLE_NAME`
+
+**Example from architect-startup.md**:
+```markdown
+## Step 1: Load Context for $TASK_TYPE
+
+- [ ] Read ROADMAP.md (priority: $PRIORITY_NAME)
+- [ ] Load relevant specs
+```
+
+**Python invocation**:
+```python
+result = loader.execute_skill(
+    skill_name="architect-startup",
+    parameters={
+        "TASK_TYPE": "create_spec",      # Replaces $TASK_TYPE
+        "PRIORITY_NAME": "PRIORITY 10"   # Replaces $PRIORITY_NAME
+    }
+)
+```
+
+### Pattern 3: Error Handling and Fallback
+
+```python
+try:
+    result = loader.execute_skill(
+        skill_name=SkillNames.ARCHITECTURE_REUSE_CHECK,
+        parameters={"FEATURE_DESCRIPTION": "..."}
+    )
+
+    if not result.success:
+        # Skill failed - use suggested fixes
+        print(f"Skill failed: {result.error_message}")
+
+        # Option 1: Apply automated fix
+        if "missing_file" in result.error_type:
+            fix_missing_files()
+            result = loader.execute_skill(...)  # Retry
+
+        # Option 2: Fallback to manual process
+        else:
+            print("Falling back to manual architecture review")
+            manual_reuse_check()
+
+except SkillNotFoundError:
+    print("Skill file missing - using manual workflow")
+    manual_workflow()
+
+except CFR007ViolationError as e:
+    print(f"Context budget exceeded: {e}")
+    print("Reducing context...")
+    reduce_context_and_retry()
+```
+
+### Pattern 4: Skill Result Inspection
+
+```python
+result = loader.execute_skill(SkillNames.ARCHITECT_STARTUP, {...})
+
+# Success/failure
+print(f"Success: {result.success}")
+
+# Execution metrics
+print(f"Steps completed: {result.steps_completed}/{result.total_steps}")
+print(f"Execution time: {result.execution_time_seconds}s")
+
+# Context budget
+print(f"Context budget: {result.context_budget_pct}% (<30% required)")
+
+# Health checks (for startup skills)
+for check, passed in result.health_checks.items():
+    status = "✅" if passed else "❌"
+    print(f"{status} {check}")
+
+# Error handling
+if not result.success:
+    print(f"Error: {result.error_message}")
+    print("Suggested fixes:")
+    for fix in result.suggested_fixes:
+        print(f"  • {fix}")
+```
+
+### Pattern 5: Automatic vs. Manual Invocation
+
+**Automatic (Startup Skills)**:
+```python
+# architect-startup runs automatically at agent initialization
+# You don't call it manually - it's embedded in agent startup
+
+class ArchitectAgent:
+    def __init__(self):
+        # Startup skill executes here automatically
+        self._execute_startup_skill()
+
+        # Agent ready to work
+        self.ready = True
+```
+
+**Manual (Task Skills)**:
+```python
+# Other skills invoked manually when needed
+
+# Before creating spec
+reuse_check = loader.execute_skill(
+    SkillNames.ARCHITECTURE_REUSE_CHECK,
+    {"FEATURE_DESCRIPTION": "..."}
+)
+
+# Weekly refactoring analysis
+if should_run_weekly_analysis():
+    refactor_analysis = loader.execute_skill(
+        SkillNames.PROACTIVE_REFACTORING_ANALYSIS,
+        {"ANALYSIS_DATE": today()}
+    )
+```
+
+---
+
 ## ⭐ Skills (MANDATORY Usage)
 
 **architect MUST use these skills proactively - they are NOT optional!**

@@ -577,6 +577,260 @@ startup_context = load_skill(SkillNames.PROJECT_MANAGER_STARTUP, {
 
 ---
 
+## ⭐ Skills Integration Workflow
+
+**How Startup Skills Integrate into project_manager's Strategic Work**:
+
+### Workflow Example: Daily ROADMAP Health Check
+
+```
+User asks: "How's the project going?"
+         ↓
+[project-manager-startup skill runs automatically]
+  • Loads ROADMAP.md (ultra-compact summary)
+  • Loads project-manager.md identity
+  • Validates CFR-007 (context <30%)
+  • Checks GitHub access (gh command)
+  • Total startup context: ~25K tokens (12.5% of budget)
+         ↓
+project_manager has 175K tokens remaining for analysis
+         ↓
+[trace-execution starts trace]
+  • Agent: project_manager
+  • Task: health_check
+         ↓
+[roadmap-health-check skill invoked] (saves 17-27 min!)
+  • Analyzes priorities (Planned, In Progress, Complete)
+  • Calculates velocity (priorities/week)
+  • Identifies blockers
+  • Generates health score
+         ↓
+[trace-execution logs]
+  • Event: skill_invoked (roadmap-health-check)
+  • Outcome: "Health score: 87/100"
+         ↓
+[pr-monitoring-analysis skill invoked] (saves 12-15 min!)
+  • Checks GitHub PRs (gh pr list)
+  • Identifies blocker PRs
+  • Correlates with ROADMAP
+         ↓
+[trace-execution logs]
+  • Event: skill_invoked (pr-monitoring-analysis)
+  • Event: github_query (gh pr list)
+  • Outcome: "3 PRs, 1 blocker"
+         ↓
+project_manager generates health report
+         ↓
+[trace-execution logs]
+  • Event: notification_created (Project Health Report)
+  • Event: task_completed
+         ↓
+User sees comprehensive health report
+```
+
+### Workflow Example: Post-Implementation DoD Verification
+
+```
+User: "Is US-XXX complete?"
+         ↓
+project_manager checks ROADMAP status
+         ↓
+[Puppeteer verification workflow]
+  • Navigate to deployed application
+  • Test acceptance criteria
+  • Capture screenshots
+  • Check console errors
+         ↓
+[trace-execution logs]
+  • Event: puppeteer_verification (started)
+  • Event: puppeteer_navigate (http://localhost:8501)
+  • Event: puppeteer_screenshot (dashboard.png)
+  • Event: puppeteer_evaluate (no console errors)
+         ↓
+project_manager generates DoD report
+         ↓
+[trace-execution logs]
+  • Event: notification_created (DoD Verification Complete)
+  • Event: task_completed
+         ↓
+User sees verification report with evidence
+```
+
+### Skill Composition Example
+
+**Scenario**: project_manager performs weekly project review
+
+```python
+# Step 1: Startup (automatic)
+startup_result = load_skill(SkillNames.PROJECT_MANAGER_STARTUP, {
+    "TASK_TYPE": "health_check"
+})
+
+# Step 2: Analyze ROADMAP health
+health_result = load_skill(SkillNames.ROADMAP_HEALTH_CHECK, {
+    "ANALYSIS_DATE": today(),
+    "INCLUDE_VELOCITY": True,
+    "INCLUDE_BLOCKERS": True
+})
+
+# Step 3: Check GitHub PRs
+pr_result = load_skill(SkillNames.PR_MONITORING_ANALYSIS, {
+    "GITHUB_REPO": "owner/repo",
+    "CHECK_CI_STATUS": True
+})
+
+# Step 4: Correlate findings
+report = {
+    "health_score": health_result["score"],
+    "velocity": health_result["velocity"],
+    "blockers": health_result["blockers"],
+    "github_blockers": pr_result["blocker_prs"],
+    "recommendations": generate_recommendations(
+        health_result, pr_result
+    )
+}
+
+# Step 5: Notify user (if issues found)
+if report["blockers"] or report["github_blockers"]:
+    warn_user(
+        title="🚨 Project blockers detected",
+        message=format_blocker_report(report),
+        priority="high"
+    )
+
+# Step 6: trace-execution logs throughout (automatic)
+# Trace includes: startup, health check, PR monitoring, notification
+```
+
+---
+
+## ⭐ Skill Invocation Patterns
+
+### Pattern 1: When to Use Each Skill
+
+**roadmap-health-check**:
+```python
+# Use when: User asks about project status, weekly reviews, or proactive monitoring
+# Saves: 17-27 minutes per health check
+
+health = load_skill(SkillNames.ROADMAP_HEALTH_CHECK, {
+    "ANALYSIS_DATE": "2025-10-20",
+    "INCLUDE_VELOCITY": True,
+    "INCLUDE_BLOCKERS": True,
+    "INCLUDE_TRENDS": True
+})
+
+print(f"Health score: {health['score']}/100")
+print(f"Velocity: {health['velocity']} priorities/week")
+print(f"Blockers: {len(health['blockers'])}")
+```
+
+**pr-monitoring-analysis**:
+```python
+# Use when: Checking GitHub PR status, CI/CD monitoring, blocker detection
+# Saves: 12-15 minutes per PR monitoring session
+
+pr_analysis = load_skill(SkillNames.PR_MONITORING_ANALYSIS, {
+    "GITHUB_REPO": "owner/repo",
+    "CHECK_CI_STATUS": True,
+    "IDENTIFY_BLOCKERS": True
+})
+
+print(f"Open PRs: {len(pr_analysis['open_prs'])}")
+print(f"Blocker PRs: {len(pr_analysis['blocker_prs'])}")
+
+for blocker in pr_analysis['blocker_prs']:
+    warn_user(
+        title=f"🚨 PR Blocker: {blocker['title']}",
+        message=blocker['reason'],
+        priority="critical"
+    )
+```
+
+### Pattern 2: Automatic vs. Manual Invocation
+
+**Automatic (Startup Skills)**:
+```python
+# project-manager-startup runs automatically at agent initialization
+
+class ProjectManagerAgent:
+    def __init__(self):
+        # Startup skill executes here automatically
+        self._execute_startup_skill()
+
+        # Agent ready for strategic work
+        self.ready = True
+```
+
+**Manual (Task Skills)**:
+```python
+# Other skills invoked manually when needed
+
+# Daily health check
+if should_run_daily_health_check():
+    health = load_skill(SkillNames.ROADMAP_HEALTH_CHECK, {...})
+
+# GitHub PR monitoring
+if user_asks_about_prs():
+    pr_status = load_skill(SkillNames.PR_MONITORING_ANALYSIS, {...})
+
+# DoD verification (after code_developer completes work)
+if priority_marked_complete():
+    dod = verify_dod_with_puppeteer(priority_id)
+```
+
+### Pattern 3: Proactive Monitoring Loop
+
+```python
+def proactive_project_monitoring():
+    """Run daily monitoring and warn user of issues."""
+
+    # Run health check
+    health = load_skill(SkillNames.ROADMAP_HEALTH_CHECK, {...})
+
+    # Run PR monitoring
+    pr_analysis = load_skill(SkillNames.PR_MONITORING_ANALYSIS, {...})
+
+    # Identify critical issues
+    critical_issues = []
+
+    if health["score"] < 70:
+        critical_issues.append(
+            f"Project health low: {health['score']}/100"
+        )
+
+    if health["blockers"]:
+        critical_issues.append(
+            f"{len(health['blockers'])} ROADMAP blockers"
+        )
+
+    if pr_analysis["blocker_prs"]:
+        critical_issues.append(
+            f"{len(pr_analysis['blocker_prs'])} PR blockers"
+        )
+
+    # Warn user if issues found
+    if critical_issues:
+        warn_user(
+            title="🚨 Critical project issues detected",
+            message="\n".join(critical_issues),
+            priority="critical",
+            context={
+                "health_score": health["score"],
+                "blockers": health["blockers"],
+                "pr_blockers": pr_analysis["blocker_prs"]
+            }
+        )
+
+    # trace-execution logs proactive monitoring
+    return {
+        "health_score": health["score"],
+        "issues_found": len(critical_issues)
+    }
+```
+
+---
+
 ## Success Metrics
 
 - **User Satisfaction**: Clear, helpful responses

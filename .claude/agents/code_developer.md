@@ -429,6 +429,261 @@ startup_context = load_skill(SkillNames.CODE_DEVELOPER_STARTUP, {
 
 ---
 
+## ⭐ Skills Integration Workflow
+
+**How Startup Skills Integrate into code_developer's Implementation Work**:
+
+### Workflow Example: Implementing a Priority
+
+```
+Daemon starts → code_developer wakes up
+         ↓
+[code-developer-startup skill runs automatically]
+  • Loads ROADMAP.md (next priority)
+  • Loads code_developer.md identity
+  • Validates CFR-007 (context <30%)
+  • Checks ANTHROPIC_API_KEY present
+  • Verifies daemon mixins loaded
+  • Total startup context: ~27K tokens (13.5% of budget)
+         ↓
+code_developer has 173K tokens remaining for implementation
+         ↓
+[trace-execution starts trace]
+  • Agent: code_developer
+  • Task: implement_priority
+  • Priority: US-XXX
+         ↓
+code_developer reads PRIORITY details
+         ↓
+[trace-execution logs]
+  • Event: file_read (ROADMAP.md)
+  • Tokens: 2143
+         ↓
+code_developer implements feature (writes code, adds tests)
+         ↓
+[trace-execution logs]
+  • Event: file_modified (coffee_maker/feature.py, 150 lines)
+  • Event: file_modified (tests/test_feature.py, 80 lines)
+         ↓
+code_developer runs tests
+         ↓
+[trace-execution logs]
+  • Event: tests_run (23 total, 20 passing, 3 failing)
+         ↓
+[test-failure-analysis skill invoked] (saves 20-50 min!)
+  • Analyzes pytest output
+  • Identifies root cause
+  • Suggests fixes
+         ↓
+[trace-execution logs]
+  • Event: skill_invoked (test-failure-analysis)
+  • Outcome: "3 fixes identified"
+         ↓
+code_developer applies fixes, reruns tests
+         ↓
+[trace-execution logs]
+  • Event: tests_run (23 total, 23 passing, 0 failing)
+         ↓
+[dod-verification skill invoked] (saves 15-35 min!)
+  • Checks acceptance criteria
+  • Runs final tests
+  • Verifies no regressions
+         ↓
+[trace-execution logs]
+  • Event: skill_invoked (dod-verification)
+  • Outcome: "All criteria met"
+         ↓
+[git-workflow-automation skill invoked] (saves 7-12 min!)
+  • Creates commit with proper message
+  • Tags commit (wip-*)
+  • Pushes to remote
+         ↓
+[trace-execution logs]
+  • Event: skill_invoked (git-workflow-automation)
+  • Event: git_commit (hash: abc123)
+  • Event: task_completed
+         ↓
+Priority complete
+```
+
+### Skill Composition Example
+
+**Scenario**: code_developer implements feature with TDD workflow
+
+```python
+# Step 1: Startup (automatic)
+startup_result = load_skill(SkillNames.CODE_DEVELOPER_STARTUP, {
+    "TASK_TYPE": "implement_priority",
+    "PRIORITY_NAME": "PRIORITY 10"
+})
+
+# Step 2: Implement feature (manual coding)
+write_implementation()
+write_tests()
+
+# Step 3: Run tests and analyze failures
+test_results = run_pytest()
+
+if test_results.failures > 0:
+    # Use test-failure-analysis skill (saves 20-50 min!)
+    analysis = load_skill(SkillNames.TEST_FAILURE_ANALYSIS, {
+        "PYTEST_OUTPUT": test_results.output,
+        "FAILING_TESTS": test_results.failures
+    })
+
+    # Apply suggested fixes
+    for fix in analysis["fixes"]:
+        apply_fix(fix)
+
+    # Rerun tests
+    test_results = run_pytest()
+
+# Step 4: Verify DoD before commit
+dod_result = load_skill(SkillNames.DOD_VERIFICATION, {
+    "PRIORITY_NAME": "PRIORITY 10",
+    "ACCEPTANCE_CRITERIA": load_acceptance_criteria(),
+    "TEST_RESULTS": test_results
+})
+
+if dod_result["passed"]:
+    # Step 5: Automate git workflow
+    git_result = load_skill(SkillNames.GIT_WORKFLOW_AUTOMATION, {
+        "COMMIT_MESSAGE": "feat: Implement PRIORITY 10",
+        "TAG_PREFIX": "wip",
+        "PUSH": True
+    })
+
+# Step 6: trace-execution logs throughout (automatic)
+# Trace includes: startup, implementation, test failures, DoD, git commit
+```
+
+---
+
+## ⭐ Skill Invocation Patterns
+
+### Pattern 1: When to Use Each Skill
+
+**test-failure-analysis**:
+```python
+# Use when: pytest shows failures
+# Saves: 20-50 minutes per test failure debugging session
+
+test_output = run_command("pytest")
+
+if "FAILED" in test_output:
+    analysis = load_skill(SkillNames.TEST_FAILURE_ANALYSIS, {
+        "PYTEST_OUTPUT": test_output
+    })
+
+    print(f"Root cause: {analysis['root_cause']}")
+    print(f"Fixes: {analysis['suggested_fixes']}")
+```
+
+**dod-verification**:
+```python
+# Use when: Implementation complete, before commit
+# Saves: 15-35 minutes of manual verification
+
+dod = load_skill(SkillNames.DOD_VERIFICATION, {
+    "PRIORITY_NAME": "PRIORITY 10",
+    "ACCEPTANCE_CRITERIA": criteria,
+    "TEST_RESULTS": test_results,
+    "IMPLEMENTATION_FILES": ["feature.py", "tests/test_feature.py"]
+})
+
+if dod["passed"]:
+    commit()
+else:
+    print(f"DoD not met: {dod['unmet_criteria']}")
+```
+
+**git-workflow-automation**:
+```python
+# Use when: Ready to commit and push
+# Saves: 7-12 minutes per commit
+
+git = load_skill(SkillNames.GIT_WORKFLOW_AUTOMATION, {
+    "COMMIT_MESSAGE": "feat: Add user authentication",
+    "TAG_PREFIX": "wip",
+    "PUSH": True,
+    "CREATE_PR": False  # PR creation later
+})
+
+print(f"Committed: {git['commit_hash']}")
+print(f"Tagged: {git['tag']}")
+```
+
+### Pattern 2: Skill Chaining for Complete Workflow
+
+```python
+def implement_priority_with_skills(priority_name: str):
+    """Complete implementation workflow using skills."""
+
+    # 1. Startup (automatic - already ran)
+
+    # 2. Implement
+    write_code()
+
+    # 3. Test and debug
+    while True:
+        test_result = run_pytest()
+
+        if test_result.failures == 0:
+            break  # All tests passing
+
+        # Use test-failure-analysis
+        analysis = load_skill(SkillNames.TEST_FAILURE_ANALYSIS, {
+            "PYTEST_OUTPUT": test_result.output
+        })
+
+        apply_fixes(analysis["suggested_fixes"])
+
+    # 4. Verify DoD
+    dod = load_skill(SkillNames.DOD_VERIFICATION, {
+        "PRIORITY_NAME": priority_name
+    })
+
+    if not dod["passed"]:
+        raise Exception(f"DoD not met: {dod['unmet_criteria']}")
+
+    # 5. Commit and tag
+    git = load_skill(SkillNames.GIT_WORKFLOW_AUTOMATION, {
+        "COMMIT_MESSAGE": f"feat: Implement {priority_name}",
+        "TAG_PREFIX": "wip"
+    })
+
+    # 6. trace-execution has logged everything automatically
+    return git["commit_hash"]
+```
+
+### Pattern 3: Fallback When Skills Unavailable
+
+```python
+try:
+    # Try using skill
+    analysis = load_skill(SkillNames.TEST_FAILURE_ANALYSIS, {
+        "PYTEST_OUTPUT": test_output
+    })
+    fixes = analysis["suggested_fixes"]
+
+except SkillNotFoundError:
+    # Skill file missing - fallback to manual
+    print("⚠️ test-failure-analysis skill not found")
+    print("Falling back to manual test debugging")
+    fixes = manual_debug_tests(test_output)
+
+except Exception as e:
+    # Skill execution failed - fallback
+    print(f"⚠️ Skill failed: {e}")
+    fixes = manual_debug_tests(test_output)
+
+# Apply fixes regardless of source
+for fix in fixes:
+    apply_fix(fix)
+```
+
+---
+
 ## Error Handling & Delegation to Architect
 
 ### When to Delegate to Architect

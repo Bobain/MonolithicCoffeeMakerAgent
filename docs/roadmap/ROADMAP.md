@@ -29058,7 +29058,8 @@ The trace-execution skill (converted from generator agent) represents a major ar
 **Completed**: 2025-10-20
 
 **Estimated Effort**: 6-8 hours
-**Actual Effort**: 1 hour (verification of existing documentation)
+
+**Actual Effort**: ~2 hours (comprehensive documentation with workflow and invocation patterns added to all 3 agent files)
 
 **User Story**:
 As an autonomous agent, I want my definition file to document startup skills in my responsibility section with integration examples, so that my capabilities and workflow are clearly understood.
