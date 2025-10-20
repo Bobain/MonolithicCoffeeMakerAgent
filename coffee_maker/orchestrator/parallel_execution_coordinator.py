@@ -214,7 +214,7 @@ class ParallelExecutionCoordinator:
             Dict with validation result
         """
         # Import task-separator skill
-        skill_path = self.repo_root / ".claude" / "skills" / "architect" / "task-separator" / "task-separator.py"
+        skill_path = self.repo_root / ".claude" / "skills" / "architect" / "task-separator" / "task_separator.py"
 
         if not skill_path.exists():
             return {
@@ -308,8 +308,9 @@ class ParallelExecutionCoordinator:
             worktree_name = f"{self.repo_root.name}-wt{priority_id}"
             worktree_path = self.repo_root.parent / worktree_name
 
-            # Create branch name: feature/us-{priority_id:03d}
-            branch_name = f"feature/us-{priority_id:03d}"
+            # Create branch name: roadmap-{priority_id} (CFR-013 compliant)
+            # CFR-013 requires all agents to work on roadmap or roadmap-* branches
+            branch_name = f"roadmap-{priority_id}"
 
             # Check if worktree already exists
             if worktree_path.exists():
@@ -326,6 +327,29 @@ class ParallelExecutionCoordinator:
                     capture_output=True,
                     text=True,
                 )
+
+                # Copy .env file from main repo to worktree
+                env_file = self.repo_root / ".env"
+                if env_file.exists():
+                    import shutil
+
+                    shutil.copy2(env_file, worktree_path / ".env")
+                    logger.info(f"Copied .env file to worktree: {worktree_path}")
+
+                # CRITICAL: Symlink data/ directory to share databases across worktrees
+                # Without this, each worktree has isolated databases and can't coordinate
+                worktree_data = worktree_path / "data"
+                main_data = self.repo_root / "data"
+
+                if worktree_data.exists() and not worktree_data.is_symlink():
+                    # Remove copied data directory
+                    shutil.rmtree(worktree_data)
+                    logger.debug(f"Removed copied data directory: {worktree_data}")
+
+                if not worktree_data.exists():
+                    # Create symlink to main repo's data directory
+                    worktree_data.symlink_to(main_data, target_is_directory=True)
+                    logger.info(f"✅ Symlinked data/ directory: {worktree_data} → {main_data}")
 
                 worktree = WorktreeConfig(
                     priority_id=priority_id, worktree_path=worktree_path, branch_name=branch_name, status="created"
@@ -345,22 +369,40 @@ class ParallelExecutionCoordinator:
             worktrees: List of WorktreeConfig objects
             auto_approve: Pass --auto-approve to code_developer
         """
+        # Get the poetry virtualenv Python path
+        venv_result = subprocess.run(
+            ["poetry", "env", "info", "--path"],
+            cwd=self.repo_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        venv_path = venv_result.stdout.strip()
+        python_bin = f"{venv_path}/bin/python"
+
         for worktree in worktrees:
-            # Build command
-            cmd = ["poetry", "run", "code-developer", f"--priority={worktree.priority_id}"]
+            # Build command using direct Python interpreter
+            cmd = [python_bin, "-m", "coffee_maker.autonomous.daemon_cli", f"--priority={worktree.priority_id}"]
             if auto_approve:
                 cmd.append("--auto-approve")
 
+            # Create log files for stdout/stderr
+            log_file = worktree.worktree_path / f"code_developer_priority_{worktree.priority_id}.log"
+            error_log_file = worktree.worktree_path / f"code_developer_priority_{worktree.priority_id}_error.log"
+
             # Spawn process
             try:
-                process = subprocess.Popen(
-                    cmd, cwd=worktree.worktree_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-                )
+                with open(log_file, "w") as stdout_f, open(error_log_file, "w") as stderr_f:
+                    process = subprocess.Popen(
+                        cmd, cwd=worktree.worktree_path, stdout=stdout_f, stderr=stderr_f, text=True
+                    )
 
                 worktree.process = process
                 worktree.status = "running"
                 worktree.start_time = datetime.now()
                 logger.info(f"Spawned code_developer for PRIORITY {worktree.priority_id} (PID: {process.pid})")
+                logger.info(f"  Logs: {log_file}")
+                logger.info(f"  Error logs: {error_log_file}")
 
             except Exception as e:
                 logger.error(f"Failed to spawn code_developer for PRIORITY {worktree.priority_id}: {e}")
@@ -391,14 +433,41 @@ class ParallelExecutionCoordinator:
                         # Process finished
                         worktree.end_time = datetime.now()
 
+                        # Read log files
+                        log_file = worktree.worktree_path / f"code_developer_priority_{worktree.priority_id}.log"
+                        error_log_file = (
+                            worktree.worktree_path / f"code_developer_priority_{worktree.priority_id}_error.log"
+                        )
+
                         if poll_result == 0:
                             worktree.status = "completed"
                             completed_count += 1
-                            logger.info(f"PRIORITY {worktree.priority_id} completed successfully")
+                            duration = (worktree.end_time - worktree.start_time).total_seconds()
+                            logger.info(
+                                f"PRIORITY {worktree.priority_id} completed successfully (duration: {duration:.1f}s)"
+                            )
+
+                            # Log last 50 lines of output for debugging
+                            if log_file.exists():
+                                with open(log_file, "r") as f:
+                                    lines = f.readlines()
+                                    last_lines = "".join(lines[-50:])
+                                    logger.info(f"  Last 50 lines of output:\n{last_lines}")
                         else:
                             worktree.status = "failed"
                             failed_count += 1
                             logger.error(f"PRIORITY {worktree.priority_id} failed with code {poll_result}")
+
+                            # Read and log error output
+                            if error_log_file.exists():
+                                with open(error_log_file, "r") as f:
+                                    stderr_output = f.read()
+                                    logger.error(f"  STDERR:\n{stderr_output[:2000]}")
+
+                            if log_file.exists():
+                                with open(log_file, "r") as f:
+                                    stdout_output = f.read()
+                                    logger.error(f"  STDOUT:\n{stdout_output[:2000]}")
 
                 if worktree.status == "running":
                     all_done = False

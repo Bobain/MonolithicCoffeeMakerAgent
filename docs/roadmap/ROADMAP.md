@@ -535,6 +535,134 @@ If REVIEW: architect asks user for decision
 
 ---
 
+### PRIORITY 25: Refactor Skill Loading to Use Proper Python Imports 📝 Planned
+
+**Status**: 📝 Planned - MEDIUM PRIORITY (Technical Debt - Code Quality)
+
+**Created**: 2025-10-20
+
+**Estimated Effort**: 4-6 hours
+
+**Problem Statement**:
+Currently, orchestrator loads skills using non-Pythonic `importlib.util` with dynamic file paths:
+
+```python
+# Current approach (coffee_maker/orchestrator/continuous_work_loop.py:976-989)
+import importlib.util
+skill_path = self.repo_root / ".claude" / "skills" / "architect" / "task-separator" / "task_separator.py"
+spec = importlib.util.spec_from_file_location("task_separator", skill_path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+result = module.main({"priority_ids": priority_ids})
+```
+
+**Issues**:
+- ❌ Not Pythonic - treats skills as external scripts rather than Python modules
+- ❌ No IDE support - autocomplete, type checking, refactoring don't work
+- ❌ Error-prone - file paths can break, typos not caught
+- ❌ Hard to test - can't easily mock or test skill imports
+- ❌ No dependency tracking - unclear what skills depend on
+- ❌ Violates Python naming conventions (directory has hyphen: `task-separator`)
+
+**Solution**: Refactor to use proper Python package structure with regular imports
+
+**Proposed Architecture**:
+
+```
+.claude/skills/
+├── __init__.py                    # Makes skills a package
+├── shared/
+│   ├── __init__.py
+│   ├── bug_tracking.py
+│   ├── roadmap_management.py
+│   └── orchestrator_agent_management.py
+└── architect/
+    ├── __init__.py
+    ├── task_separator.py          # Renamed directory: task-separator → task_separator
+    ├── dependency_conflict_resolver.py
+    ├── architecture_analysis.py
+    └── proactive_refactoring_analysis.py
+
+# Usage (Pythonic):
+from claude.skills.architect.task_separator import main as task_separator_main
+result = task_separator_main({"priority_ids": priority_ids})
+```
+
+**Implementation Steps**:
+
+1. **Directory Restructuring** (1 hr):
+   - Add `__init__.py` to all skill directories
+   - Rename hyphenated directories to use underscores:
+     - `task-separator` → `task_separator`
+     - `orchestrator-agent-management` → `orchestrator_agent_management`
+     - `architecture-reuse-check` → `architecture_reuse_check`
+     - `code-review-history` → `code_review_history`
+     - `dependency-conflict-resolver` → `dependency_conflict_resolver`
+     - `merge-worktree-branches` → `merge_worktree_branches`
+     - `proactive-refactoring-analysis` → `proactive_refactoring_analysis`
+
+2. **Update Import Statements** (2 hrs):
+   - Replace all `importlib.util` code with regular imports
+   - Update `continuous_work_loop.py` to use proper imports
+   - Update any other files that load skills dynamically
+   - Add proper error handling for import failures
+
+3. **Create Skill Registry** (1 hr):
+   - Create `coffee_maker/skills/registry.py`
+   - Centralize skill discovery and loading
+   - Provide clean API: `get_skill("architect.task_separator")`
+
+4. **Update Tests** (1 hr):
+   - Update skill tests to use new import paths
+   - Add tests for skill registry
+   - Verify all skills load correctly
+
+5. **Documentation** (0.5 hr):
+   - Update skill creation guide
+   - Document new import structure
+   - Update WORKFLOWS.md
+
+**Files to Modify**:
+- `coffee_maker/orchestrator/continuous_work_loop.py` (skill loading)
+- All skill directories (add `__init__.py`, rename directories)
+- Skill loading in other files (search for `importlib.util`)
+- Tests using skills
+
+**Python Naming Convention Reminder**:
+- ✅ **Files**: `task_separator.py` (underscore)
+- ✅ **Directories**: `task_separator/` (underscore)
+- ❌ **NEVER**: `task-separator.py` or `task-separator/` (hyphen not valid in Python identifiers)
+
+**Benefits**:
+- ✅ Pythonic code - follows Python best practices
+- ✅ IDE support - autocomplete, type hints, refactoring work
+- ✅ Better testability - easy to mock and test
+- ✅ Clearer dependencies - import statements show what's used
+- ✅ Less error-prone - import errors caught early
+- ✅ Better maintainability - standard Python project structure
+
+**Acceptance Criteria**:
+- [ ] All skill directories renamed to use underscores (no hyphens)
+- [ ] `__init__.py` added to all skill directories
+- [ ] All `importlib.util` code replaced with regular imports
+- [ ] Skill registry created with clean API
+- [ ] All tests passing
+- [ ] Documentation updated
+- [ ] No functionality regressions
+
+**Testing Strategy**:
+- Unit tests for skill registry
+- Integration tests for skill loading
+- Verify orchestrator still works correctly
+- Verify all existing skills still function
+
+**Risk Assessment**: Low
+- Non-breaking change (internal refactoring only)
+- Skills functionality unchanged
+- Can be tested incrementally (one skill at a time)
+
+---
+
 ### PRIORITY 23: US-108 - Parallel Agent Execution with Git Worktree ✅ Complete
 
 **Status**: ✅ Complete (Documentation) - 🔴 CRITICAL PRIORITY (2x-3x Velocity Increase)
@@ -1567,6 +1695,163 @@ Create detailed spec: `docs/US-023_TECHNICAL_SPEC.md`
 4. **Professional**: Well-organized code signals quality project
 
 **Dependencies**: None (can start immediately after US-021 Phase 2.5)
+
+---
+
+## 📝 PLANNED: US-113 - API Usage Tracking and Limits Monitoring
+
+**Status**: 📝 **PLANNED** - Medium Priority for Cost Control
+
+**As a**: User and system administrator
+**I want**: Real-time visibility into API token consumption, request counts, and approaching limits displayed in orchestrator dashboard and metrics DB
+**So that**: I can avoid hitting rate limits, control costs, and plan API usage strategically
+
+**Business Value**: ⭐⭐⭐ (Medium-High - Critical for production use and cost management)
+**Estimated Effort**: 2-3 days (API integration + Dashboard UI + DB schema)
+
+### Problem Statement
+
+Current issues with API usage tracking:
+1. **No Visibility**: Users don't know how many tokens/requests they're consuming per task
+2. **Surprise Limits**: Users discover "approaching weekly limit" only when shown by external tools
+3. **No Cost Tracking**: No way to track costs per agent, task, or time period
+4. **No Proactive Alerts**: System doesn't warn before hitting limits
+5. **Poor Planning**: Can't predict when limits will be hit
+
+### Proposed Solution
+
+**1. Capture API Metadata from LLM Responses**:
+- Extract token usage (input, output, total) from every LLM call
+- Capture rate limit headers from API responses:
+  - `anthropic-ratelimit-requests-remaining`
+  - `anthropic-ratelimit-requests-limit`
+  - `anthropic-ratelimit-tokens-remaining`
+  - `anthropic-ratelimit-reset`
+- Store in metrics database with agent type, task ID, timestamp
+
+**2. Add to Metrics Database** (`data/metrics.db`):
+```sql
+-- New table for API usage tracking
+CREATE TABLE api_usage (
+    id INTEGER PRIMARY KEY,
+    timestamp TEXT NOT NULL,
+    agent_type TEXT NOT NULL,      -- architect, code_developer, orchestrator, etc.
+    task_id TEXT,                   -- impl-038, spec-112, etc.
+    priority_number INTEGER,
+
+    -- Token usage per request
+    tokens_input INTEGER NOT NULL,
+    tokens_output INTEGER NOT NULL,
+    tokens_total INTEGER NOT NULL,
+
+    -- API metadata
+    model TEXT NOT NULL,            -- claude-sonnet-4, etc.
+    request_id TEXT,
+
+    -- Rate limits (from API response headers)
+    rate_limit_requests_remaining INTEGER,
+    rate_limit_requests_limit INTEGER,
+    rate_limit_tokens_remaining INTEGER,
+    rate_limit_reset_time TEXT,
+
+    -- Cost estimation
+    estimated_cost_usd REAL,
+
+    FOREIGN KEY (agent_type) REFERENCES agents(agent_type)
+);
+
+CREATE INDEX idx_api_usage_timestamp ON api_usage(timestamp);
+CREATE INDEX idx_api_usage_agent ON api_usage(agent_type);
+```
+
+**3. Display in Orchestrator Dashboard**:
+```
+╔═══════════════════════════════════════════════════════════════════╗
+║              ORCHESTRATOR DASHBOARD - API USAGE                   ║
+╠═══════════════════════════════════════════════════════════════════╣
+║ API Usage (Last 24h):                                             ║
+║   • Total Tokens:     1,245,892 (Input: 845K | Output: 400K)     ║
+║   • Total Requests:   3,421                                       ║
+║   • Estimated Cost:   $24.56 USD                                  ║
+║                                                                    ║
+║ By Agent Type:                                                    ║
+║   • architect:       345K tokens (28%) | 892 req | $6.89         ║
+║   • code_developer:  678K tokens (54%) | 1.8K req | $13.56       ║
+║   • orchestrator:     76K tokens (6%)  | 215 req | $1.20         ║
+║                                                                    ║
+║ ⚠️  Rate Limits Status:                                            ║
+║   • Daily Requests:  3,421 / 5,000 (68%) ⚠️  1,579 remaining     ║
+║   • Weekly Tokens:   8.2M / 10M (82%) ⚠️  1.8M remaining         ║
+║   • Hourly Limit:    142 / 500 (28%) ✅ 358 remaining            ║
+║                                                                    ║
+║ Next Reset:                                                       ║
+║   • Hourly: in 23 min | Daily: in 6h 15m | Weekly: in 2d 4h     ║
+╚═══════════════════════════════════════════════════════════════════╝
+```
+
+**4. Proactive Notifications**:
+- Alert at 80% of daily/weekly limits
+- Pause orchestrator at 95% to prevent hitting limits
+- Show warnings in dashboard with color coding (yellow >70%, red >85%)
+
+### Definition of Done
+
+**Phase 1: Data Collection** (1 day)
+- [ ] Add `api_usage` table to `data/metrics.db`
+- [ ] Implement API usage tracker in SmartLLM wrapper
+- [ ] Extract rate limit headers from Anthropic API responses
+- [ ] Store usage data for every LLM call
+
+**Phase 2: Dashboard Integration** (0.5 days)
+- [ ] Add API usage section to orchestrator dashboard
+- [ ] Show token consumption by agent type
+- [ ] Display rate limit status with visual indicators
+- [ ] Show time until next reset
+
+**Phase 3: Alerts & Auto-Pause** (0.5 days)
+- [ ] Create proactive alerts at 80% threshold
+- [ ] Implement orchestrator auto-pause at 95% limit
+- [ ] Add CLI command: `poetry run orchestrator api-status`
+
+**Phase 4: Historical Analysis** (0.5 days)
+- [ ] Add per-task usage reporting
+- [ ] Cost trends over time (7d, 30d)
+- [ ] Export usage reports (CSV)
+
+### Key Features
+
+1. **Real-Time Tracking**: Every API call tracked in metrics DB
+2. **Dashboard Visibility**: Always see current usage and limits
+3. **Proactive Alerts**: Warn before hitting limits
+4. **Auto-Pause**: Orchestrator stops at 95% to prevent limit breach
+5. **Cost Transparency**: See estimated costs per agent/task
+
+### Success Metrics
+
+- [ ] 100% of API calls tracked with token counts
+- [ ] Dashboard shows live rate limit status
+- [ ] Alerts triggered at 80% threshold
+- [ ] Orchestrator pauses at 95% limit
+- [ ] Historical data retained for 90 days in metrics DB
+
+### Priority Justification
+
+**Medium Priority** because:
+1. **Cost Control**: Essential for production use
+2. **Limit Avoidance**: Prevents interruptions
+3. **Transparency**: Users need visibility
+4. **Not Blocking**: System works without it, but UX suffers
+
+### Integration Points
+
+- **Metrics DB** (`data/metrics.db`): Add `api_usage` table
+- **Orchestrator Dashboard**: Add API usage section showing live token/cost metrics
+- **SmartLLM Wrapper**: Capture usage on every call
+- **NotificationDB**: Send limit alerts
+- **Langfuse Traces** (Generator Traces): Link API usage to trace IDs for full observability
+  - Store `trace_id` in `api_usage` table
+  - Cross-reference with Langfuse dashboard for detailed execution traces
+  - See token usage per generation within trace context
 
 ---
 
@@ -31656,6 +31941,95 @@ As a product owner, I want a web app to view all user stories (implemented and p
 - DoD verification skill ✅
 
 **Related**: `.claude/skills/dod-verification.md`, `coffee_maker/cli/bug_tracker.py`, SPEC-111 (to be created)
+
+---
+
+## US-112: Codebase Quality Audit - Dead Code and Incorrect References Elimination
+
+**Priority**: HIGH
+
+**Status**: 📝 PLANNED - AWAITING ARCHITECT TECHNICAL SPEC
+
+**Type**: Technical Debt / Code Quality / Architecture
+
+**Complexity**: Medium
+
+**Created**: 2025-10-20
+
+**Estimated Effort**: 3-5 days
+
+**User Story**:
+As a development team, we need to systematically identify and eliminate dead code, incorrect module paths, wrong function calls, and other code quality issues to improve maintainability and prevent bugs.
+
+**Problems Discovered**:
+- Wrong module path: `coffee_maker.cli.code_developer_cli` (doesn't exist, should be `coffee_maker.autonomous.daemon_cli`)
+- Potential dead code and unused imports
+- Incorrect function signatures or calls
+- Outdated references to moved/renamed modules
+
+**Key Features**:
+1. **Dead Code Detection**:
+   - Unused functions, classes, and modules
+   - Unreachable code blocks
+   - Unused imports
+   - Commented-out code that should be removed
+
+2. **Duplicate Functionality Detection** (CRITICAL):
+   - Identify similar functional objects (classes, functions, modules)
+   - Detect unintentional code duplication
+   - Distinguish between legitimate duplication (e.g., templates, patterns) vs redundant code
+   - Find functions/classes that do the same thing with different names
+   - Identify near-duplicate implementations that should be unified
+   - Use tools like: pylint (duplicate-code), radon (code complexity), and manual analysis
+
+3. **Reference Validation**:
+   - Validate all import statements
+   - Check module paths match actual file locations
+   - Verify function/class calls match signatures
+   - Detect outdated references to renamed components
+
+4. **Code Quality Tools**:
+   - Use vulture for dead code detection
+   - Use pylint for code quality checks (including duplicate-code)
+   - Use radon for complexity and maintainability metrics
+   - Custom scripts for project-specific validation
+   - Integration with pre-commit hooks
+
+5. **Documentation**:
+   - Create list of findings with recommendations
+   - Document duplicate functionality with consolidation suggestions
+   - Update ARCHITECTURE.md if structure changed
+   - Document any breaking changes
+
+**Deliverables**:
+- Audit report: `docs/architecture/CODE_QUALITY_AUDIT.md`
+  - Section 1: Dead code findings
+  - Section 2: Duplicate functionality analysis with consolidation plan
+  - Section 3: Reference validation results
+  - Section 4: Recommendations and prioritization
+- Dead code removal PRs
+- Code consolidation PRs (for duplicates)
+- Fixed incorrect references
+- Updated pre-commit hooks to prevent future issues
+- Technical spec: `docs/architecture/specs/SPEC-112-code-quality-audit.md`
+
+**Dependencies**:
+- vulture (install: `poetry add --group dev vulture`)
+- pylint ✅ (already installed)
+- radon (install: `poetry add --group dev radon`)
+
+**Related**: US-044 (Regular Refactoring), CFR-000 through CFR-014
+
+**Acceptance Criteria**:
+- [ ] All dead code identified and removed
+- [ ] Duplicate functionality identified and documented
+- [ ] Consolidation plan created for duplicate code
+- [ ] All module paths validated
+- [ ] All function calls checked
+- [ ] Pre-commit hooks updated
+- [ ] Zero critical pylint issues
+- [ ] Zero high-priority code duplication
+- [ ] Documentation updated
 
 ---
 

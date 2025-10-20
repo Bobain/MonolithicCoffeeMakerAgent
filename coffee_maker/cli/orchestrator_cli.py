@@ -85,46 +85,90 @@ def status():
         poetry run orchestrator status
     """
     import json
+    import sqlite3
+    from datetime import datetime
     from pathlib import Path
 
-    state_file = Path("data/orchestrator/work_loop_state.json")
+    db_path = Path("data/orchestrator.db")
 
-    if not state_file.exists():
-        click.echo("⚠️  Orchestrator not running (no state file found)")
+    if not db_path.exists():
+        click.echo("⚠️  Orchestrator not running (no database found)")
         return
 
     try:
-        with open(state_file) as f:
-            state = json.load(f)
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Read state from database (CFR-014 compliant)
+        cursor.execute("SELECT key, value, updated_at FROM orchestrator_state")
+        rows = cursor.fetchall()
+
+        state = {}
+        for row in rows:
+            key = row["key"]
+            value = row["value"]
+            if key == "active_tasks":
+                state[key] = json.loads(value)
+            else:
+                state[key] = value
+
+        conn.close()
+
+        if not state:
+            click.echo("⚠️  Orchestrator not running (no state in database)")
+            return
 
         click.echo("📊 Orchestrator Status")
         click.echo("=" * 60)
-        click.echo(f"Last Update: {state.get('last_update', 'N/A')}")
-        click.echo(f"Last ROADMAP Update: {state.get('last_roadmap_update', 'N/A')}")
+
+        # Display last update times
+        if "last_roadmap_update" in state:
+            last_roadmap_ts = float(state["last_roadmap_update"])
+            last_roadmap_dt = datetime.fromtimestamp(last_roadmap_ts)
+            click.echo(f"Last ROADMAP Update: {last_roadmap_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+        else:
+            click.echo("Last ROADMAP Update: N/A")
+
         click.echo("")
 
         # Active tasks
         active_tasks = state.get("active_tasks", {})
         if active_tasks:
-            click.echo("Active Tasks:")
+            click.echo(f"Active Tasks: {len(active_tasks)}")
             for task_key, task_info in active_tasks.items():
-                click.echo(f"  - {task_key}: {task_info.get('type', 'unknown')}")
+                task_type = task_info.get("type", "unknown")
+                agent = task_info.get("agent", "unknown")
+                pid = task_info.get("pid", "N/A")
+                click.echo(f"  - {task_key}: {task_type} (agent: {agent}, PID: {pid})")
         else:
             click.echo("No active tasks")
 
         click.echo("")
 
-        # ROADMAP cache
-        roadmap_cache = state.get("roadmap_cache")
-        if roadmap_cache:
-            priorities = roadmap_cache.get("priorities", [])
-            planned = [p for p in priorities if p.get("status") == "📝"]
-            click.echo(f"ROADMAP: {len(priorities)} total priorities, {len(planned)} planned")
+        # Check agent processes
+        import psutil
+
+        running_agents = []
+        for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+            try:
+                cmdline = proc.info.get("cmdline", [])
+                cmdline_str = " ".join(cmdline) if cmdline else ""
+                if any(agent in cmdline_str for agent in ["architect", "code_developer", "code-reviewer"]):
+                    running_agents.append((proc.info["name"], proc.info["pid"]))
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+
+        if running_agents:
+            click.echo(f"Running Agents: {len(running_agents)}")
+            for name, pid in running_agents[:10]:  # Show first 10
+                click.echo(f"  - PID {pid}: {name}")
         else:
-            click.echo("ROADMAP: Not loaded yet")
+            click.echo("No agents currently running")
 
     except Exception as e:
         click.echo(f"❌ Error reading status: {e}", err=True)
+        logger.error(f"Status error: {e}", exc_info=True)
 
 
 @orchestrator.command()

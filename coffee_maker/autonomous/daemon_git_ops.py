@@ -61,8 +61,11 @@ class GitOpsMixin:
                 ["git", "branch", "--show-current"], cwd=self.git.repo_path, text=True
             ).strip()
 
-            if current_branch != "roadmap":
-                logger.error(f"CFR-013 VIOLATION in _sync_roadmap_branch: On '{current_branch}', expected 'roadmap'")
+            # Accept "roadmap" or "roadmap-*" (for worktree parallel execution)
+            if current_branch != "roadmap" and not current_branch.startswith("roadmap-"):
+                logger.error(
+                    f"CFR-013 VIOLATION in _sync_roadmap_branch: On '{current_branch}', expected 'roadmap' or 'roadmap-*'"
+                )
                 return False
 
             # Pull latest from origin/roadmap
@@ -124,8 +127,11 @@ class GitOpsMixin:
                 ["git", "branch", "--show-current"], cwd=self.git.repo_path, text=True
             ).strip()
 
-            if current_branch != "roadmap":
-                logger.error(f"CFR-013 VIOLATION in _merge_to_roadmap: On '{current_branch}', expected 'roadmap'")
+            # Accept "roadmap" or "roadmap-*" (for worktree parallel execution)
+            if current_branch != "roadmap" and not current_branch.startswith("roadmap-"):
+                logger.error(
+                    f"CFR-013 VIOLATION in _merge_to_roadmap: On '{current_branch}', expected 'roadmap' or 'roadmap-*'"
+                )
                 return False
 
             # Check for uncommitted changes

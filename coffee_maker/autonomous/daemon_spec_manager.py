@@ -142,14 +142,23 @@ class SpecManagerMixin:
         docs_dir = self.roadmap_path.parent.parent
         architect_spec_dir = docs_dir / "architecture" / "specs"
 
+        logger.info(f"🔍 Checking for spec: {spec_prefix}-*.md in {architect_spec_dir}")
+
         # Step 1: Check if spec already exists
         if architect_spec_dir.exists():
-            for spec_file in architect_spec_dir.glob(f"{spec_prefix}-*.md"):
+            spec_pattern = f"{spec_prefix}-*.md"
+            matching_specs = list(architect_spec_dir.glob(spec_pattern))
+            logger.info(f"   Pattern: {spec_pattern}, Found {len(matching_specs)} matches")
+
+            for spec_file in matching_specs:
                 logger.info(f"✅ Technical spec found: {spec_file.name}")
                 return True
+        else:
+            logger.error(f"   Spec directory doesn't exist: {architect_spec_dir}")
 
         # Step 2: Spec missing - BLOCK and notify (CFR-008)
         logger.error(f"❌ Technical spec REQUIRED but missing for {priority_name}")
+        logger.error(f"   Expected pattern: {spec_prefix}-*.md")
         logger.error(f"   CFR-008: code_developer CANNOT create specs")
         logger.error(f"   → architect must create: docs/architecture/specs/{spec_prefix}-*.md")
         logger.error(f"   ⛔ BLOCKING implementation until spec exists")

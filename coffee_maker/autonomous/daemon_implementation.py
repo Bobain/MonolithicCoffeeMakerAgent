@@ -187,11 +187,16 @@ The daemon will skip this priority in future iterations.
 
         # Validate CFR-013 compliance before implementation
         current_branch = self.git.get_current_branch()
-        if current_branch != "roadmap":
+        # Accept "roadmap" or "roadmap-*" (for worktree parallel execution)
+        if current_branch != "roadmap" and not current_branch.startswith("roadmap-"):
             logger.error(f"CFR-013 VIOLATION: Must be on roadmap branch, currently on: {current_branch}")
+            logger.error(f"   Expected: 'roadmap' or 'roadmap-*' (worktree branches)")
             return False
 
-        logger.info("✅ CFR-013 compliant: Working on 'roadmap' branch")
+        if current_branch == "roadmap":
+            logger.info("✅ CFR-013 compliant: Working on 'roadmap' branch")
+        else:
+            logger.info(f"✅ CFR-013 compliant: Working on worktree branch '{current_branch}'")
 
         # PRIORITY 4: Log CFR-013 compliance
         self.status.report_activity(

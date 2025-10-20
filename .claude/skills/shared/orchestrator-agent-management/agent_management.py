@@ -232,14 +232,41 @@ class OrchestratorAgentManagementSkill:
         Returns:
             Spawn result with PID and task info
         """
-        # Build command
-        cmd = ["poetry", "run", "code-developer", f"--priority={priority_number}"]
-
-        if auto_approve:
-            cmd.append("--auto-approve")
-
-        # Spawn process (in worktree if specified)
+        # Determine working directory
         cwd = Path(worktree_path) if worktree_path else Path.cwd()
+
+        # Build command: If spawning in worktree, use direct Python path
+        # (worktrees don't have separate poetry config)
+        if worktree_path:
+            # Get poetry virtualenv path from main repo
+            main_repo = Path.cwd()
+            try:
+                venv_result = subprocess.run(
+                    ["poetry", "env", "info", "--path"],
+                    cwd=main_repo,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                venv_path = venv_result.stdout.strip()
+                python_bin = f"{venv_path}/bin/python"
+
+                # Use direct Python invocation with module
+                cmd = [python_bin, "-m", "coffee_maker.autonomous.daemon_cli", f"--priority={priority_number}"]
+
+                if auto_approve:
+                    cmd.append("--auto-approve")
+
+                logger.info(f"Using virtualenv Python for worktree: {python_bin}")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Failed to get poetry virtualenv path: {e}")
+                raise RuntimeError(f"Cannot spawn in worktree without virtualenv path: {e}")
+        else:
+            # Main repo: use poetry run
+            cmd = ["poetry", "run", "code-developer", f"--priority={priority_number}"]
+
+            if auto_approve:
+                cmd.append("--auto-approve")
 
         process = subprocess.Popen(
             cmd,

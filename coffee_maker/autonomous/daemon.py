@@ -495,11 +495,17 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 # Get next task
                 if self.specific_priority:
                     # Parallel execution mode: work on specific priority only
+                    logger.info(f"🎯 SPECIFIC PRIORITY MODE: Looking for priority {self.specific_priority}")
                     next_priority = self.parser.get_priority_by_number(self.specific_priority)
                     if not next_priority:
                         logger.error(f"❌ Priority {self.specific_priority} not found in ROADMAP")
+                        logger.error(
+                            f"   Available priorities: {[p.get('number') for p in self.parser.get_priorities()[:10]]}"
+                        )
                         break
                     logger.info(f"📋 Working on specific priority: {next_priority['name']} - {next_priority['title']}")
+                    logger.info(f"   Status: {next_priority.get('status', 'Unknown')}")
+                    logger.info(f"   Has spec path: {bool(next_priority.get('spec_path'))}")
                 else:
                     # Sequential mode: get next planned priority
                     next_priority = self.parser.get_next_planned_priority()
@@ -520,6 +526,11 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 # BUG FIX #3 & #4: Check for technical spec, create if missing
                 if not self._ensure_technical_spec(next_priority):
                     logger.warning("⚠️  Could not ensure technical spec exists - skipping this priority")
+                    if self.specific_priority:
+                        logger.error(
+                            f"🚨 SPECIFIC PRIORITY MODE: Cannot proceed with priority {self.specific_priority} - exiting"
+                        )
+                        break
                     time.sleep(self.sleep_interval)
                     continue
 
@@ -588,7 +599,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
                     # Exit if working on specific priority (parallel execution mode)
                     if self.specific_priority:
-                        logger.info(f"✅ Completed specific priority {self.specific_priority} - exiting")
+                        logger.info(f"✅ SPECIFIC PRIORITY MODE: Completed priority {self.specific_priority}")
+                        logger.info(f"   Priority: {next_priority['name']} - {next_priority['title']}")
+                        logger.info(f"   Duration: {datetime.now() - self.current_priority_start_time}")
+                        logger.info(f"   Exiting daemon (specific priority mode)")
                         self.running = False
                         break
 

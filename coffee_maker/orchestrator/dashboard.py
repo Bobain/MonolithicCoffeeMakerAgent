@@ -10,13 +10,12 @@ Author: code_developer
 Date: 2025-10-19
 """
 
-import json
 import logging
 import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from rich.console import Console
 from rich.layout import Layout
@@ -32,51 +31,53 @@ from agent_management import OrchestratorAgentManagementSkill
 
 sys.path.pop(0)
 
+# Import roadmap management skill
+roadmap_skill_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "roadmap-management"
+sys.path.insert(0, str(roadmap_skill_dir))
+from roadmap_management import RoadmapManagementSkill
+
+sys.path.pop(0)
+
 logger = logging.getLogger(__name__)
 
 
 class OrchestratorDashboard:
     """Real-time dashboard for orchestrator activities."""
 
-    def __init__(self, state_file: Optional[Path] = None):
-        """Initialize dashboard.
-
-        Args:
-            state_file: Path to orchestrator state file
-        """
+    def __init__(self):
+        """Initialize dashboard."""
         self.console = Console()
         self.agent_mgmt = OrchestratorAgentManagementSkill()
-        self.state_file = state_file or Path("data/orchestrator/work_loop_state.json")
+        self.roadmap_mgmt = RoadmapManagementSkill()
 
-        # Load ROADMAP cache and get orchestrator start time
-        self.roadmap_cache: Optional[Dict[str, Any]] = None
+        # Get orchestrator start time from database
         self.start_time = None
-        self._load_roadmap_cache()
+        self._load_start_time()
 
-    def _load_roadmap_cache(self):
-        """Load ROADMAP cache and orchestrator start time from state file."""
-        if not self.state_file.exists():
-            return
-
+    def _load_start_time(self):
+        """Load orchestrator start time from database (CFR-014 compliant)."""
         try:
-            with open(self.state_file, "r") as f:
-                state = json.load(f)
-                self.roadmap_cache = state.get("roadmap_cache")
+            import sqlite3
 
-                # Try to get orchestrator start time from state
-                if "orchestrator_start_time" in state:
-                    self.start_time = datetime.fromisoformat(state["orchestrator_start_time"])
-                elif "last_updated" in state:
-                    # Fallback: use last_updated as a proxy
-                    self.start_time = datetime.fromisoformat(state["last_updated"])
-                else:
-                    # No timestamp available, use current time
-                    self.start_time = datetime.now()
+            db_path = Path("data/orchestrator.db")
+            if not db_path.exists():
+                self.start_time = datetime.now()
+                return
+
+            conn = sqlite3.connect(str(db_path))
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM orchestrator_state WHERE key = 'orchestrator_start_time'")
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                self.start_time = datetime.fromisoformat(row[0])
+            else:
+                self.start_time = datetime.now()
 
         except Exception as e:
-            logger.warning(f"Failed to load ROADMAP cache: {e}")
-            if not self.start_time:
-                self.start_time = datetime.now()
+            logger.warning(f"Failed to load start time from database: {e}")
+            self.start_time = datetime.now()
 
     def _make_system_overview(self) -> Panel:
         """Create system overview panel.
@@ -109,46 +110,60 @@ class OrchestratorDashboard:
         return Panel(overview, title="System Overview", border_style="cyan")
 
     def _get_roadmap_stats(self) -> Dict[str, Any]:
-        """Get ROADMAP statistics.
+        """Get ROADMAP statistics using roadmap-management skill.
 
         Returns:
             Dict with total, completed, in_progress, planned counts and health
         """
-        if not self.roadmap_cache:
+        try:
+            # Load priorities from roadmap-management skill
+            result = self.roadmap_mgmt.execute(operation="get_all_priorities")
+            if result.get("error"):
+                logger.error(f"Failed to load ROADMAP: {result['error']}")
+                return {
+                    "total": 0,
+                    "completed": 0,
+                    "in_progress": 0,
+                    "planned": 0,
+                    "health": "Error",
+                    "health_style": "red",
+                }
+
+            priorities = result.get("result", [])
+            total = len(priorities)
+            completed = len([p for p in priorities if p["status_emoji"] == "✅"])
+            in_progress = len([p for p in priorities if p["status_emoji"] == "🔄"])
+            planned = len([p for p in priorities if p["status_emoji"] == "📝"])
+
+            # Calculate health
+            if in_progress > 0:
+                health = "Working"
+                health_style = "green"
+            elif planned > 0:
+                health = "Idle (work available)"
+                health_style = "yellow"
+            else:
+                health = "All complete!"
+                health_style = "cyan"
+
+            return {
+                "total": total,
+                "completed": completed,
+                "in_progress": in_progress,
+                "planned": planned,
+                "health": health,
+                "health_style": health_style,
+            }
+        except Exception as e:
+            logger.error(f"Error getting ROADMAP stats: {e}")
             return {
                 "total": 0,
                 "completed": 0,
                 "in_progress": 0,
                 "planned": 0,
-                "health": "Unknown",
-                "health_style": "yellow",
+                "health": "Error",
+                "health_style": "red",
             }
-
-        priorities = self.roadmap_cache.get("priorities", [])
-        total = len(priorities)
-        completed = len([p for p in priorities if p["status"] == "✅"])
-        in_progress = len([p for p in priorities if p["status"] == "🚧"])
-        planned = len([p for p in priorities if p["status"] == "📝"])
-
-        # Calculate health
-        if in_progress > 0:
-            health = "Working"
-            health_style = "green"
-        elif planned > 0:
-            health = "Idle (work available)"
-            health_style = "yellow"
-        else:
-            health = "All complete!"
-            health_style = "cyan"
-
-        return {
-            "total": total,
-            "completed": completed,
-            "in_progress": in_progress,
-            "planned": planned,
-            "health": health,
-            "health_style": health_style,
-        }
 
     def _make_agents_table(self) -> Table:
         """Create running agents table.
@@ -198,25 +213,67 @@ class OrchestratorDashboard:
     def _make_work_queue(self) -> Panel:
         """Create work queue panel showing pending priorities.
 
+        Now shows TWO separate queues:
+        1. architect queue (missing specs) - priorities need specs before implementation
+        2. code_developer queue (have specs) - ready for implementation
+
         Returns:
-            Rich Panel with work queue
+            Rich Panel with both work queues
         """
-        if not self.roadmap_cache:
-            return Panel("No ROADMAP data", title="Work Queue", border_style="yellow")
+        try:
+            # Load priorities from roadmap-management skill
+            result = self.roadmap_mgmt.execute(operation="get_all_priorities")
+            if result.get("error"):
+                return Panel(f"Error loading ROADMAP: {result['error']}", title="Work Queue", border_style="red")
 
-        priorities = self.roadmap_cache.get("priorities", [])
-        planned = [p for p in priorities if p["status"] == "📝"][:5]  # Next 5 planned
+            priorities = result.get("result", [])
+            planned = [p for p in priorities if p["status_emoji"] == "📝"]  # All planned
 
-        if not planned:
-            queue_text = Text("No pending work", style="green")
-        else:
-            queue_text = Text()
-            queue_text.append("Next priorities:\n", style="bold yellow")
-            for i, p in enumerate(planned, 1):
-                spec_icon = "📄" if p.get("has_spec") else "❌"
-                queue_text.append(f"{i}. US-{p['number']:03d} {spec_icon} {p['name']}\n", style="white")
+            # Separate into two queues based on spec availability
+            architect_queue = []  # Missing specs
+            developer_queue = []  # Have specs
 
-        return Panel(queue_text, title="Work Queue", border_style="yellow")
+            for p in planned:
+                has_spec = p.get("technical_spec") is not None and p.get("technical_spec") != ""
+                if has_spec:
+                    developer_queue.append(p)
+                else:
+                    architect_queue.append(p)
+
+            if not architect_queue and not developer_queue:
+                queue_text = Text("No pending work", style="green")
+            else:
+                queue_text = Text()
+
+                # Show architect queue (missing specs)
+                if architect_queue:
+                    queue_text.append("🏗️  architect Queue (Missing Specs):\n", style="bold magenta")
+                    for i, p in enumerate(architect_queue[:3], 1):  # Show first 3
+                        us_id = p.get("us_id", f"PRIORITY {p['number']}")
+                        title = p.get("title", "No title")
+                        queue_text.append(f"  {i}. {us_id} ❌ {title}\n", style="magenta")
+                    if len(architect_queue) > 3:
+                        queue_text.append(f"  ... and {len(architect_queue) - 3} more\n", style="dim magenta")
+                    queue_text.append("\n")
+
+                # Show code_developer queue (have specs)
+                if developer_queue:
+                    queue_text.append("💻 code_developer Queue (Ready):\n", style="bold cyan")
+                    for i, p in enumerate(developer_queue[:3], 1):  # Show first 3
+                        us_id = p.get("us_id", f"PRIORITY {p['number']}")
+                        title = p.get("title", "No title")
+                        queue_text.append(f"  {i}. {us_id} 📄 {title}\n", style="cyan")
+                    if len(developer_queue) > 3:
+                        queue_text.append(f"  ... and {len(developer_queue) - 3} more\n", style="dim cyan")
+                else:
+                    queue_text.append("💻 code_developer Queue (Ready):\n", style="bold cyan")
+                    queue_text.append("  (Waiting for architect to create specs)\n", style="dim cyan")
+
+            return Panel(queue_text, title="Work Queues", border_style="yellow")
+
+        except Exception as e:
+            logger.error(f"Error creating work queue: {e}")
+            return Panel(f"Error: {str(e)}", title="Work Queue", border_style="red")
 
     def _make_metrics_panel(self) -> Panel:
         """Create success metrics panel.
@@ -282,9 +339,7 @@ class OrchestratorDashboard:
             with Live(self._make_dashboard_layout(), refresh_per_second=1 / refresh_interval, console=self.console):
                 while True:
                     time.sleep(refresh_interval)
-
-                    # Reload ROADMAP cache
-                    self._load_roadmap_cache()
+                    # ROADMAP data is loaded fresh on each render via roadmap-management skill
 
         except KeyboardInterrupt:
             self.console.print("\n[yellow]Dashboard stopped[/yellow]")

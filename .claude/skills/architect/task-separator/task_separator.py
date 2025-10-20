@@ -81,8 +81,12 @@ class TaskSeparatorSkill:
                 "task_file_map": {},
             }
 
-    def _extract_file_impacts(self, priority_id: int):
-        """Extract file impacts from spec."""
+    def _extract_file_impacts(self, priority_id):
+        """Extract file impacts from spec.
+
+        Args:
+            priority_id: Can be int or string
+        """
         spec_file = self._find_spec_file(priority_id)
         if not spec_file:
             return None
@@ -108,12 +112,29 @@ class TaskSeparatorSkill:
 
         return sorted(list(file_paths))
 
-    def _find_spec_file(self, priority_id: int):
-        """Find spec file for priority."""
-        patterns = [
-            f"SPEC-{priority_id}-*.md",
-            f"SPEC-{priority_id:03d}-*.md",
-        ]
+    def _find_spec_file(self, priority_id):
+        """Find spec file for priority.
+
+        Args:
+            priority_id: Can be int (38) or string ("038", "US-038")
+        """
+        # Handle both int and string priority IDs
+        if isinstance(priority_id, int):
+            patterns = [
+                f"SPEC-{priority_id}-*.md",
+                f"SPEC-{priority_id:03d}-*.md",
+            ]
+        else:
+            # String priority_id (e.g., "038", "US-038")
+            # Extract numeric part if it starts with letters
+            numeric_part = priority_id
+            if "-" in priority_id:
+                numeric_part = priority_id.split("-")[1]
+
+            patterns = [
+                f"SPEC-{numeric_part}-*.md",
+                f"SPEC-{int(numeric_part):03d}-*.md",
+            ]
 
         for pattern in patterns:
             matches = list(self.specs_dir.glob(pattern))

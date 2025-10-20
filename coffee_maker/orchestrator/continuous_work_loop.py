@@ -24,6 +24,8 @@ Related:
 
 import json
 import logging
+import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -103,6 +105,12 @@ class ContinuousWorkLoop:
         self.current_state: Dict = {}
         self.last_roadmap_update = 0.0
         self.repo_root = Path.cwd()  # Repository root directory
+        self.start_time: Optional[datetime] = None  # Orchestrator start time
+
+        # BUG-074: Track recently completed priorities to prevent immediate re-spawning
+        # Maps priority_number → completion_timestamp
+        self.recently_completed: Dict[str, float] = {}
+        self.completion_cooldown_seconds = 300  # 5 minutes cooldown
 
         # Initialize agent management skill
         self.agent_mgmt = OrchestratorAgentManagementSkill()
@@ -132,6 +140,7 @@ class ContinuousWorkLoop:
         """
         logger.info("🚀 Starting Orchestrator Continuous Work Loop")
         self.running = True
+        self.start_time = datetime.now()  # Record orchestrator start time
 
         self.notifications.create_notification(
             type="info",
@@ -552,8 +561,28 @@ class ContinuousWorkLoop:
                     p["spec_path"] = str(spec_files[0])
                     planned_priorities.append(p)
 
+        # BUG-074: Filter out recently completed priorities (cooldown period)
+        current_time = time.time()
+        filtered_priorities = []
+        for p in planned_priorities:
+            priority_num = str(p.get("number"))
+            if priority_num in self.recently_completed:
+                completion_time = self.recently_completed[priority_num]
+                elapsed = current_time - completion_time
+                if elapsed < self.completion_cooldown_seconds:
+                    logger.debug(
+                        f"Skipping priority {priority_num} (recently completed {elapsed:.0f}s ago, cooldown: {self.completion_cooldown_seconds}s)"
+                    )
+                    continue
+                else:
+                    # Cooldown expired, remove from tracking
+                    del self.recently_completed[priority_num]
+            filtered_priorities.append(p)
+
+        planned_priorities = filtered_priorities
+
         if not planned_priorities:
-            logger.info("No planned priorities with specs, code_developer idle")
+            logger.info("No planned priorities with specs (after cooldown filter), code_developer idle")
             return
 
         # Check if any work already in progress (query database, not in-memory state)
@@ -625,8 +654,41 @@ class ContinuousWorkLoop:
                 check=True,
             )
             logger.info(f"✅ Created worktree: {worktree_path} (branch: {worktree_branch})")
+
+            # CRITICAL: Symlink data/ directory to share databases across worktrees
+            # Without this, each worktree has isolated databases and can't coordinate
+            worktree_abs = Path(self.repo_root) / worktree_path
+            worktree_data = worktree_abs / "data"
+            main_data = Path(self.repo_root) / "data"
+
+            if worktree_data.exists() and not worktree_data.is_symlink():
+                # Remove copied data directory
+                shutil.rmtree(worktree_data)
+                logger.debug(f"Removed copied data directory: {worktree_data}")
+
+            if not worktree_data.exists():
+                # Create symlink to main repo's data directory
+                worktree_data.symlink_to(main_data, target_is_directory=True)
+                logger.info(f"✅ Symlinked data/ directory: {worktree_data} → {main_data}")
+
+            # CRITICAL: Copy .env file to worktree (required for environment variables)
+            env_file = Path(self.repo_root) / ".env"
+            worktree_env = worktree_abs / ".env"
+            if env_file.exists() and not worktree_env.exists():
+                shutil.copy2(env_file, worktree_env)
+                logger.info(f"✅ Copied .env file to worktree: {worktree_env}")
+
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to create worktree: {e.stderr}")
+            return
+        except Exception as e:
+            logger.error(f"Failed to setup worktree data symlink: {e}")
+            # Try to cleanup worktree on setup failure
+            try:
+                subprocess.run(["git", "worktree", "remove", worktree_path, "--force"], cwd=self.repo_root)
+                subprocess.run(["git", "branch", "-D", worktree_branch], cwd=self.repo_root)
+            except Exception:
+                pass
             return
 
         # Spawn code_developer IN worktree
@@ -701,11 +763,25 @@ class ContinuousWorkLoop:
                 # Task completed, remove from active_tasks
                 completed_tasks.append(task_key)
                 logger.debug(f"✅ Task {task_key} completed (PID {task_pid} finished)")
+
+                # CFR-013: Clean up worktree if task had one
+                worktree_path = task_info.get("worktree_path")
+                worktree_branch = task_info.get("worktree_branch")
+
+                if worktree_path and worktree_branch:
+                    logger.info(f"🧹 Cleaning up worktree for completed task {task_key}")
+                    self._cleanup_worktree(worktree_path, worktree_branch)
+
                 del active_tasks[task_key]
                 continue
 
             # Check timeout for still-running tasks
-            task_age = time.time() - task_info["started_at"]
+            started_at = task_info.get("started_at")
+            if started_at is None:
+                # Skip if no started_at timestamp (shouldn't happen, but defensive)
+                continue
+
+            task_age = time.time() - started_at
 
             if task_age > self.config.task_timeout_seconds:
                 logger.warning(f"⚠️  Task timeout: {task_key} ({task_age:.0f}s)")
@@ -827,6 +903,108 @@ class ContinuousWorkLoop:
         """Check if implementation is already in progress for priority."""
         return f"impl_{priority_number}" in self.current_state.get("active_tasks", {})
 
+    def _generate_worktree_id(self) -> str:
+        """Generate unique worktree ID.
+
+        CFR-013 compliance: Ensures each code_developer gets isolated worktree.
+
+        Returns:
+            Unique worktree ID (e.g., "wt1", "wt2", "wt3")
+
+        Note:
+            Checks BOTH database and git branches to avoid conflicts with orphaned branches
+            (BUG-071 fix)
+        """
+        # Query database for existing worktrees
+        result = self.agent_mgmt.execute(action="list_active_agents", include_completed=False)
+
+        if result.get("error"):
+            # Fallback: use timestamp-based ID
+            import time
+
+            return f"wt-{int(time.time())}"
+
+        active_agents = result.get("result", {}).get("active_agents", [])
+
+        # Find highest existing worktree number from database
+        max_wt_num = 0
+        for agent in active_agents:
+            worktree_path = agent.get("worktree_path", "")
+            if worktree_path and "worktree-wt" in worktree_path:
+                try:
+                    # Extract number from "../worktree-wt5" -> 5
+                    wt_num = int(worktree_path.split("worktree-wt")[1].split("/")[0])
+                    max_wt_num = max(max_wt_num, wt_num)
+                except (ValueError, IndexError):
+                    pass
+
+        # BUG-071 FIX: Also check git branches for orphaned worktree branches
+        try:
+            result = subprocess.run(
+                ["git", "branch", "--list", "roadmap-wt*"],
+                cwd=self.repo_root,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+            if result.returncode == 0:
+                for line in result.stdout.splitlines():
+                    # Extract number from "  roadmap-wt5" or "+ roadmap-wt5"
+                    match = re.search(r"roadmap-wt(\d+)", line.strip())
+                    if match:
+                        wt_num = int(match.group(1))
+                        max_wt_num = max(max_wt_num, wt_num)
+        except Exception as e:
+            logger.warning(f"Failed to check git branches for worktree IDs: {e}")
+
+        # Return next available ID
+        next_id = max_wt_num + 1
+        return f"wt{next_id}"
+
+    def _cleanup_worktree(self, worktree_path: str, worktree_branch: str):
+        """Clean up worktree after code_developer completes.
+
+        CFR-013 compliance: Remove worktree directory and branch after task completion.
+
+        Args:
+            worktree_path: Path to worktree (e.g., "../worktree-wt1")
+            worktree_branch: Branch name (e.g., "roadmap-wt1")
+        """
+        try:
+            # Step 1: Remove worktree directory
+            result = subprocess.run(
+                ["git", "worktree", "remove", worktree_path, "--force"],
+                cwd=self.repo_root,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            if result.returncode == 0:
+                logger.info(f"✅ Removed worktree: {worktree_path}")
+            else:
+                logger.warning(f"⚠️  Failed to remove worktree {worktree_path}: {result.stderr}")
+
+            # Step 2: Delete branch
+            result = subprocess.run(
+                ["git", "branch", "-D", worktree_branch],
+                cwd=self.repo_root,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            if result.returncode == 0:
+                logger.info(f"✅ Deleted branch: {worktree_branch}")
+            else:
+                logger.warning(f"⚠️  Failed to delete branch {worktree_branch}: {result.stderr}")
+
+        except subprocess.TimeoutExpired:
+            logger.error(f"❌ Timeout cleaning up worktree {worktree_path}")
+        except Exception as e:
+            logger.error(f"❌ Error cleaning up worktree {worktree_path}: {e}")
+
     def _track_spec_task(self, priority_number: int, task_id: str, pid: Optional[int] = None):
         """Track spec creation task."""
         if "active_tasks" not in self.current_state:
@@ -863,7 +1041,7 @@ class ContinuousWorkLoop:
             # Import and execute task-separator skill
             import importlib.util
 
-            skill_path = self.repo_root / ".claude" / "skills" / "architect" / "task-separator" / "task-separator.py"
+            skill_path = self.repo_root / ".claude" / "skills" / "architect" / "task-separator" / "task_separator.py"
 
             if not skill_path.exists():
                 return {"valid": False, "reason": f"task-separator skill not found: {skill_path}"}
@@ -910,6 +1088,12 @@ class ContinuousWorkLoop:
                     task_key = f"impl_{priority_id}"
                     if task_key in self.current_state.get("active_tasks", {}):
                         del self.current_state["active_tasks"][task_key]
+
+                    # BUG-074: Mark as recently completed to prevent immediate re-spawning
+                    self.recently_completed[str(priority_id)] = time.time()
+                    logger.info(
+                        f"  Marked priority {priority_id} as recently completed (cooldown: {self.completion_cooldown_seconds}s)"
+                    )
 
             else:
                 logger.error(f"❌ Parallel execution failed: {result.get('error', 'Unknown error')}")
@@ -992,6 +1176,10 @@ class ContinuousWorkLoop:
                 ("last_planning", str(self.current_state.get("last_planning", 0))),
             ]
 
+            # Save orchestrator start time if set
+            if self.start_time:
+                config_keys.append(("orchestrator_start_time", self.start_time.isoformat()))
+
             for key, value in config_keys:
                 cursor.execute(
                     """
@@ -1045,6 +1233,9 @@ class ContinuousWorkLoop:
                 elif key == "active_tasks":
                     # Load active_tasks from JSON blob
                     self.current_state["active_tasks"] = json.loads(value)
+                elif key == "orchestrator_start_time":
+                    # Load start time for crash recovery
+                    self.start_time = datetime.fromisoformat(value)
                 elif key in ["last_refactoring_analysis", "last_analysis_notification", "last_planning"]:
                     self.current_state[key] = float(value)
 
