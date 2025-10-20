@@ -156,17 +156,20 @@ class SpecManagerMixin:
         else:
             logger.error(f"   Spec directory doesn't exist: {architect_spec_dir}")
 
-        # Step 2: Spec missing - BLOCK and notify (CFR-008)
+        # Step 2: Spec missing - DELEGATE to architect and BLOCK (US-045)
         logger.error(f"❌ Technical spec REQUIRED but missing for {priority_name}")
         logger.error(f"   Expected pattern: {spec_prefix}-*.md")
         logger.error(f"   CFR-008: code_developer CANNOT create specs")
-        logger.error(f"   → architect must create: docs/architecture/specs/{spec_prefix}-*.md")
+        logger.error(f"   → Delegating to architect to create: docs/architecture/specs/{spec_prefix}-*.md")
         logger.error(f"   ⛔ BLOCKING implementation until spec exists")
 
-        # Create notification to alert user and architect
+        # US-045: Delegate to architect agent to create spec (CRITICAL)
+        self._delegate_spec_creation_to_architect(priority, spec_prefix)
+
+        # Create notification to alert user (for visibility)
         self._notify_spec_missing(priority, spec_prefix)
 
-        # Return False to BLOCK implementation
+        # Return False to BLOCK implementation (daemon waits for architect to create spec)
         return False
 
     def _notify_spec_missing(self, priority: dict, spec_prefix: str) -> None:
@@ -303,3 +306,63 @@ class SpecManagerMixin:
         except Exception as e:
             logger.error(f"Failed to create CFR-011 notification: {e}", exc_info=True)
             # Don't fail - notification is nice-to-have but not critical
+
+    def _delegate_spec_creation_to_architect(self, priority: dict, spec_prefix: str) -> None:
+        """Delegate spec creation to architect agent via message queue.
+
+        US-045: DAEMON-TO-ARCHITECT DELEGATION
+        Instead of just blocking, daemon actively requests architect to create the spec
+        by sending an urgent message to architect's inbox.
+
+        Args:
+            priority: Priority dictionary (with name, title, content, etc.)
+            spec_prefix: Expected spec filename prefix (e.g., "SPEC-047")
+
+        Example:
+            >>> priority = {"name": "US-047", "title": "Enforce CFR-008", "content": "..."}
+            >>> self._delegate_spec_creation_to_architect(priority, "SPEC-047")
+            # Creates urgent message in data/agent_messages/architect_inbox/
+        """
+        from pathlib import Path
+        import json
+        from datetime import datetime
+
+        priority_name = priority.get("name", "Unknown Priority")
+        priority_title = priority.get("title", "Unknown Title")
+        priority_content = priority.get("content", "")
+
+        # Create message for architect
+        message = {
+            "message_id": f"spec_request_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            "from": "code_developer",
+            "to": "architect",
+            "type": "spec_request",
+            "priority": "urgent",  # Urgent because daemon is blocked
+            "timestamp": datetime.now().isoformat(),
+            "content": {
+                "priority_name": priority_name,
+                "priority_title": priority_title,
+                "priority_content": priority_content[:1500],  # Truncate for message size
+                "spec_prefix": spec_prefix,
+                "requester": "code_developer",
+                "reason": "Implementation blocked - spec missing",
+                "expected_location": f"docs/architecture/specs/{spec_prefix}-*.md",
+            },
+        }
+
+        # Write to architect's inbox
+        message_dir = Path("data/agent_messages")
+        architect_inbox = message_dir / "architect_inbox"
+        architect_inbox.mkdir(parents=True, exist_ok=True)
+
+        # Urgent message gets urgent_ prefix so architect processes it first (CFR-012)
+        msg_file = architect_inbox / f"urgent_{message['message_id']}.json"
+
+        try:
+            msg_file.write_text(json.dumps(message, indent=2), encoding="utf-8")
+            logger.info(f"📨 Sent URGENT spec_request to architect for {priority_name}")
+            logger.info(f"   Message file: {msg_file}")
+            logger.info(f"   architect will create: {spec_prefix}-*.md")
+        except Exception as e:
+            logger.error(f"Failed to send message to architect: {e}", exc_info=True)
+            # Don't fail - daemon can still notify user via notification
