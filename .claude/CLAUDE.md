@@ -121,6 +121,39 @@ poetry run project-manager /roadmap # Check ROADMAP
 pre-commit run --all-files         # Run all hooks
 ```
 
+### GitHub CLI (`gh`)
+GitHub CLI is configured and available for all GitHub operations:
+
+```bash
+# Pull Requests
+gh pr list                          # List open PRs
+gh pr view 123                      # View PR details
+gh pr create --title "..." --body "..."  # Create PR
+gh pr checks                        # Check CI status
+gh pr merge                         # Merge PR
+
+# Issues
+gh issue list                       # List open issues
+gh issue view 42                    # View issue details
+gh issue create --title "..." --body "..."  # Create issue
+gh issue close 42                   # Close issue
+
+# Repository Info
+gh repo view                        # View repo details
+gh api repos/Bobain/MonolithicCoffeeMakerAgent/branches/roadmap  # API access
+
+# Releases
+gh release list                     # List releases
+gh release create v1.0.0            # Create release
+```
+
+**When to use `gh`:**
+- Checking PR/issue status (project_manager monitoring)
+- Creating PRs from commits (code_developer workflow)
+- Viewing CI check results
+- Querying repository information
+- Managing releases and tags
+
 ---
 
 ## Agent Decision Framework
