@@ -444,7 +444,15 @@ class ContinuousWorkLoop:
                 continue
 
             # Check if spec exists
-            us_number = p.get("us_number") or p.get("name", "").split("-")[0].replace("US", "")
+            # Extract US number from name (e.g., "US-060" -> "060")
+            name = p.get("name", "")
+            us_number = p.get("us_number")
+            if not us_number and "US-" in name:
+                # Extract number after "US-"
+                parts = name.split("-")
+                if len(parts) >= 2:
+                    us_number = parts[1].split()[0]  # Get "060" from "060 Title" or just "060"
+
             if us_number:
                 spec_pattern = f"SPEC-{us_number}-*.md"
                 spec_dir = Path("docs/architecture/specs")
