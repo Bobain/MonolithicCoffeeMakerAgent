@@ -142,6 +142,9 @@ coffee_maker/
 
 - **[ROADMAP.md](docs/roadmap/ROADMAP.md)**: Complete project roadmap (single source of truth)
 - **[DAEMON_USAGE.md](docs/DAEMON_USAGE.md)**: Daemon usage guide (540 lines)
+- **[TUTORIALS.md](docs/TUTORIALS.md)**: Practical tutorials for all features
+- **[ACE Console Demo Tutorial](docs/ACE_CONSOLE_DEMO_TUTORIAL.md)**: Master the ACE Generator system ⭐ NEW
+- **[ACE Quick Reference](docs/ACE_QUICK_REFERENCE.md)**: One-page ACE reference card ⭐ NEW
 - **[ADR_001](docs/ADR_001_DATABASE_SYNC_STRATEGY.md)**: Database sync architecture decision
 - **[README_DOCS.md](docs/README_DOCS.md)**: Documentation organization
 

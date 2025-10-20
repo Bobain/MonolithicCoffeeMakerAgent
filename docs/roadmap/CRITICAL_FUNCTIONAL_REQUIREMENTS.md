@@ -3647,6 +3647,32 @@ git push origin stable-v1.3.0
 
 **Critical Constraint**: These `roadmap-*` branches are TEMPORARY and MUST be merged back to `roadmap` by architect, then deleted.
 
+#### **MANDATORY ISOLATION RULE** (Added 2025-10-20)
+
+**CRITICAL**: NO TWO code_developer instances may EVER work in the same directory.
+
+**Rule**: EVERY code_developer instance MUST have its own isolated git worktree.
+
+**Reason**: Even without direct file conflicts, multiple code_developers in the same directory cause:
+- Test failures (one agent's changes breaking another's tests)
+- Git staging area conflicts
+- Race conditions in build artifacts
+- Database/config file conflicts
+- Process lock conflicts
+
+**Enforcement**:
+```
+❌ FORBIDDEN: Spawn code_developer without worktree_path
+❌ FORBIDDEN: Sequential spawning in main directory
+✅ REQUIRED: ALWAYS create worktree for code_developer
+✅ REQUIRED: Even for sequential execution (one at a time)
+```
+
+**Implementation**:
+- First code_developer: Create worktree-1, spawn in worktree-1
+- Second code_developer: Create worktree-2, spawn in worktree-2
+- NO exceptions - worktrees are MANDATORY for ALL code_developer spawns
+
 #### Worktree Branch Lifecycle
 
 ```

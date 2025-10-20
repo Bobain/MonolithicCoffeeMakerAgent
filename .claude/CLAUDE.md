@@ -217,6 +217,8 @@ Designed to work with multiple AI providers (Claude, Gemini, OpenAI). All prompt
 | Agent boundaries? | `docs/AGENT_OWNERSHIP.md` |
 | Workflows? | `docs/WORKFLOWS.md` |
 | Daemon status? | `poetry run project-manager developer-status` |
+| **ACE Tutorial?** | **[docs/ACE_CONSOLE_DEMO_TUTORIAL.md](../docs/ACE_CONSOLE_DEMO_TUTORIAL.md)** ⭐ |
+| **ACE Quick Ref?** | **[docs/ACE_QUICK_REFERENCE.md](../docs/ACE_QUICK_REFERENCE.md)** |
 
 ---
 
