@@ -55,6 +55,10 @@ class ArchitectCoordinator:
         """
         Identify priorities that need specs.
 
+        ONLY returns priorities that are:
+        1. Marked as "📝 Planned" in ROADMAP
+        2. Missing technical specs
+
         Args:
             priorities: List of priority dicts from ROADMAP
 
@@ -64,6 +68,12 @@ class ArchitectCoordinator:
         missing = []
 
         for priority in priorities:
+            # Only consider "Planned" priorities
+            status = priority.get("status", "").lower()
+            if "planned" not in status and "📝" not in priority.get("status", ""):
+                continue
+
+            # Check if spec exists
             if not self._has_spec(priority):
                 missing.append(priority)
 
