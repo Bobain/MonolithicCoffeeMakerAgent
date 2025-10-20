@@ -259,7 +259,7 @@ architect merge-worktree-branches --merge {branch} --us-number {us_number}
         self.notifications.create_notification(
             title=title,
             message=message,
-            level="high",
+            priority="high",
             sound=False,  # CFR-009: Silent for background agent (orchestrator)
             agent_id="orchestrator",
         )
