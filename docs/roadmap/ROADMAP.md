@@ -32058,6 +32058,101 @@ As a development team, we need to systematically identify and eliminate dead cod
 
 ---
 
+## US-113: Implement Skill-Enum Synchronization System
+
+**Priority**: HIGH
+
+**Status**: 📝 PLANNED - CRITICAL SYSTEM RELIABILITY
+
+**Type**: Bug Prevention / Developer Experience / Test Infrastructure
+
+**Complexity**: Medium
+
+**Created**: 2025-10-21
+
+**Estimated Effort**: 2-3 days
+
+**User Story**:
+As a developer, I need automated validation that all Claude Skills have corresponding SkillNames enum entries to prevent architect agent crashes like BUG-076.
+
+**Background - BUG-076**:
+On 2025-10-20 at 10:51 AM, the architect agent crashed for 13+ hours because:
+- Code referenced `SkillNames.PROACTIVE_REFACTORING_ANALYSIS`
+- This enum value did NOT exist in `skill_loader.py`
+- Accessing non-existent enum attribute raised `AttributeError`
+- Architect was down, blocking spec creation for US-038, US-039, parallel execution
+
+**Root Cause**: Manual synchronization between skill files and enum values is error-prone.
+
+**Key Features**:
+1. **Automated Testing**:
+   - Test: Validate all SkillNames references exist in codebase
+   - Test: Validate all skill files have corresponding enum entries
+   - Test: Fail CI if skill file exists without enum (or vice versa)
+   - Run as part of pytest suite
+   - Add to CI pipeline
+
+2. **Pre-commit Hook**:
+   - Hook: Check enum/skill synchronization before commit
+   - Validate `.claude/skills/` directory matches `SkillNames` enum
+   - Provide clear error message if mismatch detected
+   - Integration with existing `.pre-commit-config.yaml`
+
+3. **Optional: Auto-generation** (Nice to Have):
+   - Consider auto-generating `SkillNames` enum from skill directory structure
+   - Parse `.claude/skills/` to find all `SKILL.md` files
+   - Generate enum values dynamically or via script
+   - Evaluate trade-offs (complexity vs maintainability)
+
+4. **Developer Guidelines**:
+   - Document skill creation workflow in `docs/WORKFLOWS.md`
+   - Checklist for adding new skills
+   - Example workflow:
+     1. Create skill file: `.claude/skills/{agent}/{skill-name}/SKILL.md`
+     2. Add enum value: `skill_loader.py` SkillNames
+     3. Tests auto-validate synchronization
+     4. Pre-commit hook prevents mistakes
+
+**Deliverables**:
+- Test suite: `tests/unit/test_skill_enum_sync.py`
+  - Test: All code references to SkillNames have valid enum values
+  - Test: All skill files have enum entries
+  - Test: All enum values have corresponding skill files
+- Pre-commit hook: `.pre-commit-config.yaml` update
+  - Script: `scripts/validate_skill_enum_sync.py`
+  - Hook configuration
+- Documentation: `docs/WORKFLOWS.md` skill creation section
+- Technical spec: `docs/architecture/specs/SPEC-113-skill-enum-synchronization.md`
+
+**Implementation Notes**:
+- **Short-term fix (DONE in commit 0bacf3c)**:
+  - Added missing `PROACTIVE_REFACTORING_ANALYSIS` enum value
+  - Added defensive error handling (catch `AttributeError`)
+  - Prevents crashes, but doesn't prevent root cause
+- **This US**: Prevents recurrence through automation
+
+**Dependencies**:
+- None (uses existing pytest, pre-commit infrastructure)
+
+**Related**:
+- BUG-076 (architect crash - root cause of this US)
+- Commit 0bacf3c (short-term fix with error handling)
+- Commit 19c44da (status file preservation enabled debugging)
+- US-034 (architect agent - was blocked by BUG-076)
+
+**Acceptance Criteria**:
+- [ ] Test suite validates all SkillNames references have enum values
+- [ ] Test suite validates all skill files have enum entries
+- [ ] Test suite validates all enum values have corresponding skill files
+- [ ] Pre-commit hook prevents commits with enum/skill mismatches
+- [ ] Pre-commit hook provides clear error message on mismatch
+- [ ] Documentation in WORKFLOWS.md explains skill creation workflow
+- [ ] CI fails if enum/skill synchronization broken
+- [ ] All existing skills pass validation
+- [ ] Zero false positives in validation
+
+---
+
 ## 🔴 TOP PRIORITY FOR orchestrator (PARALLEL EXECUTION TEST)
 
 ### PRIORITY 9: US-009 - Daily Report Generator ✅ Complete
