@@ -430,11 +430,29 @@ class ContinuousWorkLoop:
         3. If independent: spawn parallel code_developers in worktrees
         4. If not independent: fall back to sequential execution
         """
-        if not self.roadmap_cache:
+        # Use RoadmapParser (handles all ROADMAP formats)
+        priorities = self.roadmap_parser.get_priorities()
+
+        if not priorities:
             return
 
-        # Get planned priorities with specs
-        planned_priorities = [p for p in self.roadmap_cache["priorities"] if "📝" in p["status"] and p["has_spec"]]
+        # Filter for planned priorities with specs
+        planned_priorities = []
+        for p in priorities:
+            # Check if planned
+            if "📝" not in p.get("status", ""):
+                continue
+
+            # Check if spec exists
+            us_number = p.get("us_number") or p.get("name", "").split("-")[0].replace("US", "")
+            if us_number:
+                spec_pattern = f"SPEC-{us_number}-*.md"
+                spec_dir = Path("docs/architecture/specs")
+                spec_files = list(spec_dir.glob(spec_pattern))
+                if len(spec_files) > 0:
+                    p["has_spec"] = True
+                    p["spec_path"] = str(spec_files[0])
+                    planned_priorities.append(p)
 
         if not planned_priorities:
             logger.info("No planned priorities with specs, code_developer idle")
