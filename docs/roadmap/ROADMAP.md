@@ -31324,6 +31324,214 @@ code-reviewer → Re-reviews → Verifies → Approves
 
 ---
 
+## US-110: Orchestrator Database Tracing (CFR-014)
+
+**Priority**: HIGH (CFR Compliance)
+
+**Status**: 📝 Planned
+
+**Created**: 2025-10-20
+
+**Estimated Effort**: 2-3 days (6-8 hours)
+
+**User Story**:
+As the orchestrator, I want all agent lifecycle events (spawning, running, completion) traced in SQLite database instead of JSON files, so that we can analyze velocity, detect bottlenecks, and maintain data integrity.
+
+**Problem Statement**:
+Currently, orchestrator agent tracking uses JSON files which causes serious issues:
+- **Stale data accumulation**: `agent_state.json` has 706 lines with 64+ dead agents marked "running"
+- **Incorrect dashboards**: Dashboard shows "45 active agents" when only 2 are actually running
+- **No velocity analysis**: Cannot measure implementation speed or identify bottlenecks
+- **No historical tracking**: No way to query agent performance over time
+- **Inconsistent storage**: Tasks use SQLite, agents use JSON (violates CFR-014)
+
+**CFR Context**: This US implements CFR-014 (All Orchestrator Activities Must Be Traced in Database).
+
+**Why This Is Critical**:
+1. **Data Integrity**: JSON files never cleaned up, accumulate stale data, cause incorrect dashboards
+2. **Velocity Analysis**: Cannot answer "How fast does architect create specs?" without duration tracking
+3. **Bottleneck Detection**: Cannot identify slow agents or excessive idle time
+4. **Observability**: Team needs real-time accurate status, not stale JSON data
+5. **Business Intelligence**: Cannot make data-driven decisions without queryable historical data
+6. **Consistency**: All orchestrator data should be in single database (not split JSON/SQL)
+
+**Business Value**:
+
+**System Observability**: Real-time accurate dashboards showing only running agents, no stale data.
+
+**Performance Optimization**: Identify bottlenecks and slow agents through SQL queries and analytics.
+
+**Data-Driven Decisions**: Measure velocity, track trends, predict completion times.
+
+**CFR Compliance**: Fulfills CFR-014 requirement for database-only orchestrator state.
+
+**Acceptance Criteria**:
+
+✅ **Database Schema**:
+- [ ] Create `agent_lifecycle` table in `data/orchestrator.db`
+- [ ] Table includes: pid, agent_type, task_id, spawned_at, started_at, completed_at, status, duration_ms, idle_time_ms
+- [ ] Create indexes: agent_type_status, priority_number, spawned_at, duration, task_id, pid
+
+✅ **Analytics Views**:
+- [ ] Create `active_agents` view (only running agents)
+- [ ] Create `agent_velocity` view (throughput per agent type)
+- [ ] Create `agent_bottlenecks` view (slowest 100 agents)
+- [ ] Create `priority_timeline` view (priority implementation timeline)
+
+✅ **Migration**:
+- [ ] Migration script: `coffee_maker/orchestrator/migrate_add_agent_lifecycle.py`
+- [ ] Migrate existing JSON data to database (optional --migrate-json flag)
+- [ ] Idempotent (can run multiple times safely)
+- [ ] Verification checks after migration
+
+✅ **Agent Management Integration**:
+- [ ] Update `agent_management.py` to write to SQLite on spawn
+- [ ] Update `_check_status()` to update lifecycle timestamps
+- [ ] Update `_list_active_agents()` to query from database
+- [ ] Maintain JSON for backward compatibility during transition (Phase 2)
+
+✅ **Dashboard Integration**:
+- [ ] Update `dashboard.py` to query SQLite instead of JSON
+- [ ] Show only active agents from `active_agents` view
+- [ ] Add velocity metrics panel
+- [ ] Add bottleneck analysis panel
+
+✅ **CLI Commands**:
+- [ ] `poetry run orchestrator velocity` - Show velocity report
+- [ ] `poetry run orchestrator bottlenecks` - Show slowest priorities/agents
+- [ ] `poetry run orchestrator status` - Show real-time active agents
+
+✅ **Cleanup**:
+- [ ] Archive `data/orchestrator/agent_state.json` after migration
+- [ ] Remove JSON write operations from agent management
+- [ ] Update documentation to reflect database-only approach
+
+**Technical Implementation**:
+
+1. **Migration Script** (`coffee_maker/orchestrator/migrate_add_agent_lifecycle.py`):
+   ```python
+   class AgentLifecycleMigration:
+       def run(self, migrate_json: bool = False):
+           self._create_agent_lifecycle_table()
+           self._create_analytics_views()
+           if migrate_json:
+               self._migrate_json_data()
+           self._verify_migration()
+   ```
+
+2. **Database Schema**:
+   ```sql
+   CREATE TABLE agent_lifecycle (
+       agent_id INTEGER PRIMARY KEY AUTOINCREMENT,
+       pid INTEGER NOT NULL,
+       agent_type TEXT NOT NULL,
+       task_id TEXT NOT NULL,
+       spawned_at TEXT NOT NULL,
+       started_at TEXT,
+       completed_at TEXT,
+       status TEXT NOT NULL,
+       duration_ms INTEGER,
+       idle_time_ms INTEGER,
+       command TEXT NOT NULL,
+       -- ... more fields
+   );
+   ```
+
+3. **Analytics Views**:
+   - `active_agents`: Current running agents only
+   - `agent_velocity`: AVG(duration_ms) per agent_type
+   - `agent_bottlenecks`: Agents with duration > 95th percentile
+   - `priority_timeline`: Priority implementation timeline
+
+4. **Agent Management Update** (`agent_management.py`):
+   ```python
+   def _spawn_architect(self, priority_number: int):
+       process = subprocess.Popen(cmd, ...)
+
+       # Write to database (CFR-014)
+       with sqlite3.connect("data/orchestrator.db") as conn:
+           conn.execute("""
+               INSERT INTO agent_lifecycle
+               (pid, agent_type, task_id, spawned_at, status, command)
+               VALUES (?, ?, ?, ?, ?, ?)
+           """, (process.pid, "architect", f"spec-{priority_number}",
+                 datetime.now().isoformat(), "spawned", " ".join(cmd)))
+   ```
+
+**Migration Path (5 Phases)**:
+
+1. **Phase 1**: Add database schema (migration script)
+2. **Phase 2**: Dual-write (database + JSON for compatibility)
+3. **Phase 3**: Read from database (dashboard, status checks)
+4. **Phase 4**: Remove JSON writes
+5. **Phase 5**: Clean up (delete JSON files, update docs)
+
+**Example Queries (Business Intelligence)**:
+
+```sql
+-- Architect velocity over time
+SELECT strftime('%Y-%m-%d', spawned_at) AS day,
+       COUNT(*) AS specs_created,
+       AVG(duration_ms) / 60000 AS avg_minutes
+FROM agent_lifecycle
+WHERE agent_type = 'architect' AND status = 'completed'
+GROUP BY day
+ORDER BY day DESC LIMIT 30;
+
+-- Bottleneck priorities (slowest to implement)
+SELECT priority_number,
+       COUNT(*) AS agent_count,
+       SUM(duration_ms) / 3600000 AS total_hours
+FROM agent_lifecycle
+WHERE priority_number IS NOT NULL
+GROUP BY priority_number
+HAVING total_hours > 2
+ORDER BY total_hours DESC;
+
+-- Current active agents (real-time)
+SELECT pid, agent_type, task_id, elapsed_ms / 60000 AS elapsed_minutes
+FROM active_agents
+ORDER BY elapsed_ms DESC;
+```
+
+**Deliverables**:
+
+- [ ] Migration script with schema creation
+- [ ] Updated agent_management.py with database integration
+- [ ] Updated dashboard.py with SQLite queries
+- [ ] CLI commands for velocity/bottlenecks/status
+- [ ] Migration from JSON data
+- [ ] Unit tests (15+ tests)
+- [ ] Integration tests (spawn → update → query)
+- [ ] Documentation (SPEC-110, CFR-014 compliance notes)
+
+**Dependencies**:
+- US-072 (Orchestrator) ✅ Complete
+- SQLite database exists ✅ (`data/orchestrator.db`)
+- message_queue.py already uses SQLite ✅ (pattern to follow)
+
+**Testing**:
+- Test migration script with sample JSON data
+- Test agent lifecycle tracking (spawn, run, complete, fail)
+- Test analytics views return correct results
+- Test dashboard shows only active agents
+- Test CLI commands work correctly
+- Performance test: queries <100ms
+
+**Related Documents**:
+- CFR-014: All Orchestrator Activities Must Be Traced in Database
+- SPEC-110: Orchestrator Database Tracing (technical spec)
+- `.claude/skills/shared/cfr-management/` - CFR management skill
+
+**Success Metrics**:
+- Dashboard accuracy: 100% (verified with `ps` command)
+- Query performance: All queries <100ms
+- Historical data: 30+ days retention
+- Zero stale data: No "running" agents that are actually dead
+- Velocity analysis: Can answer "How fast is X agent?" with SQL query
+
+---
+
 ## 🔴 TOP PRIORITY FOR orchestrator (PARALLEL EXECUTION TEST)
 
 ### PRIORITY 9: US-009 - Daily Report Generator ✅ Complete
