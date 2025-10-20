@@ -460,6 +460,123 @@ print("⚠️ I've created a critical warning notification about US-021. Please 
 
 ---
 
+## ⭐ Startup Skills (Executed Automatically)
+
+**These skills run automatically when project_manager starts:**
+
+### Startup Skill: project-manager-startup
+
+**Location**: `.claude/skills/project-manager-startup.md`
+
+**When**: AUTOMATICALLY executed at EVERY project_manager session start
+
+**Purpose**: Intelligently load only necessary context for project_manager agent startup, ensuring CFR-007 compliance (≤30% context budget)
+
+**What It Does**:
+1. **Identifies Task Type** - Determines what project_manager will do (health_check, roadmap_query, pr_monitoring, dod_verification)
+2. **Calculates Context Budget** - Ensures core materials fit in ≤30% of 200K token window (60K tokens max)
+3. **Loads Core Identity** - Always loads project_manager.md (~10K tokens) and key CLAUDE.md sections (~5K tokens)
+4. **Loads Task-Specific Context** - Conditionally loads relevant docs:
+   - **health_check**: ROADMAP.md (ultra-compact summary), CFR docs
+   - **roadmap_query**: ROADMAP.md (relevant sections), priority specs
+   - **pr_monitoring**: GitHub data (via gh CLI), ROADMAP correlations
+   - **dod_verification**: Specific priority details, acceptance criteria
+5. **Validates CFR-007** - Confirms total context <30%, applies mitigations if over budget
+6. **Verifies Health Checks**:
+   - GITHUB_TOKEN present (optional but recommended)
+   - gh command available
+   - docs/roadmap/ directory writable
+   - ROADMAP.md readable
+7. **Initializes Project Resources** - Checks GitHub repository status, loads ROADMAP.md
+8. **Registers with AgentRegistry** - Enforces singleton pattern (only one project_manager can run)
+
+**Benefits**:
+- ✅ **CFR-007 Compliance Guaranteed** - Automatic validation prevents context budget violations
+- ✅ **Early Failure Detection** - Missing GitHub access or files caught before work begins
+- ✅ **Faster Startup** - Loads only 25K tokens vs. 60K (42% of budget)
+- ✅ **Task-Optimized Context** - Different tasks get different context
+
+**Example Integration**:
+```python
+# Automatic execution during project_manager startup
+startup_context = load_skill(SkillNames.PROJECT_MANAGER_STARTUP, {
+    "TASK_TYPE": "health_check"
+})
+```
+
+**Health Check Validations**:
+- ✅ GitHub access working (or gracefully degraded if not available)
+- ✅ ROADMAP.md readable
+- ✅ docs/roadmap/ directory writable
+- ✅ Agent registered (singleton enforcement)
+
+**Metrics**:
+- Context budget usage: 42% (25K tokens) for health_check task
+- Startup failures prevented: Missing ROADMAP, GitHub auth issues, agent already running
+- Startup time: 2-3 min → <30 seconds
+
+### Mandatory Skill: trace-execution (ALL Agents)
+
+**Location**: `.claude/skills/trace-execution.md`
+
+**When**: AUTOMATICALLY executed throughout ALL project_manager sessions
+
+**Purpose**: Capture execution traces for ACE framework (Agent Context Evolving) observability loop
+
+**What It Does**:
+1. **Starts Execution Trace** - Creates trace file with UUID at project_manager startup
+2. **Logs Trace Events** - Automatically records events during project_manager work:
+   - `file_read` - File read operations (e.g., ROADMAP.md)
+   - `skill_invoked` - Other skills used (e.g., roadmap-health-check, pr-monitoring-analysis)
+   - `github_query` - GitHub API calls (via gh CLI)
+   - `puppeteer_verification` - DoD verification with Puppeteer
+   - `llm_call` - LLM invocations (model, tokens, cost)
+   - `notification_created` - Notifications sent to user
+   - `task_completed` - Task finishes
+3. **Ends Execution Trace** - Finalizes trace with outcome, metrics, bottlenecks at shutdown
+
+**Trace Storage**: `docs/generator/trace_project_manager_{task_type}_{timestamp}.json`
+
+**Benefits**:
+- ✅ **Accurate Traces** - Captured at moment of action (no inference needed)
+- ✅ **Simple Architecture** - No separate generator agent (embedded in workflow)
+- ✅ **Better Performance** - Direct writes to trace file (<1% overhead)
+- ✅ **Rich Data for Reflector** - Complete execution data for strategic analysis
+
+**Example Trace Events** (during health check):
+```json
+{
+  "trace_id": "uuid-here",
+  "agent": "project_manager",
+  "task_type": "health_check",
+  "events": [
+    {"event_type": "file_read", "file": "docs/roadmap/ROADMAP.md", "format": "ultra-compact summary", "tokens": 3000},
+    {"event_type": "skill_invoked", "skill": "roadmap-health-check", "outcome": "health score: 87"},
+    {"event_type": "github_query", "command": "gh pr list", "results": 3},
+    {"event_type": "notification_created", "title": "Project Health Report", "level": "info"},
+    {"event_type": "task_completed", "outcome": "success"}
+  ],
+  "metrics": {
+    "health_score": 87,
+    "priorities_analyzed": 15,
+    "github_prs_checked": 3
+  }
+}
+```
+
+**Integration with ACE Framework**:
+- **Reflector Agent** - Analyzes traces to identify strategic bottlenecks (e.g., roadmap parsing time)
+- **Curator Agent** - Uses delta items from reflector to recommend new skills (e.g., automated health checks)
+- **Continuous Improvement** - Execution data drives skill creation and optimization
+
+**Key Metrics Tracked**:
+- Roadmap health analysis time
+- GitHub PR monitoring time
+- DoD verification time with Puppeteer
+- User notification creation frequency
+
+---
+
 ## Success Metrics
 
 - **User Satisfaction**: Clear, helpful responses

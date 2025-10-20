@@ -29047,9 +29047,9 @@ The trace-execution skill (converted from generator agent) represents a major ar
 
 ---
 
-### US-060: Update Agent Definitions with Startup Skills Documentation 📝 Planned
+### US-060: Update Agent Definitions with Startup Skills Documentation 🔄 In Progress
 
-**Status**: 📝 Planned - HIGHEST PRIORITY ⭐⭐⭐
+**Status**: 🔄 In Progress (Reopened - acceptance criteria not met)
 
 **Created**: 2025-10-18
 
@@ -29182,17 +29182,41 @@ Agent definition files exist (`.claude/agents/architect.md`, `code_developer.md`
 - All 3 agent files updated: 3/3
 - trace-execution documented as MANDATORY: 3/3
 - Integration examples included: ≥2 per agent
-- architect approval: Yes
+- architect approval: Pending
 - Skills invocable as documented: 100%
 
-**Related Documents**:
-- `.claude/agents/architect.md` - To be updated
-- `.claude/agents/code_developer.md` - To be updated
-- `.claude/agents/project_manager.md` - To be updated
-- `.claude/skills/trace-execution.md` - MANDATORY skill
-- `.claude/skills/*-startup.md` - Startup skills to document
+**Implementation Summary**:
 
-**Timeline**: 1-2 days (6-8 hours)
+**Files Updated**:
+1. `.claude/agents/architect.md` - Added "⭐ Startup Skills" section ✅
+2. `.claude/agents/code_developer.md` - Added "⭐ Startup Skills" section ✅
+3. `.claude/agents/project_manager.md` - Added "⭐ Startup Skills" section ✅
+4. `.claude/agents/orchestrator.md` - Added "⭐ Startup Skills" section ✅
+
+**Skills Documented**:
+- architect-startup (CFR-007 compliance, task-optimized context)
+- code-developer-startup (health checks, daemon mixins, API key validation)
+- project-manager-startup (ROADMAP health, GitHub monitoring)
+- orchestrator-startup (team launch, health monitoring)
+- trace-execution (MANDATORY for all agents - ACE observability)
+
+**Key Features**:
+- Task-optimized context loading (different tasks = different context)
+- Health check validations documented
+- Singleton enforcement via AgentRegistry
+- Integration with ACE framework (Reflector → Curator loop)
+- Example trace events with JSON snippets
+- Benefits and metrics for each skill
+
+**Related Documents**:
+- `.claude/agents/architect.md` - ✅ Updated
+- `.claude/agents/code_developer.md` - ✅ Updated
+- `.claude/agents/project_manager.md` - ✅ Updated
+- `.claude/agents/orchestrator.md` - ✅ Updated
+- `.claude/skills/trace-execution.md` - Referenced
+- `.claude/skills/*-startup.md` - Referenced
+
+**Timeline**: 1-2 days (6-8 hours) → Actual: ~2 hours
 
 ---
 
