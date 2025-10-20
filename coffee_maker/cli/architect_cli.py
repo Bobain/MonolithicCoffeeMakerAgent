@@ -1,9 +1,10 @@
-"""Architect CLI commands for CFR-011 enforcement.
+"""Architect CLI commands for CFR-011 enforcement and spec creation.
 
-This module provides CLI commands for architect's daily integration workflow:
+This module provides CLI commands for architect's workflows:
 - architect daily-integration: Guided workflow for reading code-searcher reports
 - architect analyze-codebase: Perform weekly codebase analysis
 - architect cfr-011-status: Check CFR-011 compliance status
+- architect create-spec: Create technical specification for a priority
 """
 
 import click
@@ -14,6 +15,8 @@ from datetime import datetime, timedelta
 from coffee_maker.autonomous.architect_daily_routine import (
     ArchitectDailyRoutine,
 )
+from coffee_maker.autonomous.roadmap_parser import RoadmapParser
+from coffee_maker.autonomous.spec_generator import SpecGenerator
 
 
 @click.group()
@@ -262,6 +265,115 @@ def cfr_011_status():
             click.echo("  2. Run: architect analyze-codebase")
 
     click.echo()
+
+
+@architect.command("create-spec")
+@click.option("--priority", type=str, required=True, help="Priority number (e.g., 042 or 1.5)")
+@click.option("--auto-approve", is_flag=True, help="Auto-approve spec creation without confirmation")
+def create_spec(priority: str, auto_approve: bool):
+    """Create technical specification for a priority.
+
+    This command:
+    1. Loads the priority from ROADMAP.md
+    2. Generates a technical specification using AI
+    3. Saves the spec to docs/architecture/specs/
+
+    Example:
+        architect create-spec --priority=042
+        architect create-spec --priority=1.5 --auto-approve
+    """
+    try:
+        # Load ROADMAP
+        parser = RoadmapParser("docs/roadmap/ROADMAP.md")
+        priorities = parser.get_priorities()
+
+        # Find the priority
+        matching_priority = None
+        for p in priorities:
+            if str(p["number"]) == priority or p["name"].endswith(priority):
+                matching_priority = p
+                break
+
+        if not matching_priority:
+            click.echo(f"❌ Priority {priority} not found in ROADMAP")
+            return 1
+
+        priority_name = matching_priority["name"]
+        priority_title = matching_priority["title"]
+        priority_content = matching_priority.get("content", "")
+
+        click.echo(f"\n📋 Creating spec for: {priority_name} - {priority_title}\n")
+
+        if not auto_approve:
+            if not click.confirm("Continue with spec creation?"):
+                click.echo("Cancelled")
+                return 0
+
+        # Generate spec using SpecGenerator
+        click.echo("Generating technical specification (this may take 1-2 minutes)...\n")
+
+        generator = SpecGenerator()
+        user_story = f"{priority_name}: {priority_title}\n\n{priority_content}"
+
+        spec = generator.generate_spec_from_user_story(
+            user_story=user_story, feature_type="general", complexity="medium"
+        )
+
+        # Save spec to file
+        spec_path = Path(
+            f"docs/architecture/specs/SPEC-{priority.replace('.', '-')}-{priority_title.lower().replace(' ', '-')[:40]}.md"
+        )
+        spec_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Format spec content
+        spec_content = f"""# SPEC-{priority.replace('.', '-')}: {priority_title}
+
+**Priority**: {priority_name}
+**Date**: {datetime.now().strftime('%Y-%m-%d')}
+**Status**: Draft
+
+## Overview
+
+{spec.overview if hasattr(spec, 'overview') else 'Technical specification for ' + priority_title}
+
+## Requirements
+
+{spec.requirements if hasattr(spec, 'requirements') else '- TBD'}
+
+## Technical Design
+
+{spec.technical_design if hasattr(spec, 'technical_design') else '### Architecture\n\nTBD\n\n### Implementation\n\nTBD'}
+
+## Effort Estimate
+
+**Total**: {spec.total_hours if hasattr(spec, 'total_hours') else 'TBD'} hours
+
+## Testing Strategy
+
+{spec.testing_strategy if hasattr(spec, 'testing_strategy') else '- Unit tests\n- Integration tests\n- Manual testing'}
+
+## Definition of Done
+
+{spec.definition_of_done if hasattr(spec, 'definition_of_done') else '- [ ] All tests passing\n- [ ] Code reviewed\n- [ ] Documentation updated'}
+
+---
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+"""
+
+        spec_path.write_text(spec_content)
+        click.echo(f"✅ Spec created: {spec_path}\n")
+
+        return 0
+
+    except Exception as e:
+        click.echo(f"❌ Error creating spec: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return 1
 
 
 if __name__ == "__main__":
