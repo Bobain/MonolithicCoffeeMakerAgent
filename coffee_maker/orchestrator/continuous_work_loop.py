@@ -408,11 +408,21 @@ class ContinuousWorkLoop:
                 continue
 
             # Check if spec exists
-            # Use priority number for spec lookup (e.g., "59" -> "SPEC-59-*.md")
-            priority_number = p.get("number")
+            # Use US number for spec lookup (e.g., "US-104" -> "SPEC-104-*.md")
+            # Skill returns: number="20" (PRIORITY number), us_id="US-104"
+            # Specs are named with US number, not PRIORITY number
+            us_id = p.get("us_id")
+            spec_number = None
 
-            if priority_number:
-                spec_pattern = f"SPEC-{priority_number}-*.md"
+            if us_id:
+                # Extract number from us_id (e.g., "US-104" -> "104")
+                spec_number = us_id.replace("US-", "")
+            else:
+                # Fallback to priority number if no us_id
+                spec_number = p.get("number")
+
+            if spec_number:
+                spec_pattern = f"SPEC-{spec_number}-*.md"
                 spec_dir = Path("docs/architecture/specs")
                 spec_files = list(spec_dir.glob(spec_pattern))
                 if len(spec_files) > 0:

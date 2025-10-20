@@ -90,8 +90,17 @@ class ArchitectCoordinator:
             True if spec exists, False otherwise
         """
         # Extract numeric part from priority
-        # priority["number"] is already the numeric part (e.g., "104" from "US-104" or "1" from "PRIORITY 1")
-        spec_number = priority["number"]
+        # Skill returns: number="20" (PRIORITY number), us_id="US-104"
+        # Specs are named with US number, not PRIORITY number
+        us_id = priority.get("us_id")
+        spec_number = None
+
+        if us_id:
+            # Extract number from us_id (e.g., "US-104" -> "104")
+            spec_number = us_id.replace("US-", "")
+        else:
+            # Fallback to priority number if no us_id
+            spec_number = priority.get("number")
 
         spec_pattern = f"SPEC-{spec_number}-*.md"
         spec_path = Path("docs/architecture/specs")

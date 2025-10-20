@@ -1,151 +1,17 @@
 {
-  "last_update": 1760896335.8875751,
+  "last_update": 1760946599.513212,
   "active_tasks": {
-    "impl_12": {
-      "task_id": "impl-12",
-      "started_at": 1760895555.805152,
+    "impl_061": {
+      "task_id": "impl-061",
+      "started_at": 1760943773.202718,
       "type": "implementation"
+    },
+    "spec_3": {
+      "task_id": "spec-3",
+      "pid": 73644,
+      "started_at": 1760944641.985467,
+      "type": "spec_creation"
     }
   },
-  "roadmap_cache": {
-    "priorities": [
-      {
-        "number": 9,
-        "name": "US-009 - Daily Report Generator",
-        "us_number": "US-009",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-009-enhanced-communication.md"
-      },
-      {
-        "number": 10,
-        "name": "US-010 - User Listener Implementation",
-        "us_number": "US-010",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-010-USER-LISTENER-UI-SIMPLIFIED.md"
-      },
-      {
-        "number": 11,
-        "name": "US-072 - Design Orchestrator Agent Architecture",
-        "us_number": "US-072",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-072-multi-agent-orchestration-daemon.md"
-      },
-      {
-        "number": 12,
-        "name": "US-047 - Enforce CFR-008 Architect-Only Spec Creation (Phase 2)",
-        "us_number": "US-047",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-047-architect-only-spec-creation.md"
-      },
-      {
-        "number": 12,
-        "name": "US-012 - User Story Command Handler",
-        "us_number": "US-012",
-        "status": "\ud83d\udcdd",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-012-natural-language-user-story-management.md"
-      },
-      {
-        "number": 13,
-        "name": "US-048 - Enforce CFR-009 Silent Background Agents",
-        "us_number": "US-048",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-048-silent-background-agents.md"
-      },
-      {
-        "number": 14,
-        "name": "US-049 - Architect Continuous Spec Improvement Loop (CFR-010)",
-        "us_number": "US-049",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-049-architect-continuous-spec-improvement-loop.md"
-      },
-      {
-        "number": 15,
-        "name": "US-054 - Architect Daily Integration of code-searcher Findings (CFR-011)",
-        "us_number": "US-054",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-054-architect-code-searcher-daily-integration.md"
-      },
-      {
-        "number": 16,
-        "name": "US-050 - Architect Creates POCs for Complex Implementations",
-        "us_number": "US-050",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-050-refactor-roadmap-cli-modularization.md"
-      },
-      {
-        "number": 17,
-        "name": "US-055 - Claude Skills Integration Phase 1",
-        "us_number": "US-055",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-055-claude-skills-phase-1-foundation.md"
-      },
-      {
-        "number": 18,
-        "name": "US-056 - Claude Skills Integration Phase 2",
-        "us_number": "US-056",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-056-claude-skills-phase-2-medium-value.md"
-      },
-      {
-        "number": 19,
-        "name": "US-057 - Claude Skills Integration Phase 3",
-        "us_number": "US-057",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-057-git-operations-test-coverage.md"
-      },
-      {
-        "number": 20,
-        "name": "US-104 - Orchestrator Continuous Agent Work Loop",
-        "us_number": "US-104",
-        "status": "\ud83d\udd04",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-104-orchestrator-continuous-agent-work-loop.md"
-      },
-      {
-        "number": 21,
-        "name": "US-105 - Development Acceleration Insights Dashboard",
-        "us_number": "US-105",
-        "status": "\u2705",
-        "has_spec": false,
-        "spec_path": null
-      },
-      {
-        "number": 22,
-        "name": "US-106 - Code-Reviewer Agent for Quality Assurance",
-        "us_number": "US-106",
-        "status": "\u2705",
-        "has_spec": false,
-        "spec_path": null
-      },
-      {
-        "number": 23,
-        "name": "US-108 - Parallel Agent Execution with Git Worktree",
-        "us_number": "US-108",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-108-parallel-agent-execution-with-git-worktree.md"
-      },
-      {
-        "number": 24,
-        "name": "US-107 - Dependency Conflict Resolver Skill",
-        "us_number": "US-107",
-        "status": "\u2705",
-        "has_spec": true,
-        "spec_path": "docs/architecture/specs/SPEC-107-dependency-conflict-resolver-skill.md"
-      }
-    ]
-  },
-  "last_roadmap_update": 1760895667.5920193
+  "last_roadmap_update": 1760946562.7186792
 }
