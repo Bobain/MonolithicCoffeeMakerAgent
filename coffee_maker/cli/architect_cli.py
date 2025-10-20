@@ -319,10 +319,28 @@ def create_spec(priority: str, auto_approve: bool):
             user_story=user_story, feature_type="general", complexity="medium"
         )
 
-        # Prepare spec identifiers (can't use .replace() in f-strings)
+        # Prepare spec identifiers (can't use .replace() or \n in f-strings)
         spec_number = priority.replace(".", "-")
         spec_title_slug = priority_title.lower().replace(" ", "-")[:40]
         spec_date = datetime.now().strftime("%Y-%m-%d")
+
+        # Prepare spec content with defaults
+        overview = spec.overview if hasattr(spec, "overview") else f"Technical specification for {priority_title}"
+        requirements = spec.requirements if hasattr(spec, "requirements") else "- TBD"
+
+        # Technical design with multiline default
+        default_tech_design = "### Architecture\n\nTBD\n\n### Implementation\n\nTBD"
+        technical_design = spec.technical_design if hasattr(spec, "technical_design") else default_tech_design
+
+        total_hours = spec.total_hours if hasattr(spec, "total_hours") else "TBD"
+
+        # Testing strategy with multiline default
+        default_testing = "- Unit tests\n- Integration tests\n- Manual testing"
+        testing_strategy = spec.testing_strategy if hasattr(spec, "testing_strategy") else default_testing
+
+        # DoD with multiline default
+        default_dod = "- [ ] All tests passing\n- [ ] Code reviewed\n- [ ] Documentation updated"
+        definition_of_done = spec.definition_of_done if hasattr(spec, "definition_of_done") else default_dod
 
         # Save spec to file
         spec_path = Path(f"docs/architecture/specs/SPEC-{spec_number}-{spec_title_slug}.md")
@@ -337,27 +355,27 @@ def create_spec(priority: str, auto_approve: bool):
 
 ## Overview
 
-{spec.overview if hasattr(spec, 'overview') else 'Technical specification for ' + priority_title}
+{overview}
 
 ## Requirements
 
-{spec.requirements if hasattr(spec, 'requirements') else '- TBD'}
+{requirements}
 
 ## Technical Design
 
-{spec.technical_design if hasattr(spec, 'technical_design') else '### Architecture\n\nTBD\n\n### Implementation\n\nTBD'}
+{technical_design}
 
 ## Effort Estimate
 
-**Total**: {spec.total_hours if hasattr(spec, 'total_hours') else 'TBD'} hours
+**Total**: {total_hours} hours
 
 ## Testing Strategy
 
-{spec.testing_strategy if hasattr(spec, 'testing_strategy') else '- Unit tests\n- Integration tests\n- Manual testing'}
+{testing_strategy}
 
 ## Definition of Done
 
-{spec.definition_of_done if hasattr(spec, 'definition_of_done') else '- [ ] All tests passing\n- [ ] Code reviewed\n- [ ] Documentation updated'}
+{definition_of_done}
 
 ---
 
