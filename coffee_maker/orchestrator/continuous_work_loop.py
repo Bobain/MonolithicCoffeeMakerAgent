@@ -434,7 +434,7 @@ class ContinuousWorkLoop:
             return
 
         # Get planned priorities with specs
-        planned_priorities = [p for p in self.roadmap_cache["priorities"] if p["status"] == "📝" and p["has_spec"]]
+        planned_priorities = [p for p in self.roadmap_cache["priorities"] if "📝" in p["status"] and p["has_spec"]]
 
         if not planned_priorities:
             logger.info("No planned priorities with specs, code_developer idle")
