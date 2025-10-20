@@ -88,15 +88,22 @@ class RoadmapParser:
         priorities = []
 
         # Multiple patterns to match priority headers:
-        # 1. ### 🔴 **PRIORITY 1: Analytics & Observability** ⚡ FOUNDATION
-        # 2. ### PRIORITY 1: Analytics 📝 Planned
-        # 3. ### PRIORITY 1: Done ✅ Complete
-        # 4. ### US-062: Implement startup skill
-        # 5. ### US-062: Implement startup skill 📝 Planned
+        # BUG-066: Support both ## and ### formats
+        # Double hash (##) - new format:
+        #   1. ## US-110: Orchestrator Database Tracing
+        #   2. ## PRIORITY 20: Feature Name
+        # Triple hash (###) - legacy format:
+        #   3. ### 🔴 **PRIORITY 1: Analytics & Observability** ⚡ FOUNDATION
+        #   4. ### PRIORITY 1: Analytics 📝 Planned
+        #   5. ### US-062: Implement startup skill 📝 Planned
         patterns = [
-            r"^###\s+🔴\s+\*\*PRIORITY\s+(\d+(?:\.\d+)?):([^*]+)\*\*",  # Strict PRIORITY format
-            r"^###\s+PRIORITY\s+(\d+(?:\.\d+)?):([^#]+?)(?:\s+(?:📝|🔄|✅|⏸️).*)?$",  # Flexible PRIORITY format
-            r"^###\s+US-(\d+):([^#]+?)(?:\s+(?:📝|🔄|✅|⏸️).*)?$",  # User Story format (US-XXX)
+            # Double hash patterns (new format) - check these first
+            r"^##\s+US-(\d+):([^#]+?)(?:\s+(?:📝|🔄|✅|⏸️).*)?$",  # ## US-XXX: Title
+            r"^##\s+PRIORITY\s+(\d+(?:\.\d+)?):([^#]+?)(?:\s+(?:📝|🔄|✅|⏸️).*)?$",  # ## PRIORITY X: Title
+            # Triple hash patterns (legacy format)
+            r"^###\s+🔴\s+\*\*PRIORITY\s+(\d+(?:\.\d+)?):([^*]+)\*\*",  # ### 🔴 **PRIORITY X**
+            r"^###\s+PRIORITY\s+(\d+(?:\.\d+)?):([^#]+?)(?:\s+(?:📝|🔄|✅|⏸️).*)?$",  # ### PRIORITY X: Title
+            r"^###\s+US-(\d+):([^#]+?)(?:\s+(?:📝|🔄|✅|⏸️).*)?$",  # ### US-XXX: Title
         ]
 
         lines = self.content.split("\n")

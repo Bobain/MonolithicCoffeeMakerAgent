@@ -10,9 +10,17 @@ Usage:
 """
 
 import re
+import sys
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 import logging
+
+# BUG-066: Use unified RoadmapParser instead of custom parsing
+# This ensures all agents see all user stories regardless of format (## or ###)
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "coffee_maker"))
+from coffee_maker.autonomous.roadmap_parser import RoadmapParser
+
+sys.path.pop(0)
 
 logger = logging.getLogger(__name__)
 
@@ -71,63 +79,68 @@ class RoadmapManagementSkill:
             return {"result": None, "error": str(e)}
 
     def _parse_roadmap(self) -> None:
-        """Parse ROADMAP.md and extract all priorities."""
+        """Parse ROADMAP.md using unified RoadmapParser (BUG-066)."""
         if not self.roadmap_path.exists():
             raise FileNotFoundError(f"ROADMAP not found: {self.roadmap_path}")
 
-        content = self.roadmap_path.read_text(encoding="utf-8")
-
-        # Extract all priorities with regex
-        # Pattern: ### PRIORITY (\d+(?:\.\d+)?): (.+?) (📝|🔄|✅|⏸️|🚧)(.*?)$
-        # Captures: number, title, emoji, status word (optional)
-        priority_pattern = r"^### PRIORITY (\d+(?:\.\d+)?): (.+?) (📝|🔄|✅|⏸️|🚧)(.*?)$"
-
-        matches = list(re.finditer(priority_pattern, content, re.MULTILINE))
+        # BUG-066: Use unified RoadmapParser to support both ## and ### formats
+        parser = RoadmapParser(str(self.roadmap_path))
+        raw_priorities = parser.get_priorities()
 
         self.priorities = []
-        for i, match in enumerate(matches):
-            number = match.group(1)
-            title = match.group(2).strip()
-            status_emoji = match.group(3)
+        for p in raw_priorities:
+            # Convert RoadmapParser format to RoadmapManagementSkill format
+            number = p.get("number", "")
+            title = p.get("title", "")
+            status = p.get("status", "Unknown")
+            content = p.get("content", "")
+            name = p.get("name", "")
 
-            # Map emoji to status string
-            status_map = {"📝": "Planned", "🔄": "In Progress", "✅": "Complete", "⏸️": "Blocked", "🚧": "Manual Review"}
-            status = status_map.get(status_emoji, "Unknown")
+            # Extract US ID from name or title
+            us_id = None
+            if "US-" in name:
+                us_id = name  # e.g., "US-110"
+            else:
+                us_id_match = re.search(r"US-(\d+)", title)
+                us_id = us_id_match.group(0) if us_id_match else None
 
-            # Extract description (content between this priority and next)
-            start_pos = match.end()
-            end_pos = matches[i + 1].start() if i + 1 < len(matches) else len(content)
-            description = content[start_pos:end_pos].strip()
-
-            # Extract US ID from title
-            us_id_match = re.search(r"US-(\d+)", title)
-            us_id = us_id_match.group(0) if us_id_match else None
-
-            # Extract dependencies
+            # Extract dependencies from content
             dependencies = []
-            dep_match = re.search(r"\*\*Dependencies\*\*:(.+?)(?:\n|$)", description)
+            dep_match = re.search(r"\*\*Dependencies\*\*:(.+?)(?:\n|$)", content)
             if dep_match:
                 dep_str = dep_match.group(1).strip()
                 dependencies = [d.strip() for d in dep_str.split(",")]
 
-            # Extract estimated effort
+            # Extract estimated effort from content
             effort = None
             effort_match = re.search(
-                r"\*\*(?:Estimated effort|Time estimate)\*\*:(.+?)(?:\n|$)", description, re.IGNORECASE
+                r"\*\*(?:Estimated effort|Estimated Effort|Time estimate)\*\*:(.+?)(?:\n|$)", content, re.IGNORECASE
             )
             if effort_match:
                 effort = effort_match.group(1).strip()
 
-            # Extract spec links
+            # Extract spec links from content
             technical_spec = None
-            spec_match = re.search(r"(docs/architecture/specs/SPEC-\d+-[^\s)]+\.md)", description)
+            spec_match = re.search(r"(docs/architecture/specs/SPEC-\d+-[^\s)]+\.md)", content)
             if spec_match:
                 technical_spec = spec_match.group(1)
 
             strategic_spec = None
-            strat_spec_match = re.search(r"(docs/roadmap/PRIORITY_\d+_STRATEGIC_SPEC\.md)", description)
+            strat_spec_match = re.search(r"(docs/roadmap/PRIORITY_\d+_STRATEGIC_SPEC\.md)", content)
             if strat_spec_match:
                 strategic_spec = strat_spec_match.group(1)
+
+            # Extract status emoji from status string
+            status_emoji_map = {
+                "Planned": "📝",
+                "In Progress": "🔄",
+                "Complete": "✅",
+                "Blocked": "⏸️",
+                "Manual Review": "🚧",
+            }
+            status_emoji = status_emoji_map.get(
+                status.replace("📝 ", "").replace("🔄 ", "").replace("✅ ", "").replace("⏸️ ", "").strip(), "📝"
+            )
 
             priority = {
                 "number": number,
@@ -135,12 +148,12 @@ class RoadmapManagementSkill:
                 "status": status,
                 "status_emoji": status_emoji,
                 "us_id": us_id,
-                "description": description,
+                "description": content,  # Use full section content
                 "dependencies": dependencies,
                 "estimated_effort": effort,
                 "technical_spec": technical_spec,
                 "strategic_spec": strategic_spec,
-                "line_number": content[: match.start()].count("\n") + 1,
+                "line_number": p.get("section_start", 0) + 1,
             }
 
             self.priorities.append(priority)
