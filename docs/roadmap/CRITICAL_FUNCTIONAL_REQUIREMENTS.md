@@ -3660,6 +3660,440 @@ git push origin stable-v1.3.0
 
 ---
 
+## CFR-014: All Orchestrator Activities Must Be Traced in Database
+
+**Rule**: ALL orchestrator activities, agent lifecycle events, state transitions, and metrics MUST be persisted in SQLite database (`data/orchestrator.db`). JSON files are FORBIDDEN for orchestrator state storage.
+
+**Core Principle**:
+```
+✅ ALLOWED: Write agent lifecycle events to SQLite
+✅ ALLOWED: Write orchestrator metrics to SQLite
+✅ ALLOWED: Query historical data from SQLite
+✅ ALLOWED: Read legacy JSON for one-time migration
+
+❌ FORBIDDEN: Write orchestrator state to JSON files
+❌ FORBIDDEN: Use JSON as primary data store
+❌ FORBIDDEN: Store agent lifecycle in agent_state.json
+❌ FORBIDDEN: Store work loop state in work_loop_state.json
+❌ FORBIDDEN: Any persistent state outside database
+```
+
+**Why This Is Critical**:
+
+1. **Velocity Analysis**: Cannot measure implementation speed without historical data
+   - "How fast does architect create specs?" → Requires `agent_lifecycle` table with durations
+   - "Which priorities take longest?" → Requires queryable timestamp data
+   - "What's our hourly throughput?" → Requires time-series aggregations
+
+2. **Bottleneck Detection**: Cannot identify performance problems without analytics
+   - "Which agents are slow?" → Requires duration_ms comparisons
+   - "Where is orchestrator idle?" → Requires spawned_at vs started_at analysis
+   - "What causes failures?" → Requires error_message tracking
+
+3. **Data Integrity**: JSON files accumulate stale data, cause bugs
+   - **Real Bug**: `agent_state.json` had 706 lines with 64+ dead agents marked "running"
+   - **Result**: Dashboard showed "45 active agents" when only 2 were actually running
+   - **Cause**: JSON never cleaned up, no lifecycle management
+
+4. **Observability**: Team and users need visibility into system behavior
+   - "Is the orchestrator working?" → Query `active_agents` view
+   - "Why is PRIORITY X taking so long?" → Query `priority_timeline` view
+   - "When was last successful completion?" → Query `agent_lifecycle WHERE status='completed'`
+
+5. **Business Intelligence**: Cannot make data-driven decisions without queryable data
+   - "Should we parallelize more agents?" → Needs velocity metrics
+   - "Which agent type is most reliable?" → Needs success rate analysis
+   - "Are we improving over time?" → Needs historical trend data
+
+6. **Consistency**: Tasks already use SQLite, agents should too
+   - **Inconsistent (current)**: Tasks in `data/orchestrator.db`, agents in `data/orchestrator/agent_state.json`
+   - **Consistent (CFR-014)**: ALL orchestrator data in `data/orchestrator.db`
+
+**Real-World Problem This Solves**:
+
+```
+BEFORE CFR-014 (chaotic):
+- Agent spawned → Write to agent_state.json
+- Agent completes → JSON never updated (still shows "running")
+- User checks dashboard → Shows 64 "active" agents (all dead)
+- User opens agent_state.json → 706 lines of stale data
+- User asks "How fast is architect?" → No way to answer (no duration tracking)
+- User asks "Are we getting faster?" → No historical data to compare
+→ Result: No visibility, no metrics, stale data, incorrect dashboards
+→ Result: Cannot optimize, cannot detect bottlenecks
+→ Result: User loses trust in orchestrator status
+
+AFTER CFR-014 (observable):
+- Agent spawned → INSERT INTO agent_lifecycle (pid, agent_type, spawned_at, status='spawned')
+- Agent starts work → UPDATE agent_lifecycle SET started_at=now(), status='running'
+- Agent completes → UPDATE agent_lifecycle SET completed_at=now(), duration_ms=X, status='completed'
+- Agent fails → UPDATE agent_lifecycle SET completed_at=now(), status='failed', error_message=Y
+- Dashboard queries → SELECT * FROM active_agents (view)  # Only running agents
+- User asks "How fast?" → SELECT AVG(duration_ms) FROM agent_lifecycle WHERE agent_type='architect'
+- User asks "Bottlenecks?" → SELECT * FROM agent_bottlenecks (view)
+→ Result: Real-time accurate status, historical metrics, data-driven optimization
+→ Result: Dashboard always correct, no stale data
+→ Result: Team can measure velocity, identify bottlenecks, improve over time
+```
+
+### Enforcement
+
+**Database Schema - REQUIRED**:
+
+```sql
+-- Agent Lifecycle Table (MUST exist)
+CREATE TABLE agent_lifecycle (
+    agent_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pid INTEGER NOT NULL,
+    agent_type TEXT NOT NULL,           -- architect, code_developer, project_manager
+    task_id TEXT NOT NULL,              -- Links to tasks.task_id if applicable
+    task_type TEXT,                     -- create_spec, implementation, auto_planning
+    priority_number INTEGER,            -- ROADMAP priority (if applicable)
+
+    -- Lifecycle timestamps (ISO8601)
+    spawned_at TEXT NOT NULL,           -- Process spawn time
+    started_at TEXT,                    -- When agent began work
+    completed_at TEXT,                  -- When agent finished
+
+    -- Status and metrics
+    status TEXT NOT NULL,               -- spawned, running, completed, failed, killed
+    exit_code INTEGER,                  -- Process exit code
+    duration_ms INTEGER,                -- spawn → complete
+    idle_time_ms INTEGER,               -- spawn → start (idle)
+
+    -- Context
+    command TEXT NOT NULL,              -- Full CLI command
+    worktree_path TEXT,                 -- Git worktree (parallel exec)
+    error_message TEXT,                 -- Error details if failed
+    metadata TEXT                       -- JSON blob for extras
+);
+
+-- Indexes for fast queries
+CREATE INDEX idx_agent_type_status ON agent_lifecycle(agent_type, status);
+CREATE INDEX idx_priority_number ON agent_lifecycle(priority_number);
+CREATE INDEX idx_spawned_at ON agent_lifecycle(spawned_at);
+CREATE INDEX idx_duration ON agent_lifecycle(duration_ms DESC);
+CREATE INDEX idx_task_id ON agent_lifecycle(task_id);
+```
+
+**Required Views - ANALYTICS**:
+
+```sql
+-- Current active agents (running only)
+CREATE VIEW active_agents AS
+SELECT agent_id, pid, agent_type, task_id, priority_number, status, spawned_at,
+       CAST((julianday('now') - julianday(spawned_at)) * 86400000 AS INTEGER) AS elapsed_ms
+FROM agent_lifecycle
+WHERE status IN ('spawned', 'running')
+ORDER BY spawned_at;
+
+-- Agent velocity (throughput per agent type)
+CREATE VIEW agent_velocity AS
+SELECT agent_type,
+       COUNT(*) AS total_agents,
+       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+       SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
+       AVG(CASE WHEN status = 'completed' THEN duration_ms ELSE NULL END) AS avg_duration_ms,
+       AVG(CASE WHEN status = 'completed' THEN idle_time_ms ELSE NULL END) AS avg_idle_ms
+FROM agent_lifecycle
+GROUP BY agent_type;
+
+-- Agent bottlenecks (slowest 100 agents)
+CREATE VIEW agent_bottlenecks AS
+SELECT agent_id, agent_type, task_id, priority_number, duration_ms, idle_time_ms,
+       spawned_at, completed_at,
+       CASE
+           WHEN idle_time_ms > duration_ms * 0.5 THEN 'High Idle Time'
+           WHEN duration_ms > 1800000 THEN 'Long Duration'  -- >30 min
+           ELSE 'Normal'
+       END AS bottleneck_type
+FROM agent_lifecycle
+WHERE status = 'completed' AND duration_ms IS NOT NULL
+ORDER BY duration_ms DESC
+LIMIT 100;
+
+-- Priority implementation timeline
+CREATE VIEW priority_timeline AS
+SELECT priority_number, agent_type,
+       MIN(spawned_at) AS first_spawn,
+       MAX(completed_at) AS last_completion,
+       COUNT(*) AS agent_count,
+       SUM(duration_ms) AS total_time_ms,
+       AVG(duration_ms) AS avg_time_ms
+FROM agent_lifecycle
+WHERE priority_number IS NOT NULL
+GROUP BY priority_number, agent_type
+ORDER BY priority_number;
+```
+
+**Agent Management - INTEGRATION**:
+
+```python
+# ✅ CORRECT: Write to database on agent spawn
+def _spawn_architect(self, priority_number: int, **kwargs):
+    process = subprocess.Popen(cmd, ...)
+
+    # Write to database (CFR-014)
+    with sqlite3.connect("data/orchestrator.db") as conn:
+        conn.execute("""
+            INSERT INTO agent_lifecycle
+            (pid, agent_type, task_id, priority_number, spawned_at, status, command)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            process.pid,
+            "architect",
+            f"spec-{priority_number}",
+            priority_number,
+            datetime.now().isoformat(),
+            "spawned",
+            " ".join(cmd)
+        ))
+
+    return {"pid": process.pid, "task_id": f"spec-{priority_number}"}
+
+# ✅ CORRECT: Update status transitions
+def _check_status(self, pid: int):
+    try:
+        os.kill(pid, 0)  # Check if running
+        status = "running"
+    except OSError:
+        status = "completed"
+
+    # Update database (CFR-014)
+    with sqlite3.connect("data/orchestrator.db") as conn:
+        if status == "completed":
+            conn.execute("""
+                UPDATE agent_lifecycle
+                SET completed_at = ?,
+                    status = 'completed',
+                    duration_ms = CAST((julianday(?) - julianday(spawned_at)) * 86400000 AS INTEGER)
+                WHERE pid = ?
+            """, (datetime.now().isoformat(), datetime.now().isoformat(), pid))
+
+    return {"pid": pid, "status": status}
+
+# ❌ FORBIDDEN: Write to JSON
+def _spawn_architect_wrong(self, priority_number: int):
+    process = subprocess.Popen(cmd, ...)
+
+    # CFR-014 VIOLATION: Writing to JSON
+    state = json.load(open("data/orchestrator/agent_state.json"))
+    state["active_agents"][str(process.pid)] = {
+        "pid": process.pid,
+        "agent_type": "architect",
+        "started_at": datetime.now().isoformat()
+    }
+    json.dump(state, open("data/orchestrator/agent_state.json", "w"))
+
+    # ❌ VIOLATION: No velocity tracking, no analytics, stale data accumulation
+```
+
+### Migration Path
+
+**Phase 1: Add Database Schema** (PRIORITY)
+```bash
+poetry run python coffee_maker/orchestrator/migrate_add_agent_lifecycle.py
+# Creates agent_lifecycle table and views in data/orchestrator.db
+```
+
+**Phase 2: Dual-Write (Database + JSON)**
+- Update `agent_management.py` to write to BOTH database and JSON
+- Allows gradual transition without breaking existing code
+- Database is source of truth, JSON is legacy compatibility
+
+**Phase 3: Read from Database**
+- Update `dashboard.py` to query SQLite instead of JSON
+- Update `_list_active_agents()` to use `active_agents` view
+- Verify accuracy with side-by-side comparison
+
+**Phase 4: Remove JSON Writes**
+- Stop writing to JSON files entirely
+- Archive historical `agent_state.json` for reference
+- Remove JSON-related code from `agent_management.py`
+
+**Phase 5: Clean Up**
+- Delete `data/orchestrator/agent_state.json`
+- Delete `data/orchestrator/work_loop_state.json`
+- Update documentation to reflect database-only approach
+
+### Data to Track (COMPREHENSIVE)
+
+| Data Category | What to Store | Where | Why |
+|--------------|--------------|-------|-----|
+| **Agent Lifecycle** | spawn, start, complete, fail, kill | `agent_lifecycle` table | Velocity, bottlenecks, reliability |
+| **Task Messages** | queue, running, completed, failed | `tasks` table (exists) | Inter-agent communication, task tracking |
+| **Performance Metrics** | duration, idle time, throughput | `agent_metrics` table (exists) | Performance analysis, optimization targets |
+| **Work Loop State** | iteration count, last_run, status | `orchestrator_state` table (new) | Orchestrator health monitoring |
+| **ROADMAP Cache** | priorities, statuses, specs | Database or files? | **QUESTION**: Should ROADMAP cache be in DB? |
+
+**ROADMAP Cache Decision**:
+- **Option A**: Keep in `work_loop_state.json` (read-only cache of ROADMAP.md)
+  - Rationale: ROADMAP.md is source of truth, JSON is just a cache
+  - Not "orchestrator state" but "ROADMAP snapshot"
+- **Option B**: Move to database (`roadmap_cache` table)
+  - Rationale: CFR-014 says "ALL orchestrator activities" → includes caching
+  - Enables SQL queries on ROADMAP data
+
+**Recommendation**: Option A (keep ROADMAP cache in JSON) - it's a read-only snapshot of markdown file, not orchestrator state. But ALL agent lifecycle, work loop state, metrics → database.
+
+### Example Queries (Business Intelligence)
+
+**Query 1: Architect velocity over time**
+```sql
+SELECT
+    strftime('%Y-%m-%d', spawned_at) AS day,
+    COUNT(*) AS specs_created,
+    AVG(duration_ms) / 60000 AS avg_duration_minutes
+FROM agent_lifecycle
+WHERE agent_type = 'architect' AND status = 'completed'
+GROUP BY day
+ORDER BY day DESC
+LIMIT 30;
+```
+
+**Query 2: Bottleneck priorities (slowest to implement)**
+```sql
+SELECT
+    priority_number,
+    COUNT(*) AS agent_count,
+    SUM(duration_ms) / 3600000 AS total_hours,
+    MAX(duration_ms) / 60000 AS max_agent_minutes
+FROM agent_lifecycle
+WHERE priority_number IS NOT NULL AND status = 'completed'
+GROUP BY priority_number
+HAVING total_hours > 2  -- Priorities taking >2 hours
+ORDER BY total_hours DESC;
+```
+
+**Query 3: Agent reliability (success rate)**
+```sql
+SELECT
+    agent_type,
+    COUNT(*) AS total,
+    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
+    ROUND(100.0 * SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) / COUNT(*), 2) AS success_rate_pct
+FROM agent_lifecycle
+WHERE status IN ('completed', 'failed')
+GROUP BY agent_type
+ORDER BY success_rate_pct DESC;
+```
+
+**Query 4: Current active agents (real-time)**
+```sql
+SELECT pid, agent_type, task_id, priority_number,
+       elapsed_ms / 60000 AS elapsed_minutes
+FROM active_agents
+ORDER BY elapsed_ms DESC;
+```
+
+**Query 5: Idle time analysis (orchestrator inefficiency)**
+```sql
+SELECT
+    agent_type,
+    AVG(idle_time_ms) / 1000 AS avg_idle_seconds,
+    MAX(idle_time_ms) / 1000 AS max_idle_seconds,
+    COUNT(*) AS agent_count
+FROM agent_lifecycle
+WHERE idle_time_ms IS NOT NULL
+GROUP BY agent_type
+HAVING avg_idle_seconds > 5  -- More than 5 seconds idle
+ORDER BY avg_idle_seconds DESC;
+```
+
+### CLI Commands (NEW)
+
+**`orchestrator velocity`** - Show velocity report
+```bash
+$ poetry run orchestrator velocity
+
+Orchestrator Velocity Report (Last 7 Days)
+==========================================
+
+Agent Type       | Total | Completed | Failed | Avg Duration | Success Rate
+----------------|-------|-----------|--------|--------------|-------------
+architect        |    15 |        14 |      1 |    12.3 min  |   93.3%
+code_developer   |    42 |        38 |      4 |    45.7 min  |   90.5%
+project_manager  |     8 |         8 |      0 |     3.2 min  |  100.0%
+
+Overall Throughput: 6.5 agents/day
+Avg Implementation Time: 38.4 minutes
+```
+
+**`orchestrator bottlenecks`** - Show slowest priorities/agents
+```bash
+$ poetry run orchestrator bottlenecks
+
+Top 10 Slowest Priorities (By Total Time)
+==========================================
+
+Priority | Agent Count | Total Time | Avg Time | Bottleneck
+---------|-------------|------------|----------|------------
+US-072   |     12      |   8.5 hrs  | 42.5 min | Long Duration
+US-047   |      6      |   4.2 hrs  | 42.0 min | High Idle Time
+US-035   |      8      |   3.8 hrs  | 28.5 min | Normal
+```
+
+**`orchestrator status`** - Show real-time active agents
+```bash
+$ poetry run orchestrator status
+
+Active Agents (2 running)
+=========================
+
+PID    | Agent Type      | Task ID      | Priority | Elapsed
+-------|----------------|--------------|----------|--------
+91255  | code_developer | impl-108     | 108      | 12.5 min
+91344  | architect      | spec-110     | 110      |  3.2 min
+```
+
+### Acceptance Criteria
+
+1. ✅ `agent_lifecycle` table exists in `data/orchestrator.db`
+2. ✅ All required views created (`active_agents`, `agent_velocity`, `agent_bottlenecks`, `priority_timeline`)
+3. ✅ All agent spawns write lifecycle record to database
+4. ✅ All status transitions update database
+5. ✅ Dashboard queries database instead of JSON
+6. ✅ `agent_state.json` deleted or archived
+7. ✅ CLI commands for velocity/bottlenecks implemented
+8. ✅ Historical data migrated from JSON to SQLite
+9. ✅ Zero writes to JSON files (read-only during migration only)
+10. ✅ Analytics queries return accurate results
+
+### Exceptions
+
+**ALLOWED: JSON for ROADMAP Cache**
+- `work_loop_state.json` can contain `roadmap_cache` field
+- Rationale: Read-only snapshot of `ROADMAP.md`, not orchestrator state
+- Source of truth is still `docs/roadmap/ROADMAP.md`
+
+**FORBIDDEN: JSON for Agent State**
+- `agent_state.json` MUST be deleted after migration
+- No exceptions for "temporary" JSON storage
+- Database is the ONLY source of truth for agent lifecycle
+
+### Relationship to Other CFRs
+
+**CFR-000 (Prevent File Conflicts)**: Database provides ACID transactions, prevents race conditions
+**CFR-001 (Document Ownership)**: orchestrator owns `data/orchestrator.db`, no conflicts
+**CFR-006 (Lessons Learned)**: Velocity metrics help identify recurring bottlenecks to document
+**CFR-011 (Architect Daily Review)**: Architect can query agent performance data for review
+
+### Success Metrics
+
+- **Data Accuracy**: Dashboard shows exact count of running agents (verified with `ps`)
+- **Query Performance**: All analytics queries return results in <100ms
+- **Historical Data**: Retain 30+ days of agent lifecycle data
+- **Zero Stale Data**: No "running" agents that are actually dead
+- **Business Intelligence**: Team can answer velocity/bottleneck questions with SQL
+
+**Enforcement**: Code-level validation before agent spawn, status check
+**Monitoring**: Track database size, query performance, data staleness
+**User Story**: US-110: Orchestrator Database Tracing (this CFR)
+**Related Spec**: SPEC-110: Orchestrator Database Tracing
+
+---
+
 ## Agent File Access Patterns
 
 **Purpose**: Agents should KNOW which files to read, not search for them.
