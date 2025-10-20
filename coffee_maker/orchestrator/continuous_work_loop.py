@@ -556,11 +556,19 @@ class ContinuousWorkLoop:
             logger.info("No planned priorities with specs, code_developer idle")
             return
 
-        # Check if any work already in progress
-        active_impl_count = sum(1 for key in self.current_state.get("active_tasks", {}) if key.startswith("impl_"))
+        # Check if any work already in progress (query database, not in-memory state)
+        # BUG-070 fix: Must query database because in-memory state clears on restart
+        result = self.agent_mgmt.execute(action="list_active_agents", include_completed=False)
+
+        if result.get("error"):
+            logger.error(f"Failed to check active agents: {result['error']}")
+            return
+
+        active_agents = result.get("result", {}).get("active_agents", [])
+        active_impl_count = sum(1 for agent in active_agents if agent.get("task_type") == "implementation")
 
         if active_impl_count > 0:
-            logger.debug(f"{active_impl_count} implementations already in progress")
+            logger.debug(f"{active_impl_count} implementations already in progress (database check)")
             return
 
         # Try parallel execution (2-3 priorities)
