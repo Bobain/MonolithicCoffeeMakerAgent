@@ -29256,17 +29256,74 @@ The agent definition files contain comprehensive startup skills documentation th
 
 ---
 
-### US-061: Architect + Project_Manager: Design Decision on Reflector & Curator Agent-to-Skill Conversion 📝 Planned
+### US-061: Architect + Project_Manager: Design Decision on Reflector & Curator Agent-to-Skill Conversion ✅ Complete
 
-**Status**: 📝 Planned - HIGHEST PRIORITY ⭐⭐⭐
+**Status**: ✅ Complete
 
 **Created**: 2025-10-18
+
+**Completed**: 2025-10-20
 
 **Approved**: 2025-10-18 (User approval obtained)
 
 **Decision**: **Reflector and Curator REMAIN AS AGENTS** (ADR-010 approved by user)
 
 **Estimated Effort**: 8-12 hours (collaborative analysis + ADR creation)
+
+**Actual Effort**: ~10 hours (comprehensive ADR with detailed analysis)
+
+**Completion Summary**:
+
+**Deliverables Completed**:
+1. ✅ **ADR-010**: Comprehensive architecture decision document created
+   - File: `docs/architecture/decisions/ADR-010-reflector-curator-agent-vs-skill.md`
+   - Decision: **Reflector and Curator REMAIN AS AGENTS** (not skills)
+   - 818 lines of detailed analysis and justification
+
+2. ✅ **Decision Matrix**: Complete comparison of Generator vs. Reflector vs. Curator
+   - Evaluated by: Frequency, Autonomy, State, Inter-Agent Communication
+   - Clear differences identified between trace-execution skill pattern and agent pattern
+
+3. ✅ **4 Options Considered**:
+   - Option 1: Keep both as agents (RECOMMENDED ✅)
+   - Option 2: Convert both to skills (Rejected - invocation pattern mismatch)
+   - Option 3: Hybrid approach (Rejected - inconsistent design)
+   - Option 4: Merge into one agent (Rejected - violates single responsibility)
+
+4. ✅ **Implementation Plan**: 6 phases defined (27 hours total effort)
+   - Phase 1: Clarify current state (1 hour)
+   - Phase 2: Design Reflector agent (2 hours)
+   - Phase 3: Implement Reflector agent (8 hours)
+   - Phase 4: Design Curator agent (2 hours)
+   - Phase 5: Implement Curator agent (10 hours)
+   - Phase 6: Integration & testing (4 hours)
+
+5. ✅ **User Approval**: Obtained 2025-10-18
+
+**Key Findings**:
+
+**Why Reflector/Curator Must Remain Agents**:
+1. **Cross-agent analysis**: They analyze work from ALL agents (N:1 relationship), not just one agent (1:1 like trace-execution)
+2. **Independent scheduling**: Need periodic execution (daily/weekly), not embedded in other agents' workflows
+3. **Clear ownership**: Own docs/reflector/ and docs/curator/ directories
+4. **Strategic function**: Make priority recommendations, calculate ROI, maintain playbooks
+5. **Invocation pattern mismatch**: Skills are embedded (trace-execution), agents are independent (Reflector/Curator)
+
+**Architectural Principle Established**:
+
+| Use SKILL when... | Use AGENT when... |
+|-------------------|-------------------|
+| Execution context already available | Must gather context from multiple sources |
+| 1:1 relationship (agent → skill) | N:1 relationship (many inputs → one analysis) |
+| Embedded in another agent's workflow | Independent execution required |
+| Tactical operation (logging, validation) | Strategic operation (analysis, planning) |
+| Real-time (during execution) | Periodic (scheduled or on-demand) |
+| No ownership needed | Clear ownership required (documents, artifacts) |
+
+**Impact**:
+- ACE framework architecture finalized: trace-execution (skill) + Reflector (agent) + Curator (agent)
+- 7 total agents confirmed (5 core + Reflector + Curator)
+- Clear path forward for US-065 (Reflector implementation) and US-066 (Curator implementation)
 
 **User Story**:
 As a system architect and project manager, we need to analyze whether Reflector and Curator agents should be converted to skills (like generator was), so that we can optimize the ACE framework architecture based on data-driven analysis.
@@ -29399,43 +29456,43 @@ Recommendation    | SKILL ✅   | ?         | ?
 **Acceptance Criteria**:
 
 **Analysis Phase**:
-- [ ] Reflector implementation analyzed (current code reviewed)
-- [ ] Curator implementation analyzed (current code reviewed)
-- [ ] Decision matrix completed (all criteria evaluated)
-- [ ] Generator conversion lessons documented
-- [ ] Benefits/drawbacks listed for each option
+- [x] Reflector implementation analyzed (current code reviewed)
+- [x] Curator implementation analyzed (current code reviewed)
+- [x] Decision matrix completed (all criteria evaluated)
+- [x] Generator conversion lessons documented
+- [x] Benefits/drawbacks listed for each option
 
 **Architect Analysis**:
-- [ ] Technical architecture recommendation prepared
-- [ ] Component reuse analysis complete
-- [ ] Conversion complexity assessed
-- [ ] Integration implications documented
+- [x] Technical architecture recommendation prepared
+- [x] Component reuse analysis complete
+- [x] Conversion complexity assessed
+- [x] Integration implications documented
 
 **project_manager Analysis**:
-- [ ] Operational complexity analysis complete
-- [ ] Observability requirements documented
-- [ ] User experience impact assessed
-- [ ] Resource/cost analysis prepared
+- [x] Operational complexity analysis complete
+- [x] Observability requirements documented
+- [x] User experience impact assessed
+- [x] Resource/cost analysis prepared
 
 **Collaborative Decision**:
-- [ ] architect and project_manager discuss findings
-- [ ] Conflicts resolved (if any)
-- [ ] Consensus reached on recommendation
-- [ ] Clear rationale documented
+- [x] architect and project_manager discuss findings
+- [x] Conflicts resolved (if any)
+- [x] Consensus reached on recommendation
+- [x] Clear rationale documented
 
 **ADR Creation**:
-- [ ] ADR-0XX created in `docs/architecture/decisions/`
-- [ ] Decision clearly stated: Keep agents OR convert to skills
-- [ ] Rationale comprehensive and evidence-based
-- [ ] Consequences (benefits/trade-offs) documented
-- [ ] Implementation plan included (if conversion recommended)
-- [ ] Alternatives considered section complete
+- [x] ADR-010 created in `docs/architecture/decisions/ADR-010-reflector-curator-agent-vs-skill.md`
+- [x] Decision clearly stated: Keep agents (Reflector and Curator REMAIN AS AGENTS)
+- [x] Rationale comprehensive and evidence-based
+- [x] Consequences (benefits/trade-offs) documented
+- [x] Implementation plan included (Phases 1-6 for Reflector and Curator implementation)
+- [x] Alternatives considered section complete
 
 **Quality**:
-- [ ] User approval obtained for final decision
-- [ ] ADR follows standard format
-- [ ] Evidence-based (not subjective opinions)
-- [ ] Implementation plan realistic and achievable
+- [x] User approval obtained for final decision (2025-10-18)
+- [x] ADR follows standard format
+- [x] Evidence-based (not subjective opinions)
+- [x] Implementation plan realistic and achievable
 
 **Deliverables**:
 
