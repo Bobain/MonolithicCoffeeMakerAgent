@@ -47,14 +47,14 @@ class OrchestratorDashboard:
         self.console = Console()
         self.agent_mgmt = OrchestratorAgentManagementSkill()
         self.state_file = state_file or Path("data/orchestrator/work_loop_state.json")
-        self.start_time = datetime.now()
 
-        # Load ROADMAP cache
+        # Load ROADMAP cache and get orchestrator start time
         self.roadmap_cache: Optional[Dict[str, Any]] = None
+        self.start_time = None
         self._load_roadmap_cache()
 
     def _load_roadmap_cache(self):
-        """Load ROADMAP cache from state file."""
+        """Load ROADMAP cache and orchestrator start time from state file."""
         if not self.state_file.exists():
             return
 
@@ -62,8 +62,21 @@ class OrchestratorDashboard:
             with open(self.state_file, "r") as f:
                 state = json.load(f)
                 self.roadmap_cache = state.get("roadmap_cache")
+
+                # Try to get orchestrator start time from state
+                if "orchestrator_start_time" in state:
+                    self.start_time = datetime.fromisoformat(state["orchestrator_start_time"])
+                elif "last_updated" in state:
+                    # Fallback: use last_updated as a proxy
+                    self.start_time = datetime.fromisoformat(state["last_updated"])
+                else:
+                    # No timestamp available, use current time
+                    self.start_time = datetime.now()
+
         except Exception as e:
             logger.warning(f"Failed to load ROADMAP cache: {e}")
+            if not self.start_time:
+                self.start_time = datetime.now()
 
     def _make_system_overview(self) -> Panel:
         """Create system overview panel.
@@ -71,10 +84,14 @@ class OrchestratorDashboard:
         Returns:
             Rich Panel with system metrics
         """
-        uptime = datetime.now() - self.start_time
-        uptime_str = str(uptime).split(".")[0]  # Remove microseconds
+        # Calculate uptime (handle None case)
+        if self.start_time:
+            uptime = datetime.now() - self.start_time
+            uptime_str = str(uptime).split(".")[0]  # Remove microseconds
+        else:
+            uptime_str = "Unknown"
 
-        # Get active agents count
+        # Get active agents count (only running agents)
         active_result = self.agent_mgmt.execute(action="list_active_agents")
         active_count = active_result.get("result", {}).get("total", 0) if not active_result.get("error") else 0
 
@@ -85,7 +102,7 @@ class OrchestratorDashboard:
         overview = Text()
         overview.append("🤖 Orchestrator Status\n", style="bold cyan")
         overview.append(f"Uptime: {uptime_str}\n", style="white")
-        overview.append(f"Active Agents: {active_count}\n", style="green" if active_count > 0 else "yellow")
+        overview.append(f"Running Agents: {active_count}\n", style="green" if active_count > 0 else "yellow")
         overview.append(f"ROADMAP Health: {roadmap_stats['health']}\n", style=roadmap_stats["health_style"])
         overview.append(f"Priorities: {roadmap_stats['completed']}/{roadmap_stats['total']} completed\n", style="white")
 
@@ -134,12 +151,12 @@ class OrchestratorDashboard:
         }
 
     def _make_agents_table(self) -> Table:
-        """Create active agents table.
+        """Create running agents table.
 
         Returns:
             Rich Table with agent details
         """
-        table = Table(title="Active Agents", show_header=True, header_style="bold magenta")
+        table = Table(title="Running Agents", show_header=True, header_style="bold magenta")
         table.add_column("PID", style="cyan", width=8)
         table.add_column("Agent Type", style="yellow", width=18)
         table.add_column("Task ID", style="white", width=20)
@@ -156,7 +173,7 @@ class OrchestratorDashboard:
         active_agents = result.get("result", {}).get("active_agents", [])
 
         if not active_agents:
-            table.add_row("—", "No active agents", "—", "—", "—")
+            table.add_row("—", "No running agents", "—", "—", "—")
             return table
 
         for agent in active_agents:

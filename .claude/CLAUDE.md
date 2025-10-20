@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**MonolithicCoffeeMakerAgent** is an autonomous software development system featuring multiple AI agents that work together to implement features, manage projects, and provide assistance.
+**MonolithicCoffeeMakerAgent** is an autonomous software development system with multiple AI agents working together to implement features, manage projects, and provide assistance.
 
 **Key Philosophy**: Autonomous, observable, multi-AI provider support
 
@@ -10,14 +10,18 @@
 
 ## Core Agents
 
-- **user_listener**: PRIMARY USER INTERFACE - Interprets user intent and delegates to team (ONLY agent with UI)
-- **architect**: Architectural design and technical specifications (interacts through user_listener)
-- **code_developer**: Autonomous implementation of priorities from ROADMAP
-- **project_manager**: Project coordination, notifications, status tracking, GitHub monitoring (backend only)
-- **assistant**: Documentation expert, intelligent dispatcher, demo creator, and bug reporter
-- **code-searcher**: Deep codebase analysis and forensic examination
-- **ux-design-expert**: UI/UX design guidance and Tailwind CSS
-- **code-reviewer**: Automated quality assurance, reviews code_developer commits, notifies architect
+| Agent | Role | Interaction |
+|-------|------|-------------|
+| **user_listener** | PRIMARY USER INTERFACE - Only agent with UI | Direct user interaction |
+| **architect** | Architectural design, specs, ADRs, dependencies | Through user_listener |
+| **code_developer** | Autonomous implementation from ROADMAP | Backend only |
+| **project_manager** | Project coordination, GitHub monitoring, notifications | Backend only |
+| **assistant** | Documentation expert, intelligent dispatcher, demo creator | Mixed |
+| **code-searcher** | Deep codebase analysis and forensic examination | Backend only |
+| **ux-design-expert** | UI/UX design guidance and Tailwind CSS | Through user_listener |
+| **code-reviewer** | Automated QA, reviews commits, notifies architect | Backend only |
+
+**See [docs/AGENT_OWNERSHIP.md](../docs/AGENT_OWNERSHIP.md) for complete agent boundaries and responsibilities.**
 
 ---
 
@@ -25,208 +29,76 @@
 
 ```
 MonolithicCoffeeMakerAgent/
-├── .claude/
-│   ├── CLAUDE.md                    # This file (instructions)
-│   ├── commands/                    # Centralized prompts
-│   ├── skills/                      # Claude Skills (Phase 2)
-│   ├── mcp/                         # MCP server configs
-│   └── settings.local.json
-│
+├── .claude/                         # Claude Code configuration
+│   ├── commands/                    # Centralized prompts (MANDATORY location)
+│   └── skills/                      # Claude Skills
 ├── docs/
-│   ├── roadmap/                     # Project planning (project_manager)
-│   │   ├── ROADMAP.md               # Master task list
-│   │   └── PRIORITY_*_STRATEGIC_SPEC.md
-│   ├── architecture/                # Technical design (architect)
-│   │   ├── specs/                   # Technical specifications
-│   │   ├── decisions/               # ADRs
-│   │   ├── guidelines/              # Implementation guidelines
-│   │   └── pocs/                    # Proof-of-Concepts
-│   ├── WORKFLOWS.md                 # Detailed workflows
-│   └── AGENT_OWNERSHIP.md           # Agent responsibilities
-│
-├── coffee_maker/                    # All implementation (code_developer)
-│   ├── autonomous/                  # Daemon and agents
-│   ├── cli/                         # CLI commands
-│   └── utils/                       # Utilities
-│
-└── tests/                           # All test code (code_developer)
+│   ├── roadmap/ROADMAP.md          # Master task list (project_manager)
+│   ├── architecture/               # Specs, ADRs, guidelines, POCs (architect)
+│   ├── WORKFLOWS.md                # Detailed workflows
+│   └── AGENT_OWNERSHIP.md          # Agent responsibilities
+├── coffee_maker/                   # All implementation (code_developer)
+└── tests/                          # All test code (code_developer)
 ```
 
 ---
 
-## Critical Coding Standards
+## Critical Standards (MANDATORY)
 
-### Python Style ⭐ **MANDATORY**
-- **Style Guide**: `.gemini/styleguide.md` - ALL code MUST follow this guide
-- **Formatter**: Black (enforced by pre-commit hooks)
-- **Type Hints**: REQUIRED for all functions
-- **Docstrings**: Google style with triple double quotes
-- **Line Length**: 120 characters
-- See `.gemini/styleguide.md` for complete details
+### Python Style
+- **Follow**: `.gemini/styleguide.md` - ALL code MUST comply
+- **Black formatting**: Enforced by pre-commit hooks
+- **Type hints**: Required for all functions
+- **Line length**: 120 characters
 
 ### Architecture Patterns
-- **Mixins**: Daemon uses composition with mixins
-- **Singletons**: Critical resources use singleton pattern (AgentRegistry, HTTPConnectionPool, GlobalRateTracker)
-- **Observability**: Use Langfuse decorators for tracking
-- **Error Handling**: Defensive programming, validate inputs, handle None gracefully
+- **Mixins**: Use composition (daemon uses mixins pattern)
+- **Singletons**: AgentRegistry, HTTPConnectionPool, GlobalRateTracker (use context manager)
+- **Observability**: Langfuse decorators for tracking
 
-### Singleton Pattern (US-035)
-**CRITICAL**: Only ONE instance of each agent type can run at a time.
+### Key Rules (CFRs)
 
-```python
-# ✅ RECOMMENDED: Use context manager
-from coffee_maker.autonomous.agent_registry import AgentRegistry, AgentType
+**CFR-007 - Context Budget**: Agent core materials MUST fit in ≤30% of context window
+- See `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` for remediation strategies
 
-with AgentRegistry.register(AgentType.CODE_DEVELOPER):
-    # Agent work here - automatically unregistered on exit
-    pass
-```
+**CFR-009 - Sound Notifications**: ONLY `user_listener` uses `sound=True`. All background agents MUST use `sound=False`
 
-### Prompt Management
-**IMPORTANT**: All prompts MUST go in `.claude/commands/`
+**CFR-013 - Git Workflow**: ALL agents work on `roadmap` branch ONLY. NO feature branches.
+- See [GUIDELINE-004](../docs/architecture/guidelines/GUIDELINE-004-git-tagging-workflow.md) for tagging
 
-```python
-# ✅ DO: Use centralized prompts
-from coffee_maker.autonomous.prompt_loader import load_prompt, PromptNames
+### Prompts
+- **Location**: `.claude/commands/` (centralized, MANDATORY)
+- **Usage**: `load_prompt(PromptNames.X, {...})` from `coffee_maker.autonomous.prompt_loader`
 
-prompt = load_prompt(PromptNames.CREATE_TECHNICAL_SPEC, {
-    "PRIORITY_NAME": priority_name,
-    "SPEC_FILENAME": spec_filename,
-    "PRIORITY_CONTEXT": context
-})
-```
+### Dependencies
+- **Three-tier approval**: See [SPEC-070](../docs/architecture/specs/SPEC-070-dependency-pre-approval-matrix.md)
+- **CLI check**: `poetry run project-manager check-dependency <package>`
 
-### Git Workflow (CFR-013)
-- **Branch**: `roadmap` ONLY - ALL agents work on roadmap branch
-- **NO Feature Branches**: Agents cannot create or switch to feature/* branches
-- **Commits**: Descriptive messages with 🤖 footer
-- **Tags**: See [GUIDELINE-004](../docs/architecture/guidelines/GUIDELINE-004-git-tagging-workflow.md)
-  - `wip-*`: code_developer marks implementation complete
-  - `dod-verified-*`: project_manager marks DoD verified
-  - `stable-v*.*.*`: Production-ready releases
-
-### Dependency Management (ADR-013)
-**Three-tier approval system** - See [SPEC-070](../docs/architecture/specs/SPEC-070-dependency-pre-approval-matrix.md)
-
-```python
-from coffee_maker.utils.dependency_checker import DependencyChecker, ApprovalStatus
-
-checker = DependencyChecker()
-status = checker.get_approval_status("package-name")
-
-if status == ApprovalStatus.PRE_APPROVED:
-    # Auto-approve (63 packages: pytest, black, langfuse, etc.)
-    subprocess.run(["poetry", "add", "package-name"])
-elif status == ApprovalStatus.NEEDS_REVIEW:
-    # Delegate to architect (requires user approval)
-elif status == ApprovalStatus.BANNED:
-    # Reject with alternatives
-```
-
-**CLI Check**:
-```bash
-poetry run project-manager check-dependency package-name
-```
-
-### Sound Notifications (CFR-009)
-**CRITICAL**: ONLY user_listener can use sound notifications. All background agents MUST use `sound=False`.
-
-```python
-# ✅ CORRECT (background agents: code_developer, architect, project_manager, assistant)
-self.notifications.create_notification(
-    title="Task Complete",
-    message="PRIORITY 13 implemented",
-    level="info",
-    sound=False,  # Silent for background work
-    agent_id="code_developer"
-)
-
-# ✅ CORRECT (user_listener only)
-self.notifications.create_notification(
-    title="User Action Required",
-    message="Please review PR #123",
-    level="high",
-    sound=True,  # Sound allowed for user interaction
-    agent_id="user_listener"
-)
-```
-
-### POC Management (US-050, SPEC-050)
-**When to Create**: architect creates Proof of Concept (POC) implementations for complex features (>2 days OR high complexity)
-
-**POC Purpose**:
-- Validate technical approach before full implementation
-- Reduce implementation risk for complex features
-- Provide working reference code for code_developer
-- Prove feasibility of novel patterns
-
-**Decision Matrix**:
-```
-Effort >16 hours (>2 days) + Complexity = High  → ✅ POC REQUIRED
-Effort >16 hours + Complexity = Medium          → ⚠️ MAYBE (default: no)
-All other cases                                  → ❌ NO POC
-```
-
-**Complexity = High** if ANY apply:
-- Novel architectural pattern
-- External system integration (GitHub API, Puppeteer, databases)
-- Multi-process or async complexity
-- Performance-critical (caching, rate limiting)
-- Security-sensitive (auth, authorization, data protection)
-- Cross-cutting concerns (affects multiple agents)
-
-**POC Structure**:
-```
-docs/architecture/pocs/POC-{number}-{feature-slug}/
-├── README.md              # POC overview (REQUIRED)
-├── {component}.py         # Minimal implementation (20-30% scope)
-├── test_poc.py            # Basic tests proving it works (REQUIRED)
-└── requirements.txt       # POC-specific dependencies (OPTIONAL)
-```
-
-**Creating POCs**:
-```bash
-# Template available at
-docs/architecture/pocs/POC-000-template/
-
-# See full guide
-docs/architecture/POC_CREATION_GUIDE.md
-```
-
-**Example**: POC-072 (Multi-Agent Orchestration) - Proved subprocess spawning, message passing, health monitoring worked before 15-20 hour implementation
-
-**Important**: POCs are minimal (20-30% scope), NOT production code. code_developer uses POC as reference only, NOT copy-paste.
+### POCs (Proof of Concepts)
+- **When**: Complex features (>2 days OR high complexity)
+- **Location**: `docs/architecture/pocs/POC-{number}-{slug}/`
+- **Guide**: See [docs/architecture/POC_CREATION_GUIDE.md](../docs/architecture/POC_CREATION_GUIDE.md)
+- **Spec**: [SPEC-050](../docs/architecture/specs/SPEC-050-poc-management-and-workflow.md)
 
 ---
 
-## 🚀 Running the System
-
-### Start Autonomous Daemon
+## Running the System
 
 ```bash
+# Start autonomous daemon
 poetry run code-developer --auto-approve
-```
 
-**What this does:**
-- 🤖 Autonomous Mode: code_developer works continuously
-- 📋 Implements ROADMAP: Automatically picks next priority
-- ✅ Auto-Approve: Makes implementation decisions automatically
-- 🌿 CFR-013 Compliant: All work on `roadmap` branch only
-
-**Monitor progress:**
-```bash
+# Monitor progress
 poetry run project-manager developer-status
 poetry run project-manager notifications
 poetry run project-manager /roadmap
 ```
 
-**Stop the daemon:** Press `Ctrl+C`
-
 ---
 
-## Key Workflows
+## Workflows
 
-**See [docs/WORKFLOWS.md](../docs/WORKFLOWS.md) for detailed workflows:**
+**See [docs/WORKFLOWS.md](../docs/WORKFLOWS.md) for all detailed workflows:**
 
 1. Implementing a New Priority
 2. Adding a New Prompt
@@ -238,37 +110,15 @@ poetry run project-manager /roadmap
 
 **Quick Commands:**
 ```bash
-# Run tests
-pytest
-
-# Format code
-black .
-
-# Check ROADMAP
-poetry run project-manager /roadmap
-
-# Pre-commit hooks
-pre-commit run --all-files
+pytest                              # Run tests
+black .                             # Format code
+poetry run project-manager /roadmap # Check ROADMAP
+pre-commit run --all-files         # Run all hooks
 ```
 
 ---
 
-## Agent Ownership & Boundaries
-
-**See [docs/AGENT_OWNERSHIP.md](../docs/AGENT_OWNERSHIP.md) for complete details.**
-
-### Quick Reference
-
-| Agent | Primary Responsibility | Cannot Do |
-|-------|----------------------|-----------|
-| **user_listener** | ONLY UI agent | Backend tasks |
-| **architect** | Specs, ADRs, dependencies | Code implementation |
-| **code_developer** | Code, .claude/ configs | Strategic docs, dependencies |
-| **project_manager** | docs/roadmap/, GitHub | Code, .claude/, architecture |
-| **assistant** | Docs expert, dispatcher, demos, QA | Code editing, strategic decisions |
-| **code-searcher** | Deep code analysis | Writing docs directly |
-
-### Decision Framework
+## Agent Decision Framework
 
 ```
 "Who should handle X?"
@@ -285,75 +135,46 @@ Implementation? → code_developer
 
 ---
 
-## Important Context
+## Implementation Checklist
 
-### Context Budget (CFR-007) ⭐ CRITICAL
-**Agent core materials must fit in ≤30% of context window.** This ensures agents have room to work (70% remaining for files, analysis, and responses). See `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` CFR-007 for remediation strategies.
+When implementing features:
 
-### Key Systems
-
-1. **Prompt Management**: `.claude/commands/` (centralized), Langfuse (Phase 2 - planned)
-2. **MCP Integration**: Puppeteer for browser automation
-3. **Claude Skills**: Automated capabilities (roadmap-health, architecture-analysis, demo-creator, security-audit, etc.)
-4. **Observability**: Langfuse tracking for all executions
+1. **Check ROADMAP first**: `docs/roadmap/ROADMAP.md`
+2. **Find specs**: Strategic (`docs/roadmap/PRIORITY_*`) and technical (`docs/architecture/specs/SPEC-*`)
+3. **Use centralized prompts**: Load from `.claude/commands/`
+4. **Follow patterns**: Mixins, singletons, defensive programming
+5. **Commit properly**: Descriptive message + 🤖 footer + Co-Authored-By
 
 ---
 
-## Special Instructions for Claude
+## Key Systems
 
-### When Implementing Features
-1. **Check ROADMAP first**: `docs/roadmap/ROADMAP.md`
-2. **Look for specs**: Strategic (`docs/roadmap/PRIORITY_*`) and technical (`docs/architecture/specs/SPEC-*`)
-3. **Use centralized prompts**: Load from `.claude/commands/`
-4. **Follow mixins pattern**: Don't create monolithic files
-5. **Update status**: Use DeveloperStatus class
-
-### When Creating Prompts
-1. **Save to**: `.claude/commands/`
-2. **Use placeholders**: `$VARIABLE_NAME` format
-3. **Add to PromptNames**: In `prompt_loader.py`
-
-### When Committing
-1. **Descriptive message**: Explain what and why
-2. **Include footer**: 🤖 Generated with Claude Code
-3. **Co-author**: `Co-Authored-By: Claude <noreply@anthropic.com>`
-4. **Tag appropriately**: See GUIDELINE-004 for git tagging workflow
+1. **Prompt Management**: `.claude/commands/` (centralized)
+2. **MCP Integration**: Puppeteer for browser automation
+3. **Claude Skills**: Automated capabilities (in `.claude/skills/`)
+4. **Observability**: Langfuse tracking for all executions
 
 ---
 
 ## Multi-AI Provider Support
 
-This project is designed to work with **multiple AI providers** (Claude, Gemini, OpenAI).
-
-**Migration Path**:
-```python
-# Works with ANY provider
-prompt = load_prompt(PromptNames.IMPLEMENT_FEATURE, {...})
-
-# Provider-specific execution
-result = provider.execute(prompt)  # Claude, Gemini, or OpenAI
-```
+Designed to work with multiple AI providers (Claude, Gemini, OpenAI). All prompts use centralized loading system for provider-agnostic execution.
 
 ---
 
-## Quick Troubleshooting
+## Quick Reference
 
 | Question | Answer |
 |----------|--------|
-| Where are the prompts? | `.claude/commands/*.md` |
-| Where's the ROADMAP? | `docs/roadmap/ROADMAP.md` |
-| How do I check daemon status? | `poetry run project-manager developer-status` |
-| Tests failing? | `pre-commit run --all-files` |
-| Detailed workflows? | See `docs/WORKFLOWS.md` |
-| Agent responsibilities? | See `docs/AGENT_OWNERSHIP.md` |
+| Where are prompts? | `.claude/commands/*.md` |
+| Where's ROADMAP? | `docs/roadmap/ROADMAP.md` |
+| Style guide? | `.gemini/styleguide.md` |
+| Agent boundaries? | `docs/AGENT_OWNERSHIP.md` |
+| Workflows? | `docs/WORKFLOWS.md` |
+| Daemon status? | `poetry run project-manager developer-status` |
 
 ---
 
-## Version
+**Last Updated**: 2025-10-20 | **Status**: Production ✅
 
-**Last Updated**: 2025-10-19
-**Status**: Production ✅
-
----
-
-**Remember**: This project emphasizes autonomy, observability, and multi-provider support. Keep prompts centralized, track everything, and design for flexibility! 🚀
+**Remember**: Autonomy, observability, multi-provider support. Keep prompts centralized, track everything, design for flexibility.

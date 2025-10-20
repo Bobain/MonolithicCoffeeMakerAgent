@@ -683,6 +683,25 @@
       "command": "poetry run project-manager auto-plan --auto-approve",
       "started_at": "2025-10-20T09:40:28.596861",
       "status": "running"
+    },
+    "88687": {
+      "pid": 88687,
+      "agent_type": "architect",
+      "task_id": "refactoring_analysis-1760950112",
+      "task_type": "refactoring_analysis",
+      "priority_number": null,
+      "command": "poetry run architect --auto-approve",
+      "started_at": "2025-10-20T10:48:32.742212",
+      "status": "running"
+    },
+    "88688": {
+      "pid": 88688,
+      "agent_type": "project_manager",
+      "task_id": "planning-1760950112",
+      "task_type": "auto_planning",
+      "command": "poetry run project-manager auto-plan --auto-approve",
+      "started_at": "2025-10-20T10:48:32.744666",
+      "status": "running"
     }
   },
   "completed_agents": []

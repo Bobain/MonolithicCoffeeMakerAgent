@@ -321,14 +321,18 @@ class OrchestratorAgentManagementSkill:
 
         return {"error": None, "result": result}
 
-    def _list_active_agents(self, **kwargs) -> Dict[str, Any]:
+    def _list_active_agents(self, include_completed: bool = False, **kwargs) -> Dict[str, Any]:
         """
-        List all active agents.
+        List all active agents with auto-cleanup of completed agents.
+
+        Args:
+            include_completed: If True, include completed agents (default: False)
 
         Returns:
             List of active agents with status
         """
         active_agents = []
+        completed_pids = []
 
         for pid_str, agent_info in list(self.state["active_agents"].items()):
             pid = int(pid_str)
@@ -339,21 +343,42 @@ class OrchestratorAgentManagementSkill:
                 status = "running"
             except OSError:
                 status = "completed"
+                completed_pids.append(pid_str)
 
             # Calculate duration
             started_at = datetime.fromisoformat(agent_info["started_at"])
             duration = (datetime.now() - started_at).total_seconds()
 
-            active_agents.append(
-                {
-                    "pid": pid,
-                    "agent_type": agent_info["agent_type"],
-                    "task_id": agent_info["task_id"],
-                    "status": status,
-                    "started_at": agent_info["started_at"],
-                    "duration": duration,
-                }
-            )
+            agent_data = {
+                "pid": pid,
+                "agent_type": agent_info["agent_type"],
+                "task_id": agent_info["task_id"],
+                "status": status,
+                "started_at": agent_info["started_at"],
+                "duration": duration,
+            }
+
+            # Only include running agents unless include_completed is True
+            if status == "running" or include_completed:
+                active_agents.append(agent_data)
+
+        # Auto-cleanup completed agents (move to completed_agents list)
+        if completed_pids:
+            if "completed_agents" not in self.state:
+                self.state["completed_agents"] = []
+
+            for pid_str in completed_pids:
+                agent_info = self.state["active_agents"].pop(pid_str)
+                agent_info["completed_at"] = datetime.now().isoformat()
+                agent_info["status"] = "completed"
+                self.state["completed_agents"].append(agent_info)
+
+            # Keep only last 100 completed agents to prevent unbounded growth
+            if len(self.state["completed_agents"]) > 100:
+                self.state["completed_agents"] = self.state["completed_agents"][-100:]
+
+            self._save_state()
+            logger.info(f"Auto-cleaned up {len(completed_pids)} completed agents")
 
         result = {"active_agents": active_agents, "total": len(active_agents)}
 
