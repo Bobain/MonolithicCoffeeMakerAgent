@@ -14,13 +14,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
-# Import functions from pr-monitoring.py
+# Import functions from pr_monitoring.py
 # Note: The skill file uses dashes, which isn't valid Python import syntax
 # We need to import it dynamically
 import importlib.util
 
 spec = importlib.util.spec_from_file_location(
-    "pr_monitoring", Path(".claude/skills/project-manager/pr-monitoring/pr-monitoring.py")
+    "pr_monitoring", Path(".claude/skills/project-manager/pr-monitoring/pr_monitoring.py")
 )
 pr_monitoring = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(pr_monitoring)

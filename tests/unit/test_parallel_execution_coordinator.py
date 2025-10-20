@@ -177,7 +177,7 @@ def main(context):
         }
     }
 """
-        (skill_path / "task-separator.py").write_text(skill_code)
+        (skill_path / "task_separator.py").write_text(skill_code)
 
         result = coordinator._validate_task_separation([20, 21, 22])
 

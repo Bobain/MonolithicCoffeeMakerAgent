@@ -63,7 +63,7 @@ def main(context):
         "task_file_map": task_file_map
     }
 '''
-        (skill_path / "task-separator.py").write_text(skill_code)
+        (skill_path / "task_separator.py").write_text(skill_code)
 
         # Create initial commit
         subprocess.run(["git", "add", "."], cwd=repo_path, check=True, capture_output=True)

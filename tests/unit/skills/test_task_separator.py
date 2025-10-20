@@ -18,7 +18,7 @@ def load_task_separator():
         / "skills"
         / "architect"
         / "task-separator"
-        / "task-separator.py"
+        / "task_separator.py"
     )
     spec = spec_from_file_location("task_separator", skill_path)
     module = module_from_spec(spec)

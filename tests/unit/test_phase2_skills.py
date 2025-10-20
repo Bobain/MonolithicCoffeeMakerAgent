@@ -47,8 +47,8 @@ class TestRoadmapHealthSkill:
 
     def test_roadmap_health_execution(self):
         """Test that roadmap-health skill executes successfully."""
-        skill_path = Path(".claude/skills/project-manager/roadmap-health/roadmap-health.py")
-        assert skill_path.exists(), "roadmap-health.py not found"
+        skill_path = Path(".claude/skills/project-manager/roadmap-health/roadmap_health.py")
+        assert skill_path.exists(), "roadmap_health.py not found"
 
         # Execute skill with test context
         context = {"generate_report": True}
@@ -72,7 +72,7 @@ class TestRoadmapHealthSkill:
 
     def test_roadmap_health_generates_report(self):
         """Test that roadmap-health generates a report file."""
-        skill_path = Path(".claude/skills/project-manager/roadmap-health/roadmap-health.py")
+        skill_path = Path(".claude/skills/project-manager/roadmap-health/roadmap_health.py")
 
         context = {"generate_report": True}
         result = subprocess.run(
@@ -97,8 +97,8 @@ class TestArchitectureAnalysisSkill:
 
     def test_architecture_analysis_execution(self):
         """Test that architecture-analysis skill executes successfully."""
-        skill_path = Path(".claude/skills/architect/architecture-analysis/architecture-analysis.py")
-        assert skill_path.exists(), "architecture-analysis.py not found"
+        skill_path = Path(".claude/skills/architect/architecture-analysis/architecture_analysis.py")
+        assert skill_path.exists(), "architecture_analysis.py not found"
 
         context = {"scope": "coffee_maker/"}
         result = subprocess.run(
@@ -120,7 +120,7 @@ class TestArchitectureAnalysisSkill:
 
     def test_architecture_analysis_generates_report(self):
         """Test that architecture-analysis generates a report file."""
-        skill_path = Path(".claude/skills/architect/architecture-analysis/architecture-analysis.py")
+        skill_path = Path(".claude/skills/architect/architecture-analysis/architecture_analysis.py")
 
         context = {"scope": "coffee_maker/"}
         result = subprocess.run(
@@ -144,8 +144,8 @@ class TestDependencyImpactSkill:
 
     def test_dependency_impact_execution(self):
         """Test that dependency-impact skill executes successfully."""
-        skill_path = Path(".claude/skills/architect/dependency-impact/dependency-impact.py")
-        assert skill_path.exists(), "dependency-impact.py not found"
+        skill_path = Path(".claude/skills/architect/dependency-impact/dependency_impact.py")
+        assert skill_path.exists(), "dependency_impact.py not found"
 
         context = {"package_name": "pytest", "current_version": "7.0.0", "target_version": "8.0.0"}
         result = subprocess.run(
@@ -172,8 +172,8 @@ class TestDemoCreatorSkill:
 
     def test_demo_creator_execution(self):
         """Test that demo-creator skill executes successfully."""
-        skill_path = Path(".claude/skills/assistant/demo-creator/demo-creator.py")
-        assert skill_path.exists(), "demo-creator.py not found"
+        skill_path = Path(".claude/skills/assistant/demo-creator/demo_creator.py")
+        assert skill_path.exists(), "demo_creator.py not found"
 
         context = {"feature_name": "User Dashboard", "url": "http://localhost:8000"}
         result = subprocess.run(
@@ -196,8 +196,8 @@ class TestBugAnalyzerSkill:
 
     def test_bug_analyzer_execution(self):
         """Test that bug-analyzer skill executes successfully."""
-        skill_path = Path(".claude/skills/assistant/bug-analyzer/bug-analyzer.py")
-        assert skill_path.exists(), "bug-analyzer.py not found"
+        skill_path = Path(".claude/skills/assistant/bug-analyzer/bug_analyzer.py")
+        assert skill_path.exists(), "bug_analyzer.py not found"
 
         context = {"bug_description": "Dashboard shows incorrect data when multiple users access simultaneously"}
         result = subprocess.run(
@@ -222,8 +222,8 @@ class TestSecurityAuditSkill:
 
     def test_security_audit_execution(self):
         """Test that security-audit skill executes successfully."""
-        skill_path = Path(".claude/skills/code-searcher/security-audit/security-audit.py")
-        assert skill_path.exists(), "security-audit.py not found"
+        skill_path = Path(".claude/skills/code-searcher/security-audit/security_audit.py")
+        assert skill_path.exists(), "security_audit.py not found"
 
         context = {"scope": "coffee_maker/"}
         result = subprocess.run(
@@ -245,7 +245,7 @@ class TestSecurityAuditSkill:
 
     def test_security_audit_generates_report(self):
         """Test that security-audit generates a report file."""
-        skill_path = Path(".claude/skills/code-searcher/security-audit/security-audit.py")
+        skill_path = Path(".claude/skills/code-searcher/security-audit/security_audit.py")
 
         context = {"scope": "coffee_maker/"}
         result = subprocess.run(

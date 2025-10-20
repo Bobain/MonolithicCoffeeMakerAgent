@@ -20,7 +20,7 @@ import pytest
 import importlib.util
 
 spec = importlib.util.spec_from_file_location(
-    "pr_monitoring", Path(".claude/skills/project-manager/pr-monitoring/pr-monitoring.py")
+    "pr_monitoring", Path(".claude/skills/project-manager/pr-monitoring/pr_monitoring.py")
 )
 pr_monitoring = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(pr_monitoring)

@@ -60,8 +60,8 @@ class TestCodeForensicsSkill:
 
     def test_code_forensics_execution(self):
         """Test that code-forensics skill executes successfully."""
-        skill_path = Path(".claude/skills/code-searcher/code-forensics/code-forensics.py")
-        assert skill_path.exists(), "code-forensics.py not found"
+        skill_path = Path(".claude/skills/code-searcher/code-forensics/code_forensics.py")
+        assert skill_path.exists(), "code_forensics.py not found"
 
         # Execute skill with test context
         context = {"scope": ".", "time_range": "last 6 months"}
@@ -92,7 +92,7 @@ class TestCodeForensicsSkill:
 
     def test_code_forensics_generates_report(self):
         """Test that code-forensics generates a report file."""
-        skill_path = Path(".claude/skills/code-searcher/code-forensics/code-forensics.py")
+        skill_path = Path(".claude/skills/code-searcher/code-forensics/code_forensics.py")
 
         context = {"scope": "."}
         result = subprocess.run(
@@ -119,7 +119,7 @@ class TestCodeForensicsSkill:
 
     def test_code_forensics_with_specific_scope(self):
         """Test code-forensics with specific file/directory scope."""
-        skill_path = Path(".claude/skills/code-searcher/code-forensics/code-forensics.py")
+        skill_path = Path(".claude/skills/code-searcher/code-forensics/code_forensics.py")
 
         # Test with specific directory
         context = {"scope": "coffee_maker/"}
@@ -142,8 +142,8 @@ class TestDesignSystemSkill:
 
     def test_design_system_execution(self):
         """Test that design-system skill executes successfully."""
-        skill_path = Path(".claude/skills/ux-design-expert/design-system/design-system.py")
-        assert skill_path.exists(), "design-system.py not found"
+        skill_path = Path(".claude/skills/ux-design-expert/design-system/design_system.py")
+        assert skill_path.exists(), "design_system.py not found"
 
         # Execute skill with test context
         context = {"scope": "templates/"}
@@ -169,7 +169,7 @@ class TestDesignSystemSkill:
 
     def test_design_system_extracts_tokens(self):
         """Test that design-system extracts design tokens correctly."""
-        skill_path = Path(".claude/skills/ux-design-expert/design-system/design-system.py")
+        skill_path = Path(".claude/skills/ux-design-expert/design-system/design_system.py")
 
         context = {"scope": "templates/"}
         result = subprocess.run(
@@ -190,7 +190,7 @@ class TestDesignSystemSkill:
 
     def test_design_system_generates_report(self):
         """Test that design-system generates a documentation file."""
-        skill_path = Path(".claude/skills/ux-design-expert/design-system/design-system.py")
+        skill_path = Path(".claude/skills/ux-design-expert/design-system/design_system.py")
 
         context = {"scope": "templates/"}
         result = subprocess.run(
@@ -216,8 +216,8 @@ class TestVisualRegressionSkill:
 
     def test_visual_regression_execution(self):
         """Test that visual-regression skill executes successfully."""
-        skill_path = Path(".claude/skills/ux-design-expert/visual-regression/visual-regression.py")
-        assert skill_path.exists(), "visual-regression.py not found"
+        skill_path = Path(".claude/skills/ux-design-expert/visual-regression/visual_regression.py")
+        assert skill_path.exists(), "visual_regression.py not found"
 
         # Execute skill with test context
         context = {
@@ -247,7 +247,7 @@ class TestVisualRegressionSkill:
 
     def test_visual_regression_requires_urls(self):
         """Test that visual-regression requires baseline_url and current_url."""
-        skill_path = Path(".claude/skills/ux-design-expert/visual-regression/visual-regression.py")
+        skill_path = Path(".claude/skills/ux-design-expert/visual-regression/visual_regression.py")
 
         # Test with missing baseline_url
         context = {"current_url": "http://localhost:8000"}
@@ -265,7 +265,7 @@ class TestVisualRegressionSkill:
 
     def test_visual_regression_generates_report(self):
         """Test that visual-regression generates a report file."""
-        skill_path = Path(".claude/skills/ux-design-expert/visual-regression/visual-regression.py")
+        skill_path = Path(".claude/skills/ux-design-expert/visual-regression/visual_regression.py")
 
         context = {"baseline_url": "http://localhost:8000", "current_url": "http://localhost:8000", "pages": ["/"]}
         result = subprocess.run(
@@ -288,9 +288,9 @@ class TestPhase3Integration:
     def test_all_phase3_skills_exist(self):
         """Test that all Phase 3 skill files exist."""
         skills = [
-            ".claude/skills/code-searcher/code-forensics/code-forensics.py",
-            ".claude/skills/ux-design-expert/design-system/design-system.py",
-            ".claude/skills/ux-design-expert/visual-regression/visual-regression.py",
+            ".claude/skills/code-searcher/code-forensics/code_forensics.py",
+            ".claude/skills/ux-design-expert/design-system/design_system.py",
+            ".claude/skills/ux-design-expert/visual-regression/visual_regression.py",
         ]
 
         for skill_path in skills:
@@ -327,11 +327,11 @@ class TestPhase3Integration:
         import time
 
         skills_timing = {
-            ".claude/skills/code-searcher/code-forensics/code-forensics.py": {
+            ".claude/skills/code-searcher/code-forensics/code_forensics.py": {
                 "context": {"scope": "coffee_maker/", "time_range": "last 3 months"},
                 "max_time": 900,  # 15 minutes
             },
-            ".claude/skills/ux-design-expert/design-system/design-system.py": {
+            ".claude/skills/ux-design-expert/design-system/design_system.py": {
                 "context": {"scope": "templates/"},
                 "max_time": 1800,  # 30 minutes
             },
@@ -362,9 +362,9 @@ class TestPhase3SkillQuality:
     def test_skill_code_quality(self):
         """Test that skill code follows best practices."""
         skills = [
-            ".claude/skills/code-searcher/code-forensics/code-forensics.py",
-            ".claude/skills/ux-design-expert/design-system/design-system.py",
-            ".claude/skills/ux-design-expert/visual-regression/visual-regression.py",
+            ".claude/skills/code-searcher/code-forensics/code_forensics.py",
+            ".claude/skills/ux-design-expert/design-system/design_system.py",
+            ".claude/skills/ux-design-expert/visual-regression/visual_regression.py",
         ]
 
         for skill_path in skills:

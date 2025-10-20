@@ -17,7 +17,7 @@ import pytest
 
 # Load roadmap_health module
 skill_path = (
-    Path(__file__).parent.parent.parent.parent / ".claude/skills/project-manager/roadmap-health/roadmap-health.py"
+    Path(__file__).parent.parent.parent.parent / ".claude/skills/project-manager/roadmap-health/roadmap_health.py"
 )
 spec = importlib.util.spec_from_file_location("roadmap_health", skill_path)
 rh = importlib.util.module_from_spec(spec)

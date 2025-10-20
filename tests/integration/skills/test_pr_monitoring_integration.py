@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 
 # Load pr_monitoring module
 skill_path = (
-    Path(__file__).parent.parent.parent.parent / ".claude/skills/project-manager/pr-monitoring/pr-monitoring.py"
+    Path(__file__).parent.parent.parent.parent / ".claude/skills/project-manager/pr-monitoring/pr_monitoring.py"
 )
 spec = importlib.util.spec_from_file_location("pr_monitoring", skill_path)
 pm = importlib.util.module_from_spec(spec)
