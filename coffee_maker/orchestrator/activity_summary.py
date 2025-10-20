@@ -224,6 +224,113 @@ def get_active_worktrees() -> List[Dict]:
     return [wt for wt in worktrees if "-wt" in wt.get("path", "")]
 
 
+def get_worktree_commits(worktree_path: str, hours: int = 6) -> List[Dict]:
+    """Get commits from a specific worktree directory.
+
+    Args:
+        worktree_path: Path to worktree directory
+        hours: Number of hours to look back
+
+    Returns:
+        List of commit dictionaries with hash, date, subject
+    """
+    import os
+
+    if not os.path.exists(worktree_path):
+        return []
+
+    since = datetime.now() - timedelta(hours=hours)
+    since_str = since.strftime("%Y-%m-%d %H:%M:%S")
+
+    cmd = f'cd "{worktree_path}" && git log --since="{since_str}" --pretty=format:"%h|%ai|%s" --no-merges'
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+    commits = []
+    for line in result.stdout.split("\n"):
+        if not line:
+            continue
+
+        parts = line.split("|", 2)
+        if len(parts) < 3:
+            continue
+
+        hash_val, date, subject = parts
+
+        # Extract US/PRIORITY from commit
+        us_match = re.search(r"(US-\d+|PRIORITY \d+)", subject)
+
+        commits.append(
+            {"hash": hash_val, "date": date, "subject": subject, "priority": us_match.group(1) if us_match else None}
+        )
+
+    return commits
+
+
+def analyze_worktree_activity(worktree: Dict, hours: int = 6) -> Dict:
+    """Analyze what work was done in a worktree.
+
+    Args:
+        worktree: Worktree dictionary with path, branch, commit
+        hours: Number of hours to look back
+
+    Returns:
+        Dictionary with commits, priority, file_stats, summary
+    """
+
+    worktree_path = worktree.get("path", "")
+    branch = worktree.get("branch", "unknown")
+
+    # Extract priority number from path (e.g., "wt038" -> "038")
+    priority_match = re.search(r"wt(\d+)", worktree_path)
+    priority_num = priority_match.group(1) if priority_match else "?"
+
+    # Get commits from this worktree
+    commits = get_worktree_commits(worktree_path, hours=hours)
+
+    # Get file stats (what changed in this worktree since it was created)
+    # Find the base commit (where this worktree branched from)
+    base_cmd = f'cd "{worktree_path}" && git merge-base HEAD roadmap'
+    base_result = subprocess.run(base_cmd, shell=True, capture_output=True, text=True)
+    base_commit = base_result.stdout.strip() if base_result.returncode == 0 else None
+
+    file_stats = {"files_changed": 0, "insertions": 0, "deletions": 0}
+
+    if base_commit:
+        stat_cmd = f'cd "{worktree_path}" && git diff {base_commit}..HEAD --shortstat'
+        stat_result = subprocess.run(stat_cmd, shell=True, capture_output=True, text=True)
+
+        if stat_result.returncode == 0:
+            # Parse output like: "3 files changed, 2981 insertions(+), 12 deletions(-)"
+            stat_match = re.search(r"(\d+) files? changed", stat_result.stdout)
+            if stat_match:
+                file_stats["files_changed"] = int(stat_match.group(1))
+
+            ins_match = re.search(r"(\d+) insertions?", stat_result.stdout)
+            if ins_match:
+                file_stats["insertions"] = int(ins_match.group(1))
+
+            del_match = re.search(r"(\d+) deletions?", stat_result.stdout)
+            if del_match:
+                file_stats["deletions"] = int(del_match.group(1))
+
+    # Determine summary
+    summary = "No activity"
+    if commits:
+        if len(commits) == 1 and "End of iteration" in commits[0]["subject"]:
+            summary = "Completed (checkpoint only)"
+        else:
+            summary = f"{len(commits)} commit(s)"
+
+    return {
+        "path": worktree_path,
+        "branch": branch,
+        "priority": f"US-{priority_num}" if priority_num.isdigit() else f"Priority {priority_num}",
+        "commits": commits,
+        "file_stats": file_stats,
+        "summary": summary,
+    }
+
+
 def get_planned_priorities(roadmap_path: Path, limit: int = 5) -> List[Dict]:
     """Get next N planned priorities from ROADMAP.
 
@@ -341,17 +448,55 @@ def generate_summary_report(
     else:
         report += "_No agents currently running_\n\n"
 
-    # Worktrees
-    worktrees = current_work.get("worktrees", [])
-    if worktrees:
-        report += f"**Active Worktrees**: {len(worktrees)}\n\n"
-        for wt in worktrees:
-            branch = wt.get("branch", "unknown")
-            path = wt.get("path", "")
-            priority = re.search(r"wt(\d+)", path)
-            priority_num = priority.group(1) if priority else "?"
-            report += f"- Priority {priority_num}: `{branch}` at `{path}`\n"
-        report += "\n"
+    # Worktrees with detailed activity
+    worktree_activities = current_work.get("worktree_activities", [])
+    if worktree_activities:
+        report += f"**Active Worktrees**: {len(worktree_activities)}\n\n"
+        for wt_activity in worktree_activities:
+            priority = wt_activity.get("priority", "Unknown")
+            branch = wt_activity.get("branch", "unknown")
+            path = wt_activity.get("path", "")
+            summary = wt_activity.get("summary", "No activity")
+            commits = wt_activity.get("commits", [])
+            file_stats = wt_activity.get("file_stats", {})
+
+            report += f"### {priority}: {summary}\n"
+            report += f"- Branch: `{branch}`\n"
+            report += f"- Path: `{path}`\n"
+
+            # File statistics
+            files_changed = file_stats.get("files_changed", 0)
+            insertions = file_stats.get("insertions", 0)
+            deletions = file_stats.get("deletions", 0)
+
+            if files_changed > 0:
+                report += f"- Changes: {files_changed} files, +{insertions}/-{deletions} lines\n"
+
+            # Show commits (excluding "End of iteration" checkpoints)
+            real_commits = [c for c in commits if "End of iteration" not in c.get("subject", "")]
+            if real_commits:
+                report += f"- Commits:\n"
+                for commit in real_commits[:5]:  # Show max 5 commits
+                    subject = commit.get("subject", "")
+                    hash_val = commit.get("hash", "")
+                    # Truncate long subjects
+                    if len(subject) > 80:
+                        subject = subject[:77] + "..."
+                    report += f"  - `{hash_val}` {subject}\n"
+
+            report += "\n"
+    else:
+        # Fallback to simple worktree list if detailed analysis not available
+        worktrees = current_work.get("worktrees", [])
+        if worktrees:
+            report += f"**Active Worktrees**: {len(worktrees)}\n\n"
+            for wt in worktrees:
+                branch = wt.get("branch", "unknown")
+                path = wt.get("path", "")
+                priority = re.search(r"wt(\d+)", path)
+                priority_num = priority.group(1) if priority else "?"
+                report += f"- Priority {priority_num}: `{branch}` at `{path}`\n"
+            report += "\n"
 
     # Agent status details (active agents only)
     agent_statuses = current_work.get("agent_statuses", {})
@@ -412,7 +557,10 @@ def generate_summary_report(
     report += "## 📊 Summary Statistics\n\n"
     report += f"- Commits in period: {total_commits}\n"
     report += f"- Active agents: {len(running_agents)}\n"
-    report += f"- Parallel worktrees: {len(worktrees)}\n"
+
+    # Count worktrees from either worktree_activities or fallback to worktrees list
+    wt_count = len(worktree_activities) if worktree_activities else len(current_work.get("worktrees", []))
+    report += f"- Parallel worktrees: {wt_count}\n"
     report += f"- Completed priorities: {len(completed_work.get('completed_priorities', []))}\n"
     report += f"- Upcoming priorities: {len(upcoming_work)}\n"
 
@@ -502,6 +650,12 @@ def generate_activity_summary(time_window: int = 6, save_to_file: bool = True) -
     agent_statuses = get_agent_status_from_files()
     worktrees = get_active_worktrees()
 
+    # Step 1b: Analyze worktree activity (detailed commits and stats)
+    worktree_activities = []
+    for worktree in worktrees:
+        activity = analyze_worktree_activity(worktree, hours=time_window)
+        worktree_activities.append(activity)
+
     # Step 2: Analyze completed work
     commits_by_priority = group_commits_by_priority(commits)
     completed_priorities = find_completed_priorities(commits)
@@ -513,7 +667,12 @@ def generate_activity_summary(time_window: int = 6, save_to_file: bool = True) -
     }
 
     # Step 3: Analyze current work
-    current_work = {"running_agents": running_agents, "agent_statuses": agent_statuses, "worktrees": worktrees}
+    current_work = {
+        "running_agents": running_agents,
+        "agent_statuses": agent_statuses,
+        "worktrees": worktrees,
+        "worktree_activities": worktree_activities,
+    }
 
     # Step 4: Get upcoming work
     roadmap_path = Path("docs/roadmap/ROADMAP.md")
