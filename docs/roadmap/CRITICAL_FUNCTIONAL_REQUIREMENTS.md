@@ -3702,12 +3702,19 @@ git push origin stable-v1.3.0
 8. ✅ Delete branch: `git branch -D roadmap-wt1`
 9. ✅ Record lifecycle: spawned → working → completed → merged → cleaned
 10. ✅ Decide: reassign agent to new task OR shutdown agent
+11. ✅ **Monitor ROADMAP for work availability** - NEVER allow empty ROADMAP:
+   - Check if ROADMAP has planned priorities (Planned status)
+   - Check if priorities have technical specs ready (from architect)
+   - If ROADMAP becomes empty or low on planned work: notify project_manager
+   - Ensure continuous planning loop works (project_manager plans → architect specs → code_developer implements)
+   - If no work available and no agents can plan: STOP and wait for user input
 
 **MUST NOT**:
 ❌ Merge worktree branches yourself (architect's responsibility)
 ❌ Delete worktree before architect confirms merge complete
 ❌ Leave stale worktrees or branches (cleanup is mandatory)
 ❌ Create worktree branches without `roadmap-` prefix
+❌ Continue spawning agents when ROADMAP is empty
 
 #### Architect Responsibilities
 
@@ -4395,6 +4402,563 @@ PID    | Agent Type      | Task ID      | Priority | Elapsed
 **Monitoring**: Track database size, query performance, data staleness
 **User Story**: US-110: Orchestrator Database Tracing (this CFR)
 **Related Spec**: SPEC-110: Orchestrator Database Tracing
+
+---
+
+## CFR-015: Continuous Planning Loop - System Must Always Be Working
+
+**Rule**: The autonomous system MUST continuously plan, write specifications, and write code. The ROADMAP must NEVER become empty without immediate corrective action.
+
+**Core Principle**:
+```
+✅ REQUIRED: orchestrator monitors ROADMAP for work availability
+✅ REQUIRED: project_manager maintains 3-5 planned priorities ahead
+✅ REQUIRED: architect creates specs within 2 hours of new priorities
+✅ REQUIRED: System triggers planning when ROADMAP runs low
+
+❌ FORBIDDEN: orchestrator stops silently due to empty ROADMAP
+❌ FORBIDDEN: System sits idle when planning could happen
+❌ FORBIDDEN: Waiting for user input when autonomous planning possible
+```
+
+**Why This Is Critical**:
+
+1. **Autonomous Continuity**: System designed to work 24/7 without human intervention
+   - "System stopped because no work" → FAILURE (should have triggered planning)
+   - "System working continuously" → SUCCESS (planning loop active)
+
+2. **Proactive Planning**: Never reactive, always ahead
+   - "orchestrator waiting for work" → BAD (should have planned ahead)
+   - "orchestrator always has 3-5 priorities queued" → GOOD (buffer maintained)
+
+3. **Resource Utilization**: Expensive AI agents should never sit idle
+   - architect idle because no priorities → WASTE (project_manager should plan)
+   - code_developer idle because no specs → WASTE (architect should spec)
+   - orchestrator idle because ROADMAP empty → CRITICAL FAILURE
+
+4. **User Experience**: Users expect continuous progress
+   - User returns after 8 hours → "System stopped, no progress" → DISAPPOINTED
+   - User returns after 8 hours → "5 new features complete" → DELIGHTED
+
+**The Continuous Planning Loop**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CONTINUOUS WORK CYCLE                     │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+                  ┌───────────────────────┐
+                  │  project_manager      │
+                  │  Plans upcoming work  │
+                  │  (3-5 priorities)     │
+                  └───────────────────────┘
+                              ↓
+                  ┌───────────────────────┐
+                  │  architect            │
+                  │  Creates tech specs   │
+                  │  (for planned work)   │
+                  └───────────────────────┘
+                              ↓
+                  ┌───────────────────────┐
+                  │  code_developer       │
+                  │  Implements priority  │
+                  │  (with spec)          │
+                  └───────────────────────┘
+                              ↓
+                  ┌───────────────────────┐
+                  │  orchestrator         │
+                  │  Monitors & checks:   │
+                  │  "More work queued?"  │
+                  └───────────────────────┘
+                              ↓
+              YES ─────┐             ┌───── NO
+                       ↓             ↓
+            Continue cycle    Trigger planning
+                       ↓             ↓
+            [Loop to top]   [Notify project_manager]
+                                     ↓
+                         [project_manager plans 5 more]
+                                     ↓
+                              [Loop to top]
+```
+
+### project_manager Responsibility: Maintain Work Buffer
+
+**CRITICAL REQUIREMENT**: project_manager MUST maintain minimum buffer of planned priorities.
+
+**Buffer Size**: 3-5 planned priorities ahead of current work
+
+**Implementation**:
+
+```python
+# project_manager checks ROADMAP regularly (every 30 minutes or on completion)
+def maintain_work_buffer():
+    """Ensure ROADMAP never runs empty."""
+
+    planned_priorities = get_planned_priorities()
+    MINIMUM_BUFFER = 3  # Always keep 3-5 ahead
+
+    if len(planned_priorities) < MINIMUM_BUFFER:
+        logger.warning(f"Work buffer low: {len(planned_priorities)} planned")
+
+        # Plan new work immediately
+        new_priorities = plan_upcoming_work(
+            recent_completions=get_recent_completions(),
+            user_goals=load_user_goals(),
+            project_roadmap=analyze_roadmap_trends(),
+            technical_debt=review_technical_debt()
+        )
+
+        # Add to ROADMAP
+        for priority in new_priorities:
+            add_priority_to_roadmap(priority)
+
+        # Notify architect for specs
+        notify_architect(
+            title="📋 New Priorities Need Specs",
+            message=f"{len(new_priorities)} priorities planned. "
+                    f"Please create technical specs.",
+            priority="normal",
+            sound=False
+        )
+
+        logger.info(f"Buffer restored: {len(new_priorities)} priorities added")
+```
+
+**Triggers for Planning**:
+1. Completion of any priority (check buffer after)
+2. Every 30 minutes (scheduled check)
+3. orchestrator notification: "ROADMAP running low"
+4. User request: "Plan upcoming work"
+
+### architect Responsibility: Timely Spec Creation
+
+**CRITICAL REQUIREMENT**: architect MUST create specs within 2 hours of new priorities being planned.
+
+**SLA**: 2 hours from notification to spec creation
+
+**Implementation**:
+
+```python
+# architect responds to planning notifications
+def create_specs_for_planned_work():
+    """Create technical specs for newly planned priorities."""
+
+    # Get priorities needing specs
+    priorities_needing_specs = get_planned_priorities_without_specs()
+
+    if not priorities_needing_specs:
+        logger.info("All planned priorities have specs ✅")
+        return
+
+    # Create specs (highest priority first)
+    for priority in sorted(priorities_needing_specs, key=lambda p: p.number):
+        spec = create_technical_specification(
+            priority_name=priority.name,
+            strategic_spec=load_strategic_spec(priority),
+            codebase_context=analyze_codebase_for_priority(priority)
+        )
+
+        save_spec(spec)
+        mark_priority_spec_ready(priority)
+
+        logger.info(f"Spec created for {priority.name}")
+
+    # Notify orchestrator: specs ready
+    notify_orchestrator(
+        title="✅ Technical Specs Ready",
+        message=f"{len(priorities_needing_specs)} specs created. Ready for implementation.",
+        priority="normal",
+        sound=False
+    )
+```
+
+### orchestrator Responsibility: Monitor Work Availability
+
+**CRITICAL REQUIREMENT**: orchestrator MUST check ROADMAP status before stopping or going idle.
+
+**Monitoring Checks** (before completing work loop):
+
+**Check 1: Planned Priorities Exist?**
+```python
+def check_planned_work_exists():
+    """Check if ROADMAP has planned priorities."""
+    count = count_roadmap_priorities(status='Planned')
+
+    if count == 0:
+        # CRITICAL: ROADMAP empty!
+        notify_project_manager(
+            title="🚨 ROADMAP Empty - Planning Required",
+            message="No planned priorities in ROADMAP. Please plan upcoming work immediately.",
+            priority="critical",
+            sound=False,
+            action_required=True
+        )
+        return False
+
+    if count < 3:
+        # WARNING: Buffer low
+        notify_project_manager(
+            title="⚠️ ROADMAP Buffer Low",
+            message=f"Only {count} planned priorities. Please plan more work.",
+            priority="high",
+            sound=False
+        )
+
+    return count > 0
+```
+
+**Check 2: Specs Ready for Implementation?**
+```python
+def check_specs_ready():
+    """Check if planned priorities have technical specs."""
+    planned_count = count_roadmap_priorities(status='Planned')
+    specs_ready_count = count_roadmap_priorities(status='Planned', has_spec=True)
+
+    if planned_count > 0 and specs_ready_count == 0:
+        # No specs ready!
+        notify_architect(
+            title="⚠️ Specs Needed for Planned Work",
+            message=f"{planned_count} planned priorities need technical specs.",
+            priority="high",
+            sound=False,
+            action_required=True
+        )
+        return False
+
+    return specs_ready_count > 0
+```
+
+**Check 3: Wait or Stop Decision**
+```python
+def decide_next_action():
+    """Decide: continue, wait, or stop."""
+
+    # Check if work available
+    has_planned_work = check_planned_work_exists()
+    has_specs_ready = check_specs_ready()
+
+    if has_specs_ready:
+        # Work available! Continue immediately
+        return "CONTINUE"
+
+    if has_planned_work and not has_specs_ready:
+        # Waiting for specs
+        logger.info("Waiting for architect to create specs...")
+        wait_for_notification(timeout=timedelta(hours=2))
+        return "WAIT"
+
+    if not has_planned_work:
+        # ROADMAP empty, waiting for planning
+        logger.warning("Waiting for project_manager to plan work...")
+        wait_for_notification(timeout=timedelta(hours=1))
+        return "WAIT"
+
+    # Timeout: no planning or specs after waiting
+    logger.error("No work available after waiting. Stopping orchestrator.")
+    return "STOP"
+```
+
+### Orchestrator Decision Tree (Complete Flow)
+
+```
+┌──────────────────────────────────────┐
+│ orchestrator completes current work  │
+└──────────────────────────────────────┘
+                 ↓
+    ┌────────────────────────────┐
+    │ Check: Work queued?        │
+    │ (planned + specs ready)    │
+    └────────────────────────────┘
+                 ↓
+        YES ─────┴───── NO
+         ↓                ↓
+    ┌────────┐    ┌──────────────────────┐
+    │Continue│    │Check: Planned work?  │
+    │  loop  │    │(without specs)       │
+    └────────┘    └──────────────────────┘
+                           ↓
+                  YES ─────┴───── NO
+                   ↓                ↓
+          ┌────────────────┐  ┌────────────────┐
+          │Notify architect│  │Notify project_ │
+          │"Create specs"  │  │manager "Plan!" │
+          └────────────────┘  └────────────────┘
+                   ↓                ↓
+          ┌────────────────┐  ┌────────────────┐
+          │Wait 2 hours    │  │Wait 1 hour     │
+          │for specs       │  │for planning    │
+          └────────────────┘  └────────────────┘
+                   ↓                ↓
+          ┌────────────────┐  ┌────────────────┐
+          │Specs created?  │  │Work planned?   │
+          └────────────────┘  └────────────────┘
+                   ↓                ↓
+        YES ───────┴─── NO   YES ───┴─── NO
+         ↓              ↓     ↓          ↓
+    ┌────────┐   ┌──────────┐ │   ┌──────────┐
+    │Continue│   │ STOP     │ │   │ STOP     │
+    │  loop  │   │(timeout) │ │   │(timeout) │
+    └────────┘   └──────────┘ │   └──────────┘
+                              ↓
+                      ┌────────────┐
+                      │ Loop back  │
+                      │ to check   │
+                      │ specs      │
+                      └────────────┘
+```
+
+### Planning Loop Metrics (CFR-014 Integration)
+
+The orchestrator MUST track planning loop health in database:
+
+**Database Schema**:
+
+```sql
+CREATE TABLE IF NOT EXISTS planning_loop_metrics (
+    metric_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT NOT NULL,
+
+    -- Work availability
+    planned_priorities_count INTEGER NOT NULL,
+    priorities_with_specs_count INTEGER NOT NULL,
+
+    -- Alerts and triggers
+    empty_roadmap_alerts INTEGER DEFAULT 0,
+    low_buffer_alerts INTEGER DEFAULT 0,
+    planning_triggered INTEGER DEFAULT 0,       -- Boolean
+    spec_creation_triggered INTEGER DEFAULT 0,  -- Boolean
+
+    -- Timing
+    orchestrator_idle_ms INTEGER,               -- Time waiting for work
+    time_to_planning_ms INTEGER,                -- Alert → planning complete
+    time_to_spec_ms INTEGER,                    -- Alert → spec complete
+
+    -- Notes
+    notes TEXT
+);
+```
+
+**Key Queries**:
+
+```sql
+-- How often does ROADMAP go empty?
+SELECT COUNT(*) AS empty_roadmap_events,
+       AVG(time_to_planning_ms) / 1000 AS avg_recovery_seconds
+FROM planning_loop_metrics
+WHERE planned_priorities_count = 0;
+
+-- Average orchestrator idle time
+SELECT AVG(orchestrator_idle_ms) / 1000 AS avg_idle_seconds
+FROM planning_loop_metrics
+WHERE orchestrator_idle_ms > 0;
+
+-- Planning loop health score (0-100)
+SELECT
+    100 - (SUM(empty_roadmap_alerts) * 10) AS health_score
+FROM planning_loop_metrics
+WHERE timestamp > datetime('now', '-7 days');
+```
+
+### Example Scenario: Happy Path (Continuous Work)
+
+```
+Time: 09:00 AM
+project_manager: Proactive buffer check
+project_manager: Planned priorities = 5 ✅
+project_manager: All have specs ✅
+project_manager: No action needed
+
+Time: 09:30 AM
+code_developer: Complete US-110
+orchestrator: Check work → 4 planned, 4 with specs ✅
+orchestrator: Spawn code_developer for US-111 immediately
+
+Time: 10:00 AM
+code_developer: Complete US-111
+orchestrator: Check work → 3 planned, 3 with specs ⚠️ (buffer at minimum)
+orchestrator: Notify project_manager: "Buffer low"
+orchestrator: Spawn code_developer for US-112 (while planning happens)
+
+Time: 10:05 AM
+project_manager: Receive buffer alert
+project_manager: Plan 5 new priorities (US-115 through US-119)
+project_manager: Add to ROADMAP
+project_manager: Notify architect: "Create specs"
+
+Time: 10:30 AM
+architect: Create specs for US-115, US-116, US-117
+architect: Notify orchestrator: "3 specs ready"
+
+Time: 11:00 AM
+orchestrator: Check work → 7 planned, 6 with specs ✅
+orchestrator: Buffer restored, continuous work continues
+orchestrator: No interruptions, no idle time
+
+→ Result: System worked continuously for 2 hours, no gaps
+```
+
+### Example Scenario: ROADMAP Becomes Empty (Recovery)
+
+```
+Time: 14:00
+code_developer: Complete US-110 (last priority)
+orchestrator: Check work → 0 planned ❌
+orchestrator: CRITICAL ALERT to project_manager
+orchestrator: Status = 'waiting_for_planning'
+orchestrator: Log: "ROADMAP empty, autonomous planning triggered"
+
+Time: 14:05
+project_manager: Receive CRITICAL notification
+project_manager: Analyze project context
+project_manager: Plan 5 new priorities (US-111 through US-115)
+project_manager: Add to ROADMAP
+project_manager: Notify architect: "5 priorities need specs (URGENT)"
+
+Time: 14:15
+architect: Receive urgent notification
+architect: Create spec for US-111 (highest priority)
+architect: Notify orchestrator: "US-111 spec ready"
+
+Time: 14:20
+orchestrator: Receive notification
+orchestrator: Check work → 5 planned, 1 with spec ✅
+orchestrator: Spawn code_developer for US-111
+orchestrator: Status = 'running'
+orchestrator: Log: "Planning loop restored after 20 minutes"
+
+Time: 14:30-16:00
+architect: Create specs for US-112, US-113, US-114, US-115
+architect: All priorities now have specs
+
+→ Result: System recovered autonomously, 20-minute gap, then continuous work resumed
+```
+
+### Error Scenarios and Handling
+
+**Scenario 1: project_manager Doesn't Plan (CRITICAL)**
+```
+orchestrator: ROADMAP empty, notify project_manager
+Wait 30 minutes → no response
+orchestrator: Repeat notification (higher priority)
+Wait 1 hour total → no response
+orchestrator: Create notification for USER (intervention required)
+orchestrator: STOP gracefully (log: "Planning loop failed, user intervention needed")
+```
+
+**Scenario 2: architect Doesn't Create Specs**
+```
+project_manager: Plan 5 priorities
+project_manager: Notify architect
+Wait 2 hours → no specs created
+orchestrator: Escalate to architect (high priority)
+Wait 3 hours total → no specs
+orchestrator: Notify USER (intervention required)
+orchestrator: STOP gracefully (log: "Spec bottleneck, user intervention needed")
+```
+
+**Scenario 3: Continuous Success (Target State)**
+```
+Every 30 minutes:
+  - project_manager checks buffer → Always 3-5 ahead
+  - architect checks planned work → Specs within 2 hours
+  - orchestrator checks work → Always available
+
+Result:
+  - 0 empty ROADMAP events
+  - 0 orchestrator idle time
+  - 100% planning loop health score
+  - User delighted with continuous progress
+```
+
+### Implementation Requirements
+
+**Code Changes Required**:
+
+1. **Orchestrator Monitoring**:
+   - `coffee_maker/orchestrator/work_availability_monitor.py` (new)
+   - Check ROADMAP before stopping
+   - Trigger planning notifications
+   - Track metrics in database
+
+2. **project_manager Proactive Planning**:
+   - `coffee_maker/cli/project_manager_auto_planning.py` (new)
+   - Scheduled buffer checks (every 30 min)
+   - Autonomous planning triggers
+   - Notification handling
+
+3. **architect Spec Creation**:
+   - `coffee_maker/cli/architect_auto_spec_creation.py` (new)
+   - Respond to planning notifications
+   - SLA tracking (2-hour target)
+   - Batch spec creation
+
+4. **Database Tracking**:
+   - Add `planning_loop_metrics` table
+   - Track all planning events
+   - Query for health metrics
+
+**CLI Commands** (to be implemented):
+
+```bash
+# Check work availability status
+poetry run orchestrator work-status
+
+# Check planning loop health
+poetry run orchestrator planning-health
+
+# Trigger planning manually
+poetry run project-manager plan-ahead --count=5
+
+# Trigger spec creation
+poetry run architect create-specs --batch=all
+
+# View planning metrics
+poetry run orchestrator planning-metrics --days=7
+```
+
+### Success Criteria
+
+**Operational Metrics**:
+- ✅ orchestrator NEVER stops silently due to empty ROADMAP
+- ✅ ROADMAP buffer maintained at 3-5 planned priorities at all times
+- ✅ architect creates specs within 2 hours of new priorities (95% SLA)
+- ✅ Planning loop health score >90/100 over 7 days
+- ✅ orchestrator idle time <5% of total runtime
+
+**User Experience Metrics**:
+- ✅ Users see continuous progress (no "system stopped" messages)
+- ✅ Users return to completed work (not idle agents)
+- ✅ System requires minimal user intervention for planning
+
+**System Health Metrics**:
+- ✅ Empty ROADMAP events <1 per week
+- ✅ Planning triggered automatically (not user-initiated)
+- ✅ Average recovery time <30 minutes (empty ROADMAP → work resumed)
+
+### Benefits
+
+1. **Autonomous Continuity**: System works 24/7 without human intervention
+2. **Proactive Planning**: Never reactive, always ahead with work buffer
+3. **Resource Utilization**: Expensive AI agents never sit idle
+4. **User Delight**: Continuous progress, no gaps in development
+5. **Fail-Safe**: System recovers autonomously or requests help gracefully
+6. **Observable**: Metrics track planning loop health in real-time
+7. **Sustainable**: Work buffer prevents burnout/rush cycles
+
+### Relationship to Other CFRs
+
+**CFR-013 (Single Branch Workflow)**: All planning and implementation happens on roadmap branch
+**CFR-014 (Database Tracing)**: All planning loop events tracked in database
+**CFR-008 (Architect Creates Specs)**: architect creates specs as part of planning loop
+**CFR-011 (Daily Integration)**: architect integrates findings while creating specs
+
+### Enforcement
+
+**Code Validation**: orchestrator MUST call `check_work_availability()` before stopping
+**Monitoring**: Track `planning_loop_metrics` table for health score
+**Alerts**: User notified if planning loop health <70/100
+**User Story**: US-115: Continuous Planning Loop Implementation (to be created)
 
 ---
 
