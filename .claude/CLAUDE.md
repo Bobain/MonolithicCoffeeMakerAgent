@@ -64,7 +64,12 @@ MonolithicCoffeeMakerAgent/
 **CFR-009 - Sound Notifications**: ONLY `user_listener` uses `sound=True`. All background agents MUST use `sound=False`
 
 **CFR-013 - Git Workflow**: ALL agents work on `roadmap` branch ONLY. NO feature branches.
+- **Exception**: orchestrator may create temporary `roadmap-*` worktree branches for parallel execution
+- architect merges `roadmap-*` → `roadmap`, then orchestrator cleans up
 - See [GUIDELINE-004](../docs/architecture/guidelines/GUIDELINE-004-git-tagging-workflow.md) for tagging
+- See CFR-013 "Git Worktree Workflow" section for complete lifecycle
+
+**CFR-014 - Database Tracing**: ALL orchestrator activities in SQLite database. JSON files FORBIDDEN.
 
 ### Prompts
 - **Location**: `.claude/commands/` (centralized, MANDATORY)
