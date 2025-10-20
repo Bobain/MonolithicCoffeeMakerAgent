@@ -24,7 +24,6 @@ Related:
 
 import json
 import logging
-import re
 import signal
 import sys
 import time
@@ -32,16 +31,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 from coffee_maker.cli.notifications import NotificationDB
 from coffee_maker.orchestrator.architect_coordinator import ArchitectCoordinator
 
 logger = logging.getLogger(__name__)
 
-# Import agent management skill
-skill_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "orchestrator-agent-management"
-sys.path.insert(0, str(skill_dir))
+# Import orchestrator agent management skill
+agent_mgmt_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "orchestrator-agent-management"
+sys.path.insert(0, str(agent_mgmt_dir))
 from agent_management import OrchestratorAgentManagementSkill
+
+sys.path.pop(0)
+
+# Import roadmap management skill (SINGLE SOURCE OF TRUTH for ROADMAP operations)
+roadmap_mgmt_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "roadmap-management"
+sys.path.insert(0, str(roadmap_mgmt_dir))
+from roadmap_management import RoadmapManagementSkill
 
 sys.path.pop(0)
 
@@ -87,15 +92,14 @@ class ContinuousWorkLoop:
         self.notifications = NotificationDB()
         self.running = False
         self.current_state: Dict = {}
-        self.roadmap_cache: Optional[Dict] = None
         self.last_roadmap_update = 0.0
         self.repo_root = Path.cwd()  # Repository root directory
 
         # Initialize agent management skill
         self.agent_mgmt = OrchestratorAgentManagementSkill()
 
-        # Initialize roadmap parser for all ROADMAP formats
-        self.roadmap_parser = RoadmapParser("docs/roadmap/ROADMAP.md")
+        # Initialize roadmap management skill (SINGLE SOURCE OF TRUTH)
+        self.roadmap_skill = RoadmapManagementSkill()
 
         # Initialize architect coordinator (spec backlog + worktree merging)
         self.architect_coordinator = ArchitectCoordinator(spec_backlog_target=self.config.spec_backlog_target)
@@ -189,6 +193,9 @@ class ContinuousWorkLoop:
         """
         Poll ROADMAP.md for changes.
 
+        NOTE: With roadmap-management skill, we don't cache - skill reads file directly.
+        This method only checks if file changed to log updates.
+
         Returns:
             True if ROADMAP was updated since last check, False otherwise
         """
@@ -202,71 +209,12 @@ class ContinuousWorkLoop:
         current_mtime = roadmap_path.stat().st_mtime
 
         if current_mtime > self.last_roadmap_update:
-            # ROADMAP was modified, reload
+            # ROADMAP was modified
             logger.info(f"ROADMAP.md updated (mtime: {current_mtime})")
-            self.roadmap_cache = self._parse_roadmap(roadmap_path)
             self.last_roadmap_update = current_mtime
             return True
 
         return False
-
-    def _parse_roadmap(self, roadmap_path: Path) -> Dict:
-        """
-        Parse ROADMAP.md and extract priority information.
-
-        Args:
-            roadmap_path: Path to ROADMAP.md
-
-        Returns:
-            Dict with priority information:
-            {
-                "priorities": [
-                    {
-                        "number": 20,
-                        "name": "US-104 - Orchestrator Continuous Work Loop",
-                        "status": "📝 Planned",
-                        "has_spec": False,
-                        "spec_path": None
-                    },
-                    ...
-                ]
-            }
-        """
-        priorities = []
-
-        with open(roadmap_path, "r") as f:
-            content = f.read()
-
-        # Extract priorities (pattern: "### PRIORITY N: US-XXX - Title STATUS")
-        # Matches: ### PRIORITY 20: US-104 - Orchestrator Continuous Work Loop 📝 Planned
-        pattern = r"### PRIORITY (\d+):\s+(US-\d+)\s+-\s+(.*?)\s+(📝|✅|🔄|⏸️|🚧)"
-
-        for match in re.finditer(pattern, content):
-            priority_num = int(match.group(1))
-            us_number = match.group(2)
-            title = match.group(3)
-            status = match.group(4)
-
-            # Check if spec exists
-            spec_num = us_number.split("-")[1]
-            spec_pattern = f"SPEC-{spec_num}-*.md"
-            spec_dir = Path("docs/architecture/specs")
-            spec_files = list(spec_dir.glob(spec_pattern))
-            has_spec = len(spec_files) > 0
-            spec_path = str(spec_files[0]) if has_spec else None
-
-            priorities.append(
-                {
-                    "number": priority_num,
-                    "name": f"{us_number} - {title}",
-                    "us_number": us_number,
-                    "status": status,
-                    "has_spec": has_spec,
-                    "spec_path": spec_path,
-                }
-            )
-
-        return {"priorities": sorted(priorities, key=lambda p: p["number"])}
 
     def _coordinate_architect(self):
         """
@@ -278,8 +226,14 @@ class ContinuousWorkLoop:
         3. Spawn architect instances for first N missing specs (parallel execution)
         4. Target: Always have 2-3 specs ahead of code_developer
         """
-        # Load all priorities from ROADMAP
-        priorities = self.roadmap_parser.get_priorities()
+        # Load all priorities from ROADMAP using skill (SINGLE SOURCE OF TRUTH)
+        result = self.roadmap_skill.execute(operation="get_all_priorities")
+
+        if result.get("error"):
+            logger.error(f"Failed to get priorities: {result['error']}")
+            return
+
+        priorities = result.get("result", [])
 
         if not priorities:
             logger.debug("No priorities found in ROADMAP")
@@ -299,12 +253,15 @@ class ContinuousWorkLoop:
         for priority in missing_specs[: self.config.spec_backlog_target]:
             # Check if already creating this spec
             if self._is_spec_in_progress(priority["number"]):
-                logger.debug(f"Spec for {priority['name']} already in progress")
+                # Construct name from us_id or number for logging
+                priority_name = priority.get("us_id") or f"PRIORITY {priority['number']}"
+                logger.debug(f"Spec for {priority_name} already in progress")
                 continue
 
             # Spawn architect to create spec
-            priority_name = priority["name"]  # e.g., "US-047" or "PRIORITY 1"
-            priority_number = priority["number"]  # e.g., "047" or "1"
+            # Skill returns: us_id (e.g., "US-059") and number (e.g., "59")
+            priority_name = priority.get("us_id") or f"PRIORITY {priority['number']}"
+            priority_number = priority["number"]  # e.g., "59" or "1.5"
             logger.info(f"🏗️  Spawning architect for {priority_name} spec creation")
 
             result = self.agent_mgmt.execute(
@@ -430,31 +387,32 @@ class ContinuousWorkLoop:
         3. If independent: spawn parallel code_developers in worktrees
         4. If not independent: fall back to sequential execution
         """
-        # Use RoadmapParser (handles all ROADMAP formats)
-        priorities = self.roadmap_parser.get_priorities()
+        # Use roadmap-management skill (SINGLE SOURCE OF TRUTH)
+        result = self.roadmap_skill.execute(operation="get_all_priorities")
+
+        if result.get("error"):
+            logger.error(f"Failed to get priorities: {result['error']}")
+            return
+
+        priorities = result.get("result", [])
 
         if not priorities:
             return
 
         # Filter for planned priorities with specs
+        # NOTE: Skill returns: status="Planned" (not emoji), us_id="US-059", number="59"
         planned_priorities = []
         for p in priorities:
-            # Check if planned
-            if "📝" not in p.get("status", ""):
+            # Check if planned (skill returns status="Planned" without emoji)
+            if p.get("status") != "Planned":
                 continue
 
             # Check if spec exists
-            # Extract US number from name (e.g., "US-060" -> "060")
-            name = p.get("name", "")
-            us_number = p.get("us_number")
-            if not us_number and "US-" in name:
-                # Extract number after "US-"
-                parts = name.split("-")
-                if len(parts) >= 2:
-                    us_number = parts[1].split()[0]  # Get "060" from "060 Title" or just "060"
+            # Use priority number for spec lookup (e.g., "59" -> "SPEC-59-*.md")
+            priority_number = p.get("number")
 
-            if us_number:
-                spec_pattern = f"SPEC-{us_number}-*.md"
+            if priority_number:
+                spec_pattern = f"SPEC-{priority_number}-*.md"
                 spec_dir = Path("docs/architecture/specs")
                 spec_files = list(spec_dir.glob(spec_pattern))
                 if len(spec_files) > 0:
@@ -703,7 +661,6 @@ class ContinuousWorkLoop:
         state_data = {
             "last_update": time.time(),
             "active_tasks": self.current_state.get("active_tasks", {}),
-            "roadmap_cache": self.roadmap_cache,
             "last_roadmap_update": self.last_roadmap_update,
         }
 
@@ -723,7 +680,6 @@ class ContinuousWorkLoop:
                 state_data = json.load(f)
 
             self.current_state = state_data
-            self.roadmap_cache = state_data.get("roadmap_cache")
             self.last_roadmap_update = state_data.get("last_roadmap_update", 0.0)
 
             logger.info(f"Loaded previous state (last update: {state_data['last_update']})")
