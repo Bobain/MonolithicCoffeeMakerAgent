@@ -257,6 +257,7 @@ architect merge-worktree-branches --merge {branch} --us-number {us_number}
 
         # Create high-priority notification for architect
         self.notifications.create_notification(
+            type="worktree_merge",
             title=title,
             message=message,
             priority="high",
