@@ -527,10 +527,9 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 if not self._ensure_technical_spec(next_priority):
                     logger.warning("⚠️  Could not ensure technical spec exists - skipping this priority")
                     if self.specific_priority:
-                        logger.error(
-                            f"🚨 SPECIFIC PRIORITY MODE: Cannot proceed with priority {self.specific_priority} - exiting"
+                        logger.warning(
+                            f"⚠️  SPECIFIC PRIORITY MODE: Cannot proceed with priority {self.specific_priority} yet - retrying in {self.sleep_interval}s"
                         )
-                        break
                     time.sleep(self.sleep_interval)
                     continue
 

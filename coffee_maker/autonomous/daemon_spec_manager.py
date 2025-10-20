@@ -97,16 +97,20 @@ class SpecManagerMixin:
 
         # US-054: ENFORCE CFR-011 BEFORE checking for spec
         # This ensures architect has read all findings before ANY spec-related work
-        routine = ArchitectDailyRoutine()
-        try:
-            routine.enforce_cfr_011()
-            logger.info("✅ CFR-011 compliant - architect has integrated code-searcher findings")
-        except CFR011ViolationError as e:
-            logger.error(f"❌ CFR-011 violation detected: {e}")
-            # Notify user about CFR-011 violation
-            self._notify_cfr_011_violation(priority, str(e))
-            # BLOCK spec checking until architect complies
-            return False
+        # SKIP in parallel execution mode (specific_priority set) - worktrees are isolated
+        if not hasattr(self, "specific_priority") or self.specific_priority is None:
+            routine = ArchitectDailyRoutine()
+            try:
+                routine.enforce_cfr_011()
+                logger.info("✅ CFR-011 compliant - architect has integrated code-searcher findings")
+            except CFR011ViolationError as e:
+                logger.error(f"❌ CFR-011 violation detected: {e}")
+                # Notify user about CFR-011 violation
+                self._notify_cfr_011_violation(priority, str(e))
+                # BLOCK spec checking until architect complies
+                return False
+        else:
+            logger.info("⏭️  Skipping CFR-011 enforcement (parallel execution mode)")
 
         priority_name = priority["name"]
         priority_title = priority.get("title", "")
