@@ -224,6 +224,44 @@ def stop():
         click.echo("⚠️  No running orchestrator found")
 
 
+@orchestrator.command()
+@click.option("--hours", default=6, help="Hours to look back (default: 6)")
+@click.option("--save", is_flag=True, help="Save report to evidence/ directory")
+def activity_summary(hours, save):
+    """Generate activity and progress summary.
+
+    Generates a comprehensive report showing:
+    - Completed work (commits, merged priorities)
+    - Current work (running agents, active worktrees)
+    - Upcoming work (next planned priorities)
+    - Summary statistics
+
+    Example:
+        poetry run orchestrator activity-summary
+        poetry run orchestrator activity-summary --hours 2
+        poetry run orchestrator activity-summary --save
+    """
+    from coffee_maker.orchestrator.activity_summary import generate_activity_summary
+
+    click.echo(f"📊 Generating activity summary (last {hours} hours)...")
+    click.echo("")
+
+    try:
+        report = generate_activity_summary(time_window=hours, save_to_file=save)
+
+        click.echo(report)
+
+        if save:
+            click.echo("")
+            click.echo("✅ Report saved to evidence/activity-summary-*.md")
+            click.echo("   Notification created")
+
+    except Exception as e:
+        click.echo(f"\n❌ Error generating summary: {e}", err=True)
+        logger.error(f"Activity summary error: {e}", exc_info=True)
+        sys.exit(1)
+
+
 def main():
     """Entry point for CLI."""
     orchestrator()
