@@ -11,6 +11,10 @@ import click
 import subprocess
 from pathlib import Path
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from coffee_maker.autonomous.architect_daily_routine import (
     ArchitectDailyRoutine,
