@@ -31532,6 +31532,44 @@ ORDER BY elapsed_ms DESC;
 
 ---
 
+## US-111: Web App for User Story Management and Feedback
+
+**Priority**: HIGH
+
+**Status**: 📝 Planned
+
+**Created**: 2025-10-20
+
+**Estimated Effort**: 5-7 days
+
+**User Story**:
+As a product owner, I want a web app to view all user stories (implemented and planned), validate implementations, provide feedback, add DoD criteria, create bug tickets, and attach screen captures.
+
+**Key Features**:
+- View implemented/unimplemented user stories with demos
+- Validate feature implementations (Yes/No/Partial)
+- Provide feedback on results and process (1-5 star ratings)
+- Manage Definition of Done (add, check, verify with skill)
+- Create bug tickets linked to user stories
+- Upload screen captures with annotations
+- Search and filter user stories
+
+**Technical Stack**:
+- Flask web framework
+- Tailwind CSS
+- SQLite database (data/orchestrator.db)
+- Integration: RoadmapParser, BugTracker, DoD verification skill
+
+**Dependencies**:
+- Flask ✅
+- RoadmapParser ✅
+- BugTracker ✅
+- DoD verification skill ✅
+
+**Related**: `.claude/skills/dod-verification.md`, `coffee_maker/cli/bug_tracker.py`, SPEC-111 (to be created)
+
+---
+
 ## 🔴 TOP PRIORITY FOR orchestrator (PARALLEL EXECUTION TEST)
 
 ### PRIORITY 9: US-009 - Daily Report Generator ✅ Complete
