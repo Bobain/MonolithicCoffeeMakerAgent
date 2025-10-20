@@ -24080,11 +24080,12 @@ Study claude-cli for:
 
 ## US-037: Create ACE Console Demo Tutorial
 
-**Status**: 📝 PLANNED
+**Status**: ✅ COMPLETE
 **Type**: Documentation / Onboarding
 **Complexity**: Low
 **Priority**: MEDIUM
 **Created**: 2025-10-16
+**Completed**: 2025-10-20
 
 ### User Story
 
