@@ -24,6 +24,10 @@ exclude:
   - .pre-commit-config.yaml
   - Makefile
   - requirements*.txt
+  # Exclude docs with Liquid-like syntax that breaks Jekyll
+  - docs/architecture/SPEC_IMPROVEMENT_REVIEW_2025-10-17.md
+  - docs/architecture/TEAM_ACCELERATION_OPPORTUNITIES.md
+  - docs/roadmap/PRIORITY_5_5_STRATEGIC_SPEC.md
 
 # GitHub Pages settings
 theme: jekyll-theme-primer
