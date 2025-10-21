@@ -144,11 +144,185 @@ class TaskSeparatorSkill:
         return None
 
 
+def extract_file_patterns_from_text(text: str) -> List[str]:
+    """Extract file patterns from text.
+
+    Args:
+        text: Text to search for file patterns
+
+    Returns:
+        List of file path patterns found (including globs with *)
+    """
+    file_paths = set()
+    patterns = [
+        r"```\w+\s+([\w/]+(?:\*|\.py))",  # Code blocks (*.py or with *)
+        r"`([\w/]+(?:\*|\.py))`",  # Backticks (*.py or with *)
+        r"-\s*\[\s*\]\s+.*?`([\w/]+(?:\*|\.py))`",  # Checklist items
+        r"\b([\w/]+/\*)",  # Directory globs (word boundary followed by path/*)
+    ]
+
+    for pattern in patterns:
+        for match in re.finditer(pattern, text):
+            file_paths.add(match.group(1))
+
+    return sorted(list(file_paths))
+
+
+def find_spec_file(priority_id: Any) -> Path | None:
+    """Find spec file for priority ID.
+
+    Args:
+        priority_id: Priority ID (int, string, or US-XXX format)
+
+    Returns:
+        Path to spec file or None if not found
+    """
+    skill = TaskSeparatorSkill()
+    return skill._find_spec_file(priority_id)
+
+
+def files_conflict(file1: str, file2: str) -> bool:
+    """Check if two file paths conflict (exact match or glob pattern match).
+
+    Args:
+        file1: First file path (may include glob patterns with *)
+        file2: Second file path (may include glob patterns with *)
+
+    Returns:
+        True if files conflict, False otherwise
+    """
+    # Exact match
+    if file1 == file2:
+        return True
+
+    # Check glob patterns
+    import fnmatch
+
+    # If file1 is a glob pattern, check if file2 matches it
+    if "*" in file1:
+        if fnmatch.fnmatch(file2, file1):
+            return True
+
+    # If file2 is a glob pattern, check if file1 matches it
+    if "*" in file2:
+        if fnmatch.fnmatch(file1, file2):
+            return True
+
+    return False
+
+
+def build_file_map(priority_ids: List[int]) -> Dict[int, List[str]]:
+    """Build map of priority IDs to file paths.
+
+    Args:
+        priority_ids: List of priority IDs
+
+    Returns:
+        Dictionary mapping priority IDs to list of file paths
+    """
+    task_file_map = {}
+    skill = TaskSeparatorSkill()
+    for priority_id in priority_ids:
+        files = skill._extract_file_impacts(priority_id)
+        # Include entry even if files is None or empty
+        if files is None:
+            task_file_map[priority_id] = []
+        else:
+            task_file_map[priority_id] = files
+    return task_file_map
+
+
+def find_conflicts(task_file_map: Dict[int, set]) -> Dict[tuple, List[str]]:
+    """Find file conflicts between tasks (including glob pattern matches).
+
+    Args:
+        task_file_map: Map of priority IDs to sets of file paths
+
+    Returns:
+        Dictionary of (priority_a, priority_b) tuples to list of conflicting files
+    """
+    conflicts = {}
+    priority_ids = list(task_file_map.keys())
+
+    for i, priority_a in enumerate(priority_ids):
+        for priority_b in priority_ids[i + 1 :]:
+            files_a = (
+                task_file_map[priority_a]
+                if isinstance(task_file_map[priority_a], list)
+                else list(task_file_map[priority_a])
+            )
+            files_b = (
+                task_file_map[priority_b]
+                if isinstance(task_file_map[priority_b], list)
+                else list(task_file_map[priority_b])
+            )
+
+            # Check for conflicts including glob patterns
+            conflicting_files = []
+            for file_a in files_a:
+                for file_b in files_b:
+                    if files_conflict(file_a, file_b):
+                        # Add both files to the conflict list
+                        if file_a not in conflicting_files:
+                            conflicting_files.append(file_a)
+                        if file_b not in conflicting_files:
+                            conflicting_files.append(file_b)
+
+            if conflicting_files:
+                pair = tuple(sorted([priority_a, priority_b]))
+                conflicts[pair] = sorted(conflicting_files)
+
+    return conflicts
+
+
+def find_safe_pairs(task_file_map: Dict[int, set]) -> List[tuple]:
+    """Find pairs of tasks that can run safely in parallel (no glob conflicts).
+
+    Args:
+        task_file_map: Map of priority IDs to sets of file paths
+
+    Returns:
+        List of (priority_a, priority_b) tuples that have no conflicts
+    """
+    independent_pairs = []
+    priority_ids = list(task_file_map.keys())
+
+    for i, priority_a in enumerate(priority_ids):
+        for priority_b in priority_ids[i + 1 :]:
+            files_a = (
+                task_file_map[priority_a]
+                if isinstance(task_file_map[priority_a], list)
+                else list(task_file_map[priority_a])
+            )
+            files_b = (
+                task_file_map[priority_b]
+                if isinstance(task_file_map[priority_b], list)
+                else list(task_file_map[priority_b])
+            )
+
+            # Check for any conflicts (including glob patterns)
+            has_conflict = False
+            for file_a in files_a:
+                for file_b in files_b:
+                    if files_conflict(file_a, file_b):
+                        has_conflict = True
+                        break
+                if has_conflict:
+                    break
+
+            if not has_conflict:
+                pair = tuple(sorted([priority_a, priority_b]))
+                independent_pairs.append(pair)
+
+    return independent_pairs
+
+
 def main(args: Dict[str, Any]) -> Dict[str, Any]:
     """Skill entry point."""
     priority_ids = args.get("priority_ids", [])
     if not priority_ids:
         return {
+            "error": "No priority_ids provided",
             "valid": False,
             "reason": "No priority_ids provided",
             "independent_pairs": [],
