@@ -43,7 +43,7 @@ $ poetry run architect cfr-011-status
 
 **Output**:
 ```
-=Ë CFR-011 Compliance Status
+=== CFR-011 Compliance Status
 
 ============================================================
  COMPLIANT - No violations detected
@@ -74,12 +74,12 @@ $ poetry run architect daily-integration
 
 **Example Session**:
 ```
-=Ë Found 2 unread code-searcher report(s):
+=== Found 2 unread code-searcher report(s):
 
   1. CODE_QUALITY_ANALYSIS_2025-10-17.md
   2. SECURITY_AUDIT_2025-10-18.md
 
-=Ö Please read all reports now:
+=== Please read all reports now:
 
 ============================================================
 Reading: CODE_QUALITY_ANALYSIS_2025-10-17.md
@@ -121,7 +121,7 @@ $ poetry run architect cfr-011-status
 
 Look for:
 ```
-   Weekly codebase analysis is OVERDUE
+Â   Weekly codebase analysis is OVERDUE
 ```
 
 ### Step 2: Run Codebase Analysis
@@ -139,9 +139,10 @@ $ poetry run architect analyze-codebase
 
 **Example Output**:
 ```
-= Starting weekly codebase analysis...
+=
+ Starting weekly codebase analysis...
 
-=Ê Analyzing codebase for:
+=== Analyzing codebase for:
   - Complexity metrics (radon --average)
   - Large files (>500 LOC)
   - Test coverage (pytest --cov)
@@ -149,7 +150,7 @@ $ poetry run architect analyze-codebase
 
 (This may take 5-10 minutes...)
 
-=Ä Report saved: docs/architecture/CODEBASE_ANALYSIS_2025-10-19.md
+=== Report saved: docs/architecture/CODEBASE_ANALYSIS_2025-10-19.md
 
  Codebase analysis complete!
    Next analysis due: 2025-10-26
