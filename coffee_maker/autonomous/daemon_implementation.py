@@ -456,6 +456,8 @@ Status: Requires human decision
         Enhanced: Now uses centralized prompt from .claude/commands/
         for easy migration to Gemini, OpenAI, or other LLMs.
 
+        NEW: Reads and injects technical spec content into prompt (CFR-XXX)
+
         Args:
             priority: Priority dictionary
 
@@ -463,9 +465,32 @@ Status: Requires human decision
             Prompt string for feature implementation from
             .claude/commands/implement-feature.md
         """
+        from pathlib import Path
+
         priority_content = priority.get("content", "")[:1000]
         if len(priority.get("content", "")) > 1000:
             priority_content += "..."
+
+        # Read and inject technical spec content
+        spec_content = ""
+        priority_number = priority.get("number")
+        if priority_number:
+            spec_dir = Path("docs/architecture/specs")
+            spec_pattern = f"SPEC-{priority_number}-*.md"
+
+            if spec_dir.exists():
+                matching_specs = list(spec_dir.glob(spec_pattern))
+                if matching_specs:
+                    spec_file = matching_specs[0]
+                    try:
+                        spec_content = spec_file.read_text()
+                        logger.info(f"✅ Injected spec content: {spec_file.name} ({len(spec_content)} chars)")
+                    except Exception as e:
+                        logger.warning(f"Failed to read spec file {spec_file}: {e}")
+                        spec_content = f"[ERROR: Could not read spec file {spec_file}: {e}]"
+                else:
+                    logger.warning(f"No spec found for {priority['name']} (pattern: {spec_pattern})")
+                    spec_content = f"[NO SPEC FOUND: Expected pattern {spec_pattern} in {spec_dir}]"
 
         return load_prompt(
             PromptNames.IMPLEMENT_FEATURE,
@@ -473,6 +498,7 @@ Status: Requires human decision
                 "PRIORITY_NAME": priority["name"],
                 "PRIORITY_TITLE": priority["title"],
                 "PRIORITY_CONTENT": priority_content,
+                "SPEC_CONTENT": spec_content,  # NEW: Inject full spec content
             },
         )
 
