@@ -339,6 +339,12 @@ Status: Requires human decision
 
         logger.info("✅ Roadmap branch pushed")
 
+        # Reset no-progress counter since we made progress (files changed and committed)
+        # This allows unlimited iterations as long as we keep making progress
+        if priority_name in self.attempted_priorities:
+            logger.info(f"✅ Progress made on {priority_name} - resetting no-progress counter")
+            self.attempted_priorities[priority_name] = 0
+
         # PRIORITY 4: Log push activity
         self.status.report_activity(
             ActivityType.GIT_PUSH,

@@ -1,7 +1,7 @@
 # Critical Functional Requirements - System Invariants
 
-**Version**: 2.3
-**Date**: 2025-10-17
+**Version**: 2.4
+**Date**: 2025-10-21
 **Status**: Active
 **Owner**: project_manager
 
@@ -4990,6 +4990,228 @@ poetry run orchestrator planning-metrics --days=7
 
 ---
 
+## CFR-016: Technical Specs Must Be Broken Into Small, Incremental Implementation Steps
+
+**Rule**: Technical specifications MUST be broken down into small, incremental implementation steps that can each be completed in a single code_developer iteration.
+
+**Core Principle**:
+```
+✅ REQUIRED: Each implementation step is achievable in one iteration
+✅ REQUIRED: Steps build progressively (foundation → features → polish)
+✅ REQUIRED: code_developer can iterate unlimited times while making progress
+✅ REQUIRED: architect divides complex specs into clear, sequential phases
+
+❌ FORBIDDEN: Specs that are "too complex" for autonomous implementation
+❌ FORBIDDEN: Single monolithic implementation step (>2 days)
+❌ FORBIDDEN: Giving up after 3 attempts when making progress each time
+❌ FORBIDDEN: Vague implementation guidance ("implement the feature")
+```
+
+**Why This Is Critical**:
+
+1. **Progressive Implementation**: Complex features naturally require multiple steps
+   - Database schema → API endpoints → UI components → Tests
+   - Each step builds on previous step
+   - Each step is independently verifiable
+   - Total time: Same or less (better organized)
+
+2. **No-Progress vs Progress Tracking**: System must distinguish between types of iterations
+   - **Progress iteration**: Files changed, committed, pushed → Reset counter, continue
+   - **No-progress iteration**: No files changed, no commit → Increment counter
+   - **Max retries**: Only counts CONSECUTIVE no-progress attempts
+   - Example: 10 progress iterations + 1 no-progress = 1/3 retries used ✅
+
+3. **Prevents "Too Complex" Blocking**:
+   - OLD: "This spec is too complex" → Blocked → Notification to architect → Delay
+   - NEW: architect creates incremental steps UPFRONT → No blocking ever
+   - Result: Continuous forward progress
+
+4. **Autonomous Implementation**: Each step is small enough for single prompt
+   - Step 1: "Create database schema with 3 tables" ✅ (30 min)
+   - Step 2: "Add CRUD operations for table X" ✅ (45 min)
+   - Step 3: "Create FastAPI endpoints" ✅ (1 hour)
+   - Step 4: "Add unit tests" ✅ (30 min)
+   - NOT: "Build entire system" ❌ (3 days, too complex)
+
+**The Progressive Implementation Pattern**:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                  INCREMENTAL IMPLEMENTATION                   │
+└──────────────────────────────────────────────────────────────┘
+
+PRIORITY: Add user authentication system
+
+architect creates spec with phases:
+
+Phase 1: Database Foundation
+- [ ] Create users table schema
+- [ ] Create sessions table schema
+- [ ] Add database migration
+→ Estimate: 1 iteration, 30 min
+
+Phase 2: Core Authentication
+- [ ] Add password hashing utility
+- [ ] Add JWT token generation
+- [ ] Add JWT token validation
+→ Estimate: 1 iteration, 45 min
+
+Phase 3: API Endpoints
+- [ ] POST /auth/register endpoint
+- [ ] POST /auth/login endpoint
+- [ ] POST /auth/logout endpoint
+→ Estimate: 1 iteration, 1 hour
+
+Phase 4: Tests & Documentation
+- [ ] Unit tests for auth utilities
+- [ ] Integration tests for endpoints
+- [ ] Update API documentation
+→ Estimate: 1 iteration, 45 min
+
+Total: 4 iterations, ~3 hours
+Each iteration: Small, focused, achievable
+```
+
+**code_developer Iteration Logic** (daemon_implementation.py):
+
+```python
+# Track consecutive NO-PROGRESS attempts (not total attempts)
+no_progress_count = self.attempted_priorities.get(priority_name, 0)
+
+# Only give up after 3 CONSECUTIVE no-progress attempts
+if no_progress_count >= self.max_retries:
+    logger.warning(
+        f"Skipping {priority_name} - {no_progress_count} consecutive attempts "
+        f"with no changes"
+    )
+    # Block priority and notify architect
+    create_spec_splitting_notification(priority)
+    return
+
+# Execute implementation iteration
+files_changed = implement_priority(priority)
+
+if files_changed:
+    # Progress made! Reset counter and continue
+    self.attempted_priorities[priority_name] = 0
+    logger.info(f"Progress made on {priority_name} - ready for next iteration")
+    # Loop continues on same priority (next incremental step)
+else:
+    # No progress. Increment counter
+    self.attempted_priorities[priority_name] = no_progress_count + 1
+    logger.warning(
+        f"No changes for {priority_name}. "
+        f"Consecutive no-progress: {self.attempted_priorities[priority_name]}/3"
+    )
+```
+
+**Key Difference from Old Behavior**:
+
+```
+OLD (BROKEN):
+Iteration 1: Add database schema → 5 files changed ✅
+Iteration 2: Add API endpoints → 3 files changed ✅
+Iteration 3: Add tests → 2 files changed ✅
+→ Result: BLOCKED (3 total attempts reached)
+→ Problem: Made progress every time but blocked anyway!
+
+NEW (CORRECT):
+Iteration 1: Add database schema → 5 files changed ✅ (reset counter to 0)
+Iteration 2: Add API endpoints → 3 files changed ✅ (reset counter to 0)
+Iteration 3: Add tests → 2 files changed ✅ (reset counter to 0)
+Iteration 4: Add documentation → 1 file changed ✅ (reset counter to 0)
+Iteration 5: Ready for next feature
+→ Result: CONTINUES (unlimited iterations while making progress)
+→ Success: Progressive implementation works!
+```
+
+**architect Responsibilities**:
+
+1. **Divide Complex Specs**: Break down large features into phases
+   - Each phase: 1-2 hours maximum
+   - Clear acceptance criteria per phase
+   - Sequential dependencies documented
+
+2. **Provide Clear Steps**: Each step is actionable
+   - NOT: "Implement authentication" (vague)
+   - YES: "Create users table with id, email, password_hash, created_at columns"
+
+3. **Estimate Per Phase**: Help code_developer plan
+   - Phase 1: 30 min
+   - Phase 2: 1 hour
+   - Phase 3: 45 min
+   - Total: 2 hours 15 min
+
+**Spec Template for Incremental Implementation**:
+
+```markdown
+## Implementation Plan (Incremental Phases)
+
+### Phase 1: Foundation (30 min)
+**Goal**: Create database schema
+
+**Steps**:
+1. Create `users` table with columns: id, email, password_hash, created_at
+2. Create `sessions` table with columns: id, user_id, token, expires_at
+3. Add migration script to `migrations/001_auth_tables.sql`
+
+**Acceptance Criteria**:
+- [ ] Tables created and migration runs successfully
+- [ ] Schema matches design in ERD above
+
+**Files to Create/Modify**:
+- `coffee_maker/database/schema.py` (add table definitions)
+- `migrations/001_auth_tables.sql` (new file)
+
+---
+
+### Phase 2: Authentication Logic (45 min)
+**Goal**: Add password hashing and JWT generation
+
+**Steps**:
+1. Add `hash_password(password: str) -> str` to `auth_utils.py`
+2. Add `verify_password(password: str, hash: str) -> bool`
+3. Add `create_jwt_token(user_id: str) -> str`
+4. Add `verify_jwt_token(token: str) -> Optional[str]`
+
+**Acceptance Criteria**:
+- [ ] Passwords hashed with bcrypt (cost=12)
+- [ ] JWT tokens signed with HS256
+- [ ] Token expiry set to 24 hours
+
+**Files to Create/Modify**:
+- `coffee_maker/auth/auth_utils.py` (new file)
+- `pyproject.toml` (add bcrypt, python-jose dependencies)
+
+[... more phases ...]
+```
+
+**Benefits of Incremental Implementation**:
+
+1. **Continuous Progress**: Never stuck, always moving forward
+2. **Clear Checkpoints**: Each phase is verifiable milestone
+3. **Easy Debugging**: Small changes, easy to identify issues
+4. **Parallel Work Possible**: Different phases can inspire parallel tasks
+5. **Better Estimates**: Small increments are easier to estimate accurately
+6. **No "Too Complex" Blocking**: Every spec is implementable
+
+**Enforcement**:
+
+- architect MUST break specs >2 hours into phases (checked in spec review)
+- code_developer can iterate unlimited times while making progress (daemon enforces)
+- Consecutive no-progress limit: 3 attempts (then create notification to architect)
+- project_manager monitors: "high iteration count" alerts if >10 iterations on single priority
+
+**Related**:
+- CFR-008: Architect Creates ALL Specs (architect owns spec creation)
+- CFR-011: Architect Must Integrate code-searcher Findings (informs spec creation)
+- CFR-015: Continuous Planning Loop (incremental steps enable continuous work)
+- PRIORITY 24: Technical Prerequisite Tracking (identifies foundations to build first)
+
+**User Story**: US-116: Progressive Implementation Support (IMPLEMENTED 2025-10-21)
+
+---
+
 ## Agent File Access Patterns
 
 **Purpose**: Agents should KNOW which files to read, not search for them.
@@ -5326,6 +5548,19 @@ This means US-043 (Parallel Execution) can be implemented safely thanks to CFR e
 **Next Review**: After US-038, US-039, US-043, US-044, and US-056 implementation
 
 **Changelog**:
+- **v2.4** (2025-10-21): Added CFR-016 (Technical Specs Must Be Broken Into Small, Incremental Implementation Steps)
+  - New CFR-016: architect MUST break specs into incremental phases (each 1-2 hours max)
+  - code_developer supports unlimited iterations while making progress
+  - Tracks consecutive NO-PROGRESS attempts (not total attempts)
+  - Counter resets to 0 when files changed and committed (progress made)
+  - Only gives up after 3 CONSECUTIVE no-progress attempts
+  - Enables progressive implementation (database → API → UI → tests)
+  - Each phase has clear steps, acceptance criteria, time estimate
+  - Prevents "too complex" blocking by creating small, achievable steps upfront
+  - Spec template provided with incremental phases example
+  - Related: daemon_implementation.py updated to support progressive iteration
+  - Why critical: Complex features need multiple iterations, system must distinguish progress vs no-progress
+  - User Story: US-116 (Progressive Implementation Support - IMPLEMENTED 2025-10-21)
 - **v2.3** (2025-10-17): Enhanced CFR-011 with Proactive Spec Creation Mandate
   - Added Part 1: Proactively Create Specs for ALL ROADMAP Priorities (BEFORE code_developer needs them)
   - Core principle: architect works AHEAD of code_developer, NEVER reacts to blocking
