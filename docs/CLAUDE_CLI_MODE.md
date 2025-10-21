@@ -163,7 +163,7 @@ else:
 
 # 2. Execute prompt (same interface for both)
 result = self.claude.execute_prompt(
-    prompt="Read docs/ROADMAP.md and implement PRIORITY 2.6",
+    prompt="Read docs/roadmap/ROADMAP.md and implement PRIORITY 2.6",
     timeout=3600
 )
 

@@ -7,7 +7,7 @@ from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
 import logging
 import sys
 from functools import partial
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Callable
 
 # This prompt is focused ONLY on getting the model to call the tool correctly.
 # The final summarization step will be handled by a separate, simpler prompt.
@@ -102,7 +102,7 @@ async def run_agent_chat_stream(message: str, history: list, agent: ReActAgent) 
 
 async def get_agent_func_with_context(
     mcp_server_tool_url: str, ollama_model: str = OLLAMA_MODEL, request_timeout: int = REQUEST_TIMEOUT
-) -> callable:
+) -> Callable:
     """Creates a partially configured agent chat function.
 
     This function initializes an MCP client and tools, creates a ReActAgent,

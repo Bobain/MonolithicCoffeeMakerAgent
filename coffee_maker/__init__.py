@@ -86,7 +86,7 @@ print(f"Cost: ${cost:.4f}")
 Built-in observability and monitoring:
 
 ```python
-from coffee_maker.langchain_observe import LangfuseObserver
+from coffee_maker.langfuse_observe import LangfuseObserver
 
 observer = LangfuseObserver(
     project_name="my-project",
@@ -109,7 +109,7 @@ coffee_maker/
 ├── llm.py                          # Base LLM abstractions
 ├── cost_calculator.py              # Cost tracking
 ├── scheduled_llm.py                # Rate limiting and quotas
-├── langchain_observe/              # Observability
+├── langfuse_observe/              # Observability
 │   ├── analytics/                  # Analytics and reporting
 │   └── exporters/                  # Data export utilities
 ├── autonomous/                     # Autonomous development daemon
@@ -198,7 +198,7 @@ llm = ScheduledLLM(
 
 ```python
 from coffee_maker.auto_picker_llm_refactored import AutoPickerLLM
-from coffee_maker.langchain_observe import trace
+from coffee_maker.langfuse_observe import trace
 
 @trace(name="story-generator")
 def generate_story(prompt):
@@ -289,12 +289,14 @@ See `LICENSE` file.
 **Built with coffee by the Coffee Maker Agent team**
 """
 
-__version__ = "1.0.0"
-__author__ = "Coffee Maker Agent Team"
-__license__ = "MIT"
+from typing import List
+
+__version__: str = "1.0.0"
+__author__: str = "Coffee Maker Agent Team"
+__license__: str = "MIT"
 
 # Public API exports
-__all__ = [
+__all__: List[str] = [
     # Core LLM interface
     "AutoPickerLLM",
     # Strategies

@@ -1,6 +1,6 @@
 # Autonomous Development Daemon - Usage Guide
 
-The **DevDaemon** is an autonomous development system that continuously reads `docs/ROADMAP.md` and automatically implements planned priorities using Claude CLI.
+The **DevDaemon** is an autonomous development system that continuously reads `docs/roadmap/ROADMAP.md` and automatically implements planned priorities using Claude CLI.
 
 ## 🎯 Overview
 
@@ -70,7 +70,7 @@ python run_dev_daemon.py [OPTIONS]
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--roadmap PATH` | Path to ROADMAP.md | `docs/ROADMAP.md` |
+| `--roadmap PATH` | Path to ROADMAP.md | `docs/roadmap/ROADMAP.md` |
 | `--auto` | Auto-approve (skip confirmation) | `False` |
 | `--no-pr` | Skip PR creation | `False` |
 | `--sleep N` | Sleep N seconds between iterations | `30` |
@@ -174,9 +174,9 @@ When the daemon finds a planned priority:
 The daemon sends this prompt to Claude CLI:
 
 ```
-Read docs/ROADMAP.md and implement PRIORITY X: Feature Name.
+Read docs/roadmap/ROADMAP.md and implement PRIORITY X: Feature Name.
 
-Follow the roadmap guidelines and deliverables. Update docs/ROADMAP.md with your progress.
+Follow the roadmap guidelines and deliverables. Update docs/roadmap/ROADMAP.md with your progress.
 
 Important:
 - Follow all coding standards
@@ -237,7 +237,7 @@ If using the daemon as a library:
 from coffee_maker.autonomous.daemon import DevDaemon
 
 daemon = DevDaemon(
-    roadmap_path="docs/ROADMAP.md",
+    roadmap_path="docs/roadmap/ROADMAP.md",
     auto_approve=False,          # Ask for approval
     create_prs=True,             # Create PRs automatically
     sleep_interval=30,           # Sleep 30s between iterations
@@ -448,7 +448,7 @@ Run separate daemons for different roadmaps:
 
 **Terminal 1** (main roadmap):
 ```bash
-python run_dev_daemon.py --roadmap docs/ROADMAP.md
+python run_dev_daemon.py --roadmap docs/roadmap/ROADMAP.md
 ```
 
 **Terminal 2** (feature roadmap):
@@ -476,7 +476,7 @@ class CustomDaemon(DevDaemon):
         {priority['content']}
         """
 
-daemon = CustomDaemon(roadmap_path="docs/ROADMAP.md")
+daemon = CustomDaemon(roadmap_path="docs/roadmap/ROADMAP.md")
 daemon.run()
 ```
 
@@ -510,9 +510,9 @@ jobs:
 
 ## 📚 Related Documentation
 
-- [ROADMAP.md](../docs/ROADMAP.md) - Project roadmap
-- [PRIORITY 3 Details](../docs/ROADMAP.md#priority-3) - Daemon implementation details
-- [Notification System](../docs/ROADMAP.md#priority-2) - project-manager CLI
+- [ROADMAP.md](../docs/roadmap/ROADMAP.md) - Project roadmap
+- [PRIORITY 3 Details](../docs/roadmap/ROADMAP.md#priority-3) - Daemon implementation details
+- [Notification System](../docs/roadmap/ROADMAP.md#priority-2) - project-manager CLI
 
 ---
 
@@ -525,7 +525,7 @@ If you encounter issues:
 3. Test components individually:
    ```bash
    # Test roadmap parser
-   python -c "from coffee_maker.autonomous.roadmap_parser import RoadmapParser; p = RoadmapParser('docs/ROADMAP.md'); print(p.get_priorities())"
+   python -c "from coffee_maker.autonomous.roadmap_parser import RoadmapParser; p = RoadmapParser('docs/roadmap/ROADMAP.md'); print(p.get_priorities())"
 
    # Test Claude CLI
    claude code -p "print hello world"

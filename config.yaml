@@ -1,0 +1,136 @@
+# Coffee Maker Agent - Configuration File
+#
+# This configuration file contains settings for the autonomous daemon,
+# including crash recovery and context management features.
+#
+# Note: Most configuration is defined in coffee_maker/config.py for
+# programmatic access. This YAML file documents configuration options
+# that can be overridden via environment variables or CLI arguments.
+
+# ============================================================================
+# DAEMON CONFIGURATION
+# ============================================================================
+
+daemon:
+  # Sleep interval between iterations (seconds)
+  sleep_interval: 30
+
+  # Model to use for Claude API
+  model: "sonnet"  # Options: "sonnet", "opus", "haiku"
+
+  # Whether to use Claude CLI (subscription) vs API (credits)
+  use_claude_cli: false
+
+  # Path to Claude CLI executable (if use_claude_cli=true)
+  claude_cli_path: "/opt/homebrew/bin/claude"
+
+  # Whether to auto-approve implementation without user confirmation
+  auto_approve: false
+
+  # Whether to create pull requests automatically
+  create_prs: true
+
+  # Maximum retry attempts before skipping a priority
+  max_retries: 3
+
+# ============================================================================
+# CRASH RECOVERY CONFIGURATION
+# ============================================================================
+
+daemon.crash_recovery:
+  # Enable automatic crash recovery
+  enabled: true
+
+  # Maximum number of crashes before stopping daemon
+  max_crashes: 3
+
+  # Initial backoff time after first crash (seconds)
+  backoff_initial: 30
+
+  # Maximum backoff time (seconds)
+  # Uses exponential backoff: 30s, 60s, 120s, 240s, 300s (max)
+  backoff_max: 300
+
+# ============================================================================
+# CONTEXT MANAGEMENT CONFIGURATION
+# ============================================================================
+
+daemon.context_management:
+  # Enable periodic context refresh using /compact
+  compact_enabled: true
+
+  # Number of iterations before running /compact
+  # This prevents token bloat and context pollution
+  compact_interval: 10
+
+  # Whether to use isolated sessions per priority
+  # If true, each priority gets a fresh Claude session
+  # This eliminates context pollution but may miss cross-priority context
+  isolated_sessions: false
+
+# ============================================================================
+# NOTIFICATION CONFIGURATION
+# ============================================================================
+
+notifications:
+  # Database path for notifications
+  db_path: "data/notifications.db"
+
+  # Whether to create notifications for crashes
+  crash_notifications: true
+
+  # Whether to create notifications for priority completion
+  completion_notifications: true
+
+# ============================================================================
+# LOGGING CONFIGURATION
+# ============================================================================
+
+logging:
+  # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  level: "INFO"
+
+  # Log directory
+  log_dir: "logs"
+
+  # Daemon log file
+  daemon_log: "logs/daemon.log"
+
+  # Whether to log to console in addition to file
+  console_output: true
+
+# ============================================================================
+# GIT CONFIGURATION
+# ============================================================================
+
+git:
+  # Main branch name (for PRs)
+  main_branch: "main"
+
+  # Branch prefix for feature branches
+  branch_prefix: "feature/"
+
+  # Whether to push branches automatically
+  auto_push: true
+
+  # Whether to create pull requests
+  auto_pr: true
+
+# ============================================================================
+# USAGE NOTES
+# ============================================================================
+#
+# Configuration Precedence (highest to lowest):
+# 1. CLI arguments (e.g., --auto-approve, --sleep-interval)
+# 2. Environment variables (e.g., DAEMON_AUTO_APPROVE=true)
+# 3. This config.yaml file
+# 4. Default values in code
+#
+# Environment Variable Format:
+#   daemon.sleep_interval -> DAEMON_SLEEP_INTERVAL
+#   daemon.crash_recovery.max_crashes -> DAEMON_CRASH_RECOVERY_MAX_CRASHES
+#
+# CLI Arguments Override Everything:
+#   python run_daemon.py --auto-approve --max-crashes 5
+#
+# ============================================================================

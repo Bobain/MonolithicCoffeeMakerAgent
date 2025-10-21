@@ -34,7 +34,7 @@ LOGGER = logging.getLogger(__name__)
 MCP_SERVER_TOOL_URL = f"http://127.0.0.1:{weather_mcp_server_port}/sse"
 
 
-async def main():
+async def main() -> None:
     """Initializes resources and launches the Gradio application."""
     agent_fn = await get_agent_func_with_context(MCP_SERVER_TOOL_URL)
     try:
@@ -61,7 +61,7 @@ async def main():
 
 if __name__ == "__main__":
     from coffee_maker.examples.llama_index.dummy_weather_mcp_server import main as run_dummy_weather_server, PORT
-    from coffee_maker.utils.run_deamon_process import run_daemon
+    from coffee_maker.utils.run_daemon_process import run_daemon
 
     run_daemon(run_dummy_weather_server, PORT)
     try:

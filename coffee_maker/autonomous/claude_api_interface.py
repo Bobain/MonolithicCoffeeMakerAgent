@@ -8,7 +8,7 @@ Example:
     >>>
     >>> api = ClaudeAPI()
     >>> result = api.execute_prompt(
-    ...     "Read docs/ROADMAP.md and implement PRIORITY 2"
+    ...     "Read docs/roadmap/ROADMAP.md and implement PRIORITY 2"
     ... )
     >>> print(result.content)
 """
@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from typing import Optional
 
 from anthropic import Anthropic
+
+from coffee_maker.config import ConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -94,9 +96,12 @@ class ClaudeAPI:
         self.timeout = timeout
 
         # Initialize Anthropic client
-        self.client = Anthropic(api_key=api_key or os.environ.get("ANTHROPIC_API_KEY"))
+        # Use provided key or get from ConfigManager
+        if api_key is None:
+            api_key = ConfigManager.get_anthropic_api_key()
+        self.client = Anthropic(api_key=api_key)
 
-        logger.info(f"ClaudeAPI initialized with model: {model}")
+        logger.debug(f"ClaudeAPI initialized with model: {model}")
 
     def execute_prompt(
         self,
@@ -119,7 +124,7 @@ class ClaudeAPI:
         Example:
             >>> api = ClaudeAPI()
             >>> result = api.execute_prompt(
-            ...     "Read docs/ROADMAP.md and implement PRIORITY 2"
+            ...     "Read docs/roadmap/ROADMAP.md and implement PRIORITY 2"
             ... )
             >>> if result.success:
             ...     print("Implementation complete")
@@ -134,7 +139,7 @@ class ClaudeAPI:
         if system_prompt is None:
             system_prompt = self._build_default_system_prompt(working_dir)
 
-        logger.info(f"Executing API request: {prompt[:100]}...")
+        logger.debug(f"Executing API request: {prompt[:100]}...")
 
         try:
             message = self.client.messages.create(
@@ -145,7 +150,7 @@ class ClaudeAPI:
                 timeout=timeout,
             )
 
-            logger.info(f"API request completed: {message.usage.input_tokens} in, {message.usage.output_tokens} out")
+            logger.debug(f"API request completed: {message.usage.input_tokens} in, {message.usage.output_tokens} out")
 
             return APIResult(
                 content=self._extract_content(message),

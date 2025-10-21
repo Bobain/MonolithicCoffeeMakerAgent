@@ -15,6 +15,8 @@ Usage:
     report.save_html("review_report.html")
 """
 
+from typing import List
+
 from coffee_maker.code_reviewer.reviewer import MultiModelCodeReviewer
 
-__all__ = ["MultiModelCodeReviewer"]
+__all__: List[str] = ["MultiModelCodeReviewer"]

@@ -1,0 +1,332 @@
+# Documentation Validation Report
+
+**Date**: 2025-10-11 21:32:39
+**Files Checked**: 95
+**Errors**: 44
+**Warnings**: 253
+**Info**: 59
+
+## Errors
+
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/__init__.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/agents.py:290: Function `extract_brackets` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/agents.py:264: Function `get_result_from_llm` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/agents.py:267: Function `get_list_of_dict_from_llm` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/examples/__init__.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/examples/llama_index/__init__.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/examples/llama_index/app.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/examples/llama_index/dummy_weather_mcp_server.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/agents.py:20: Function `instrument_llm` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/agents.py:44: Function `resolve_gemini_api_key` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/agents.py:99: Function `configure_llm` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/llm_providers/gemini.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/llm_providers/gemini.py:163: Function `set_api_limits` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/llm_providers/gemini.py:177: Function `update_rate_limits` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/llm_providers/openai.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/llm_tools.py:291: Function `make_tool_func` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/retry_utils.py:28: Function `__init__` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/retry_utils.py:235: Function `decorator` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/retry_utils.py:336: Function `decorator` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/retry_utils.py:237: Function `wrapper` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/retry_utils.py:338: Function `wrapper` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:30: Function `__init__` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/tools.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/tools.py:15: Function `make_func_a_tool` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/tools.py:53: Function `escape_newlines_in_strings` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/utils.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/sec_vuln_helper/__init__.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/__init__.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/github.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/github.py:13: Function `get_github_client_instance` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/github.py:290: Function `__init__` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/github.py:299: Function `post_suggestion_in_pr_review` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/github.py:320: Function `get_pr_modified_files` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/github.py:323: Function `get_pr_file_content` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/github.py:92: Function `cleanup` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/llama_index.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/run_deamon_process.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/run_deamon_process.py:117: Class `DeamonProcessOnPortHandler` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/run_deamon_process.py:118: Function `__init__` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/run_deamon_process.py:124: Function `run_daemon` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/run_deamon_process.py:127: Function `kill_process_on_port` missing docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/setup_isolated_venv.py: Missing module docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/text_to_speech.py: Missing module docstring
+
+## Warnings
+
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:65: Function `read_file_content` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:65: Function `read_file_content` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:78: Function `write_file_content` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:78: Function `write_file_content` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:90: Function `construct_llm_prompt` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:90: Function `construct_llm_prompt` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:133: Function `parse_llm_response` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:133: Function `parse_llm_response` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:238: Function `get_ai_suggestion` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:238: Function `get_ai_suggestion` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:290: Function `generate_and_write_diff` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:290: Function `generate_and_write_diff` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/auto_gemini_styleguide.py:364: Function `main` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/claude_api_interface.py:45: Function `success` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/claude_api_interface.py:45: Function `success` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/claude_api_interface.py:227: Function `check_available` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/claude_cli_interface.py:48: Function `success` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/claude_cli_interface.py:48: Function `success` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/claude_cli_interface.py:110: Function `is_available` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/claude_cli_interface.py:118: Function `check_available` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/claude_cli_interface.py:261: Function `reset_context` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/daemon.py:159: Function `run` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/daemon.py:1180: Function `stop` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/daemon_cli.py:178: Function `signal_handler` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/developer_status.py:30: Class `ActivityType` docstring too short
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/developer_status.py:237: Function `task_completed` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/git_manager.py:77: Function `get_current_branch` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/git_manager.py:248: Function `is_clean` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/git_manager.py:269: Function `get_status` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/git_manager.py:288: Function `has_remote` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/roadmap_parser.py:59: Function `get_priorities` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/roadmap_parser.py:160: Function `get_next_planned_priority` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/roadmap_parser.py:183: Function `get_in_progress_priorities` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/ai_service.py:710: Function `check_available` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/assistant_bridge.py:137: Function `is_available` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/bug_tracker.py:35: Function `get_next_bug_number` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/chat_interface.py:525: Function `start` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/add_priority.py:31: Function `name` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/add_priority.py:31: Function `name` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/add_priority.py:36: Function `description` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/add_priority.py:36: Function `description` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/add_priority.py:40: Function `get_usage` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/add_priority.py:40: Function `get_usage` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/analyze_roadmap.py:36: Function `name` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/analyze_roadmap.py:36: Function `name` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/analyze_roadmap.py:41: Function `description` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/analyze_roadmap.py:41: Function `description` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/analyze_roadmap.py:45: Function `get_usage` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/analyze_roadmap.py:45: Function `get_usage` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/base.py:54: Function `name` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/base.py:67: Function `description` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/base.py:178: Function `get_usage` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/update_priority.py:37: Function `name` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/update_priority.py:37: Function `name` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/update_priority.py:42: Function `description` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/update_priority.py:42: Function `description` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/update_priority.py:46: Function `get_usage` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/update_priority.py:46: Function `get_usage` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/user_story.py:40: Function `name` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/user_story.py:40: Function `name` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/user_story.py:45: Function `description` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/user_story.py:45: Function `description` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/user_story.py:49: Function `get_usage` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/user_story.py:49: Function `get_usage` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/view_roadmap.py:36: Function `name` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/view_roadmap.py:36: Function `name` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/view_roadmap.py:41: Function `description` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/view_roadmap.py:41: Function `description` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/view_roadmap.py:45: Function `get_usage` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/commands/view_roadmap.py:45: Function `get_usage` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/developer_status_display.py:45: Function `show` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/notifications.py:347: Function `close` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/roadmap_editor.py:233: Function `get_priority_summary` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/roadmap_editor.py:546: Function `get_user_story_summary` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/agents.py:192: Function `create_langchain_code_formatter_agent` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/agents.py:192: Function `create_langchain_code_formatter_agent` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/agents.py:301: Function `main` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/agents.py:301: Function `main` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/main.py:305: Function `on_llm_new_token` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/main.py:309: Function `on_llm_end` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/main.py:313: Function `on_tool_start` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/main.py:317: Function `on_tool_end` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_formatter/main.py:321: Function `on_tool_error` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_reviewer/git_integration.py:60: Function `get_staged_files` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_reviewer/git_integration.py:116: Function `review_staged_files` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_reviewer/git_integration.py:360: Function `uninstall_hooks` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_reviewer/models.py:88: Function `calculate_metrics` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_reviewer/perspectives/base_perspective.py:59: Function `get_summary` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/code_reviewer/report_generator.py:31: Function `__init__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/examples/llama_index/dummy_weather_mcp_server.py:6: Function `main` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/examples/llama_index/dummy_weather_mcp_server.py:6: Function `main` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/examples/llama_index/dummy_weather_mcp_server.py:12: Function `get_weather` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/examples/llama_index/dummy_weather_mcp_server.py:12: Function `get_weather` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/examples/llama_index/dummy_weather_mcp_server.py:17: Function `weather_resource` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/examples/llama_index/dummy_weather_mcp_server.py:17: Function `weather_resource` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/examples/llama_index/dummy_weather_mcp_server.py:22: Function `weather_report` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/examples/llama_index/dummy_weather_mcp_server.py:22: Function `weather_report` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/analyzer_sqlite.py:261: Function `close` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/analyzer_sqlite.py:267: Function `__enter__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/analyzer_sqlite.py:267: Function `__enter__` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/analyzer_sqlite.py:271: Function `__exit__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/config.py:77: Function `from_env` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/config.py:129: Function `db_url` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/db_schema.py:116: Function `load_dialect_impl` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/db_schema.py:116: Function `load_dialect_impl` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/db_schema.py:125: Function `process_bind_param` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/db_schema.py:125: Function `process_bind_param` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/db_schema.py:136: Function `process_result_value` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/db_schema.py:136: Function `process_result_value` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/db_schema.py:155: Function `load_dialect_impl` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/db_schema.py:155: Function `load_dialect_impl` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/db_schema.py:164: Function `process_bind_param` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/db_schema.py:164: Function `process_bind_param` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/db_schema.py:175: Function `process_result_value` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/db_schema.py:175: Function `process_result_value` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/exporter.py:86: Function `setup_database` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/exporter_sqlite.py:83: Function `setup_database` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/exporter_sqlite.py:311: Function `close` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/exporter_sqlite.py:317: Function `__enter__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/exporter_sqlite.py:317: Function `__enter__` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/exporter_sqlite.py:321: Function `__exit__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:371: Function `insert_trace` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:385: Function `insert_generation` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:401: Function `insert_span` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:414: Function `get_generation_by_id` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:414: Function `get_generation_by_id` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:421: Function `get_recent_generations` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:421: Function `get_recent_generations` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:427: Function `get_generations_by_model` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:427: Function `get_generations_by_model` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:175: Function `to_db_row` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:175: Function `to_db_row` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:192: Function `from_db_row` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:192: Function `from_db_row` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:235: Function `to_db_row` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:235: Function `to_db_row` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:262: Function `from_db_row` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:262: Function `from_db_row` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:304: Function `to_db_row` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:304: Function `to_db_row` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:320: Function `from_db_row` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/analytics/models_sqlite.py:320: Function `from_db_row` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/auto_picker_llm_refactored.py:41: Function `__init__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/auto_picker_llm_refactored.py:94: Function `invoke` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/auto_picker_llm_refactored.py:94: Function `invoke` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/auto_picker_llm_refactored.py:325: Function `get_stats` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:16: Function `__init__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:30: Function `with_tier` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:30: Function `with_tier` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:35: Function `with_primary` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:35: Function `with_primary` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:41: Function `with_fallback` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:41: Function `with_fallback` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:46: Function `with_fallbacks` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:46: Function `with_fallbacks` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:51: Function `with_cost_tracking` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:51: Function `with_cost_tracking` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:81: Function `with_max_wait` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:81: Function `with_max_wait` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:86: Function `with_context_fallback` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:86: Function `with_context_fallback` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:91: Function `with_smart_fallback` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:91: Function `with_smart_fallback` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:96: Function `with_cost_optimized_fallback` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:96: Function `with_cost_optimized_fallback` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:101: Function `with_sequential_fallback` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:101: Function `with_sequential_fallback` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:106: Function `with_custom_fallback_strategy` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:106: Function `with_custom_fallback_strategy` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:111: Function `build` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:111: Function `build` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:212: Function `for_tier` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:212: Function `for_tier` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:244: Function `fast` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:244: Function `fast` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:257: Function `powerful` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/builder.py:257: Function `powerful` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/cost_budget.py:28: Function `__init__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/cost_budget.py:154: Function `get_budget_status` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/cost_calculator.py:33: Function `__init__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/cost_calculator.py:207: Function `reset_history` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/http_pool.py:23: Function `__new__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/http_pool.py:23: Function `__new__` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/http_pool.py:104: Function `close` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/http_pool.py:144: Function `reset` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/langfuse_logger.py:12: Function `__init__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/langfuse_logger.py:16: Function `log_generation` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/langfuse_logger.py:50: Function `log_fallback` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/langfuse_logger.py:67: Function `log_context_fallback` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/llm_tools.py:292: Function `tool_func` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/llm_tools.py:292: Function `tool_func` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/rate_limiter.py:33: Function `__init__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/rate_limiter.py:195: Function `get_last_call_time` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/scheduled_llm.py:313: Function `get_stats` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/scheduled_llm.py:341: Function `__init__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:67: Function `create_context_strategy` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:67: Function `create_context_strategy` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:16: Function `check_fits` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:23: Function `get_larger_context_models` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:33: Function `check_fits` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:33: Function `check_fits` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:46: Function `get_larger_context_models` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:46: Function `get_larger_context_models` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:58: Function `check_fits` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:58: Function `check_fits` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:62: Function `get_larger_context_models` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/context.py:62: Function `get_larger_context_models` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:32: Function `record_request` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:43: Function `record_error` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:47: Function `record_cost` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:51: Function `record_fallback` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:55: Function `get_metrics` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:66: Function `__init__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:76: Function `record_request` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:104: Function `record_error` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:118: Function `record_cost` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:132: Function `record_fallback` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:146: Function `get_metrics` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:146: Function `get_metrics` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:158: Function `get_average_latency` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:158: Function `get_average_latency` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:164: Function `get_total_cost` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:164: Function `get_total_cost` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:168: Function `reset` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:186: Function `__init__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:247: Function `record_request` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:263: Function `record_error` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:270: Function `record_cost` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:277: Function `record_fallback` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:284: Function `get_metrics` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:284: Function `get_metrics` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:295: Function `record_request` docstring too short
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:305: Function `record_error` docstring too short
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:308: Function `record_cost` docstring too short
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:311: Function `record_fallback` docstring too short
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:314: Function `get_metrics` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/metrics.py:314: Function `get_metrics` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/retry.py:219: Function `__repr__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/retry.py:219: Function `__repr__` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/scheduling.py:436: Function `__repr__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/langchain_observe/strategies/scheduling.py:436: Function `__repr__` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/process_manager.py:29: Function `__init__` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/process_manager.py:39: Function `is_daemon_running` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/process_manager.py:94: Function `get_daemon_status` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/github.py:103: Function `post_suggestion_in_pr_review` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/github.py:223: Function `get_pr_modified_files` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/github.py:260: Function `get_pr_file_content` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/github.py:294: Function `client` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/github.py:294: Function `client` has return but no Returns section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/run_deamon_process.py:26: Function `kill_process_on_port` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/run_deamon_process.py:48: Function `run_daemon` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/run_deamon_process.py:96: Function `find_process_on_port` has parameters but no Args section
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/utils/run_deamon_process.py:96: Function `find_process_on_port` has return but no Returns section
+
+## Info
+
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/claude_api_interface.py:27: Class `APIResult` has structured docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/claude_api_interface.py:50: Class `ClaudeAPI` has structured docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/claude_cli_interface.py:27: Class `APIResult` has structured docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/claude_cli_interface.py:53: Class `ClaudeCLIInterface` has structured docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/daemon.py:48: Class `DevDaemon` has structured docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/developer_status.py:49: Class `DeveloperStatus` has structured docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/git_manager.py:27: Class `GitManager` has structured docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/autonomous/roadmap_parser.py:28: Class `RoadmapParser` has structured docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/ai_service.py:47: Class `AIResponse` has structured docstring
+- /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent/coffee_maker/cli/ai_service.py:61: Class `AIService` has structured docstring
+- ... and 49 more
+
+## Summary
+
+**Status**: ❌ FAIL
+
+**Next Steps**:
+- Fix missing docstrings
+- Address warnings for better documentation

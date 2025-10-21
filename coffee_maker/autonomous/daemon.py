@@ -1,51 +1,207 @@
 """Autonomous development daemon - minimal MVP.
 
-This module implements the core autonomous daemon that:
-1. Reads ROADMAP.md continuously
-2. Finds next planned priority
-3. Executes Claude API to implement it
-4. Commits, pushes, creates PR
-5. Updates ROADMAP status
-6. Repeats until all priorities complete
+This module implements the core autonomous daemon that continuously reads
+ROADMAP.md and autonomously implements features by invoking Claude API.
 
-Example:
-    >>> from coffee_maker.autonomous.daemon import DevDaemon
-    >>>
-    >>> daemon = DevDaemon(
-    ...     roadmap_path="docs/ROADMAP.md",
-    ...     auto_approve=True,
-    ...     create_prs=True
-    ... )
+Architecture:
+    DevDaemon: Main daemon loop
+    ├── RoadmapParser: Reads and parses ROADMAP.md
+    ├── ClaudeAPI/ClaudeCLI: Interfaces with Claude for implementation
+    ├── GitManager: Handles git operations (branch, commit, push, PR)
+    ├── DeveloperStatus: Real-time status tracking (PRIORITY 4)
+    └── NotificationDB: Bidirectional communication with project-manager
+
+Workflow:
+    1. Parse ROADMAP.md for next planned priority
+    2. Ensure technical specification exists (create if missing)
+    3. Create feature branch
+    4. Execute Claude API with implementation prompt
+    5. Commit changes with proper message
+    6. Push and create PR
+    7. Update status and notify user
+    8. Sleep and repeat
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 WORKFLOW INTEGRATION: US-024 + US-027 (VISIBILITY LOOP)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This daemon implements a dual workflow for real-time visibility between
+code_developer (this daemon) and project_manager (user interface):
+
+US-027: Roadmap Branch as Single Source of Truth (Developer Side)
+──────────────────────────────────────────────────────────────────
+The daemon ALWAYS syncs with 'roadmap' branch at the start of each iteration:
+
+    def run():
+        while True:
+            # 1. SYNC FROM roadmap branch (US-027)
+            _sync_roadmap_branch()  # Pull latest ROADMAP.md from origin/roadmap
+
+            # 2. Read priorities
+            next_priority = parser.get_next_planned_priority()
+
+            # 3. Implement
+            _implement_priority(next_priority)
+
+            # 4. MERGE TO roadmap branch (US-024)
+            # (Not yet implemented - see US-024.md)
+
+            time.sleep(30)
+
+Key principle: The 'roadmap' branch is the SINGLE SOURCE OF TRUTH.
+All priority decisions, status updates, and planning changes MUST go
+through the roadmap branch first.
+
+US-024: Frequent Roadmap Sync (Developer → Manager Visibility)
+───────────────────────────────────────────────────────────────
+The daemon will merge to 'roadmap' branch frequently to show progress:
+
+    Merge Triggers:
+    - After completing sub-tasks
+    - After updating ROADMAP.md
+    - Before going idle/sleep
+    - After creating tickets
+
+    Implementation (planned):
+        def _merge_to_roadmap(message: str):
+            git checkout roadmap
+            git merge --no-ff feature-branch -m message
+            git push origin roadmap
+            git checkout feature-branch
+
+The Visibility Loop
+───────────────────
+Together, US-024 + US-027 create a continuous visibility loop:
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │                  VISIBILITY LOOP                            │
+    │                                                             │
+    │   code_developer                    project_manager        │
+    │   (this daemon)                     (user interface)        │
+    │        │                                   │                │
+    │        ├──[1. Work on feature]─────►      │                │
+    │        │                                   │                │
+    │        ├──[2. Merge to roadmap]────►  ┌───┴───┐            │
+    │        │        (US-024)              │ See   │            │
+    │        │                              │updates│            │
+    │        │                              └───┬───┘            │
+    │        │                                  │                │
+    │        │   ┌──────────────────────────────┘                │
+    │        │   │ [3. User provides feedback]                   │
+    │        │   │    (updates ROADMAP.md on                     │
+    │        │   │     roadmap branch)                           │
+    │        │   │                                               │
+    │   ┌────┴───▼────┐                                          │
+    │   │ [4. Sync    │                                          │
+    │   │  from       │                                          │
+    │   │  roadmap]   │                                          │
+    │   │  (US-027)   │                                          │
+    │   └────┬────────┘                                          │
+    │        │                                                   │
+    │        └──[5. Continue with updated priorities]           │
+    │                                                             │
+    │   Result: Real-time visibility and early course            │
+    │           correction without waiting for PR merge          │
+    └─────────────────────────────────────────────────────────────┘
+
+Benefits:
+    For code_developer (daemon):
+    - ✅ Always works on latest priorities
+    - ✅ Never wastes time on obsolete tasks
+    - ✅ Frequent checkpoints for recovery
+
+    For project_manager (user):
+    - ✅ Real-time visibility into progress
+    - ✅ Can provide feedback early
+    - ✅ No surprises at PR time
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Key Features:
+    - Crash Recovery: Automatic recovery from crashes (max 3 attempts)
+    - Context Management: Periodic context refresh (every 10 iterations)
+    - Status Tracking: Real-time status reporting via data/developer_status.json
+    - Retry Logic: Smart retry with max attempts per priority
+    - Notifications: Bidirectional communication with user
+    - Auto-approval Mode: Fully autonomous operation
+    - PR Creation: Automatic pull request generation
+    - Roadmap Sync: Always syncs with origin/roadmap (US-027)
+
+Prerequisites:
+    - ANTHROPIC_API_KEY environment variable (for API mode)
+    - Claude CLI installed (for CLI mode)
+    - Git repository with remote
+    - docs/roadmap/ROADMAP.md exists
+    - Clean working directory
+    - 'roadmap' branch exists and is up to date
+
+Usage Examples:
+    Basic usage (autonomous mode):
+    >>> daemon = DevDaemon(auto_approve=True)
+    >>> daemon.run()  # Runs until all priorities complete
+
+    With user approval:
+    >>> daemon = DevDaemon(auto_approve=False)
+    >>> daemon.run()  # Asks for approval before each priority
+
+    Using Claude CLI (subscription):
+    >>> daemon = DevDaemon(use_claude_cli=True, claude_cli_path="/path/to/claude")
     >>> daemon.run()
+
+    Custom crash recovery:
+    >>> daemon = DevDaemon(max_crashes=5, crash_sleep_interval=120)
+    >>> daemon.run()
+
+Status Tracking:
+    The daemon writes status to ~/.coffee_maker/daemon_status.json
+    which project-manager reads to display current progress.
+
+    Use `project-manager developer-status` to view daemon status.
+
+Configuration:
+    - roadmap_path: Path to ROADMAP.md (default: docs/roadmap/ROADMAP.md)
+    - auto_approve: Auto-approve without confirmation (default: True)
+    - create_prs: Create PRs automatically (default: True)
+    - sleep_interval: Seconds between iterations (default: 30)
+    - model: Claude model to use (default: sonnet)
+    - max_crashes: Max crashes before stopping (default: 3)
+    - compact_interval: Iterations between context resets (default: 10)
 """
 
-import json
 import logging
-import os
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
+# from coffee_maker.autonomous.activity_logger import ActivityLogger  # TODO: Re-enable when activity_logger is implemented
+from coffee_maker.autonomous.agent_registry import AgentRegistry, AgentType
 from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
+from coffee_maker.autonomous.daemon_git_ops import GitOpsMixin
+from coffee_maker.autonomous.startup_skill_executor import (
+    StartupSkillExecutor,
+    StartupError,
+)
+from coffee_maker.autonomous.daemon_implementation import ImplementationMixin
+from coffee_maker.autonomous.daemon_spec_manager import SpecManagerMixin
+from coffee_maker.autonomous.daemon_status import StatusMixin
 from coffee_maker.autonomous.developer_status import (
     ActivityType,
     DeveloperState,
     DeveloperStatus,
 )
+from coffee_maker.autonomous.spec_watcher import SpecWatcher
 from coffee_maker.autonomous.git_manager import GitManager
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
+from coffee_maker.autonomous.task_metrics import TaskMetricsDB
 from coffee_maker.cli.notifications import (
-    NOTIF_PRIORITY_CRITICAL,
-    NOTIF_PRIORITY_HIGH,
-    NOTIF_TYPE_ERROR,
-    NOTIF_TYPE_INFO,
     NotificationDB,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class DevDaemon:
+class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin):
     """Autonomous development daemon (minimal MVP).
 
     This daemon continuously reads ROADMAP.md and autonomously implements
@@ -59,6 +215,12 @@ class DevDaemon:
     6. Update ROADMAP status (via notification)
     7. Sleep and repeat
 
+    Composed from mixins:
+        - GitOpsMixin: Git synchronization and branch operations
+        - SpecManagerMixin: Technical specification management
+        - ImplementationMixin: Priority implementation orchestration
+        - StatusMixin: Status tracking and notifications
+
     Attributes:
         roadmap_path: Path to ROADMAP.md
         auto_approve: Whether to auto-approve without user confirmation
@@ -67,7 +229,7 @@ class DevDaemon:
 
     Example:
         >>> daemon = DevDaemon(
-        ...     roadmap_path="docs/ROADMAP.md",
+        ...     roadmap_path="docs/roadmap/ROADMAP.md",
         ...     auto_approve=False,  # Ask user before starting
         ...     create_prs=True
         ... )
@@ -76,7 +238,7 @@ class DevDaemon:
 
     def __init__(
         self,
-        roadmap_path: str = "docs/ROADMAP.md",
+        roadmap_path: str = "docs/roadmap/ROADMAP.md",
         auto_approve: bool = True,  # BUG FIX: Should be autonomous by default
         create_prs: bool = True,
         sleep_interval: int = 30,
@@ -87,7 +249,9 @@ class DevDaemon:
         max_crashes: int = 3,
         crash_sleep_interval: int = 60,
         compact_interval: int = 10,
-    ):
+        # Parallel execution support
+        specific_priority: Optional[int] = None,
+    ) -> None:
         """Initialize development daemon.
 
         Args:
@@ -101,6 +265,7 @@ class DevDaemon:
             max_crashes: Maximum consecutive crashes before stopping (default: 3)
             crash_sleep_interval: Sleep duration after crash in seconds (default: 60)
             compact_interval: Iterations between context resets (default: 10)
+            specific_priority: Work on this specific priority only (for parallel execution)
         """
         self.roadmap_path = Path(roadmap_path)
         self.auto_approve = auto_approve
@@ -108,6 +273,7 @@ class DevDaemon:
         self.sleep_interval = sleep_interval
         self.model = model
         self.use_claude_cli = use_claude_cli
+        self.specific_priority = specific_priority
 
         # Initialize components
         self.parser = RoadmapParser(str(self.roadmap_path))
@@ -117,8 +283,14 @@ class DevDaemon:
         if use_claude_cli:
             from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
 
-            self.claude = ClaudeCLIInterface(claude_path=claude_cli_path, model=model)
-            logger.info("✅ Using Claude CLI mode (subscription)")
+            try:
+                self.claude = ClaudeCLIInterface(claude_path=claude_cli_path, model=model)
+                logger.info("✅ Using Claude CLI mode (subscription)")
+            except RuntimeError as e:
+                logger.warning(f"Claude CLI initialization failed: {e}")
+                logger.info("Falling back to Claude API mode")
+                self.claude = ClaudeAPI(model=model)
+                self.use_claude_cli = False
         else:
             self.claude = ClaudeAPI(model=model)
             logger.info("✅ Using Claude API mode (requires credits)")
@@ -127,6 +299,12 @@ class DevDaemon:
 
         # PRIORITY 4: Developer status tracking
         self.status = DeveloperStatus()
+
+        # Task metrics database for performance tracking
+        self.metrics_db = TaskMetricsDB()
+
+        # PRIORITY 9: Activity logging for daily standup generation
+        # self.activity_logger = ActivityLogger()  # TODO: Re-enable when activity_logger is implemented
 
         # State
         self.running = False
@@ -137,6 +315,10 @@ class DevDaemon:
         self.start_time = None
         self.iteration_count = 0
         self.current_priority_start_time = None
+        self.current_priority_info = None  # Store current priority for metrics recording
+
+        # Subtask tracking for status bar display
+        self.current_subtasks = []  # List of {name, status, duration_seconds, estimated_seconds}
 
         # PRIORITY 2.7: Crash recovery state
         self.max_crashes = max_crashes
@@ -149,12 +331,79 @@ class DevDaemon:
         self.iterations_since_compact = 0
         self.last_compact_time = None
 
+        # US-047 Phase 3: Spec watcher for proactive missing spec detection
+        self.spec_watcher = SpecWatcher(roadmap_path=self.roadmap_path)
+        self.spec_check_interval = 300  # Check every 5 minutes (300 seconds)
+        self.last_spec_check_time = None
+
+        # US-049: Architect continuous spec improvement loop (CFR-010)
+        from coffee_maker.autonomous.architect_review_triggers import ReviewTrigger
+        from coffee_maker.autonomous.architect_metrics import ArchitectMetrics
+        from coffee_maker.autonomous.architect_report_generator import (
+            WeeklyReportGenerator,
+        )
+
+        self.review_trigger = ReviewTrigger()
+        self.architect_metrics = ArchitectMetrics()
+        self.report_generator = WeeklyReportGenerator(self.architect_metrics)
+
+        # US-062: Execute startup skill (CFR-007 validation, health checks)
+        self._execute_startup_skill()
+
         logger.info("DevDaemon initialized")
         logger.info(f"Roadmap: {self.roadmap_path}")
         logger.info(f"Auto-approve: {self.auto_approve}")
         logger.info(f"Create PRs: {self.create_prs}")
         logger.info(f"Max crashes: {self.max_crashes}")
         logger.info(f"Compact interval: {self.compact_interval} iterations")
+
+    def _execute_startup_skill(self) -> None:
+        """Execute code_developer startup skill (US-062).
+
+        This method:
+        1. Loads the code_developer-startup skill from .claude/skills/
+        2. Validates CFR-007 context budget compliance
+        3. Executes health checks
+        4. Initializes daemon resources
+
+        Raises:
+            StartupError: If startup skill fails (missing config, CFR-007 violation, etc.)
+        """
+        executor = StartupSkillExecutor()
+
+        logger.info("🚀 Executing code_developer startup skill...")
+
+        # Execute startup skill
+        result = executor.execute_startup_skill("code_developer")
+
+        if not result.success:
+            # Startup failed - format error message
+            error_msg = (
+                f"❌ code_developer startup failed\n"
+                f"Error: {result.error_message}\n"
+                f"Steps completed: {result.steps_completed}/{result.total_steps}\n"
+            )
+
+            if result.suggested_fixes:
+                error_msg += "\nSuggested fixes:\n"
+                for i, fix in enumerate(result.suggested_fixes, 1):
+                    error_msg += f"  {i}. {fix}\n"
+
+            logger.error(error_msg)
+            raise StartupError(error_msg)
+
+        # Startup succeeded - log metrics
+        logger.info(f"✅ code_developer startup successful")
+        logger.info(
+            f"   Context budget: {result.context_budget_pct:.1f}% (limit: {StartupSkillExecutor.CFR007_BUDGET_PCT}%)"
+        )
+        logger.info(
+            f"   Health checks: {sum(1 for h in result.health_checks if h.passed)}/{len(result.health_checks)} passed"
+        )
+        logger.info(f"   Startup time: {result.execution_time_seconds:.2f}s")
+
+        # Store result for debugging
+        self.startup_result = result
 
     def run(self):
         """Run daemon main loop.
@@ -168,6 +417,19 @@ class DevDaemon:
             >>> daemon = DevDaemon()
             >>> daemon.run()  # Runs until complete
         """
+        # US-035: Register agent in singleton registry to prevent duplicate instances
+        # Using context manager ensures automatic cleanup even if exceptions occur
+        try:
+            with AgentRegistry.register(AgentType.CODE_DEVELOPER):
+                logger.info("✅ Agent registered in singleton registry")
+                self._run_daemon_loop()
+        except Exception as e:
+            logger.error(f"❌ Failed to register agent: {e}")
+            logger.error("Another code_developer instance is already running!")
+            return
+
+    def _run_daemon_loop(self):
+        """Internal daemon loop (extracted for cleaner agent registry management)."""
         self.running = True
         self.start_time = datetime.now()
         logger.info("🤖 DevDaemon starting...")
@@ -221,11 +483,32 @@ class DevDaemon:
                 # Reload roadmap
                 self.parser = RoadmapParser(str(self.roadmap_path))
 
+                # US-047 Phase 3: Periodic spec check (every 5 minutes)
+                self._check_for_missing_specs()
+
+                # US-049: Check if architect reviews needed (CFR-010)
+                self._check_architect_reviews()
+
                 # PRIORITY 4: Update status - analyzing roadmap
                 self.status.update_status(DeveloperState.THINKING, current_step="Analyzing ROADMAP.md")
 
                 # Get next task
-                next_priority = self.parser.get_next_planned_priority()
+                if self.specific_priority:
+                    # Parallel execution mode: work on specific priority only
+                    logger.info(f"🎯 SPECIFIC PRIORITY MODE: Looking for priority {self.specific_priority}")
+                    next_priority = self.parser.get_priority_by_number(self.specific_priority)
+                    if not next_priority:
+                        logger.error(f"❌ Priority {self.specific_priority} not found in ROADMAP")
+                        logger.error(
+                            f"   Available priorities: {[p.get('number') for p in self.parser.get_priorities()[:10]]}"
+                        )
+                        break
+                    logger.info(f"📋 Working on specific priority: {next_priority['name']} - {next_priority['title']}")
+                    logger.info(f"   Status: {next_priority.get('status', 'Unknown')}")
+                    logger.info(f"   Has spec path: {bool(next_priority.get('spec_path'))}")
+                else:
+                    # Sequential mode: get next planned priority
+                    next_priority = self.parser.get_next_planned_priority()
 
                 if not next_priority:
                     logger.info("✅ No more planned priorities - all done!")
@@ -243,6 +526,10 @@ class DevDaemon:
                 # BUG FIX #3 & #4: Check for technical spec, create if missing
                 if not self._ensure_technical_spec(next_priority):
                     logger.warning("⚠️  Could not ensure technical spec exists - skipping this priority")
+                    if self.specific_priority:
+                        logger.warning(
+                            f"⚠️  SPECIFIC PRIORITY MODE: Cannot proceed with priority {self.specific_priority} yet - retrying in {self.sleep_interval}s"
+                        )
                     time.sleep(self.sleep_interval)
                     continue
 
@@ -272,8 +559,16 @@ class DevDaemon:
                     "name": f"{next_priority['name']}: {next_priority['title']}",
                 }
                 self.status.update_status(
-                    DeveloperState.WORKING, task=task_info, progress=0, current_step="Starting implementation"
+                    DeveloperState.WORKING,
+                    task=task_info,
+                    progress=0,
+                    current_step="Starting implementation",
                 )
+
+                # PRIORITY 9: Log priority start for daily standup
+                priority_number = next_priority.get("number", "")
+                priority_name = next_priority.get("name", "Unknown")
+                # self.activity_logger.start_priority(str(priority_number), priority_name)  # TODO: Re-enable
 
                 # Execute implementation
                 success = self._implement_priority(next_priority)
@@ -286,8 +581,30 @@ class DevDaemon:
                     self.iterations_since_compact += 1
                     # PRIORITY 2.8: Write status after completion
                     self._write_status(priority=next_priority)
+
+                    # PRIORITY 9: Log priority completion for daily standup
+                    priority_number = next_priority.get("number", "")
+                    # self.activity_logger.complete_priority(str(priority_number), success=True)  # TODO: Re-enable
+
+                    # US-029: CRITICAL - Merge to roadmap after successful implementation
+                    logger.info(f"📤 Merging {next_priority['name']} to roadmap for project_manager visibility...")
+                    self._merge_to_roadmap(f"Completed {next_priority['name']}")
+
                     # PRIORITY 4: Return to idle after task complete
-                    self.status.update_status(DeveloperState.IDLE, current_step="Task completed, waiting for next")
+                    self.status.update_status(
+                        DeveloperState.IDLE,
+                        current_step="Task completed, waiting for next",
+                    )
+
+                    # Exit if working on specific priority (parallel execution mode)
+                    if self.specific_priority:
+                        logger.info(f"✅ SPECIFIC PRIORITY MODE: Completed priority {self.specific_priority}")
+                        logger.info(f"   Priority: {next_priority['name']} - {next_priority['title']}")
+                        logger.info(f"   Duration: {datetime.now() - self.current_priority_start_time}")
+                        logger.info(f"   Exiting daemon (specific priority mode)")
+                        self.running = False
+                        break
+
                 else:
                     logger.warning(f"⚠️  Implementation failed for {next_priority['name']}")
                     # PRIORITY 4: Log error activity
@@ -296,6 +613,14 @@ class DevDaemon:
                         f"Implementation failed for {next_priority['name']}",
                         details={"priority": next_priority["name"]},
                     )
+
+                    # PRIORITY 9: Log failure for daily standup
+                    priority_number = next_priority.get("number", "")
+                    # self.activity_logger.complete_priority(str(priority_number), success=False)  # TODO: Re-enable
+
+                # US-029: CRITICAL - Merge to roadmap before sleep so project_manager has visibility
+                logger.info("📤 Merging progress to roadmap before sleep...")
+                self._merge_to_roadmap("End of iteration checkpoint")
 
                 # Sleep before next iteration
                 logger.info(f"💤 Sleeping {self.sleep_interval}s before next iteration...")
@@ -313,7 +638,9 @@ class DevDaemon:
                     "timestamp": datetime.now().isoformat(),
                     "exception": str(e),
                     "exception_type": type(e).__name__,
-                    "priority": next_priority.get("name") if "next_priority" in locals() else "Unknown",
+                    "priority": (
+                        next_priority.get("name") if "next_priority" in locals() and next_priority else "Unknown"
+                    ),
                     "iteration": iteration,
                 }
                 self.crash_history.append(crash_info)
@@ -328,7 +655,10 @@ class DevDaemon:
                 self.status.report_activity(
                     ActivityType.ERROR_ENCOUNTERED,
                     f"Daemon crashed: {type(e).__name__}",
-                    details={"exception": str(e)[:200], "crash_count": self.crash_count},
+                    details={
+                        "exception": str(e)[:200],
+                        "crash_count": self.crash_count,
+                    },
                 )
 
                 # PRIORITY 2.8: Write status after crash
@@ -385,6 +715,14 @@ class DevDaemon:
 
         logger.info("✅ ROADMAP.md found")
 
+        # CFR-013 validation: Daemon must work on roadmap branch only
+        logger.info("Checking CFR-013 compliance...")
+        if not self._validate_cfr_013():
+            logger.error("❌ CFR-013 validation failed")
+            return False
+
+        logger.info("✅ CFR-013 compliant")
+
         return True
 
     def _reset_claude_context(self) -> bool:
@@ -432,750 +770,233 @@ class DevDaemon:
             logger.error(f"Error resetting context: {e}")
             return False
 
-    def _sync_roadmap_branch(self) -> bool:
-        """Sync with 'roadmap' branch before each iteration.
+    def _check_for_missing_specs(self) -> None:
+        """Periodically check for new priorities missing specs (US-047 Phase 3).
 
-        This ensures the daemon always works with the latest priorities
-        and prevents working on stale/obsolete tasks.
+        This method implements proactive spec monitoring:
+        1. Checks if it's time for a spec check (every 5 minutes)
+        2. Uses SpecWatcher to detect new priorities without specs
+        3. Creates notifications to alert architect
 
-        Returns:
-            True if sync successful or not needed, False if sync failed
-
-        Implementation:
-            1. Fetch origin/roadmap
-            2. Merge origin/roadmap into current branch
-            3. Handle conflicts gracefully
+        CFR-008: Enforces architect-only spec creation by alerting when missing.
         """
-        try:
-            # Fetch latest from roadmap branch
-            import subprocess
+        current_time = time.time()
 
-            result = subprocess.run(
-                ["git", "fetch", "origin", "roadmap"],
-                cwd=self.git.repo_path,
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
+        # Check if it's time for a spec check (every 5 minutes)
+        if self.last_spec_check_time is not None:
+            elapsed = current_time - self.last_spec_check_time
+            if elapsed < self.spec_check_interval:
+                # Not time yet
+                return
 
-            if result.returncode != 0:
-                logger.warning(f"Failed to fetch roadmap branch: {result.stderr}")
-                return False
-
-            # Merge origin/roadmap
-            result = subprocess.run(
-                ["git", "merge", "origin/roadmap", "--no-edit"],
-                cwd=self.git.repo_path,
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-
-            if result.returncode != 0:
-                # Check if merge conflict
-                if "CONFLICT" in result.stdout or "CONFLICT" in result.stderr:
-                    logger.error("❌ Merge conflict with roadmap branch!")
-                    logger.error("Manual intervention required to resolve conflicts")
-
-                    # Abort merge
-                    subprocess.run(
-                        ["git", "merge", "--abort"],
-                        cwd=self.git.repo_path,
-                        capture_output=True,
-                    )
-                    return False
-                else:
-                    logger.warning(f"Merge failed: {result.stderr}")
-                    return False
-
-            logger.info("✅ Synced with 'roadmap' branch")
-            return True
-
-        except Exception as e:
-            logger.error(f"Error syncing roadmap branch: {e}")
-            return False
-
-    def _ensure_technical_spec(self, priority: dict) -> bool:
-        """Ensure technical specification exists for this priority.
-
-        BUG-002 FIX: Validate priority fields before accessing them.
-
-        If spec doesn't exist, create it before implementing.
-
-        Args:
-            priority: Priority dictionary
-
-        Returns:
-            True if spec exists or was created successfully
-        """
-        # BUG-002: Validate required fields
-        if not priority.get("name"):
-            logger.error("❌ Priority missing 'name' field - cannot create technical spec")
-            return False
-
-        if not priority.get("content"):
-            logger.warning(f"⚠️  Priority {priority.get('name')} has no content - will use title only in spec")
-
-        priority_name = priority["name"]
-
-        # Determine spec filename
-        # US-XXX -> US-XXX_TECHNICAL_SPEC.md
-        # PRIORITY X -> PRIORITY_X_TECHNICAL_SPEC.md
-        if priority_name.startswith("US-"):
-            spec_filename = f"{priority_name}_TECHNICAL_SPEC.md"
-        elif priority_name.startswith("PRIORITY"):
-            # PRIORITY 2.6 -> PRIORITY_2_6_TECHNICAL_SPEC.md
-            spec_name = priority_name.replace(" ", "_").replace(".", "_")
-            spec_filename = f"{spec_name}_TECHNICAL_SPEC.md"
-        else:
-            # Generic fallback
-            spec_name = priority_name.replace(" ", "_").replace(":", "")
-            spec_filename = f"{spec_name}_TECHNICAL_SPEC.md"
-
-        spec_path = self.roadmap_path.parent / spec_filename
-
-        # Check if spec already exists
-        if spec_path.exists():
-            logger.info(f"✅ Technical spec exists: {spec_filename}")
-            return True
-
-        logger.info(f"📝 Technical spec not found: {spec_filename}")
-        logger.info("Creating technical specification...")
-
-        # Create spec using Claude
-        spec_prompt = self._build_spec_creation_prompt(priority, spec_filename)
+        logger.debug("🔍 Checking for new priorities missing specs...")
+        self.last_spec_check_time = current_time
 
         try:
-            result = self.claude.execute_prompt(spec_prompt, timeout=600)  # 10 min timeout
-
-            if not result.success:
-                logger.error(f"Failed to create technical spec: {result.error}")
-                return False
-
-            # Check if spec file was created
-            if not spec_path.exists():
-                logger.error("Claude completed but spec file was not created")
-                return False
-
-            logger.info(f"✅ Created technical spec: {spec_filename}")
-
-            # Commit the spec
-            self.git.commit(f"docs: Add technical spec for {priority_name}")
-            self.git.push()
-
-            return True
-
-        except Exception as e:
-            logger.error(f"Error creating technical spec: {e}")
-            return False
-
-    def _build_spec_creation_prompt(self, priority: dict, spec_filename: str) -> str:
-        """Build prompt for creating technical specification.
-
-        BUG-002 FIX: Use safe dictionary access to prevent KeyError crashes.
-
-        Args:
-            priority: Priority dictionary
-            spec_filename: Name of spec file to create
-
-        Returns:
-            Prompt string
-        """
-        # BUG-002: Safe dictionary access with defaults
-        priority_name = priority.get("name", "Unknown Priority")
-        priority_title = priority.get("title", "No title")
-        priority_content = priority.get("content", "")
-
-        # Handle missing/empty content gracefully
-        if not priority_content or len(priority_content.strip()) == 0:
-            priority_context = f"Title: {priority_title}\nNo additional details provided in ROADMAP."
-            logger.warning(f"Priority {priority_name} has no content - using title only for spec creation")
-        else:
-            # Safely truncate content
-            priority_context = priority_content[:2000]
-            if len(priority_content) > 2000:
-                priority_context += "..."
-
-        return f"""Create a detailed technical specification for implementing {priority_name}.
-
-Read the user story from docs/ROADMAP.md and create a comprehensive technical spec.
-
-**Your Task:**
-1. Read docs/ROADMAP.md to understand {priority_name}
-2. Create docs/{spec_filename} with detailed technical specification
-3. Include:
-   - Prerequisites & Dependencies
-   - Architecture Overview
-   - Component Specifications
-   - Data Flow Diagrams (in text/mermaid format)
-   - Implementation Plan (step-by-step with time estimates)
-   - Testing Strategy
-   - Security Considerations
-   - Performance Requirements
-   - Risk Analysis
-   - Success Criteria
-
-**Important:**
-- Be VERY specific and detailed
-- Include file paths, class names, method signatures
-- Provide code examples
-- Break down into concrete tasks
-- Estimate time for each task
-- Make it actionable for implementation
-
-**User Story Context:**
-{priority_context}
-
-Create the spec now in docs/{spec_filename}."""
-
-    def _request_approval(self, priority: dict) -> bool:
-        """Request user approval to implement a priority.
-
-        Args:
-            priority: Priority dictionary
-
-        Returns:
-            True if approved
-        """
-        logger.info(f"Requesting approval for {priority['name']}")
-
-        # Create notification
-        notif_id = self.notifications.create_notification(
-            type=NOTIF_TYPE_INFO,
-            title=f"Implement {priority['name']}?",
-            message=f"The daemon wants to implement:\n{priority['title']}\n\nApprove?",
-            priority=NOTIF_PRIORITY_HIGH,
-            context={"priority_name": priority["name"], "priority_number": priority["number"]},
-        )
-
-        logger.info(f"Created notification {notif_id} - waiting for response")
-        logger.info("Check notifications with: project-manager notifications")
-        logger.info(f"Approve with: project-manager respond {notif_id} approve")
-
-        # Poll for response (simplified - in production would use event system)
-        max_wait = 1800  # 30 minutes
-        poll_interval = 5
-        waited = 0
-
-        while waited < max_wait:
-            time.sleep(poll_interval)
-            waited += poll_interval
-
-            notif = self.notifications.get_notification(notif_id)
-            if notif and notif["user_response"]:
-                response = notif["user_response"].lower()
-                approved = "approve" in response or "yes" in response
-                logger.info(f"User response: {response} (approved={approved})")
-                return approved
-
-        logger.warning("User did not respond in time - skipping")
-        return False
-
-    def _implement_priority(self, priority: dict) -> bool:
-        """Implement a priority.
-
-        Args:
-            priority: Priority dictionary
-
-        Returns:
-            True if successful
-        """
-        priority_name = priority["name"]
-        priority_title = priority["title"]
-
-        # Check if we've already attempted this priority too many times
-        attempt_count = self.attempted_priorities.get(priority_name, 0)
-
-        if attempt_count >= self.max_retries:
-            logger.warning(f"⏭️  Skipping {priority_name} - already attempted {attempt_count} times with no changes")
-            logger.warning(f"This priority requires manual intervention")
-
-            # Create final notification
-            self.notifications.create_notification(
-                type=NOTIF_TYPE_INFO,
-                title=f"{priority_name}: Max Retries Reached",
-                message=f"""The daemon has attempted to implement this priority {attempt_count} times but no files were changed.
-
-This priority requires manual implementation:
-
-Priority: {priority_name}
-Title: {priority_title}
-Status: Skipped after {attempt_count} attempts
-
-Action Required:
-1. Manually implement this priority, OR
-2. Mark as "Manual Only" in ROADMAP.md, OR
-3. Clarify the deliverables to make them more concrete
-
-The daemon will skip this priority in future iterations.
-""",
-                priority=NOTIF_PRIORITY_HIGH,
-                context={
-                    "priority_name": priority_name,
-                    "priority_number": priority.get("number"),
-                    "reason": "max_retries_reached",
-                    "attempts": attempt_count,
-                },
-            )
-
-            return False  # Return False so the daemon moves on
-
-        # Increment attempt counter
-        self.attempted_priorities[priority_name] = attempt_count + 1
-        logger.info(
-            f"🚀 Starting implementation of {priority_name} (attempt {self.attempted_priorities[priority_name]}/{self.max_retries})"
-        )
-
-        # PRIORITY 4: Update progress - creating branch
-        self.status.report_progress(10, "Creating feature branch")
-
-        # Create branch
-        branch_name = f"feature/{priority_name.lower().replace(' ', '-').replace(':', '')}"
-        logger.info(f"Creating branch: {branch_name}")
-
-        if not self.git.create_branch(branch_name):
-            logger.error("Failed to create branch")
-            return False
-
-        # PRIORITY 4: Log branch creation
-        self.status.report_activity(
-            ActivityType.GIT_BRANCH, f"Created branch: {branch_name}", details={"branch": branch_name}
-        )
-
-        # Build prompt for Claude
-        prompt = self._build_implementation_prompt(priority)
-
-        # PRIORITY 4: Update progress - calling Claude API
-        self.status.report_progress(20, "Executing implementation with Claude API")
-
-        logger.info("Executing Claude API with implementation prompt...")
-
-        # Execute Claude API
-        result = self.claude.execute_prompt(prompt, timeout=3600)  # 1 hour timeout
-
-        if not result.success:
-            logger.error(f"Claude API failed: {result.error}")
-            return False
-
-        logger.info("✅ Claude API execution complete")
-        logger.info(f"📊 Token usage: {result.usage['input_tokens']} in, {result.usage['output_tokens']} out")
-
-        # PRIORITY 4: Update progress - implementation complete
-        self.status.report_progress(60, "Implementation complete, checking changes")
-
-        # Check if any files were changed (Fix for infinite loop issue)
-        if self.git.is_clean():
-            logger.warning("⚠️  Claude API completed but no files changed")
-            logger.warning("Possible reasons:")
-            logger.warning("  1. Priority already implemented")
-            logger.warning("  2. Task too vague for autonomous implementation")
-            logger.warning("  3. Requires human judgment/review")
-
-            # Create notification for human review
-            self.notifications.create_notification(
-                type=NOTIF_TYPE_INFO,
-                title=f"{priority_name}: Needs Manual Review",
-                message=f"""Claude API completed successfully but made no file changes.
-
-Possible actions:
-1. Review priority description - is it concrete enough?
-2. Manually implement this priority
-3. Mark as "Manual Only" in ROADMAP
-4. Skip and move to next priority
-
-Priority: {priority_name}
-Title: {priority_title}
-Status: Requires human decision
-""",
-                priority=NOTIF_PRIORITY_HIGH,
-                context={
-                    "priority_name": priority_name,
-                    "priority_number": priority.get("number"),
-                    "reason": "no_changes",
-                },
-            )
-
-            logger.info("📧 Created notification for manual review")
-            # Return "success" to avoid infinite retry - human will decide next steps
-            return True
-
-        # PRIORITY 4: Update progress - committing changes
-        self.status.report_progress(70, "Committing changes")
-
-        # Commit changes
-        commit_message = self._build_commit_message(priority)
-
-        if not self.git.commit(commit_message):
-            logger.error("Failed to commit changes")
-            return False
-
-        logger.info("✅ Changes committed")
-
-        # PRIORITY 4: Log commit activity
-        self.status.report_activity(
-            ActivityType.GIT_COMMIT, f"Committed {priority_name}", details={"priority": priority_name}
-        )
-
-        # PRIORITY 4: Update progress - pushing
-        self.status.report_progress(80, "Pushing to remote")
-
-        # Push
-        if not self.git.push():
-            logger.error("Failed to push branch")
-            return False
-
-        logger.info("✅ Branch pushed")
-
-        # PRIORITY 4: Log push activity
-        self.status.report_activity(
-            ActivityType.GIT_PUSH, f"Pushed branch: {branch_name}", details={"branch": branch_name}
-        )
-
-        # Create PR if enabled
-        if self.create_prs:
-            # PRIORITY 4: Update status to REVIEWING
-            self.status.update_status(DeveloperState.REVIEWING, progress=90, current_step="Creating pull request")
-            pr_body = self._build_pr_body(priority)
-            pr_url = self.git.create_pull_request(f"Implement {priority_name}: {priority_title}", pr_body)
-
-            if pr_url:
-                logger.info(f"✅ PR created: {pr_url}")
-
-                # PRIORITY 4: Update progress - PR created
-                self.status.report_progress(100, f"PR created: {pr_url}")
-
-                # Notify user
-                self.notifications.create_notification(
-                    type=NOTIF_TYPE_INFO,
-                    title=f"{priority_name} Complete!",
-                    message=f"Implementation complete!\n\nPR: {pr_url}\n\nPlease review and merge.",
-                    priority=NOTIF_PRIORITY_HIGH,
-                    context={"priority_name": priority_name, "pr_url": pr_url},
-                )
+            # Check for new priorities needing specs
+            missing_specs = self.spec_watcher.check_for_new_priorities()
+
+            if missing_specs:
+                logger.warning(f"⚠️  Found {len(missing_specs)} new priorities without specs")
+
+                # Create notification for each missing spec
+                for priority in missing_specs:
+                    self._notify_architect_missing_spec(priority)
             else:
-                logger.warning("Failed to create PR")
-                # PRIORITY 4: Still mark as complete even if PR failed
-                self.status.report_progress(100, "Implementation complete (PR creation failed)")
-
-        return True
-
-    def _build_implementation_prompt(self, priority: dict) -> str:
-        """Build Claude API prompt for implementation.
-
-        Args:
-            priority: Priority dictionary
-
-        Returns:
-            Prompt string
-        """
-        # Detect priority type and build specialized prompt
-        title_lower = priority["title"].lower()
-        content_lower = priority.get("content", "").lower()
-
-        # Check if this is a documentation/UX priority
-        is_documentation = any(
-            keyword in title_lower or keyword in content_lower
-            for keyword in ["documentation", "docs", "guide", "ux", "user experience", "quickstart"]
-        )
-
-        if is_documentation:
-            return self._build_documentation_prompt(priority)
-        else:
-            return self._build_feature_prompt(priority)
-
-    def _build_documentation_prompt(self, priority: dict) -> str:
-        """Build explicit documentation creation prompt.
-
-        Args:
-            priority: Priority dictionary
-
-        Returns:
-            Prompt string optimized for documentation tasks
-        """
-        return f"""Read docs/ROADMAP.md and implement {priority['name']}: {priority['title']}.
-
-⚠️  THIS IS A DOCUMENTATION PRIORITY - You MUST CREATE FILES ⚠️
-
-The ROADMAP lists specific deliverable files under "Deliverables" section.
-Your task is to:
-1. Identify all deliverable files mentioned in ROADMAP for this priority
-2. CREATE each file with actual content (not placeholders)
-3. Use real examples from the existing codebase
-4. Test any commands/examples before documenting them
-
-Instructions:
-- CREATE all files listed in the Deliverables section
-- Fill with real, specific content based on existing codebase
-- Include actual commands, file paths, and examples
-- Be concrete, not generic or abstract
-- Test examples to ensure accuracy
-
-After creating files:
-- Update ROADMAP.md status to "✅ Complete"
-- List all files created
-- Commit your changes
-
-Priority details:
-{priority['content'][:1500]}...
-
-Begin implementation now - CREATE THE FILES."""
-
-    def _build_feature_prompt(self, priority: dict) -> str:
-        """Build standard feature implementation prompt.
-
-        Args:
-            priority: Priority dictionary
-
-        Returns:
-            Prompt string for feature implementation
-        """
-        return f"""Read docs/ROADMAP.md and implement {priority['name']}: {priority['title']}.
-
-Follow the roadmap guidelines and deliverables. Update docs/ROADMAP.md with your progress.
-
-Important:
-- Follow all coding standards
-- Add tests where appropriate
-- Document your changes
-- Update ROADMAP.md status to "🔄 In Progress" first, then "✅ Complete" when done
-- Commit frequently with clear messages
-
-Priority details:
-{priority['content'][:1000]}...
-
-Begin implementation now."""
-
-    def _build_commit_message(self, priority: dict) -> str:
-        """Build commit message for implementation.
-
-        Args:
-            priority: Priority dictionary
-
-        Returns:
-            Commit message
-        """
-        message = f"""feat: Implement {priority['name']} - {priority['title']}
-
-Autonomous implementation by DevDaemon.
-
-Priority: {priority['name']}
-Status: ✅ Complete
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code) via DevDaemon
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-"""
-        return message
-
-    def _build_pr_body(self, priority: dict) -> str:
-        """Build PR description.
-
-        Args:
-            priority: Priority dictionary
-
-        Returns:
-            PR body markdown
-        """
-        body = f"""## Summary
-
-Autonomous implementation of {priority['name']}: {priority['title']}
-
-## Implementation
-
-This PR was autonomously implemented by the DevDaemon following the ROADMAP.md specifications.
-
-## Testing
-
-- Implementation follows ROADMAP guidelines
-- Tests added where appropriate
-- Manual verification completed
-
-## Review Checklist
-
-- [ ] Code follows project standards
-- [ ] Tests pass
-- [ ] Documentation updated
-- [ ] ROADMAP.md status updated
-
-🤖 Autonomously implemented by DevDaemon
-"""
-        return body
-
-    def _notify_completion(self):
-        """Notify user that all priorities are complete."""
-        self.notifications.create_notification(
-            type=NOTIF_TYPE_INFO,
-            title="🎉 All Priorities Complete!",
-            message="The DevDaemon has completed all planned priorities in the ROADMAP!\n\nCheck your PRs for review.",
-            priority=NOTIF_PRIORITY_HIGH,
-        )
-
-    def _notify_persistent_failure(self, crash_info: dict):
-        """Notify user of persistent daemon failure.
-
-        Creates a critical notification when the daemon hits max crashes
-        and needs to stop. Includes crash history and debugging information.
-
-        Args:
-            crash_info: Dictionary with last crash details
-                - timestamp: ISO timestamp
-                - exception: Exception message
-                - exception_type: Exception class name
-                - priority: Priority being worked on
-                - iteration: Iteration number
-
-        Example:
-            >>> daemon._notify_persistent_failure({
-            ...     "timestamp": "2025-10-11T10:30:00",
-            ...     "exception": "API timeout",
-            ...     "exception_type": "TimeoutError",
-            ...     "priority": "PRIORITY 2.7",
-            ...     "iteration": 5
-            ... })
-        """
-        # Build crash history summary
-        crash_summary = "\n".join(
-            [
-                f"{i+1}. {c['timestamp']} - {c['exception_type']}: {c['exception'][:100]}"
-                for i, c in enumerate(self.crash_history[-5:])  # Last 5 crashes
-            ]
-        )
-
-        message = f"""🚨 CRITICAL: code_developer daemon has crashed {self.crash_count} times and stopped.
-
-**Last Crash Details**:
-- Time: {crash_info['timestamp']}
-- Priority: {crash_info['priority']}
-- Exception: {crash_info['exception_type']}
-- Message: {crash_info['exception'][:200]}
-
-**Recent Crash History** ({len(self.crash_history)} total):
-{crash_summary}
-
-**Action Required**:
-1. Review crash logs for root cause
-2. Check ROADMAP.md for problematic priority
-3. Fix underlying issue (API, network, code bug)
-4. Restart daemon: `poetry run code-developer`
-
-**Debugging Steps**:
-1. Check daemon logs: `tail -f ~/.coffee_maker/daemon.log`
-2. Test Claude CLI: `claude -p "test"`
-3. Verify API credits: Check Anthropic dashboard
-4. Check network: `ping api.anthropic.com`
-5. Review priority: `poetry run project-manager view {crash_info['priority']}`
-
-The daemon will remain stopped until manually restarted.
-"""
-
-        self.notifications.create_notification(
-            type=NOTIF_TYPE_ERROR,
-            title="🚨 Daemon Persistent Failure",
-            message=message,
-            priority=NOTIF_PRIORITY_CRITICAL,
-            context={
-                "crash_count": self.crash_count,
-                "crash_info": crash_info,
-                "crash_history": self.crash_history,
-                "requires_manual_intervention": True,
-            },
-        )
-
-        logger.critical("Created critical notification for persistent failure")
-
-    def _write_status(self, priority=None):
-        """Write current daemon status to file.
-
-        PRIORITY 2.8: Daemon Status Reporting
-
-        This method writes the daemon's current status to ~/.coffee_maker/daemon_status.json
-        so that `project-manager status` can read and display it to the user.
-
-        Called at:
-        - Start of each iteration
-        - After priority completion
-        - After crash/recovery
-        - On daemon stop
-
-        Args:
-            priority: Optional priority dictionary being worked on
-
-        Status file format:
-            {
-                "pid": 12345,
-                "status": "running" | "stopped",
-                "started_at": "2025-10-11T10:30:00",
-                "current_priority": {
-                    "name": "PRIORITY 2.8",
-                    "title": "Daemon Status Reporting",
-                    "started_at": "2025-10-11T10:35:00"
-                },
-                "iteration": 5,
-                "crashes": {
-                    "count": 0,
-                    "max": 3,
-                    "history": [...]
-                },
-                "context": {
-                    "iterations_since_compact": 2,
-                    "compact_interval": 10,
-                    "last_compact": "2025-10-11T10:00:00"
-                },
-                "last_update": "2025-10-11T10:45:00"
-            }
-
-        Example:
-            >>> daemon = DevDaemon()
-            >>> daemon._write_status(priority={"name": "PRIORITY 2.8", "title": "..."})
-        """
-        try:
-            # Build status dictionary
-            status = {
-                "pid": os.getpid(),
-                "status": "running" if self.running else "stopped",
-                "started_at": (
-                    getattr(self, "start_time", datetime.now()).isoformat() if hasattr(self, "start_time") else None
-                ),
-                "current_priority": (
-                    {
-                        "name": priority["name"] if priority else None,
-                        "title": priority["title"] if priority else None,
-                        "started_at": (
-                            getattr(self, "current_priority_start_time", None).isoformat()
-                            if hasattr(self, "current_priority_start_time") and self.current_priority_start_time
-                            else None
-                        ),
-                    }
-                    if priority
-                    else None
-                ),
-                "iteration": getattr(self, "iteration_count", 0),
-                "crashes": {
-                    "count": self.crash_count,
-                    "max": self.max_crashes,
-                    "history": self.crash_history[-5:],  # Last 5 crashes
-                },
-                "context": {
-                    "iterations_since_compact": self.iterations_since_compact,
-                    "compact_interval": self.compact_interval,
-                    "last_compact": (self.last_compact_time.isoformat() if self.last_compact_time else None),
-                },
-                "last_update": datetime.now().isoformat(),
-            }
-
-            # Write to status file
-            status_file = Path.home() / ".coffee_maker" / "daemon_status.json"
-            status_file.parent.mkdir(exist_ok=True, parents=True)
-
-            with open(status_file, "w") as f:
-                json.dump(status, f, indent=2)
-
-            logger.debug(f"Status written to {status_file}")
+                logger.debug("✅ All new priorities have specs")
 
         except Exception as e:
-            logger.error(f"Failed to write status file: {e}")
+            logger.error(f"Error checking for missing specs: {e}", exc_info=True)
+
+    def _notify_architect_missing_spec(self, priority: dict) -> None:
+        """Notify architect about a new priority missing a spec.
+
+        Args:
+            priority: Priority dictionary with name, title, spec_prefix
+        """
+        title = f"CFR-008: New Priority Needs Spec - {priority['name']}"
+        message = (
+            f"A new priority was added to ROADMAP without a technical specification.\n\n"
+            f"Priority: {priority['name']}\n"
+            f"Title: {priority['title']}\n"
+            f"Expected spec: docs/architecture/specs/{priority['spec_prefix']}-<name>.md\n\n"
+            f"CFR-008 ENFORCEMENT: architect must create this spec.\n\n"
+            f"ACTIONS:\n"
+            f"1. Invoke architect agent\n"
+            f"2. architect reviews {priority['name']} in ROADMAP.md\n"
+            f"3. architect creates comprehensive spec\n"
+            f"4. code_developer will auto-resume when spec exists"
+        )
+
+        context = {
+            "priority_name": priority["name"],
+            "priority_title": priority["title"],
+            "spec_prefix": priority["spec_prefix"],
+            "enforcement": "CFR-008",
+            "action_required": "architect must create technical spec",
+        }
+
+        try:
+            self.notifications.create_notification(
+                type="warning",
+                title=title,
+                message=message,
+                priority="high",
+                context=context,
+                sound=False,  # CFR-009: code_developer uses sound=False
+                agent_id="code_developer",
+            )
+            logger.info(f"✅ Created notification for missing spec: {priority['name']}")
+
+        except Exception as e:
+            logger.error(f"Failed to create notification: {e}", exc_info=True)
+
+    def _check_architect_reviews(self) -> None:
+        """Check if architect reviews are needed (US-049 CFR-010).
+
+        This method implements continuous spec improvement loop:
+        1. Checks if daily review needed (ROADMAP changed or >24h elapsed)
+        2. Checks if weekly review needed (>7 days elapsed)
+        3. Logs when reviews should happen (architect picks up asynchronously)
+
+        CFR-010: Ensures architect continuously improves specs to reduce complexity.
+
+        Note: This is detection only (non-blocking). Actual reviews happen when
+        architect agent runs separately.
+        """
+        try:
+            # Daily quick review
+            if self.review_trigger.should_run_daily_review():
+                logger.info("📅 Architect daily review needed (ROADMAP changed or >24h elapsed)")
+                # Mark as completed to avoid repeated triggers
+                # Actual review happens when architect runs
+                self.review_trigger.mark_review_completed("daily")
+
+                # Create notification for visibility
+                self._notify_architect_review_needed("daily")
+
+            # Weekly deep review
+            if self.review_trigger.should_run_weekly_review():
+                logger.info("📊 Architect weekly review needed (>7 days elapsed)")
+                # Mark as completed to avoid repeated triggers
+                # Actual review happens when architect runs
+                self.review_trigger.mark_review_completed("weekly")
+
+                # Create notification for visibility
+                self._notify_architect_review_needed("weekly")
+
+        except Exception as e:
+            logger.error(f"Error checking architect reviews: {e}", exc_info=True)
+
+    def _notify_architect_review_needed(self, review_type: str) -> None:
+        """Notify that architect review is needed.
+
+        Args:
+            review_type: "daily" or "weekly"
+        """
+        if review_type == "daily":
+            title = "CFR-010: Architect Daily Review Needed"
+            message = (
+                "ROADMAP has been modified or 24+ hours have elapsed since last review.\n\n"
+                "ACTIONS:\n"
+                "1. Review ROADMAP.md for new/changed priorities\n"
+                "2. Quick check for simplification opportunities\n"
+                "3. Identify reuse patterns\n"
+                "4. Add notes to weekly review backlog if needed\n\n"
+                "Expected duration: 5-10 minutes"
+            )
+            priority = "medium"
+        else:  # weekly
+            title = "CFR-010: Architect Weekly Deep Review Needed"
+            message = (
+                "7+ days have elapsed since last weekly review.\n\n"
+                "ACTIONS:\n"
+                "1. Read ALL technical specs (docs/architecture/specs/)\n"
+                "2. Identify simplification opportunities (ADR-003 principles)\n"
+                "3. Identify component reuse across specs\n"
+                "4. Update specs if improvements found\n"
+                "5. Record metrics (simplifications, reuse)\n"
+                "6. Generate weekly report\n\n"
+                "Expected duration: 1-2 hours"
+            )
+            priority = "high"
+
+        context = {
+            "review_type": review_type,
+            "enforcement": "CFR-010",
+            "action_required": "architect continuous spec improvement",
+        }
+
+        try:
+            self.notifications.create_notification(
+                type="info",
+                title=title,
+                message=message,
+                priority=priority,
+                context=context,
+                sound=False,  # CFR-009: code_developer uses sound=False
+                agent_id="code_developer",
+            )
+            logger.info(f"✅ Created notification for {review_type} review")
+
+        except Exception as e:
+            logger.error(f"Failed to create notification: {e}", exc_info=True)
 
     def stop(self):
         """Stop the daemon gracefully."""
         logger.info("Stopping daemon...")
         self.running = False
+
+    def _validate_cfr_013(self) -> bool:
+        """Validate CFR-013: Daemon must be on roadmap branch.
+
+        CFR-013 requires ALL agents to work ONLY on the 'roadmap' branch or
+        roadmap-based worktree branches (roadmap-*) for parallel execution.
+
+        This method validates that the daemon is on the correct branch before
+        starting any operations.
+
+        Returns:
+            True if on roadmap branch or roadmap-* worktree, False otherwise
+
+        Raises:
+            No exceptions - logs error and returns False for graceful failure
+        """
+        try:
+            current_branch = self.git.get_current_branch()
+
+            # Allow 'roadmap' or 'roadmap-*' for worktree parallel execution
+            if current_branch != "roadmap" and not current_branch.startswith("roadmap-"):
+                logger.error("")
+                logger.error("=" * 60)
+                logger.error("CFR-013 VIOLATION: Daemon must work on 'roadmap' branch ONLY")
+                logger.error("=" * 60)
+                logger.error(f"Current branch: {current_branch}")
+                logger.error(f"Expected branch: roadmap or roadmap-*")
+                logger.error("")
+                logger.error("CFR-013 requires ALL agents to work on the roadmap branch.")
+                logger.error("This ensures:")
+                logger.error("  - Single source of truth")
+                logger.error("  - No merge conflicts between feature branches")
+                logger.error("  - All work immediately visible to team")
+                logger.error("")
+                logger.error("Parallel execution:")
+                logger.error("  - Worktree branches (roadmap-*) are allowed")
+                logger.error("  - Orchestrator manages worktree creation/cleanup")
+                logger.error("")
+                logger.error("To fix:")
+                logger.error("  1. git checkout roadmap")
+                logger.error("  2. git pull origin roadmap")
+                logger.error("  3. Restart daemon")
+                logger.error("")
+                return False
+
+            if current_branch.startswith("roadmap-"):
+                logger.info(f"✅ CFR-013 compliant: On worktree branch '{current_branch}'")
+            else:
+                logger.info("✅ CFR-013 compliant: On 'roadmap' branch")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error validating CFR-013: {e}")
+            return False

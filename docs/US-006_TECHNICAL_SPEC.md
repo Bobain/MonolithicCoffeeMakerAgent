@@ -383,7 +383,7 @@ You: PRIORITY [TAB]
      → ...
 
 You: /view docs/RO[TAB]
-     → /view docs/ROADMAP.md
+     → /view docs/roadmap/ROADMAP.md
 ```
 
 **Testing**:

@@ -4,7 +4,7 @@
 This script automates the creation and merging of Pull Requests for
 roadmap and documentation updates to the 'roadmap' branch on GitHub.
 
-⚠️ IMPORTANT: Only use this for docs/ROADMAP.md and docs/*.md updates!
+⚠️ IMPORTANT: Only use this for docs/roadmap/ROADMAP.md and docs/*.md updates!
 
 Usage:
     python scripts/merge_roadmap_pr.py <branch-name> [--base roadmap|main]
@@ -38,6 +38,10 @@ except ImportError:
     print("\nInstall with: poetry add PyGithub")
     sys.exit(1)
 
+# Add project to path for ConfigManager import
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from coffee_maker.config import ConfigManager
+
 
 class RoadmapPRMerger:
     """Handles automated PR creation and merging for roadmap updates."""
@@ -49,9 +53,10 @@ class RoadmapPRMerger:
             repo_name: GitHub repository in format 'owner/repo'
         """
         self.repo_name = repo_name
-        token = os.environ.get("GITHUB_TOKEN")
 
-        if not token:
+        try:
+            token = ConfigManager.get_github_token()
+        except Exception:
             print("❌ GITHUB_TOKEN environment variable not set")
             print("\nGet your token from: https://github.com/settings/tokens")
             print("Then set it:")

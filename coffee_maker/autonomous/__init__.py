@@ -15,4 +15,6 @@ Vision:
     builds itself.
 """
 
-__all__ = ["daemon", "roadmap_parser", "claude_cli_interface", "git_manager"]
+from typing import List
+
+__all__: List[str] = ["daemon", "roadmap_parser", "claude_cli_interface", "git_manager"]

@@ -7,12 +7,13 @@ CLI can display to the user.
 PRIORITY 4: Developer Status Dashboard
 """
 
-import json
 import os
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
+
+from coffee_maker.utils.file_io import atomic_write_json
 
 
 class DeveloperState(str, Enum):
@@ -70,7 +71,7 @@ class DeveloperStatus:
         status.report_progress(50, "Core functionality complete")
     """
 
-    def __init__(self, status_file: Path = None):
+    def __init__(self, status_file: Optional[Path] = None):
         """Initialize status tracker.
 
         Args:
@@ -80,9 +81,9 @@ class DeveloperStatus:
             status_file = Path("data/developer_status.json")
         self.status_file = status_file
         self.current_state = DeveloperState.IDLE
-        self.current_task = None
-        self.activity_log = []
-        self.questions = []
+        self.current_task: Optional[Dict] = None
+        self.activity_log: list = []
+        self.questions: list = []
         self.daemon_started_at = datetime.utcnow().isoformat() + "Z"
 
         # Metrics
@@ -133,12 +134,20 @@ class DeveloperStatus:
             self.current_task["eta_seconds"] = self._calculate_eta(self.current_task, progress)
 
         # Log status update as activity
-        self.report_activity(ActivityType.STATUS_UPDATE, f"Status changed to {status.value}", auto_write=False)
+        self.report_activity(
+            ActivityType.STATUS_UPDATE,
+            f"Status changed to {status.value}",
+            auto_write=False,
+        )
 
         self._write_status()
 
     def report_activity(
-        self, activity_type: ActivityType, description: str, details: Optional[Dict] = None, auto_write: bool = True
+        self,
+        activity_type: ActivityType,
+        description: str,
+        details: Optional[Dict] = None,
+        auto_write: bool = True,
     ):
         """Log an activity.
 
@@ -148,7 +157,7 @@ class DeveloperStatus:
             details: Additional details (optional)
             auto_write: Whether to automatically write status file (default: True)
         """
-        activity = {
+        activity: Dict[str, Any] = {
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "type": activity_type.value,
             "description": description,
@@ -187,7 +196,9 @@ class DeveloperStatus:
 
             # Log progress milestone
             self.report_activity(
-                ActivityType.STATUS_UPDATE, f"Progress: {progress}% - {current_step}", auto_write=False
+                ActivityType.STATUS_UPDATE,
+                f"Progress: {progress}% - {current_step}",
+                auto_write=False,
             )
 
         self._write_status()
@@ -287,13 +298,8 @@ class DeveloperStatus:
         }
 
         try:
-            # Write atomically by writing to temp file then renaming
-            temp_file = self.status_file.with_suffix(".tmp")
-            with open(temp_file, "w") as f:
-                json.dump(status_data, f, indent=2)
-
-            # Atomic rename
-            temp_file.replace(self.status_file)
+            # Write atomically using file_io utility
+            atomic_write_json(self.status_file, status_data)
         except Exception as e:
             # If write fails, log but don't crash daemon
             print(f"Warning: Failed to write status file: {e}")

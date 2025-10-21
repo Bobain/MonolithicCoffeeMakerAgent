@@ -13,7 +13,7 @@ import re
 from typing import List
 
 from coffee_maker.code_reviewer.perspectives.base_perspective import BasePerspective
-from coffee_maker.code_reviewer.reviewer import ReviewIssue
+from coffee_maker.code_reviewer.models import ReviewIssue
 
 
 class ArchitectCritic(BasePerspective):
@@ -213,7 +213,8 @@ class ArchitectCritic(BasePerspective):
         method_count = 0
 
         for i, line in enumerate(lines, 1):
-            if re.match(r"^class\s+(\w+)", line):
+            class_match = re.match(r"^class\s+(\w+)", line)
+            if class_match:
                 if in_class and method_count > 10:
                     issues.append(
                         self._create_issue(
@@ -227,7 +228,7 @@ class ArchitectCritic(BasePerspective):
                     )
 
                 in_class = True
-                class_name = re.match(r"^class\s+(\w+)", line).group(1)
+                class_name = class_match.group(1)
                 class_start = i
                 method_count = 0
 

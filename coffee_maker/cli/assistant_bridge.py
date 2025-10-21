@@ -14,7 +14,6 @@ The assistant:
 """
 
 import logging
-import os
 from typing import Callable, Dict, Optional
 
 from langchain.agents import AgentExecutor, create_react_agent
@@ -23,6 +22,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 
 from coffee_maker.cli.assistant_tools import get_assistant_tools
+from coffee_maker.config import ConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ Question: {input}
                 return_intermediate_steps=True,  # Important for action streaming
             )
 
-            logger.info("LangChain assistant initialized successfully")
+            logger.debug("LangChain assistant initialized successfully")
 
         except Exception as e:
             logger.error(f"Failed to initialize assistant: {e}", exc_info=True)
@@ -114,18 +114,20 @@ Question: {input}
     def _get_llm(self):
         """Get LLM for agent (tries multiple providers).
 
+        Uses Haiku 4.5 for cost efficiency on assistant tasks.
+
         Returns:
             LLM instance or None if no provider available
         """
-        # Try Anthropic first
-        if os.environ.get("ANTHROPIC_API_KEY"):
+        # Try Anthropic first (using Haiku 4.5 for cost efficiency)
+        if ConfigManager.has_anthropic_api_key():
             try:
-                return ChatAnthropic(model="claude-3-5-sonnet-20241022", temperature=0)
+                return ChatAnthropic(model="claude-3-5-haiku-20241022", temperature=0)
             except Exception as e:
                 logger.warning(f"Failed to initialize Anthropic LLM: {e}")
 
         # Try OpenAI
-        if os.environ.get("OPENAI_API_KEY"):
+        if ConfigManager.has_openai_api_key():
             try:
                 return ChatOpenAI(model="gpt-4", temperature=0)
             except Exception as e:
@@ -157,7 +159,10 @@ Question: {input}
             - error: str (if failed)
         """
         if not self.is_available():
-            return {"success": False, "error": "Assistant not available (no LLM configured)"}
+            return {
+                "success": False,
+                "error": "Assistant not available (no LLM configured)",
+            }
 
         try:
             logger.info(f"Invoking assistant for: {question[:100]}...")

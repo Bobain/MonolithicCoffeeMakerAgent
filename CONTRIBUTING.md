@@ -92,7 +92,7 @@ The `main` branch has protection rules requiring Pull Requests for all changes. 
 ### When To Use This
 
 ✅ **ONLY use this automated merge process when**:
-- Updating `docs/ROADMAP.md`
+- Updating `docs/roadmap/ROADMAP.md`
 - Updating `docs/COLLABORATION_METHODOLOGY.md`
 - Updating documentation files (`docs/*.md`)
 - Changes made by `project-manager` agent
@@ -137,7 +137,7 @@ We provide a Python script that uses the GitHub API to automatically create and 
 ```bash
 # After making roadmap changes on a feature branch:
 git checkout feature/roadmap-update
-git add docs/ROADMAP.md docs/COLLABORATION_METHODOLOGY.md
+git add docs/roadmap/ROADMAP.md docs/COLLABORATION_METHODOLOGY.md
 git commit -m "docs: Update roadmap with latest priorities"
 git push -u origin feature/roadmap-update
 
@@ -206,7 +206,7 @@ def update_roadmap_on_main(self, commit_message: str):
     subprocess.run(["git", "checkout", "-b", branch_name])
 
     # Commit changes
-    subprocess.run(["git", "add", "docs/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"])
+    subprocess.run(["git", "add", "docs/roadmap/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"])
     subprocess.run(["git", "commit", "-m", commit_message])
     subprocess.run(["git", "push", "-u", "origin", branch_name])
 
@@ -377,7 +377,7 @@ Every code change must include documentation updates:
    - Usage examples in docstrings
 
 2. **User Documentation**:
-   - Update `docs/ROADMAP.md` if adding features
+   - Update `docs/roadmap/ROADMAP.md` if adding features
    - Update `docs/QUICKSTART*.md` if changing user workflows
    - Update `docs/COLLABORATION_METHODOLOGY.md` if changing processes
 

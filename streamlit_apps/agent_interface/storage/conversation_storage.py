@@ -9,10 +9,12 @@ This module provides functionality to save and load conversations:
 Conversations are stored in the data/conversations/ directory.
 """
 
-import json
+import json  # Keep for json.dumps in export_conversation
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
+
+from coffee_maker.utils.file_io import read_json_file, write_json_file
 
 
 class ConversationStorage:
@@ -29,7 +31,7 @@ class ConversationStorage:
         storage_dir: Directory where conversations are stored
     """
 
-    def __init__(self, storage_dir: Optional[str] = None):
+    def __init__(self, storage_dir: Optional[Union[str, Path]] = None):
         """Initialize conversation storage.
 
         Args:
@@ -39,9 +41,11 @@ class ConversationStorage:
         if storage_dir is None:
             # Default to data/conversations relative to project root
             project_root = Path(__file__).parents[3]
-            storage_dir = project_root / "data" / "conversations"
+            storage_dir_path = project_root / "data" / "conversations"
+        else:
+            storage_dir_path = Path(storage_dir)
 
-        self.storage_dir = Path(storage_dir)
+        self.storage_dir = storage_dir_path
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
     def save_conversation(
@@ -85,8 +89,7 @@ class ConversationStorage:
         filepath = self.storage_dir / filename
 
         # Save to JSON
-        with open(filepath, "w") as f:
-            json.dump(conversation_data, f, indent=2)
+        write_json_file(filepath, conversation_data)
 
         return str(filepath)
 
@@ -107,10 +110,9 @@ class ConversationStorage:
         """
         # Find file matching conversation ID
         for filepath in self.storage_dir.glob("*.json"):
-            with open(filepath, "r") as f:
-                data = json.load(f)
-                if data.get("id") == conversation_id:
-                    return data
+            data = read_json_file(filepath, default=None)
+            if data and data.get("id") == conversation_id:
+                return data
 
         return None
 
@@ -128,8 +130,7 @@ class ConversationStorage:
         if not filepath.exists():
             return None
 
-        with open(filepath, "r") as f:
-            return json.load(f)
+        return read_json_file(filepath, default=None)
 
     def list_conversations(self, limit: int = 50) -> List[Dict]:
         """List all saved conversations.
@@ -150,22 +151,23 @@ class ConversationStorage:
 
         for filepath in self.storage_dir.glob("*.json"):
             try:
-                with open(filepath, "r") as f:
-                    data = json.load(f)
+                data = read_json_file(filepath, default=None)
+                if not data:
+                    continue
 
-                    # Create summary
-                    summary = {
-                        "id": data.get("id"),
-                        "filename": filepath.name,
-                        "agent_name": data.get("agent_name"),
-                        "timestamp": data.get("timestamp"),
-                        "message_count": len(data.get("messages", [])),
-                        "metrics": data.get("metrics", {}),
-                    }
+                # Create summary
+                summary = {
+                    "id": data.get("id"),
+                    "filename": filepath.name,
+                    "agent_name": data.get("agent_name"),
+                    "timestamp": data.get("timestamp"),
+                    "message_count": len(data.get("messages", [])),
+                    "metrics": data.get("metrics", {}),
+                }
 
-                    conversations.append(summary)
+                conversations.append(summary)
 
-            except (json.JSONDecodeError, KeyError):
+            except KeyError:
                 # Skip invalid files
                 continue
 
@@ -192,12 +194,11 @@ class ConversationStorage:
         # Find and delete file matching conversation ID
         for filepath in self.storage_dir.glob("*.json"):
             try:
-                with open(filepath, "r") as f:
-                    data = json.load(f)
-                    if data.get("id") == conversation_id:
-                        filepath.unlink()
-                        return True
-            except (json.JSONDecodeError, KeyError):
+                data = read_json_file(filepath, default=None)
+                if data and data.get("id") == conversation_id:
+                    filepath.unlink()
+                    return True
+            except KeyError:
                 continue
 
         return False
@@ -223,18 +224,20 @@ class ConversationStorage:
 
         for filepath in self.storage_dir.glob("*.json"):
             try:
-                with open(filepath, "r") as f:
-                    data = json.load(f)
-                    timestamp_str = data.get("timestamp")
+                data = read_json_file(filepath, default=None)
+                if not data:
+                    continue
 
-                    if timestamp_str:
-                        timestamp = datetime.fromisoformat(timestamp_str)
+                timestamp_str = data.get("timestamp")
 
-                        if timestamp < cutoff:
-                            filepath.unlink()
-                            deleted_count += 1
+                if timestamp_str:
+                    timestamp = datetime.fromisoformat(timestamp_str)
 
-            except (json.JSONDecodeError, KeyError, ValueError):
+                    if timestamp < cutoff:
+                        filepath.unlink()
+                        deleted_count += 1
+
+            except (KeyError, ValueError):
                 continue
 
         return deleted_count

@@ -45,13 +45,15 @@ Example:
 
 import json
 import logging
+import os
+import platform
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from coffee_maker.config import DATABASE_PATHS
-from coffee_maker.langchain_observe.retry_utils import with_retry
+from coffee_maker.langfuse_observe.retry import with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +78,85 @@ NOTIF_STATUS_PENDING = "pending"
 NOTIF_STATUS_READ = "read"
 NOTIF_STATUS_RESPONDED = "responded"
 NOTIF_STATUS_DISMISSED = "dismissed"
+
+
+class CFR009ViolationError(Exception):
+    """Raised when non-UI agent tries to play sound notification.
+
+    CFR-009: ONLY user_listener can use sound notifications.
+    All other agents (code_developer, architect, project_manager, etc.)
+    must work silently in the background.
+    """
+
+
+def play_notification_sound(priority: str = "normal") -> bool:
+    """Play system notification sound.
+
+    PRIORITY 2.9: Sound Notifications for project-manager
+
+    Plays a platform-specific notification sound based on the priority level.
+    Handles cross-platform differences gracefully.
+
+    Args:
+        priority: Sound priority level - "normal", "high", or "critical"
+
+    Returns:
+        True if sound played successfully, False otherwise
+
+    Platform Support:
+        - macOS: Uses afplay with system sounds
+        - Linux: Uses paplay with freedesktop sounds
+        - Windows: Uses winsound module
+
+    Example:
+        >>> play_notification_sound("normal")   # Gentle notification
+        >>> play_notification_sound("high")     # Attention needed
+        >>> play_notification_sound("critical") # Urgent alert
+    """
+    try:
+        system = platform.system()
+
+        if system == "Darwin":  # macOS
+            if priority == "critical":
+                os.system("afplay /System/Library/Sounds/Sosumi.aiff &")
+            elif priority == "high":
+                os.system("afplay /System/Library/Sounds/Glass.aiff &")
+            else:
+                os.system("afplay /System/Library/Sounds/Pop.aiff &")
+            return True
+
+        elif system == "Linux":
+            # Try to play freedesktop sound
+            sound_file = "/usr/share/sounds/freedesktop/stereo/message.oga"
+            if os.path.exists(sound_file):
+                os.system(f"paplay {sound_file} &")
+                return True
+            else:
+                logger.debug(f"Sound file not found: {sound_file}")
+                return False
+
+        elif system == "Windows":
+            try:
+                import winsound
+
+                if priority == "critical":
+                    winsound.MessageBeep(winsound.MB_ICONHAND)
+                elif priority == "high":
+                    winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                else:
+                    winsound.MessageBeep(winsound.MB_ICONASTERISK)
+                return True
+            except ImportError:
+                logger.debug("winsound module not available on Windows")
+                return False
+
+        else:
+            logger.debug(f"Unsupported platform for sound notifications: {system}")
+            return False
+
+    except Exception as e:
+        logger.debug(f"Failed to play notification sound: {e}")
+        return False
 
 
 CREATE_NOTIFICATIONS_TABLE = """
@@ -136,7 +217,7 @@ class NotificationDB:
         # Initialize database
         self._init_database()
 
-        logger.info(f"NotificationDB initialized: {db_path}")
+        logger.debug(f"NotificationDB initialized: {db_path}")
 
     def _init_database(self):
         """Initialize database schema and enable WAL mode."""
@@ -151,7 +232,7 @@ class NotificationDB:
         conn.commit()
         conn.close()
 
-        logger.info("Notification database schema initialized with WAL mode")
+        logger.debug("Notification database schema initialized with WAL mode")
 
     def _get_connection(self) -> sqlite3.Connection:
         """Get database connection with proper configuration.
@@ -172,8 +253,13 @@ class NotificationDB:
         message: str,
         priority: str = NOTIF_PRIORITY_NORMAL,
         context: Optional[Dict] = None,
+        sound: bool = False,
+        agent_id: Optional[str] = None,
     ) -> int:
-        """Create a new notification.
+        """Create a new notification with CFR-009 sound enforcement.
+
+        PRIORITY 2.9: Enhanced with sound notifications
+        CFR-009: ONLY user_listener can use sound notifications
 
         Args:
             type: Notification type (question, info, warning, error, completion)
@@ -181,20 +267,46 @@ class NotificationDB:
             message: Full message
             priority: Priority level (critical, high, normal, low)
             context: Optional context data (will be JSON serialized)
+            sound: Whether to play notification sound (default: False)
+                   CFR-009: ONLY user_listener can use sound=True
+            agent_id: Calling agent identifier for CFR-009 enforcement
+                      (e.g., "user_listener", "code_developer", "architect")
 
         Returns:
             Notification ID
 
+        Raises:
+            CFR009ViolationError: If non-UI agent tries sound=True
+
         Example:
             >>> db = NotificationDB()
+            >>> # user_listener CAN use sound
             >>> notif_id = db.create_notification(
             ...     type="question",
             ...     title="Dependency Approval",
             ...     message="Install pandas?",
             ...     priority="high",
-            ...     context={"dependency": "pandas"}
+            ...     context={"dependency": "pandas"},
+            ...     sound=True,
+            ...     agent_id="user_listener"
+            ... )
+            >>> # Background agents MUST use sound=False
+            >>> notif_id = db.create_notification(
+            ...     type="info",
+            ...     title="Task Complete",
+            ...     message="Implementation finished",
+            ...     sound=False,
+            ...     agent_id="code_developer"
             ... )
         """
+        # CFR-009: Validate sound usage
+        if sound and agent_id and agent_id != "user_listener":
+            raise CFR009ViolationError(
+                f"CFR-009 VIOLATION: Agent '{agent_id}' cannot use sound=True. "
+                f"ONLY user_listener can play sounds. "
+                f"Background agents must use sound=False."
+            )
+
         now = datetime.utcnow().isoformat()
         context_json = json.dumps(context) if context else None
 
@@ -205,12 +317,35 @@ class NotificationDB:
                 (type, priority, title, message, context, status, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (type, priority, title, message, context_json, NOTIF_STATUS_PENDING, now, now),
+                (
+                    type,
+                    priority,
+                    title,
+                    message,
+                    context_json,
+                    NOTIF_STATUS_PENDING,
+                    now,
+                    now,
+                ),
             )
             conn.commit()
             notif_id = cursor.lastrowid
 
         logger.info(f"Created notification {notif_id}: {title}")
+
+        # PRIORITY 2.9: Play notification sound based on priority
+        if sound:
+            sound_priority = "normal"
+            if priority == NOTIF_PRIORITY_CRITICAL:
+                sound_priority = "critical"
+            elif priority == NOTIF_PRIORITY_HIGH:
+                sound_priority = "high"
+
+            if play_notification_sound(sound_priority):
+                logger.debug(f"Played {sound_priority} notification sound")
+            else:
+                logger.debug("Sound notification disabled or unavailable")
+
         return notif_id
 
     @with_retry(max_attempts=3, retriable_exceptions=(sqlite3.OperationalError,))

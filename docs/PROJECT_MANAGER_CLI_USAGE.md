@@ -500,7 +500,7 @@ project-manager notifications
 The CLI reads the roadmap from:
 
 ```
-docs/ROADMAP.md
+docs/roadmap/ROADMAP.md
 ```
 
 This is hardcoded in `coffee_maker/config.py` as `ROADMAP_PATH`.
@@ -556,12 +556,12 @@ ROADMAP_PATH = Path("/custom/path/to/roadmap.md")
 **Symptom**:
 ```bash
 $ project-manager view
-❌ ROADMAP not found: /path/to/docs/ROADMAP.md
+❌ ROADMAP not found: /path/to/docs/roadmap/ROADMAP.md
 ```
 
 **Solutions**:
 1. Ensure you're in the project root directory
-2. Check ROADMAP.md exists: `ls docs/ROADMAP.md`
+2. Check ROADMAP.md exists: `ls docs/roadmap/ROADMAP.md`
 3. Verify `ROADMAP_PATH` in `coffee_maker/config.py`
 
 ---

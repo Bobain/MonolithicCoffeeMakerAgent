@@ -111,7 +111,7 @@ The README provides:
   - Bidirectional communication
   - 4-phase implementation
 
-- **[PRIORITY_2_TECHNICAL_SPEC.md](PRIORITY_2_TECHNICAL_SPEC.md)** - Project Manager CLI design
+- **[PRIORITY_2_STRATEGIC_SPEC.md](PRIORITY_2_STRATEGIC_SPEC.md)** - Project Manager CLI design
   - Database architecture
   - Command implementation
   - Notification system

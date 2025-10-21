@@ -1,20 +1,71 @@
+"""GitHub API utilities for pull request operations.
+
+This module provides utilities for interacting with GitHub pull requests,
+including posting code suggestions, fetching PR files, and handling review conflicts.
+
+Features:
+- Post code suggestions as PR review comments with automatic retry on conflicts
+- Fetch list of modified files from PRs (with Python file filtering)
+- Fetch file content from PR head commits
+- Automatic handling of pending review conflicts
+- GitHubPRClient wrapper for convenient PR operations
+
+Example:
+    >>> from coffee_maker.utils.github import GitHubPRClient
+    >>>
+    >>> # Create client
+    >>> client = GitHubPRClient()
+    >>>
+    >>> # Get modified Python files
+    >>> files = client.get_pr_modified_files("owner/repo", 123)
+    >>> print(f"Found {len(files['python_files'])} Python files")
+    >>>
+    >>> # Post code suggestion
+    >>> client.post_suggestion_in_pr_review(
+    ...     "owner/repo", 123, "src/main.py",
+    ...     start_line=10, end_line=12,
+    ...     suggestion_body="improved code",
+    ...     comment_text="Better implementation"
+    ... )
+
+Technical Notes:
+- Requires GITHUB_TOKEN environment variable (loaded via ConfigManager)
+- Uses PyGithub library for GitHub API access
+- Includes Langfuse observability decorators for monitoring
+- Automatically handles pending review conflicts with retry logic
+- Line numbers are 1-indexed (first line is 1)
+"""
+
 import logging
-import os
 from typing import Callable, Optional, Tuple
 
 from github import Auth, Github, GithubException
 from langfuse import observe
 
-from coffee_maker.langchain_observe.retry_utils import with_conditional_retry
+from coffee_maker.config import ConfigManager
+from coffee_maker.langfuse_observe.retry import with_conditional_retry
 
 LOGGER = logging.getLogger(__name__)
 
 
 def get_github_client_instance() -> Github:
-    token = os.getenv("GITHUB_TOKEN")
-    if not token or not len(token):
-        LOGGER.critical("Error: GITHUB_TOKEN environment variable is not set.")
-        raise ValueError("Credentials for Github needed: GITHUB_TOKEN not defined.")
+    """Create and return an authenticated GitHub client instance.
+
+    Uses ConfigManager to load GITHUB_TOKEN from environment and creates
+    an authenticated GitHub client using PyGithub.
+
+    Returns:
+        Github: Authenticated GitHub client instance
+
+    Raises:
+        APIKeyMissingError: If GITHUB_TOKEN environment variable is not set
+
+    Example:
+        >>> client = get_github_client_instance()
+        >>> user = client.get_user()
+        >>> print(user.login)
+    """
+    token = ConfigManager.get_github_token()
     auth = Auth.Token(token)
     return Github(auth=auth)
 
@@ -101,13 +152,13 @@ def _create_pending_review_retry_condition(
 
 @observe
 def post_suggestion_in_pr_review(
-    repo_full_name: str = None,
-    pr_number: int = None,
-    file_path: str = None,
-    start_line: int = None,
-    end_line: int = None,
-    suggestion_body: str = None,
-    comment_text: str = None,
+    repo_full_name: Optional[str] = None,
+    pr_number: Optional[int] = None,
+    file_path: Optional[str] = None,
+    start_line: Optional[int] = None,
+    end_line: Optional[int] = None,
+    suggestion_body: Optional[str] = None,
+    comment_text: Optional[str] = None,
     g: Github = github_client_instance,
 ) -> str:
     """
@@ -249,7 +300,7 @@ def get_pr_modified_files(repo_full_name, pr_number, g: Github = github_client_i
             )
         LOGGER.info(f"Found {len(file_list)} modified files in PR #{pr_number}")
         # Return just the filenames as a simple list to minimize tokens
-        filenames = [f["filename"] for f in file_list if f["filename"].endswith(".py")]
+        filenames = [f["filename"] for f in file_list if f["filename"] and f["filename"].endswith(".py")]
         return {"python_files": filenames, "total_files": len(file_list)}
     except Exception:
         LOGGER.error(f"Could not fetch modified files from PR #{pr_number}.", exc_info=True)
@@ -288,6 +339,17 @@ class GitHubPRClient:
     """Convenience wrapper that reuses a persistent Github client for PR utilities."""
 
     def __init__(self, github_client: Optional[Github] = None) -> None:
+        """Initialize GitHubPRClient with an optional GitHub client.
+
+        Args:
+            github_client: Optional Github client instance. If None, uses the global instance.
+
+        Example:
+            >>> client = GitHubPRClient()
+            >>> # Or with custom client:
+            >>> custom_client = Github(auth=Auth.Token("custom_token"))
+            >>> client = GitHubPRClient(custom_client)
+        """
         self._client = github_client or github_client_instance
 
     @property
@@ -306,6 +368,29 @@ class GitHubPRClient:
         suggestion_body: str,
         comment_text: str,
     ) -> str:
+        """Post a code suggestion as a review comment on a GitHub pull request.
+
+        Wrapper method that uses the client instance to post suggestions.
+
+        Args:
+            repo_full_name: Full repository name, e.g., 'owner/repo'
+            pr_number: Pull request number
+            file_path: Path to the file in the repository
+            start_line: Starting line number (1-indexed)
+            end_line: Ending line number (1-indexed)
+            suggestion_body: The suggested code (plain text, no markdown)
+            comment_text: Explanatory text for the suggestion
+
+        Returns:
+            Success message string
+
+        Example:
+            >>> client = GitHubPRClient()
+            >>> result = client.post_suggestion_in_pr_review(
+            ...     "owner/repo", 123, "src/main.py", 10, 12,
+            ...     "improved code", "Better implementation"
+            ... )
+        """
         return post_suggestion_in_pr_review(
             repo_full_name=repo_full_name,
             pr_number=pr_number,
@@ -318,9 +403,39 @@ class GitHubPRClient:
         )
 
     def get_pr_modified_files(self, repo_full_name: str, pr_number: int):
+        """Fetch the list of modified files from a pull request.
+
+        Args:
+            repo_full_name: Full repository name, e.g., 'owner/repo'
+            pr_number: Pull request number
+
+        Returns:
+            Dict with "python_files" (list of .py filenames) and "total_files" count
+
+        Example:
+            >>> client = GitHubPRClient()
+            >>> files = client.get_pr_modified_files("owner/repo", 123)
+            >>> print(f"Found {files['total_files']} files")
+        """
         return get_pr_modified_files(repo_full_name=repo_full_name, pr_number=pr_number, g=self._client)
 
     def get_pr_file_content(self, repo_full_name: str, pr_number: int, file_path: str):
+        """Fetch the content of a specific file from a PR's head commit.
+
+        Args:
+            repo_full_name: Full repository name, e.g., 'owner/repo'
+            pr_number: Pull request number
+            file_path: Path to the file in the repository
+
+        Returns:
+            File content as string, or None if fetch fails
+
+        Example:
+            >>> client = GitHubPRClient()
+            >>> content = client.get_pr_file_content("owner/repo", 123, "src/main.py")
+            >>> if content:
+            ...     print(f"File has {len(content)} bytes")
+        """
         return get_pr_file_content(
             repo_full_name=repo_full_name,
             pr_number=pr_number,

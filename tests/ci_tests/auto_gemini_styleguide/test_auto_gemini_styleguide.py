@@ -20,6 +20,8 @@ from coffee_maker import auto_gemini_styleguide as ags
 
 def test_load_api_key_from_env_var(monkeypatch):
     """Test API key is loaded from environment variable."""
+    # First, remove any existing API_KEY_ENV_VAR to ensure clean state
+    monkeypatch.delenv(ags.API_KEY_ENV_VAR, raising=False)
     monkeypatch.setenv(ags.API_KEY_ENV_VAR, "test_api_key_from_env")
     # Mock pathlib.Path.is_file to return False so it doesn't try to load from a file
     monkeypatch.setattr(pathlib.Path, "is_file", lambda self: False)

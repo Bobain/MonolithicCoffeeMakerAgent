@@ -43,7 +43,7 @@ from dotenv import load_dotenv
 from langfuse import Langfuse, observe
 
 from coffee_maker.code_formatter.agents import create_langchain_code_formatter_agent, create_react_formatter_agent
-
+from coffee_maker.config.manager import ConfigManager
 from coffee_maker.utils.github import get_pr_file_content, get_pr_modified_files, post_suggestion_in_pr_review
 
 # --- Logging Configuration ---
@@ -58,8 +58,8 @@ load_dotenv()
 # --- Initialize the global Langfuse client ---
 try:
     langfuse_client = Langfuse(
-        secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-        public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+        secret_key=ConfigManager.get_langfuse_secret_key(required=True),
+        public_key=ConfigManager.get_langfuse_public_key(required=True),
         host=os.getenv("LANGFUSE_HOST"),
     )
 except Exception:
@@ -323,7 +323,7 @@ if __name__ == "__main__":
             print(f"✗ {error}")
 
     # Get LLM with streaming enabled - use AutoPickerLLMRefactored for rate limiting and fallback
-    from coffee_maker.langchain_observe.create_auto_picker import create_auto_picker_for_react_agent
+    from coffee_maker.langfuse_observe.create_auto_picker import create_auto_picker_for_react_agent
 
     auto_picker_llm = create_auto_picker_for_react_agent(tier="tier1", streaming=True)
     react_agent, tools, llm_instance = create_react_formatter_agent(
@@ -350,7 +350,7 @@ if __name__ == "__main__":
     logger.info(f"\nAgent completed. Response: {response}")
 
     # Print AutoPickerLLMRefactored statistics
-    from coffee_maker.langchain_observe.auto_picker_llm_refactored import AutoPickerLLMRefactored
+    from coffee_maker.langfuse_observe.auto_picker_llm_refactored import AutoPickerLLMRefactored
 
     if isinstance(llm_instance, AutoPickerLLMRefactored):
         stats = llm_instance.get_stats()

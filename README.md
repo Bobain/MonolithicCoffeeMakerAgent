@@ -33,7 +33,7 @@ project-manager notifications
 
 ## 📋 Project Roadmap - Single Source of Truth
 
-**THE ONE AND ONLY ROADMAP**: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+**THE ONE AND ONLY ROADMAP**: [`docs/roadmap/ROADMAP.md`](docs/roadmap/ROADMAP.md)
 
 This file is the **SINGLE SOURCE OF TRUTH** for:
 - All project priorities and features
@@ -48,7 +48,7 @@ This file is the **SINGLE SOURCE OF TRUTH** for:
 
 **Documentation Structure**: See [`docs/README_DOCS.md`](docs/README_DOCS.md) for complete documentation organization.
 
-⚠️ **IMPORTANT**: Never create alternative roadmap files. Always edit `docs/ROADMAP.md` directly.
+⚠️ **IMPORTANT**: Never create alternative roadmap files. Always edit `docs/roadmap/ROADMAP.md` directly.
 
 ---
 
@@ -76,6 +76,37 @@ project-manager respond <id> approve   # Approve daemon's work
 
 ### 3. Notification System
 SQLite-based communication system between daemon and user with WAL mode for concurrent access.
+
+### 4. ACE Streamlit App (`ace-ui`) ⭐ NEW
+Visual interface for ACE (Agentic Context Engineering) framework management.
+
+**Launch**:
+```bash
+poetry run ace-ui
+```
+
+**Features**:
+- 📊 **Real-time Monitoring**: Live trace feed with agent performance metrics
+- 📚 **Playbook Management**: Interactive bullet curation with search, filters, and bulk actions
+- 📈 **Analytics Dashboard**: Comprehensive performance insights, cost tracking, and recommendations
+- ⚙️ **Configuration**: Agent-level ACE settings *(Phase 1 - Coming Soon)*
+
+**Documentation**:
+- **User Guide**: [`docs/ACE_STREAMLIT_USER_GUIDE.md`](docs/ACE_STREAMLIT_USER_GUIDE.md) - Complete usage instructions
+- **Technical Spec**: [`docs/STREAMLIT_ACE_APP_SPEC.md`](docs/STREAMLIT_ACE_APP_SPEC.md) - Architecture and implementation details
+
+**Quick Start**:
+```bash
+# Start the app
+poetry run ace-ui
+
+# Open browser at http://localhost:8501
+
+# Navigate between pages using the sidebar:
+# - 📊 Monitor: Real-time execution traces
+# - 📚 Playbooks: Manage playbook bullets
+# - 📈 Analytics: Performance insights
+```
 
 ---
 
@@ -109,8 +140,11 @@ coffee_maker/
 
 ## 📚 Documentation
 
-- **[ROADMAP.md](docs/ROADMAP.md)**: Complete project roadmap (single source of truth)
+- **[ROADMAP.md](docs/roadmap/ROADMAP.md)**: Complete project roadmap (single source of truth)
 - **[DAEMON_USAGE.md](docs/DAEMON_USAGE.md)**: Daemon usage guide (540 lines)
+- **[TUTORIALS.md](docs/TUTORIALS.md)**: Practical tutorials for all features
+- **[ACE Console Demo Tutorial](docs/ACE_CONSOLE_DEMO_TUTORIAL.md)**: Master the ACE Generator system ⭐ NEW
+- **[ACE Quick Reference](docs/ACE_QUICK_REFERENCE.md)**: One-page ACE reference card ⭐ NEW
 - **[ADR_001](docs/ADR_001_DATABASE_SYNC_STRATEGY.md)**: Database sync architecture decision
 - **[README_DOCS.md](docs/README_DOCS.md)**: Documentation organization
 

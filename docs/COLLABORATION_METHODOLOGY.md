@@ -164,7 +164,7 @@ User: "How long will feature X take?"
 PM: "Probably 3-4 days"  ← WRONG! No spec created!
 ```
 
-✅ **GOOD** (What PM MUST do):
+✅ **GOOD - Example 1** (What PM MUST do):
 ```
 User: "How long will feature X take?"
 
@@ -191,6 +191,63 @@ PM: "Based on the detailed task breakdown in docs/US-XXX_TECHNICAL_SPEC.md:
 **Total Estimated Delivery**: 18 hours (2.25 days)
 
 Would you like to review the technical spec before I proceed?"
+```
+
+✅ **GOOD - Example 2** (PM refuses even when pressured):
+```
+User: "I need a quick estimate for the authentication feature. Just ballpark it."
+
+PM: "I understand you need a quick answer, but providing a ballpark estimate
+without a technical specification would be irresponsible.
+
+Here's why:
+
+1. Hidden complexity: Authentication seems simple but has many edge cases
+   (password reset, session management, OAuth, 2FA, etc.)
+
+2. Historical data shows: Features estimated without specs are typically
+   2-3x off the initial estimate
+
+3. Your time matters: If I say '2 days' and it takes 6 days, that breaks
+   your planning and expectations
+
+Instead, I can:
+- Create a technical spec in 20-30 minutes
+- Give you an accurate estimate based on task-level breakdown
+- Show you exactly what's included in the estimate
+- Identify any risky areas upfront
+
+Should I proceed with creating the spec? It's the fastest path to an
+accurate answer."
+
+User: "OK, create the spec"
+
+PM: [Creates docs/US-XXX_AUTHENTICATION_TECHNICAL_SPEC.md with task breakdown]
+
+PM: "Spec complete. Based on detailed analysis:
+
+**Phase 1: Core Auth** (8 hours)
+- User model + password hashing (2h)
+- Login/logout endpoints (2h)
+- Session management (2h)
+- Tests (2h)
+
+**Phase 2: Password Reset** (4 hours)
+- Reset flow + email (2h)
+- Token generation/validation (1h)
+- Tests (1h)
+
+**Phase 3: OAuth Integration** (6 hours)
+- Google/GitHub OAuth (3h)
+- Account linking (2h)
+- Tests (1h)
+
+**Total Estimated Delivery**: 18 hours (2.25 days)
+
+This is significantly more than a 'quick ballpark' would have suggested,
+but now we have a clear plan and accurate timeline.
+
+Would you like to review the full spec before I proceed?"
 ```
 
 **Why This is Critical**:
@@ -614,7 +671,7 @@ This causes:
   "agent": "project_manager",
   "pid": 12345,
   "start_time": "2025-10-11T10:30:00Z",
-  "files": ["docs/ROADMAP.md"],
+  "files": ["docs/roadmap/ROADMAP.md"],
   "lock_type": "write"
 }
 ```
@@ -709,7 +766,7 @@ When conflicts are unavoidable, provide clear steps:
 ```
 ⚠️ MERGE CONFLICT DETECTED
 
-File: docs/ROADMAP.md
+File: docs/roadmap/ROADMAP.md
 Conflict: Both you and code_developer edited US-022
 
 Your version:
@@ -2157,7 +2214,7 @@ notif_service.create_notification(
 
 ### 4.3 Communication via Shared Artifacts
 
-**Primary Artifact**: `docs/ROADMAP.md`
+**Primary Artifact**: `docs/roadmap/ROADMAP.md`
 
 **When to Use**:
 - Documenting priorities and their status
@@ -2291,7 +2348,7 @@ notif_service.create_notification(
 - ✅ **Before** moving to next topic
 
 **Where to Document**:
-- **Primary**: `docs/ROADMAP.md` (single source of truth)
+- **Primary**: `docs/roadmap/ROADMAP.md` (single source of truth)
 - **Secondary**: Technical specs, ADRs (for detailed design decisions)
 
 **Example**:
@@ -2566,7 +2623,7 @@ PM: "Done! Added after the process management feature in the roadmap."
 
 **Implementation Status**:
 - 📝 **Planned** (US-012, US-013)
-- See `docs/ROADMAP.md` for complete specification
+- See `docs/roadmap/ROADMAP.md` for complete specification
 - Estimated: 12-17 hours total implementation time
 
 ---
@@ -2784,7 +2841,7 @@ Without synchronization, the daemon works with **stale roadmap data** and may:
 1. git fetch origin roadmap
 2. git merge origin/roadmap       # Get latest FIRST!
 3. Modify ROADMAP.md locally
-4. git add docs/ROADMAP.md
+4. git add docs/roadmap/ROADMAP.md
 5. git commit -m "docs: update roadmap"
 6. git push origin HEAD:roadmap   # Push and merge to roadmap branch
 ```
@@ -2903,7 +2960,7 @@ daemon:
 
 **Implementation Status**:
 - 📝 **PLANNED** (US-022 created 2025-10-11)
-- See `docs/ROADMAP.md` for complete specification
+- See `docs/roadmap/ROADMAP.md` for complete specification
 - Estimated: 4 hours total implementation time
 
 **User Story Reference**: US-022
@@ -3168,11 +3225,240 @@ PM: [Next time user checks in]
 
 **Implementation Status**:
 - 📝 **PLANNED** (PRIORITY 2.11 created 2025-10-11)
-- See `docs/ROADMAP.md` for complete specification
+- See `docs/roadmap/ROADMAP.md` for complete specification
 - High priority for implementation
 
 **User Story Reference**: PRIORITY 2.11
 > "As a user I want to be able to ask the project_manager to fix a bug he opens a ticket, with DoD and it will be analysed by the code_developer before writing technical specs and finally implementing the fix."
+
+---
+
+### 5.9 Technical Spec Generation via `/spec` Command (US-016)
+
+**Pattern**: `/spec` command → AI Analysis → Time Estimation → Delivery Calculation → User Review → ROADMAP Update
+
+**Philosophy**: Automated technical specification generation with realistic time estimates and delivery dates
+
+**What This Is**:
+The `/spec` command provides AI-powered technical specification generation that:
+- Breaks down user stories into phases and tasks
+- Estimates time with confidence levels
+- Calculates realistic delivery dates with buffer
+- Integrates with ROADMAP for approved specs
+- Generates consistent markdown documentation
+
+**The Spec Generation Workflow**:
+
+```
+User provides user story description
+  ↓
+/spec command with feature type and complexity
+  ↓
+AI Analysis (SpecGenerator)
+  ├─ Extract feature info
+  ├─ Break down into components
+  └─ Identify phases and tasks
+  ↓
+Time Estimation (TaskEstimator)
+  ├─ Estimate each task (base + multipliers)
+  ├─ Calculate confidence levels
+  └─ Apply historical adjustments (if Phase 4)
+  ↓
+Delivery Calculation
+  ├─ Apply buffer based on confidence (10-20%)
+  ├─ Use velocity (6h/day) for realistic dates
+  └─ Generate delivery date estimate
+  ↓
+Spec File Generated (docs/US-XXX_TECHNICAL_SPEC.md)
+  ↓
+User Review
+  ├─ View summary with estimates
+  ├─ Review full spec (optional)
+  └─ Approve or Reject
+  ↓
+If Approved → ROADMAP Updated with spec reference
+If Rejected → Spec kept for reference (no ROADMAP update)
+```
+
+**Command Syntax**:
+
+```bash
+poetry run project-manager /spec "user story description" \
+  --type {crud|integration|ui|infrastructure|analytics|security|general} \
+  --complexity {low|medium|high} \
+  --id US-XXX
+```
+
+**Parameters**:
+- `user_story` (required): Natural language description
+- `--type` (optional): Feature type for estimate adjustment (default: general)
+- `--complexity` (optional): Overall complexity (default: medium)
+- `--id` (optional): User story ID for ROADMAP integration
+
+**Example Interaction**:
+
+```
+User: "I need a technical spec for email notifications"
+
+PM: "Let me generate that for you. Running /spec command..."
+
+PM: [Executes /spec command]
+    poetry run project-manager /spec \
+      "As a user, I want email notifications when tasks complete" \
+      --type integration \
+      --complexity medium \
+      --id US-033
+
+System Output:
+Specification complete! 📋
+
+Total Estimated Time: 24.0 hours (3.0 days)
+Phases: 4
+Tasks: 12
+Confidence: 85%
+
+With 15% buffer for unknowns:
+- Buffered Time: 27.6 hours (4.6 days)
+- Expected Delivery: 2025-10-20
+
+Spec saved to: docs/US-033_TECHNICAL_SPEC.md
+
+Would you like to review the spec? [y/n]
+
+User: y
+
+[Spec opens in editor showing detailed breakdown]
+
+PM: "Here's what will be added to ROADMAP when you approve..."
+
+When approved, ROADMAP.md will be updated:
+
+## US-033: Email Notification System
+
+**Status**: 📝 READY TO IMPLEMENT
+**Estimated Time**: 27.6 hours (4.6 days)
+**Spec**: docs/US-033_TECHNICAL_SPEC.md
+**Confidence**: 85%
+**Expected Delivery**: 2025-10-20 (with 15% buffer)
+
+Approve this spec and update ROADMAP? [y/n]
+
+User: y
+
+PM: "Spec approved! ROADMAP updated with estimate and spec reference.
+     US-033 is now ready for implementation by code_developer."
+```
+
+**Generated Spec Structure**:
+
+All specs follow this consistent format:
+
+```markdown
+# {Feature Name} - Technical Specification
+
+**Feature Type**: {crud|integration|ui|...}
+**Complexity**: {low|medium|high}
+**Estimated Time**: {total_hours} hours ({total_days} days)
+**Confidence**: {confidence}%
+
+## Summary
+{Business value and overview}
+
+## Phase Breakdown
+
+### Phase 1: {Phase Name}
+**Goal**: {Phase objective}
+**Estimated Time**: {hours}h
+
+#### Tasks
+1. **{Task Title}**
+   - **Description**: {What to do}
+   - **Deliverable**: {What's produced}
+   - **Dependencies**: {Prerequisites}
+   - **Testing**: {How to verify}
+   - **Estimated Time**: {hours}h
+
+...
+
+**Risks**:
+- {Identified risks}
+
+**Success Criteria**:
+- {How we know it's done}
+
+...
+
+## Delivery Estimate
+
+- **Total Time**: {base_hours}h ({base_days} days)
+- **With Buffer**: {buffered_hours}h ({buffered_days} days)
+- **Confidence**: {confidence}%
+- **Expected Delivery**: {delivery_date}
+```
+
+**Time Estimation Details**:
+
+**Base Estimation**:
+- **Low complexity**: 1.5h average (1-2h range)
+- **Medium complexity**: 2.5h average (2-3h range)
+- **High complexity**: 3.5h average (3-4h range)
+
+**Multipliers Applied**:
+- Testing: +30%
+- Documentation: +15%
+- Security: +25%
+- Integration Complexity: +20%
+
+**Feature Type Adjustments**:
+- CRUD: +0h (baseline)
+- Integration: +0.5h
+- UI: +0.3h
+- Infrastructure: +0.7h
+- Analytics: +0.4h
+- Security: +0.6h
+
+**Buffer Calculation** (based on confidence):
+- High confidence (90%+): 10% buffer
+- Medium confidence (70-90%): 15% buffer
+- Low confidence (<70%): 20% buffer
+
+**Velocity Adjustment**:
+- Estimates use 6h/day velocity (not 8h)
+- Accounts for meetings, reviews, interruptions
+
+**Benefits**:
+
+1. **Faster Planning**: Generate detailed specs in minutes
+2. **Consistent Format**: All specs follow same structure
+3. **Realistic Estimates**: Include testing, docs, buffers
+4. **Historical Learning**: Estimates improve over time (Phase 4)
+5. **ROADMAP Integration**: Approved specs auto-update ROADMAP
+6. **Team Alignment**: Everyone works from same spec
+
+**Integration with Other Workflows**:
+
+- **Precedes**: `/US` command creates user story, `/spec` creates technical spec
+- **Enables**: code_developer can implement from spec
+- **Connects**: Metrics from US-015 improve estimates (Phase 4)
+- **Updates**: ROADMAP shows estimates and delivery dates
+
+**Common Use Cases**:
+
+1. **Feature Planning**: Generate spec before implementation
+2. **Estimation Request**: Get time estimate for user story
+3. **Exploratory Planning**: Generate spec without ROADMAP update (no --id)
+4. **Batch Planning**: Generate specs for multiple user stories
+
+**Tutorial**: See `docs/tutorials/SPEC_GENERATION_TUTORIAL.md` for comprehensive examples and FAQ.
+
+**Implementation Status**:
+- ✅ **COMPLETE** (US-016 Phase 6 completed 2025-10-16)
+- 100 tests passing (unit + integration)
+- Full documentation and examples
+- Ready for production use
+
+**User Story Reference**: US-016
+> "As a PM, I want to generate technical specifications from user stories with time estimates so that I can plan sprints accurately and provide delivery dates to stakeholders."
 
 ---
 
@@ -3200,6 +3486,17 @@ A user story is **done** when:
 
 ```markdown
 ## Definition of Done - [User Story ID]
+
+### Planning & Specification Criteria (UPDATED - US-016)
+- [ ] **Technical specification created** (for features >1 day) - MANDATORY before coding
+- [ ] **Task-level estimates included** (0.5h - 4h granularity)
+- [ ] **Dependencies documented** between tasks
+- [ ] **Risks identified** per phase
+- [ ] **User approved spec** before implementation started
+
+**Why This Matters**: Per Section 2.4, PM cannot provide delivery estimates without creating a detailed technical spec first. This prevents scope creep and ensures accurate estimates.
+
+**See Also**: Section 2.4 - Specification Before Implementation (US-016)
 
 ### Functional Criteria
 - [ ] All acceptance criteria met
@@ -3481,7 +3778,7 @@ PM documents decision and informs developer
 
 | Tool | Purpose | Owner | Update Frequency |
 |------|---------|-------|------------------|
-| `docs/ROADMAP.md` | Single source of truth for priorities | PM | Real-time (every decision) |
+| `docs/roadmap/ROADMAP.md` | Single source of truth for priorities | PM | Real-time (every decision) |
 | `project-manager chat` | Interactive communication (User ↔ PM) | PM | During chat session |
 | `data/notifications.db` | Async communication (PM ↔ Developer) | Developer | Continuous (polling) |
 | Technical Specs (`docs/US-XXX_TECHNICAL_SPEC.md`) | Detailed implementation plans | PM | Before implementation |
@@ -3692,12 +3989,12 @@ To avoid CLI nesting, we need to use API mode.
 
 #### Problem
 
-GitHub has a dedicated `roadmap` branch that must always reflect the current state of `docs/ROADMAP.md` and `docs/COLLABORATION_METHODOLOGY.md`. Team members (project_manager, code_developer, assistant) need to update this branch frequently, but manual PR process creates overhead.
+GitHub has a dedicated `roadmap` branch that must always reflect the current state of `docs/roadmap/ROADMAP.md` and `docs/COLLABORATION_METHODOLOGY.md`. Team members (project_manager, code_developer, assistant) need to update this branch frequently, but manual PR process creates overhead.
 
 #### When To Use This Process
 
 ✅ **ALWAYS use this automated merge process when updating**:
-- `docs/ROADMAP.md` - Single source of truth for priorities
+- `docs/roadmap/ROADMAP.md` - Single source of truth for priorities
 - `docs/COLLABORATION_METHODOLOGY.md` - Team processes and methodology
 - `docs/*.md` - Any documentation files
 - Changes made by project_manager agent
@@ -3749,7 +4046,7 @@ poetry add PyGithub
 ```bash
 # After making roadmap changes on a feature branch:
 git checkout -b feature/roadmap-update-$(date +%Y%m%d-%H%M%S)
-git add docs/ROADMAP.md docs/COLLABORATION_METHODOLOGY.md
+git add docs/roadmap/ROADMAP.md docs/COLLABORATION_METHODOLOGY.md
 git commit -m "docs: Update roadmap with latest priorities"
 git push -u origin HEAD
 
@@ -3838,7 +4135,7 @@ def save_and_update_main(self):
 
     # Commit and push
     subprocess.run(["git", "checkout", "-b", branch])
-    subprocess.run(["git", "add", "docs/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"])
+    subprocess.run(["git", "add", "docs/roadmap/ROADMAP.md", "docs/COLLABORATION_METHODOLOGY.md"])
     subprocess.run(["git", "commit", "-m", "docs: Update roadmap"])
     subprocess.run(["git", "push", "-u", "origin", branch])
 
@@ -3911,7 +4208,7 @@ def sync_roadmap_from_github(self):
         # Update local roadmap file from remote branch
         # (without checking out the branch)
         subprocess.run(
-            ["git", "show", "origin/roadmap:docs/ROADMAP.md"],
+            ["git", "show", "origin/roadmap:docs/roadmap/ROADMAP.md"],
             stdout=open(self.roadmap_path, 'w'),
             check=True
         )
@@ -3930,7 +4227,7 @@ def update_roadmap_status(self, priority_name: str, new_status: str):
     # Use automated script to update roadmap branch
     branch = f"roadmap-{priority_name.lower().replace(' ', '-')}-{new_status}"
     subprocess.run(["git", "checkout", "-b", branch])
-    subprocess.run(["git", "add", "docs/ROADMAP.md"])
+    subprocess.run(["git", "add", "docs/roadmap/ROADMAP.md"])
     subprocess.run(["git", "commit", "-m", f"docs: Mark {priority_name} as {new_status}"])
     subprocess.run(["git", "push", "-u", "origin", branch])
 
@@ -3966,7 +4263,7 @@ def help_update_roadmap(user_changes: str):
     branch = f"roadmap-user-update-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 
     subprocess.run(["git", "checkout", "-b", branch])
-    subprocess.run(["git", "add", "docs/ROADMAP.md"])
+    subprocess.run(["git", "add", "docs/roadmap/ROADMAP.md"])
     subprocess.run(["git", "commit", "-m", "docs: User-requested roadmap update"])
     subprocess.run(["git", "push", "-u", "origin", branch])
     subprocess.run(["python", "scripts/merge_roadmap_pr.py", branch, "--base", "roadmap"])
@@ -4023,11 +4320,11 @@ From github.com:Bobain/MonolithicCoffeeMakerAgent
  * branch            main       -> FETCH_HEAD
 Updating abc1234..def5678
 Fast-forward
- docs/ROADMAP.md | 5 +++--
+ docs/roadmap/ROADMAP.md | 5 +++--
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 # 3. View updated roadmap
-$ cat docs/ROADMAP.md
+$ cat docs/roadmap/ROADMAP.md
 # Shows US-020 marked as ✅ Complete
 
 # 4. Continue working on main

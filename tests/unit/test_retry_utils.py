@@ -1,11 +1,11 @@
-"""Unit tests for coffee_maker.langchain_observe.retry_utils module."""
+"""Unit tests for coffee_maker.langfuse_observe.retry_utils module."""
 
 import time
 from unittest.mock import Mock
 
 import pytest
 
-from coffee_maker.langchain_observe.retry_utils import (
+from coffee_maker.langfuse_observe.retry import (
     RetryConfig,
     RetryExhausted,
     with_conditional_retry,
@@ -183,6 +183,7 @@ class TestWithRetry:
         assert "permanent error" in str(exc_info.value)
         assert mock_func.call_count == 2
 
+    @pytest.mark.slow
     def test_backoff_timing(self):
         """Should wait with exponential backoff between retries."""
         mock_func = Mock(side_effect=[ValueError("1"), ValueError("2"), "success"])
@@ -255,12 +256,15 @@ class TestWithRetry:
         assert my_function.__name__ == "my_function"
         assert my_function.__doc__ == "My function docstring."
 
+    @pytest.mark.slow
     def test_max_backoff_limit(self):
         """Should respect max_backoff limit."""
         mock_func = Mock(side_effect=[ValueError("1"), ValueError("2"), ValueError("3"), "success"])
 
         @with_retry(
-            max_attempts=4, backoff_base=10.0, max_backoff=5.0  # Would be 10, 100, 1000 without max  # Cap at 5 seconds
+            max_attempts=4,
+            backoff_base=10.0,
+            max_backoff=5.0,  # Would be 10, 100, 1000 without max  # Cap at 5 seconds
         )
         def test_func():
             result = mock_func()
@@ -382,6 +386,7 @@ class TestWithConditionalRetry:
         assert mock_func.call_count == 2
         assert cleanup_mock.call_count == 1  # Only called once (not on last attempt)
 
+    @pytest.mark.slow
     def test_backoff_timing(self):
         """Should wait with backoff between retries."""
         cleanup_mock = Mock()
@@ -493,6 +498,7 @@ class TestIntegration:
         assert len(call_count) == 2  # Initial + 1 retry
         assert len(cleanup_called) == 1  # Cleanup called once
 
+    @pytest.mark.slow
     def test_mixed_retry_strategies(self):
         """Test combining multiple retry decorators."""
         # This tests that decorators can be stacked

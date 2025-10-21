@@ -7,11 +7,12 @@ comprehensive code analysis from different perspectives.
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from coffee_maker.code_reviewer.models import ReviewReport
 from coffee_maker.code_reviewer.perspectives import (
     ArchitectCritic,
+    BasePerspective,
     BugHunter,
     PerformanceAnalyst,
     SecurityAuditor,
@@ -52,7 +53,7 @@ class MultiModelCodeReviewer:
         ]
 
         # Initialize perspectives
-        self.perspectives = {}
+        self.perspectives: Dict[str, BasePerspective] = {}
         if "bug_hunter" in self.enabled_perspectives:
             self.perspectives["bug_hunter"] = BugHunter()
         if "architect_critic" in self.enabled_perspectives:

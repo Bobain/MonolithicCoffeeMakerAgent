@@ -3,7 +3,7 @@
 import pytest
 import httpx
 
-from coffee_maker.langchain_observe.http_pool import (
+from coffee_maker.langfuse_observe.http_pool import (
     HTTPConnectionPool,
     get_http_client,
     get_async_http_client,

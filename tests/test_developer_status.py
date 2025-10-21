@@ -3,7 +3,6 @@
 Tests status tracking, activity logging, progress reporting, and JSON file writing.
 """
 
-import json
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -15,6 +14,7 @@ from coffee_maker.autonomous.developer_status import (
     DeveloperState,
     DeveloperStatus,
 )
+from coffee_maker.utils.file_io import read_json_file
 
 
 @pytest.fixture
@@ -60,8 +60,7 @@ def test_update_status_new_task(status, temp_status_file):
     assert temp_status_file.exists()
 
     # Verify file contents
-    with open(temp_status_file) as f:
-        data = json.load(f)
+    data = read_json_file(temp_status_file)
 
     assert data["status"] == "working"
     assert data["current_task"]["priority"] == 4
@@ -254,8 +253,7 @@ def test_status_file_format(status, temp_status_file):
     status.report_activity(ActivityType.GIT_COMMIT, "Test commit")
 
     # Read file
-    with open(temp_status_file) as f:
-        data = json.load(f)
+    data = read_json_file(temp_status_file)
 
     # Verify structure
     assert "status" in data
@@ -292,8 +290,7 @@ def test_activity_log_in_file_limited_to_20(status, temp_status_file):
         status.report_activity(ActivityType.CODE_CHANGE, f"Change {i}")
 
     # Read file
-    with open(temp_status_file) as f:
-        data = json.load(f)
+    data = read_json_file(temp_status_file)
 
     # File should contain only last 20
     assert len(data["activity_log"]) == 20

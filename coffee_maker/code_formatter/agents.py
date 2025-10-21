@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 from langfuse import Langfuse
 
-from coffee_maker.langchain_observe.agents import configure_llm
+from coffee_maker.langfuse_observe.agents import configure_llm
 
 load_dotenv()
 
@@ -100,7 +100,7 @@ def create_react_formatter_agent(
     # agent = ReAct agent with less complex and tools to use
     from langchain.agents import create_react_agent
 
-    from coffee_maker.langchain_observe.tools import (
+    from coffee_maker.langfuse_observe.tools import (
         get_pr_modified_files,
         get_pr_file_content,
         post_suggestion_in_pr_review,
@@ -108,23 +108,23 @@ def create_react_formatter_agent(
     )
 
     # Wrap in AutoPickerLLMRefactored if requested
-    from coffee_maker.langchain_observe.auto_picker_llm_refactored import AutoPickerLLMRefactored
+    from coffee_maker.langfuse_observe.auto_picker_llm_refactored import AutoPickerLLMRefactored
 
     if use_auto_picker and not isinstance(llm, AutoPickerLLMRefactored):
         logger.info("Wrapping LLM in AutoPickerLLMRefactored for rate limiting and fallback")
-        from coffee_maker.langchain_observe.create_auto_picker import create_auto_picker_for_react_agent
+        from coffee_maker.langfuse_observe.create_auto_picker import create_auto_picker_for_react_agent
 
         llm = create_auto_picker_for_react_agent(tier=tier, streaming=True)
 
     # 2. Define the tools
-    tools = github_tools + [get_pr_modified_files, get_pr_file_content, post_suggestion_in_pr_review]
+    tools = list(github_tools) + [get_pr_modified_files, get_pr_file_content, post_suggestion_in_pr_review]
 
     # Add LLM tools if requested
     if include_llm_tools:
-        from coffee_maker.langchain_observe.llm_tools import create_llm_tools
+        from coffee_maker.langfuse_observe.llm_tools import create_llm_tools
 
         llm_tools = create_llm_tools(tier=tier)
-        tools = tools + llm_tools
+        tools = tools + list(llm_tools)
         logger.info(f"Added {len(llm_tools)} LLM tools to ReAct agent")
 
     styleguide = langfuse_client.get_prompt("styleguide.md").prompt
@@ -262,11 +262,42 @@ def create_langchain_code_formatter_agent(
             raise
 
     def get_result_from_llm(file_content: str, file_path: str) -> str:
+        """Invoke the formatter LLM and return raw output.
+
+        Args:
+            file_content: Source code content to format
+            file_path: Logical file path for context
+
+        Returns:
+            Raw LLM response as string (may include markdown formatting)
+
+        Example:
+            >>> result = get_result_from_llm("def foo():\\n  pass", "demo.py")
+            >>> print(result)  # Returns formatted code suggestions
+        """
         return _invoke_formatter(file_content, file_path)
 
     def get_list_of_dict_from_llm(
         file_content: str, file_path: str, *, skip_empty_files: bool = True
     ) -> list[dict[str, Any]]:
+        """Invoke formatter LLM and parse output as structured list of suggestions.
+
+        Args:
+            file_content: Source code content to format
+            file_path: Logical file path for context
+            skip_empty_files: If True, return empty list for empty files without LLM call
+
+        Returns:
+            List of dictionaries containing parsed code suggestions.
+            Returns empty list if file is empty and skip_empty_files=True.
+
+        Raises:
+            json.JSONDecodeError: If LLM output cannot be parsed as valid JSON
+
+        Example:
+            >>> suggestions = get_list_of_dict_from_llm("def foo():\\n  pass", "demo.py")
+            >>> print(len(suggestions))  # Number of formatting suggestions
+        """
         if skip_empty_files and not file_content.strip():
             return []
         raw_output = _invoke_formatter(file_content, file_path)
@@ -287,7 +318,25 @@ def create_langchain_code_formatter_agent(
     return agent
 
 
-def extract_brackets(s: str):
+def extract_brackets(s: str) -> str:
+    """Extract content between first opening and last closing bracket.
+
+    Finds the first occurrence of '[' or '{' and the last occurrence of ']' or '}'
+    in the string, then returns the substring between them (inclusive).
+
+    Args:
+        s: Input string to extract from
+
+    Returns:
+        Substring between first opening and last closing bracket,
+        or empty string if no valid brackets found
+
+    Example:
+        >>> extract_brackets('text before [{"key": "value"}] text after')
+        '[{"key": "value"}]'
+        >>> extract_brackets('no brackets here')
+        ''
+    """
     # Remove any char surrounding the json list of dict
     first_open = min((i for i in [s.find("["), s.find("{")] if i != -1), default=-1)
     last_close = max((i for i in [s.rfind("]"), s.rfind("}")] if i != -1), default=-1)

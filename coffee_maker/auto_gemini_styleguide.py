@@ -1,4 +1,23 @@
-# co-author: Gemini Code Assist
+"""Automatic code style correction using Google Gemini AI.
+
+This module provides functionality to automatically format Python code according to
+a style guide using Google's Gemini AI models. It can:
+- Read a style guide and target code file
+- Send code to Gemini for formatting suggestions
+- Parse AI responses with modified code and explanations
+- Generate unified diffs showing changes
+- Optionally apply changes to the original file
+
+The script uses structured delimiters to parse AI responses and generate
+comprehensive diffs with explanations.
+
+Example:
+    $ python auto_gemini_styleguide.py target_file.py --styleguide .gemini/styleguide.md
+    $ python auto_gemini_styleguide.py target_file.py --no-modify  # Generate diff only
+
+Co-author: Gemini Code Assist
+"""
+
 import argparse
 import difflib  # For generating diffs
 import logging
@@ -9,6 +28,8 @@ import google.api_core.exceptions  # Added: For GoogleAPICallError
 import google.generativeai as genai
 import google.generativeai.types  # Added: For BlockedPromptException
 from dotenv import load_dotenv
+
+from coffee_maker.config.manager import APIKeyMissingError, ConfigManager
 
 # --- Configuration ---
 # Relative path to the style guide from the script's location or project root
@@ -26,44 +47,70 @@ EXPLANATIONS_DELIMITER_END = "---EXPLANATIONS_END---"
 
 
 def load_api_key(env_file_path: str, let_load_dotenv_search: bool = True) -> str | None:
-    """Loads the Google API key from .env file or environment variables.
+    """Loads the Google API key from .env file or environment variables using ConfigManager.
+
+    ConfigManager automatically checks multiple environment variable names:
+    - GEMINI_API_KEY (primary)
+    - GOOGLE_API_KEY (alternative)
+    - COFFEE_MAKER_GEMINI_API_KEY (project-specific)
 
     Args:
         env_file_path (str): The path to the .env file.
-        let_load_dotenv_search (bool): If True, and key not found via `env_file_path` or system vars,
+        let_load_dotenv_search (bool): If True, and key not found via `env_file_path`,
                                         `load_dotenv()` will search default locations.
 
     Returns:
         str | None: The API key if found, otherwise None.
     """
+    # Load .env file if it exists (for other environment variables)
     if pathlib.Path(env_file_path).is_file():
         logging.info(f"Sourcing environment variables from '{env_file_path}'...")
-        # load_dotenv expects a string or Pathlike object for dotenv_path
         load_dotenv(dotenv_path=env_file_path, override=True)
     else:
         logging.info(f"Info: Environment file '{env_file_path}' not found. Checking system environment variables.")
 
-    api_key = os.getenv(API_KEY_ENV_VAR)
-    if not api_key:
-        logging.warning(
-            f"Error: API key not found. Please set the {API_KEY_ENV_VAR} environment variable "
-            f"or provide it in '{env_file_path}'."
-        )
-        logging.info(f"You can get an API key from Google AI Studio (https://aistudio.google.com/app/apikey).")
-
-    if let_load_dotenv_search and load_dotenv():
-        api_key = os.getenv(API_KEY_ENV_VAR)
-        if not api_key:
-            logging.error("We tried load_dotenv() (which searches default locations like .env) without specifying env_file_path, but could not find the API key.")
-            return None
+    # Try to get API key using ConfigManager (checks multiple variable names)
+    try:
+        api_key = ConfigManager.get_gemini_api_key(required=True)
+        logging.info("Gemini API key loaded successfully from environment")
+        return api_key
+    except APIKeyMissingError:
+        # If not found, try load_dotenv() search
+        if let_load_dotenv_search and load_dotenv():
+            try:
+                api_key = ConfigManager.get_gemini_api_key(required=True)
+                logging.info("Gemini API key loaded successfully from .env file")
+                return api_key
+            except APIKeyMissingError:
+                logging.error(
+                    "API key not found. Tried GEMINI_API_KEY, GOOGLE_API_KEY, and COFFEE_MAKER_GEMINI_API_KEY. "
+                    f"Please set one of these in '{env_file_path}' or your environment."
+                )
+                logging.info("You can get an API key from Google AI Studio (https://aistudio.google.com/app/apikey).")
+                return None
         else:
-            logging.info(f"{API_KEY_ENV_VAR} was found by load_dotenv.")
-
-    return api_key
+            logging.error(
+                "API key not found. Tried GEMINI_API_KEY, GOOGLE_API_KEY, and COFFEE_MAKER_GEMINI_API_KEY. "
+                f"Please set one of these in '{env_file_path}' or your environment."
+            )
+            logging.info("You can get an API key from Google AI Studio (https://aistudio.google.com/app/apikey).")
+            return None
 
 
 def read_file_content(file_path: str) -> str | None:
-    """Reads the content of a file."""
+    """Read and return the complete content of a file.
+
+    Args:
+        file_path: Path to the file to read
+
+    Returns:
+        File content as string, or None if file not found or read error occurs
+
+    Example:
+        >>> content = read_file_content("example.py")
+        >>> if content:
+        ...     print(f"Read {len(content)} characters")
+    """
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
@@ -76,7 +123,20 @@ def read_file_content(file_path: str) -> str | None:
 
 
 def write_file_content(file_path: str, content: str) -> bool:
-    """Writes content to a file, overwriting it."""
+    """Write content to a file, overwriting existing content.
+
+    Args:
+        file_path: Path to the file to write
+        content: String content to write to the file
+
+    Returns:
+        True if write succeeded, False if an error occurred
+
+    Example:
+        >>> success = write_file_content("output.txt", "Hello, World!")
+        >>> if success:
+        ...     print("File written successfully")
+    """
     try:
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(content)
@@ -88,7 +148,27 @@ def write_file_content(file_path: str, content: str) -> bool:
 
 
 def construct_llm_prompt(style_guide_content: str, code_to_modify: str, file_name: str) -> str:
-    """Constructs the prompt for the LLM, asking for modified code and explanations."""
+    """Construct the LLM prompt for code formatting with structured output.
+
+    Creates a detailed prompt that instructs the LLM to format code according to
+    a style guide and return results with specific delimiters for parsing.
+
+    Args:
+        style_guide_content: Complete text of the style guide in markdown format
+        code_to_modify: Source code to be formatted
+        file_name: Name of the file being formatted (for context)
+
+    Returns:
+        Complete prompt string ready to send to the LLM
+
+    Example:
+        >>> prompt = construct_llm_prompt(
+        ...     "# Style Guide\\n- Use 4 spaces",
+        ...     "def foo():\\n  pass",
+        ...     "example.py"
+        ... )
+        >>> print(prompt[:50])  # First 50 chars of prompt
+    """
     prompt = f"""You are an expert code formatting and styling assistant.
 Your task is to take the provided code snippet and reformat/restyle it to adhere (with minimal changes : don't change the code logic) to the rules outlined in the "STYLE GUIDE" below.
 The code is from the file named '{file_name}'.

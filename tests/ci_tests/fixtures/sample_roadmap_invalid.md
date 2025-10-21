@@ -1,41 +1,32 @@
-# Project Roadmap
+# Invalid Test Roadmap
 
-This roadmap has invalid/malformed priority entries.
+This roadmap has malformed priorities for testing error handling.
 
-### PRIORITY 1 Missing Format Markers
+### This is not a valid priority header
+Missing the PRIORITY keyword
 
-This priority is missing the required 🔴 marker and **bold** formatting.
+### PRIORITY: Missing Number
+Should have a number after PRIORITY
 
-**Status**: Planned
+### PRIORITY ABC: Non-numeric
+Priority number should be numeric
 
-Content here.
+### PRIORITY -1: Negative Number
+Negative priorities are invalid
 
-### Another Section
+### Regular Heading: Not a Priority
+Just a regular markdown heading
 
-Random content without proper structure.
+Some random text that's not in any priority.
 
-Some deliverables:
-- Do thing 1
-- Do thing 2
+### PRIORITY 1 Without Status
+This priority is missing a status emoji
 
-### 🔴 PRIORITY 2 Missing Bold
+### PRIORITY 2:
+Empty title after colon
 
-This one has the marker but is missing bold formatting.
+### PRIORITY 3
+Missing colon completely
 
-Status: 📝 Planned
-
-More content.
-
-### 🔴 **PRIORITY 3: Valid Priority** 📝 Planned
-
-**Status**: 📝 Planned
-
-This is the only properly formatted priority in this roadmap.
-
-**Deliverables**:
-- Create file1.txt
-- Create file2.txt
-
-### Random Header
-
-More random content that should be ignored.
+###PRIORITY 4: No Space After Hashes
+Missing space after ### before PRIORITY

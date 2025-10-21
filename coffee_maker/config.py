@@ -9,6 +9,7 @@ This module contains global configuration constants used throughout the project.
 import os
 import re
 from pathlib import Path
+from typing import Dict, Final, Optional
 
 
 # ============================================================================
@@ -31,7 +32,7 @@ from pathlib import Path
 # ============================================================================
 
 
-def load_env_with_exports(env_file: Path = None) -> None:
+def load_env_with_exports(env_file: Optional[Path] = None) -> None:
     """Load environment variables from .env file, handling 'export' keyword.
 
     This custom loader supports both formats:
@@ -117,7 +118,7 @@ if not ROADMAP_PATH.exists():
 DATA_DIR = PROJECT_ROOT / "data"
 
 # Database paths (shared between user environment and daemon)
-DATABASE_PATHS = {
+DATABASE_PATHS: Final[Dict[str, Path]] = {
     "analytics": DATA_DIR / "analytics.db",
     "notifications": DATA_DIR / "notifications.db",
     "langfuse_export": DATA_DIR / "langfuse_export.db",
@@ -193,7 +194,7 @@ def validate_single_roadmap() -> None:
         raise RuntimeError(
             f"ERROR: Unauthorized roadmap files detected!\n\n"
             f"Only these files are allowed:\n"
-            f"  - docs/ROADMAP.md (source of truth)\n"
+            f"  - docs/roadmap/ROADMAP.md (source of truth)\n"
             f"  - docs/ROADMAP_OVERVIEW.md (summary documentation)\n\n"
             f"Found unauthorized roadmap files:\n{files_list}\n\n"
             f"Please delete these files and use only the official files.\n"
@@ -213,7 +214,7 @@ def validate_database_paths() -> None:
                 f"Path: {db_path}\n"
                 f"Expected: {DATA_DIR}/...\n\n"
                 f"All databases must be in DATA_DIR for proper daemon synchronization.\n"
-                f"See docs/PRIORITY_1.5_DATABASE_SYNC_DESIGN.md for details."
+                f"See docs/roadmap/PRIORITY_1.5_DATABASE_SYNC_DESIGN.md for details."
             )
 
 

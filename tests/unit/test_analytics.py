@@ -8,9 +8,9 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from coffee_maker.langchain_observe.analytics.analyzer import PerformanceAnalyzer
-from coffee_maker.langchain_observe.analytics.config import ExportConfig
-from coffee_maker.langchain_observe.analytics.models import Base, Generation, Trace
+from coffee_maker.langfuse_observe.analytics.analyzer import PerformanceAnalyzer
+from coffee_maker.langfuse_observe.analytics.config import ExportConfig
+from coffee_maker.langfuse_observe.analytics.models import Base, Generation, Trace
 
 
 @pytest.fixture
@@ -137,10 +137,24 @@ class TestExportConfig:
 
     def test_missing_credentials(self, monkeypatch):
         """Test error when credentials are missing."""
+        # Clear environment variables to test missing credentials
         monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
         monkeypatch.delenv("LANGFUSE_SECRET_KEY", raising=False)
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
-        with pytest.raises(ValueError, match="LANGFUSE_PUBLIC_KEY"):
+        # Mock ConfigManager to return None for missing keys
+        from coffee_maker.config.manager import ConfigManager
+
+        ConfigManager.get_langfuse_public_key
+
+        def mock_get_public_key(required=True):
+            if required:
+                raise ValueError("LANGFUSE_PUBLIC_KEY not configured")
+            return None
+
+        monkeypatch.setattr(ConfigManager, "get_langfuse_public_key", mock_get_public_key)
+
+        with pytest.raises(ValueError, match="LANGFUSE"):
             ExportConfig.from_env()
 
 

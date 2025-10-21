@@ -48,6 +48,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.ruff_cache/
 
 # Translations
 *.mo
@@ -143,5 +144,11 @@ data/*.db
 data/*.sqlite
 data/*.sqlite3
 
+# Runtime status files (daemon state, should not be versioned)
+data/developer_status.json
+data/agent_status/*.json
+data/agent_messages/
+
 # User configuration files (use config.yaml.example as template)
 config.yaml
+coverage.json
