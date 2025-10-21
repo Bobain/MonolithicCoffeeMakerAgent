@@ -25,6 +25,19 @@ export ANTHROPIC_API_KEY=sk-ant-...
 pytest manual_tests/test_daemon_api_mode_smoke.py -v
 ```
 
+### `test_daemon_cli_mode.py`
+Tests for daemon in Claude CLI mode (requires Claude CLI installed):
+- ClaudeCLIInterface initialization and configuration
+- Claude CLI availability checks
+- Command execution and timeout handling
+- Integration tests with real Claude CLI calls
+
+**Run with:**
+```bash
+# Requires: brew install claude (or equivalent)
+pytest manual_tests/test_daemon_cli_mode.py -v
+```
+
 ### `test_daemon_integration.py`
 Integration tests for the autonomous daemon components:
 - RoadmapParser with real ROADMAP.md
