@@ -13,6 +13,18 @@ This directory contains tests that require manual execution because they:
 
 ## Tests in This Directory
 
+### `test_daemon_health.py`
+Health check tests for daemon (requires ANTHROPIC_API_KEY):
+- Daemon initialization verification
+- ROADMAP parsing validation
+- Infinite loop pattern detection
+
+**Run with:**
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+pytest manual_tests/test_daemon_health.py -v
+```
+
 ### `test_daemon_api_mode_smoke.py`
 Smoke tests for daemon in API mode (requires ANTHROPIC_API_KEY):
 - DevDaemon initialization with API mode
