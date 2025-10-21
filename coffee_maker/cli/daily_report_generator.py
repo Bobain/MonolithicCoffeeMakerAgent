@@ -21,9 +21,10 @@ Data Sources:
 ✅ developer_status.json: Current task, metrics, activity log
 ✅ notifications.db: Blockers, issues, questions
 ✅ rich library: Beautiful terminal rendering
+✅ SQLite: Last interaction tracking (replaced JSON file)
 
 Non-Goals:
-❌ Complex scheduling (simple file-based tracking)
+❌ Complex scheduling (simple database-based tracking)
 ❌ Multi-channel delivery (terminal only)
 ❌ Real-time streaming (daily batch summary)
 ❌ Advanced metrics (reuse existing data)
@@ -31,6 +32,7 @@ Non-Goals:
 
 import json
 import re
+import sqlite3
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -59,45 +61,101 @@ class DailyReportGenerator:
         """Initialize report generator with data file paths."""
         self.status_file = Path("data/developer_status.json")
         self.notifications_db = Path("data/notifications.db")
-        self.interaction_file = Path("data/last_interaction.json")
         self.repo_root = Path.cwd()
+        self._init_system_state_table()
+
+    def _init_system_state_table(self) -> None:
+        """Initialize system_state table in notifications.db if it doesn't exist."""
+        try:
+            self.notifications_db.parent.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(self.notifications_db)
+            cursor = conn.cursor()
+
+            # Create system_state table for key-value storage
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS system_state (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """
+            )
+
+            conn.commit()
+            conn.close()
+        except sqlite3.Error:
+            # If database is not accessible, fail silently
+            # The should_show_report() will return True and show the report
+            pass
 
     def should_show_report(self) -> bool:
         """Check if daily report should be shown.
 
         Returns True if:
-        1. last_interaction.json doesn't exist (first time)
+        1. No previous report record exists (first time)
         2. Last report was shown on a different day
 
         Returns:
             True if report should be shown
         """
-        if not self.interaction_file.exists():
-            return True
-
         try:
-            data = json.loads(self.interaction_file.read_text())
-            last_report_shown = data.get("last_report_shown")
+            conn = sqlite3.connect(self.notifications_db)
+            cursor = conn.cursor()
 
-            if not last_report_shown:
+            cursor.execute("SELECT value FROM system_state WHERE key = ?", ("last_report_shown",))
+            result = cursor.fetchone()
+            conn.close()
+
+            if not result:
                 return True
+
+            last_report_shown = result[0]
 
             # Parse date (YYYY-MM-DD format)
             last_date = datetime.fromisoformat(last_report_shown).date()
             today = datetime.now().date()
 
             return last_date < today
-        except (json.JSONDecodeError, ValueError):
+
+        except (sqlite3.Error, ValueError):
+            # On any error, show the report
             return True
 
     def update_interaction_timestamp(self) -> None:
-        """Update last_interaction.json with current timestamp and date."""
-        data = {
-            "last_check_in": datetime.now().isoformat(),
-            "last_report_shown": datetime.now().date().isoformat(),
-        }
-        self.interaction_file.parent.mkdir(parents=True, exist_ok=True)
-        self.interaction_file.write_text(json.dumps(data, indent=2))
+        """Update system_state table with current timestamp and date."""
+        try:
+            conn = sqlite3.connect(self.notifications_db)
+            cursor = conn.cursor()
+
+            now = datetime.now()
+            today = now.date().isoformat()
+            timestamp = now.isoformat()
+
+            # Upsert last_report_shown
+            cursor.execute(
+                """
+                INSERT OR REPLACE INTO system_state (key, value, updated_at)
+                VALUES (?, ?, ?)
+            """,
+                ("last_report_shown", today, timestamp),
+            )
+
+            # Also track last_check_in
+            cursor.execute(
+                """
+                INSERT OR REPLACE INTO system_state (key, value, updated_at)
+                VALUES (?, ?, ?)
+            """,
+                ("last_check_in", timestamp, timestamp),
+            )
+
+            conn.commit()
+            conn.close()
+        except sqlite3.Error:
+            # If database write fails, continue without error
+            # This ensures the daily report still shows even if DB is unavailable
+            pass
 
     def generate_report(self, since_date: Optional[datetime] = None, until_date: Optional[datetime] = None) -> str:
         """Generate markdown report for date range.

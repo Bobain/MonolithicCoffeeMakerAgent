@@ -146,6 +146,7 @@ data/*.sqlite3
 
 # Runtime status files (daemon state, should not be versioned)
 data/developer_status.json
+data/last_interaction.json
 data/agent_status/*.json
 data/agent_messages/
 
