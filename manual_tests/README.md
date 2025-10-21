@@ -25,6 +25,18 @@ export ANTHROPIC_API_KEY=sk-ant-...
 pytest manual_tests/test_daemon_api_mode_smoke.py -v
 ```
 
+### `test_daemon_smoke.py`
+Smoke tests for daemon initialization (requires mock API key fixture):
+- DevDaemon initialization in CLI mode
+- RoadmapParser functionality
+- GitManager operations
+- Daemon configuration options
+
+**Run with:**
+```bash
+pytest manual_tests/test_daemon_smoke.py -v
+```
+
 ### `test_daemon_cli_mode.py`
 Tests for daemon in Claude CLI mode (requires Claude CLI installed):
 - ClaudeCLIInterface initialization and configuration
