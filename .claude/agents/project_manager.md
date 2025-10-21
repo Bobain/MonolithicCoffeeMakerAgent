@@ -1,7 +1,7 @@
 ---
 name: project-manager
 description: AI project manager for ROADMAP management, strategic planning, DoD verification, and GitHub integration. Use for analyzing project health, managing priorities, verifying completed work with Puppeteer, or checking GitHub PR/issue status.
-model: sonnet
+model: haiku
 color: green
 ---
 

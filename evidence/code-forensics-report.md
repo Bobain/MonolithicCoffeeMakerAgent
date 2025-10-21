@@ -1,13 +1,13 @@
 # Code Forensics Report
 
-**Date**: 2025-10-20
+**Date**: 2025-10-21
 **Scope**: coffee_maker/
 
 ## Top 5 Contributors
 
 | Rank | Name | Commits | Lines Added | Lines Removed |
 |------|------|---------|-------------|---------------|
-| 1 | bobain | 385 | 96095 | 13045 |
+| 1 | bobain | 406 | 99309 | 13471 |
 | 2 | Bobain | 15 | 1312 | 1196 |
 
 
@@ -29,6 +29,6 @@
 
 ## Key Insights
 
-- Top contributor: bobain (385 commits, 96095 lines added)
+- Top contributor: bobain (406 commits, 99309 lines added)
 - Code hotspot: coffee_maker/{langchain_observe (changed most frequently → refactor candidate)
 - Peak commit time: 18:00 (team most active)

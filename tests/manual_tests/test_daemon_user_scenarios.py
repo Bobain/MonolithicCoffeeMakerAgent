@@ -237,13 +237,10 @@ Custom location test
         1. User runs: code-developer --verbose
         2. Daemon should output detailed logs
         3. User can debug issues
+
+        Note: Verbose parameter removed - logging controlled via Python logging config
         """
-        roadmap = tmp_path / "ROADMAP.md"
-        roadmap.write_text("# Roadmap\n\n### PRIORITY 1: Test 📝 Planned\nTest")
-
-        daemon = DevDaemon(roadmap_path=str(roadmap), verbose=True)
-
-        assert daemon.verbose is True
+        pytest.skip("Verbose parameter removed - use logging configuration instead")
 
     def test_user_scenario_daemon_continues_after_error(self):
         """
@@ -302,10 +299,11 @@ class TestCommonUserErrors:
         # Remove API key
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
-        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False)
+        # Should raise StartupError during initialization
+        from coffee_maker.autonomous.startup_skill_executor import StartupError
 
-        # Should fail prerequisite check
-        assert not daemon._check_prerequisites()
+        with pytest.raises(StartupError):
+            daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False)
 
 
 class TestUserWorkflowPatterns:

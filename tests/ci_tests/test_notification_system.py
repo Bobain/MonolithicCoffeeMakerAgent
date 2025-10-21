@@ -21,9 +21,7 @@ class TestNotificationSystem:
         from coffee_maker.cli.notifications import NotificationDB
 
         db = NotificationDB(str(test_db))
-        notif_id = db.create_notification(
-            notification_type="approval_request", priority_name="PRIORITY 1", message="Test notification"
-        )
+        notif_id = db.create_notification(type="approval_request", title="PRIORITY 1", message="Test notification")
 
         assert isinstance(notif_id, int)
         assert notif_id > 0
@@ -33,14 +31,12 @@ class TestNotificationSystem:
         from coffee_maker.cli.notifications import NotificationDB
 
         db = NotificationDB(str(test_db))
-        notif_id = db.create_notification(
-            notification_type="approval_request", priority_name="PRIORITY 1", message="Test notification"
-        )
+        notif_id = db.create_notification(type="approval_request", title="PRIORITY 1", message="Test notification")
 
         notification = db.get_notification(notif_id)
         assert notification is not None
         assert notification["id"] == notif_id
-        assert notification["priority_name"] == "PRIORITY 1"
+        assert notification["title"] == "PRIORITY 1"
 
     def test_list_pending_notifications(self, test_db):
         """Verify can list pending notifications."""

@@ -2,7 +2,7 @@
 name: orchestrator
 description: Multi-agent team coordinator managing parallel agent execution, health monitoring, and fault tolerance
 tools: Bash, Read, Write, Edit, Glob, Grep, mcp__puppeteer__*
-model: sonnet
+model: haiku
 ---
 
 # Orchestrator Agent
