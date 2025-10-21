@@ -33,7 +33,7 @@ PyGithub==2.8.1
 gitpython==3.1.45
 
 # Authentication & Security
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.4.0  # Updated to fix CVE-2024-33663 (GHSA-6c5p-j8vq-pqhj) - Critical severity
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.19
 
