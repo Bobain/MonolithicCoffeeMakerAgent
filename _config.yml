@@ -1,0 +1,33 @@
+# Jekyll configuration for GitHub Pages
+# Exclude test directories and Python files from Jekyll processing
+
+exclude:
+  - manual_tests/
+  - tests/
+  - coffee_maker/
+  - scripts/
+  - .pytest_cache/
+  - .mypy_cache/
+  - .ruff_cache/
+  - __pycache__/
+  - "*.py"
+  - "*.pyc"
+  - .venv/
+  - venv/
+  - .env
+  - .git/
+  - .github/
+  - .gitignore
+  - poetry.lock
+  - pyproject.toml
+  - pytest.ini
+  - .pre-commit-config.yaml
+  - Makefile
+  - requirements*.txt
+
+# GitHub Pages settings
+theme: jekyll-theme-primer
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
