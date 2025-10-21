@@ -671,10 +671,13 @@ docs/architecture/specs/SPEC-{number}-{slug}/
 
 **Implementation Phases**:
 
-**Phase 1: architect Skill Creation** (COMPLETED ✅)
-- [x] Create `.claude/skills/architect/hierarchical-spec-creation/SKILL.md`
+**Phase 1: Shared Skill Enhancement** (COMPLETED ✅)
+- [x] Extend `.claude/skills/shared/technical-specification-handling/` to v2.0.0
+- [x] Add hierarchical spec support (create_hierarchical, read_hierarchical)
 - [x] Document templates for README.md and phase documents
+- [x] Add phase detection logic (ROADMAP, git, file existence)
 - [x] Provide examples and guidelines
+- [x] Maintain backward compatibility with monolithic specs
 
 **Phase 2: Daemon Enhancement** (3 hours)
 - [ ] Add `_detect_current_phase()` method to daemon_implementation.py
@@ -709,7 +712,7 @@ docs/architecture/specs/SPEC-{number}-{slug}/
 
 **Technical Specification**: [SPEC-NEXT-hierarchical-modular-spec-architecture.md](../architecture/specs/SPEC-NEXT-hierarchical-modular-spec-architecture.md)
 
-**Claude Skill**: `.claude/skills/architect/hierarchical-spec-creation/SKILL.md`
+**Claude Skill**: `.claude/skills/shared/technical-specification-handling/SKILL.md` (v2.0.0 - hierarchical support)
 
 **Success Metrics**:
 - Average spec context usage: <150 lines (vs 300+ currently)

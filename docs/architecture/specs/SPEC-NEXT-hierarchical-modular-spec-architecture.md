@@ -32,11 +32,15 @@ Context waste: 280 lines (80% wasted!)
 
 ## Proposed Solution: Hierarchical Spec Architecture
 
-**Implementation**: This is implemented as a Claude skill for architect
+**Implementation**: This is implemented as a SHARED Claude skill for both architect and code_developer
 
-**Skill Location**: `.claude/skills/architect/hierarchical-spec-creation/SKILL.md`
+**Skill Location**: `.claude/skills/shared/technical-specification-handling/SKILL.md` (v2.0.0)
 
-**Usage**: architect invokes the `hierarchical-spec-creation` skill when creating ANY technical specification
+**Usage**:
+- **architect**: Invokes `create_hierarchical` action to create hierarchical specs
+- **code_developer**: Invokes `read_hierarchical` action to read only relevant phase context
+
+**Skill Version**: 2.0.0 (added hierarchical support to existing spec handling skill)
 
 ---
 
