@@ -37,7 +37,7 @@ class TestDaemonSmoke:
         assert daemon.use_claude_cli is True
         assert isinstance(daemon.claude, ClaudeCLIInterface)
 
-    # test_daemon_initializes_with_api_mode moved to tests/manual_tests/test_daemon_api_mode_smoke.py
+    # test_daemon_initializes_with_api_mode moved to manual_tests/test_daemon_api_mode_smoke.py
     # because it requires ANTHROPIC_API_KEY
 
     def test_roadmap_parser_loads_roadmap(self):
@@ -79,7 +79,7 @@ class TestDaemonSmoke:
 class TestDaemonModeInitialization:
     """Test daemon initialization in CLI mode.
 
-    Note: API mode (use_cli=False) tests moved to tests/manual_tests/test_daemon_api_mode_smoke.py
+    Note: API mode (use_cli=False) tests moved to manual_tests/test_daemon_api_mode_smoke.py
     because they require ANTHROPIC_API_KEY.
     """
 

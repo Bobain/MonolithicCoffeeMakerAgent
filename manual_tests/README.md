@@ -22,7 +22,7 @@ Smoke tests for daemon in API mode (requires ANTHROPIC_API_KEY):
 **Run with:**
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
-pytest tests/manual_tests/test_daemon_api_mode_smoke.py -v
+pytest manual_tests/test_daemon_api_mode_smoke.py -v
 ```
 
 ### `test_daemon_integration.py`
@@ -34,7 +34,7 @@ Integration tests for the autonomous daemon components:
 
 **Run with:**
 ```bash
-pytest tests/manual_tests/test_daemon_integration.py -v
+pytest manual_tests/test_daemon_integration.py -v
 ```
 
 ### `test_daemon_e2e.py`
@@ -48,11 +48,11 @@ Full end-to-end tests for the daemon workflow:
 **Run with:**
 ```bash
 # Basic E2E tests (safe)
-pytest tests/manual_tests/test_daemon_e2e.py -v -s --run-e2e
+pytest manual_tests/test_daemon_e2e.py -v -s --run-e2e
 
 # Full E2E tests (creates real branches/commits)
 export DAEMON_E2E_FULL=1
-pytest tests/manual_tests/test_daemon_e2e.py::TestDaemonE2EFull::test_daemon_full_implementation -v -s
+pytest manual_tests/test_daemon_e2e.py::TestDaemonE2EFull::test_daemon_full_implementation -v -s
 ```
 
 ## When to Run These Tests
@@ -61,7 +61,7 @@ pytest tests/manual_tests/test_daemon_e2e.py::TestDaemonE2EFull::test_daemon_ful
 Run these tests before deploying daemon changes to production:
 ```bash
 # Run all manual tests
-pytest tests/manual_tests/ -v -s --run-e2e
+pytest manual_tests/ -v -s --run-e2e
 ```
 
 ### After Major Changes
@@ -122,13 +122,13 @@ The CI pipeline only runs:
 
 ```bash
 # Test daemon initialization only
-pytest tests/manual_tests/test_daemon_e2e.py::TestDaemonE2EFull::test_daemon_initialization -v
+pytest manual_tests/test_daemon_e2e.py::TestDaemonE2EFull::test_daemon_initialization -v
 
 # Test roadmap parsing only
-pytest tests/manual_tests/test_daemon_integration.py::TestRoadmapParserIntegration::test_parse_real_roadmap -v
+pytest manual_tests/test_daemon_integration.py::TestRoadmapParserIntegration::test_parse_real_roadmap -v
 
 # Test Claude CLI availability
-pytest tests/manual_tests/test_daemon_integration.py::TestClaudeCLIIntegration::test_check_availability_real -v
+pytest manual_tests/test_daemon_integration.py::TestClaudeCLIIntegration::test_check_availability_real -v
 ```
 
 ## Safety Notes
@@ -169,6 +169,7 @@ git checkout -b test/manual-testing
 
 ---
 
-**Last Updated**: October 10, 2025
-**Moved from**: `tests/integration/`, `tests/e2e/`
+**Last Updated**: October 21, 2025
+**Location**: `/manual_tests/` (outside `tests/` directory)
+**Previous Location**: `tests/manual_tests/` → Moved to root level to prevent accidental CI execution
 **Reason**: Exclude from CI - run only on user demand

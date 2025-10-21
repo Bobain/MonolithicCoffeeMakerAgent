@@ -4,7 +4,7 @@ These tests require ANTHROPIC_API_KEY and make real API calls.
 They are excluded from CI/CD and must be run manually.
 
 Usage:
-    pytest tests/manual_tests/test_daemon_api_mode_smoke.py -v
+    pytest manual_tests/test_daemon_api_mode_smoke.py -v
 """
 
 import pytest
