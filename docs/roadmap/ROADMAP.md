@@ -630,7 +630,101 @@ See `docs/architecture/specs/SPEC-NEXT-technical-prerequisite-tracking.md` for c
 
 ---
 
-### PRIORITY 25: Refactor Skill Loading to Use Proper Python Imports 📝 Planned
+### PRIORITY 25: Hierarchical, Modular Technical Specification Architecture 📝 Planned
+
+**Status**: 📝 Planned - HIGH PRIORITY (Context Efficiency + Progressive Implementation)
+
+**Created**: 2025-10-21
+
+**Estimated Effort**: 10 hours
+
+**Priority Rationale**: This is HIGH PRIORITY because it enables:
+- **71% context reduction** for code_developer (150 lines vs 350 per iteration)
+- **30% faster implementation** through better focus
+- **Unlimited scalability** for large features (10+ phases)
+- **CFR-016 compliance** (incremental implementation steps)
+- **CFR-007 compliance** (context budget optimization)
+
+**Problem Statement**:
+
+Currently, technical specifications are monolithic documents that code_developer reads in their entirety, even when only implementing a specific phase or subtask.
+
+**Impact Without This**:
+- 80% context waste: code_developer loads 350-line spec when only needs 50 lines for current phase
+- Cognitive overload: Too much information reduces focus on current subtask
+- Context budget violations: Large features (10+ phases) exceed context limits
+- Duplicate patterns: Common approaches repeated across specs instead of referenced
+
+**Solution**: Hierarchical, modular spec architecture with progressive disclosure
+
+**Architecture**:
+
+```
+docs/architecture/specs/SPEC-{number}-{slug}/
+├── README.md (Overview - 100-150 lines) ← Always read
+├── phase1-{name}.md (50-100 lines) ← Read only when implementing Phase 1
+├── phase2-{name}.md (50-100 lines) ← Read only when implementing Phase 2
+├── phase3-{name}.md (50-100 lines) ← Read only when implementing Phase 3
+├── references.md (Links to guidelines)
+└── diagrams/ (Architecture diagrams)
+```
+
+**Implementation Phases**:
+
+**Phase 1: architect Skill Creation** (COMPLETED ✅)
+- [x] Create `.claude/skills/architect/hierarchical-spec-creation/SKILL.md`
+- [x] Document templates for README.md and phase documents
+- [x] Provide examples and guidelines
+
+**Phase 2: Daemon Enhancement** (3 hours)
+- [ ] Add `_detect_current_phase()` method to daemon_implementation.py
+- [ ] Add `_load_phase_spec()` method to load overview + current phase only
+- [ ] Update `_build_feature_prompt()` to use hierarchical loading
+- [ ] Test with existing specs
+
+**Phase 3: Guidelines Library** (2 hours)
+- [ ] Create `docs/architecture/guidelines/` directory structure
+- [ ] Extract common patterns from existing specs into guidelines
+- [ ] Create 5-10 initial guidelines (JWT, database, API patterns)
+- [ ] Update specs to reference guidelines
+
+**Phase 4: Spec Migration** (3 hours)
+- [ ] Migrate 3-5 recent specs to hierarchical structure
+- [ ] Create migration guide for remaining specs
+- [ ] Document backward compatibility strategy
+
+**Phase 5: Testing and Documentation** (2 hours)
+- [ ] Verify context reduction metrics (target: 70%+)
+- [ ] Test code_developer with hierarchical specs
+- [ ] Update architect workflow documentation
+- [ ] Add examples to README
+
+**Benefits**:
+- ✅ **71% context reduction**: 150 lines loaded vs 350 (monolithic)
+- ✅ **30% faster implementation**: Better focus, clearer steps
+- ✅ **Scalable**: Large features (10+ phases) stay manageable
+- ✅ **Reusable**: Common patterns in guidelines (referenced, not duplicated)
+- ✅ **Maintainable**: Update one phase without touching others
+- ✅ **CFR Compliant**: Aligns with CFR-007 (context budget) and CFR-016 (incremental steps)
+
+**Technical Specification**: [SPEC-NEXT-hierarchical-modular-spec-architecture.md](../architecture/specs/SPEC-NEXT-hierarchical-modular-spec-architecture.md)
+
+**Claude Skill**: `.claude/skills/architect/hierarchical-spec-creation/SKILL.md`
+
+**Success Metrics**:
+- Average spec context usage: <150 lines (vs 300+ currently)
+- Phase implementation time: 30% faster
+- Spec reusability: 50%+ content from referenced guidelines
+- code_developer iterations: 20% fewer (clearer guidance)
+
+**Related**:
+- CFR-007: Agent Context Budget (30% Maximum)
+- CFR-016: Technical Specs Must Be Broken Into Small, Incremental Implementation Steps
+- PRIORITY 24: Technical Prerequisite Identification and Tracking
+
+---
+
+### PRIORITY 26: Refactor Skill Loading to Use Proper Python Imports 📝 Planned
 
 **Status**: 📝 Planned - MEDIUM PRIORITY (Technical Debt - Code Quality)
 
