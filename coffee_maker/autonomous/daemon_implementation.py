@@ -24,6 +24,7 @@ from datetime import datetime
 from coffee_maker.autonomous.developer_status import ActivityType, DeveloperState
 from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
 from coffee_maker.autonomous.puppeteer_client import PuppeteerClient
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 from coffee_maker.cli.notifications import (
     NOTIF_PRIORITY_HIGH,
     NOTIF_TYPE_INFO,
@@ -138,6 +139,20 @@ class ImplementationMixin:
             logger.warning(f"⏭️  Skipping {priority_name} - already attempted {attempt_count} times with no changes")
             logger.warning(f"This priority requires manual intervention")
 
+            # Update ROADMAP status to blocked so daemon skips it in future
+            try:
+                db = RoadmapDatabase()
+                item_id = priority_name  # e.g., "US-111"
+                db.update_status(
+                    item_id=item_id,
+                    new_status="⏸️ Blocked - Too complex for autonomous implementation",
+                    updated_by="code_developer",
+                )
+                db.export_to_file(self.roadmap_path)
+                logger.info(f"✅ Updated {priority_name} status to '⏸️ Blocked' in ROADMAP")
+            except Exception as e:
+                logger.error(f"Failed to update ROADMAP status: {e}")
+
             # Create final notification
             self.notifications.create_notification(
                 type=NOTIF_TYPE_INFO,
@@ -148,14 +163,14 @@ This priority requires manual implementation:
 
 Priority: {priority_name}
 Title: {priority_title}
-Status: Skipped after {attempt_count} attempts
+Status: ⏸️ Blocked - Too complex for autonomous implementation
 
 Action Required:
 1. Manually implement this priority, OR
-2. Mark as "Manual Only" in ROADMAP.md, OR
+2. Break it down into smaller user stories, OR
 3. Clarify the deliverables to make them more concrete
 
-The daemon will skip this priority in future iterations.
+The daemon has updated ROADMAP.md and will skip this priority in future iterations.
 """,
                 priority=NOTIF_PRIORITY_HIGH,
                 context={
@@ -268,8 +283,9 @@ Status: Requires human decision
             )
 
             logger.info("📧 Created notification for manual review")
-            # Return "success" to avoid infinite retry - human will decide next steps
-            return True
+            # Return False so attempt counter increments
+            # After max retries, daemon will mark as blocked and skip
+            return False
 
         # PRIORITY 4: Update progress - committing changes
         self.status.report_progress(70, "Committing changes")
