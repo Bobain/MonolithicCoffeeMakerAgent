@@ -329,6 +329,146 @@ elif status == ApprovalStatus.BANNED:
 
 ---
 
+## 8. Regular Refactoring and Technical Debt Reduction
+
+See [US-044](roadmap/ROADMAP.md#us-044) and complete workflow guides in `docs/architecture/refactoring/` for details.
+
+### Overview
+
+architect monitors code quality weekly and creates refactoring plans for code_developer to execute.
+
+### architect Weekly Monitoring (Monday 9am)
+
+```bash
+# Run complexity check
+cd /Users/bobain/PycharmProjects/MonolithicCoffeeMakerAgent-wt044
+./scripts/check_complexity.sh > docs/architecture/refactoring/weekly_$(date +%Y_%m_%d).txt
+
+# Review output for issues
+cat docs/architecture/refactoring/weekly_$(date +%Y_%m_%d).txt
+
+# Look for:
+# - Cyclomatic complexity >20 (Grade D-F)
+# - Files >1500 lines
+# - Pylint score <7.0
+# - Test coverage <80%
+```
+
+### architect Creating Refactoring Plan
+
+```bash
+# If critical issues found, create refactoring plan
+cp docs/architecture/refactoring/templates/REFACTOR_TEMPLATE.md \
+   docs/architecture/refactoring/active/REFACTOR_$(date +%Y_%m_%d)_description.md
+
+# Edit plan with:
+# - Why refactor (metrics)
+# - Current state (code examples)
+# - Target state (desired structure)
+# - Tasks for code_developer (specific, actionable)
+# - Acceptance criteria (measurable)
+# - Verification commands (exact commands to run)
+
+# Example plan structure:
+# 1. Why Refactor? - DevDaemon complexity 47 (Grade E)
+# 2. Current State - 1592 lines, nested 4 levels deep
+# 3. Target State - <500 lines, complexity <20
+# 4. Tasks:
+#    - Task 1: Extract SpecManagerMixin (4h)
+#    - Task 2: Extract ImplementationMixin (4h)
+#    - Task 3: Simplify main loop (3h)
+# 5. Acceptance Criteria:
+#    - Complexity <20 ✓
+#    - Lines <500 ✓
+#    - All tests passing ✓
+# 6. Verification:
+#    - radon cc coffee_maker/autonomous/daemon.py -a
+#    - pytest
+```
+
+### code_developer Executing Refactoring
+
+```bash
+# Find refactoring task
+ls docs/architecture/refactoring/active/
+
+# Read the plan
+cat docs/architecture/refactoring/active/REFACTOR_2025_10_16_daemon_simplification.md
+
+# Execute tasks one by one:
+
+# Task 1: Extract SpecManagerMixin
+touch coffee_maker/autonomous/mixins/spec_manager.py
+# ... implement mixin
+# ... update DevDaemon to inherit from mixin
+pytest tests/unit/mixins/test_spec_manager.py -v
+git add .
+git commit -m "refactor: Extract SpecManagerMixin from DevDaemon
+
+Part of REFACTOR-001 (Task 1/6)
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# Task 2: Extract ImplementationMixin
+# ... repeat process
+
+# After all tasks, run verification
+radon cc coffee_maker/autonomous/daemon.py -a
+# Expected: Complexity <20
+
+wc -l coffee_maker/autonomous/daemon.py
+# Expected: <500 lines
+
+pytest
+# Expected: All passing
+
+pytest --cov=coffee_maker --cov-report=term
+# Expected: >90% coverage
+```
+
+### architect Review Process (Friday 4pm)
+
+```bash
+# Run verification commands from plan
+radon cc coffee_maker/autonomous/daemon.py -a
+wc -l coffee_maker/autonomous/daemon.py
+pytest
+pytest --cov=coffee_maker --cov-report=term
+
+# If all pass, approve and move to completed
+mv docs/architecture/refactoring/active/REFACTOR_2025_10_16_daemon_simplification.md \
+   docs/architecture/refactoring/completed/REFACTOR_2025_10_16_daemon_simplification_COMPLETED.md
+
+# Update ROADMAP status to ✅ COMPLETE
+```
+
+### Decision Criteria
+
+| Metric | Critical | High | Medium | OK |
+|--------|----------|------|--------|----|
+| Complexity | >40 | 30-40 | 20-30 | <20 |
+| Lines | >2000 | 1500-2000 | 1000-1500 | <1000 |
+| Pylint | <5.0 | 5.0-7.0 | 7.0-8.0 | >8.0 |
+| Coverage | <70% | 70-80% | 80-90% | >90% |
+
+**Action:**
+- **Critical**: Refactor this week
+- **High**: Plan refactoring within 2 weeks
+- **Medium**: Refactor this month
+- **OK**: No action needed
+
+### Complete Documentation
+
+Detailed guides available:
+- `docs/architecture/refactoring/ARCHITECT_WORKFLOW.md` - architect complete workflow
+- `docs/architecture/refactoring/CODE_DEVELOPER_WORKFLOW.md` - code_developer execution guide
+- `docs/architecture/refactoring/MONITORING_GUIDE.md` - Metrics interpretation
+- `docs/architecture/refactoring/templates/REFACTOR_TEMPLATE.md` - Plan template
+
+---
+
 ## Quick Command Reference
 
 ```bash
