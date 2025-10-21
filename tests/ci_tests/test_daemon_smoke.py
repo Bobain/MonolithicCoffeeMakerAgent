@@ -10,7 +10,6 @@ from coffee_maker.autonomous.daemon import DevDaemon
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 from coffee_maker.autonomous.git_manager import GitManager
 from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
-from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
 
 
 class TestDaemonSmoke:
@@ -22,14 +21,14 @@ class TestDaemonSmoke:
         assert RoadmapParser is not None
         assert GitManager is not None
 
-    def test_daemon_initializes_with_defaults(self):
+    def test_daemon_initializes_with_defaults(self, mock_api_key):
         """Verify daemon can be created with default parameters."""
-        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", auto_approve=False)
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", auto_approve=False, use_claude_cli=True)
         assert daemon is not None
         assert daemon.roadmap_path.exists()
         assert daemon.auto_approve is False
 
-    def test_daemon_initializes_with_cli_mode(self):
+    def test_daemon_initializes_with_cli_mode(self, mock_api_key):
         """Verify daemon can be initialized in CLI mode."""
         # Use a path that might not exist - test just initialization
         daemon = DevDaemon(
@@ -38,11 +37,8 @@ class TestDaemonSmoke:
         assert daemon.use_claude_cli is True
         assert isinstance(daemon.claude, ClaudeCLIInterface)
 
-    def test_daemon_initializes_with_api_mode(self):
-        """Verify daemon can be initialized in API mode."""
-        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=False)
-        assert daemon.use_claude_cli is False
-        assert isinstance(daemon.claude, ClaudeAPI)
+    # test_daemon_initializes_with_api_mode moved to tests/manual_tests/test_daemon_api_mode_smoke.py
+    # because it requires ANTHROPIC_API_KEY
 
     def test_roadmap_parser_loads_roadmap(self):
         """Verify roadmap parser can load ROADMAP.md."""
@@ -79,23 +75,23 @@ class TestDaemonSmoke:
         assert "PRIORITY" in content or "Priority" in content.lower()
 
 
-@pytest.mark.parametrize("use_cli", [True, False])
+@pytest.mark.parametrize("use_cli", [True])  # False moved to manual tests
 class TestDaemonModeInitialization:
-    """Test daemon initialization in both CLI and API modes."""
+    """Test daemon initialization in CLI mode.
 
-    def test_daemon_mode_correct(self, use_cli):
-        """Verify daemon correctly initializes in specified mode."""
+    Note: API mode (use_cli=False) tests moved to tests/manual_tests/test_daemon_api_mode_smoke.py
+    because they require ANTHROPIC_API_KEY.
+    """
+
+    def test_daemon_mode_correct(self, mock_api_key, use_cli):
+        """Verify daemon correctly initializes in CLI mode."""
         daemon = DevDaemon(
             roadmap_path="docs/roadmap/ROADMAP.md",
             use_claude_cli=use_cli,
-            claude_cli_path="/opt/homebrew/bin/claude" if use_cli else None,
+            claude_cli_path="/opt/homebrew/bin/claude",
         )
         assert daemon.use_claude_cli == use_cli
-
-        if use_cli:
-            assert isinstance(daemon.claude, ClaudeCLIInterface)
-        else:
-            assert isinstance(daemon.claude, ClaudeAPI)
+        assert isinstance(daemon.claude, ClaudeCLIInterface)
 
 
 class TestRoadmapParserSmoke:
@@ -147,34 +143,34 @@ class TestGitManagerSmoke:
 class TestDaemonConfiguration:
     """Test daemon configuration options."""
 
-    def test_daemon_accepts_custom_roadmap_path(self, tmp_path):
+    def test_daemon_accepts_custom_roadmap_path(self, mock_api_key, tmp_path):
         """Verify daemon accepts custom ROADMAP path."""
         roadmap = tmp_path / "CUSTOM_ROADMAP.md"
         roadmap.write_text("# Custom Roadmap\n\n### PRIORITY 1: Test ✅ Complete\nDone")
 
-        daemon = DevDaemon(roadmap_path=str(roadmap))
+        daemon = DevDaemon(roadmap_path=str(roadmap), use_claude_cli=True)
         assert daemon.roadmap_path == Path(roadmap)
         assert daemon.roadmap_path.exists()
 
-    def test_daemon_accepts_auto_approve_flag(self):
+    def test_daemon_accepts_auto_approve_flag(self, mock_api_key):
         """Verify daemon accepts auto_approve configuration."""
-        daemon_auto = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", auto_approve=True)
-        daemon_manual = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", auto_approve=False)
+        daemon_auto = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", auto_approve=True, use_claude_cli=True)
+        daemon_manual = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", auto_approve=False, use_claude_cli=True)
 
         assert daemon_auto.auto_approve is True
         assert daemon_manual.auto_approve is False
 
-    def test_daemon_accepts_create_prs_flag(self):
+    def test_daemon_accepts_create_prs_flag(self, mock_api_key):
         """Verify daemon accepts create_prs configuration."""
-        daemon_with_pr = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", create_prs=True)
-        daemon_no_pr = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", create_prs=False)
+        daemon_with_pr = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", create_prs=True, use_claude_cli=True)
+        daemon_no_pr = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", create_prs=False, use_claude_cli=True)
 
         assert daemon_with_pr.create_prs is True
         assert daemon_no_pr.create_prs is False
 
-    def test_daemon_has_max_retries(self):
+    def test_daemon_has_max_retries(self, mock_api_key):
         """Verify daemon has max_retries field."""
-        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md")
+        daemon = DevDaemon(roadmap_path="docs/roadmap/ROADMAP.md", use_claude_cli=True)
         assert hasattr(daemon, "max_retries")
         assert daemon.max_retries == 3  # Default value
 

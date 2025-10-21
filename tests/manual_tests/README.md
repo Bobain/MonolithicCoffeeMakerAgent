@@ -13,6 +13,18 @@ This directory contains tests that require manual execution because they:
 
 ## Tests in This Directory
 
+### `test_daemon_api_mode_smoke.py`
+Smoke tests for daemon in API mode (requires ANTHROPIC_API_KEY):
+- DevDaemon initialization with API mode
+- ClaudeAPI instance creation
+- API key validation
+
+**Run with:**
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+pytest tests/manual_tests/test_daemon_api_mode_smoke.py -v
+```
+
 ### `test_daemon_integration.py`
 Integration tests for the autonomous daemon components:
 - RoadmapParser with real ROADMAP.md
@@ -66,17 +78,23 @@ Run when validating the full autonomous workflow with real data.
 
 Before running these tests, ensure:
 
-1. ✅ **Claude CLI** installed and authenticated
+1. ✅ **ANTHROPIC_API_KEY** set in environment (for API mode tests)
+   ```bash
+   export ANTHROPIC_API_KEY=sk-ant-...
+   # Or add to .env file
+   ```
+
+2. ✅ **Claude CLI** installed and authenticated (for CLI mode tests)
    ```bash
    claude --version
    ```
 
-2. ✅ **gh CLI** installed and authenticated (for E2E tests)
+3. ✅ **gh CLI** installed and authenticated (for E2E tests)
    ```bash
    gh auth status
    ```
 
-3. ✅ **Git remote** configured
+4. ✅ **Git remote** configured
    ```bash
    git remote -v
    ```
