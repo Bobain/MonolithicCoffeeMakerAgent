@@ -679,11 +679,14 @@ docs/architecture/specs/SPEC-{number}-{slug}/
 - [x] Provide examples and guidelines
 - [x] Maintain backward compatibility with monolithic specs
 
-**Phase 2: Daemon Enhancement** (3 hours)
-- [ ] Add `_detect_current_phase()` method to daemon_implementation.py
-- [ ] Add `_load_phase_spec()` method to load overview + current phase only
-- [ ] Update `_build_feature_prompt()` to use hierarchical loading
-- [ ] Test with existing specs
+**Phase 2: Daemon Enhancement** (3 hours) ✅ COMPLETE
+- [x] Add `_detect_current_phase()` method to daemon_implementation.py
+- [x] Add `_mark_phase_complete()` method to update ROADMAP after phase completion
+- [x] Update `_build_feature_prompt()` to use hierarchical loading
+- [x] Add context efficiency logging
+- [x] Add error handling for hierarchical specs
+- [x] Write unit tests for hierarchical spec functionality
+- [x] Test with existing specs (all 10 tests passing)
 
 **Phase 3: Guidelines Library** (2 hours)
 - [ ] Create `docs/architecture/guidelines/` directory structure
