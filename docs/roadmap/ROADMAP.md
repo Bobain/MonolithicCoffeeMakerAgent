@@ -31855,11 +31855,13 @@ code-reviewer → Re-reviews → Verifies → Approves
 
 **Priority**: HIGH (CFR Compliance)
 
-**Status**: 📝 Planned
+**Status**: ✅ Complete
 
 **Created**: 2025-10-20
+**Completed**: 2025-10-21
 
 **Estimated Effort**: 2-3 days (6-8 hours)
+**Actual Effort**: 1 day
 
 **User Story**:
 As the orchestrator, I want all agent lifecycle events (spawning, running, completion) traced in SQLite database instead of JSON files, so that we can analyze velocity, detect bottlenecks, and maintain data integrity.
@@ -31895,43 +31897,43 @@ Currently, orchestrator agent tracking uses JSON files which causes serious issu
 **Acceptance Criteria**:
 
 ✅ **Database Schema**:
-- [ ] Create `agent_lifecycle` table in `data/orchestrator.db`
-- [ ] Table includes: pid, agent_type, task_id, spawned_at, started_at, completed_at, status, duration_ms, idle_time_ms
-- [ ] Create indexes: agent_type_status, priority_number, spawned_at, duration, task_id, pid
+- [x] Create `agent_lifecycle` table in `data/orchestrator.db`
+- [x] Table includes: pid, agent_type, task_id, spawned_at, started_at, completed_at, status, duration_ms, idle_time_ms
+- [x] Create indexes: agent_type_status, priority_number, spawned_at, duration, task_id, pid
 
 ✅ **Analytics Views**:
-- [ ] Create `active_agents` view (only running agents)
-- [ ] Create `agent_velocity` view (throughput per agent type)
-- [ ] Create `agent_bottlenecks` view (slowest 100 agents)
-- [ ] Create `priority_timeline` view (priority implementation timeline)
+- [x] Create `active_agents` view (only running agents)
+- [x] Create `agent_velocity` view (throughput per agent type)
+- [x] Create `agent_bottlenecks` view (slowest 100 agents)
+- [x] Create `priority_timeline` view (priority implementation timeline)
 
 ✅ **Migration**:
-- [ ] Migration script: `coffee_maker/orchestrator/migrate_add_agent_lifecycle.py`
-- [ ] Migrate existing JSON data to database (optional --migrate-json flag)
-- [ ] Idempotent (can run multiple times safely)
-- [ ] Verification checks after migration
+- [x] Migration script: `coffee_maker/orchestrator/migrate_add_agent_lifecycle.py`
+- [x] Migrate existing JSON data to database (optional --migrate-json flag)
+- [x] Idempotent (can run multiple times safely)
+- [x] Verification checks after migration
 
 ✅ **Agent Management Integration**:
-- [ ] Update `agent_management.py` to write to SQLite on spawn
-- [ ] Update `_check_status()` to update lifecycle timestamps
-- [ ] Update `_list_active_agents()` to query from database
-- [ ] Maintain JSON for backward compatibility during transition (Phase 2)
+- [x] Update `agent_management.py` to write to SQLite on spawn
+- [x] Update `_check_status()` to update lifecycle timestamps
+- [x] Update `_list_active_agents()` to query from database
+- [x] Maintain JSON for backward compatibility during transition (Phase 2)
 
 ✅ **Dashboard Integration**:
-- [ ] Update `dashboard.py` to query SQLite instead of JSON
-- [ ] Show only active agents from `active_agents` view
-- [ ] Add velocity metrics panel
-- [ ] Add bottleneck analysis panel
+- [x] Update `dashboard.py` to query SQLite instead of JSON
+- [x] Show only active agents from `active_agents` view
+- [x] Add velocity metrics panel
+- [x] Add bottleneck analysis panel
 
 ✅ **CLI Commands**:
-- [ ] `poetry run orchestrator velocity` - Show velocity report
-- [ ] `poetry run orchestrator bottlenecks` - Show slowest priorities/agents
-- [ ] `poetry run orchestrator status` - Show real-time active agents
+- [x] `poetry run orchestrator velocity` - Show velocity report
+- [x] `poetry run orchestrator bottlenecks` - Show slowest priorities/agents
+- [x] `poetry run orchestrator status` - Show real-time active agents
 
 ✅ **Cleanup**:
-- [ ] Archive `data/orchestrator/agent_state.json` after migration
-- [ ] Remove JSON write operations from agent management
-- [ ] Update documentation to reflect database-only approach
+- [x] Archive `data/orchestrator/agent_state.json` after migration
+- [x] Remove JSON write operations from agent management
+- [x] Update documentation to reflect database-only approach
 
 **Technical Implementation**:
 
@@ -32023,14 +32025,14 @@ ORDER BY elapsed_ms DESC;
 
 **Deliverables**:
 
-- [ ] Migration script with schema creation
-- [ ] Updated agent_management.py with database integration
-- [ ] Updated dashboard.py with SQLite queries
-- [ ] CLI commands for velocity/bottlenecks/status
-- [ ] Migration from JSON data
-- [ ] Unit tests (15+ tests)
-- [ ] Integration tests (spawn → update → query)
-- [ ] Documentation (SPEC-110, CFR-014 compliance notes)
+- [x] Migration script with schema creation (`coffee_maker/orchestrator/migrate_add_agent_lifecycle.py`)
+- [x] Updated agent_management.py with database integration (`.claude/skills/shared/orchestrator-agent-management/agent_management.py`)
+- [x] Updated dashboard.py with SQLite queries (`coffee_maker/orchestrator/dashboard.py`)
+- [x] CLI commands for velocity/bottlenecks/status (`coffee_maker/cli/orchestrator_cli.py`)
+- [x] Migration from JSON data (optional --migrate-json flag)
+- [x] Unit tests (16 tests in `tests/unit/test_agent_lifecycle_database.py`)
+- [x] Integration tests (spawn → update → query - covered in unit tests)
+- [x] Documentation (SPEC-110, CFR-014 compliance notes, `docs/CFR-014-DATABASE-TRACING-USAGE-GUIDE.md`)
 
 **Dependencies**:
 - US-072 (Orchestrator) ✅ Complete

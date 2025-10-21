@@ -111,7 +111,36 @@ class AgentLifecycleMigration:
             error_message TEXT,                 -- Error details if failed
             metadata TEXT                       -- JSON blob for extras
         );
+        """
 
+        # Create table first
+        with sqlite3.connect(self.db_path) as conn:
+            conn.executescript(schema_sql)
+            conn.commit()
+
+        # Then add missing columns if needed (for tables that exist but are missing columns)
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(agent_lifecycle)")
+            existing_columns = {row[1] for row in cursor.fetchall()}
+
+            new_columns = [
+                ("worktree_branch", "TEXT"),
+                ("merged_at", "TEXT"),
+                ("cleaned_at", "TEXT"),
+                ("merge_duration_ms", "INTEGER"),
+                ("cleanup_duration_ms", "INTEGER"),
+            ]
+
+            for col_name, col_type in new_columns:
+                if col_name not in existing_columns:
+                    logger.info(f"Adding missing column: {col_name}")
+                    conn.execute(f"ALTER TABLE agent_lifecycle ADD COLUMN {col_name} {col_type}")
+
+            conn.commit()
+
+        # Now create indexes
+        index_sql = """
         -- Indexes for fast queries
         CREATE INDEX IF NOT EXISTS idx_agent_type_status ON agent_lifecycle(agent_type, status);
         CREATE INDEX IF NOT EXISTS idx_priority_number ON agent_lifecycle(priority_number);
@@ -124,7 +153,7 @@ class AgentLifecycleMigration:
         """
 
         with sqlite3.connect(self.db_path) as conn:
-            conn.executescript(schema_sql)
+            conn.executescript(index_sql)
             conn.commit()
 
         logger.info("✅ agent_lifecycle table created")
