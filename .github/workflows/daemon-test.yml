@@ -82,61 +82,8 @@ jobs:
           poetry config virtualenvs.in-project true
           poetry install --no-interaction --no-ansi
 
-  smoke-tests:
-    name: Quick Smoke Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    needs: prepare
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Restore Poetry cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pypoetry
-            ~/.cache/pip
-            .venv
-          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Restore build cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            .pytest_cache
-            .mypy_cache
-            .ruff_cache
-          key: ${{ runner.os }}-build-${{ github.sha }}
-
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies (from cache)
-        run: |
-          poetry config virtualenvs.in-project true
-          poetry install --no-interaction --no-ansi
-
-      - name: Run smoke tests
-        run: |
-          poetry run pytest tests/ci_tests/test_daemon_smoke.py -v -m smoke
-
-      - name: Upload smoke test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: smoke-test-results
-          path: |
-            .pytest_cache/
-            test-results/
+  # smoke-tests job removed - daemon tests moved to manual_tests/
+  # These tests require Claude CLI or API keys and should not run in CI
 
   unit-tests:
     name: Unit Tests
@@ -184,7 +131,6 @@ jobs:
       - name: Run unit tests with parallelization (4 workers)
         run: |
           poetry run pytest tests/ci_tests/ -v \
-            --ignore=tests/ci_tests/test_daemon_integration.py \
             -m "not integration and not slow" \
             -n 4
 
@@ -390,7 +336,7 @@ jobs:
   summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [prepare, smoke-tests, unit-tests, daemon-health-check, test-coverage, notification-system-check]
+    needs: [prepare, unit-tests, daemon-health-check, test-coverage, notification-system-check]
     if: always()
 
     steps:
@@ -398,7 +344,6 @@ jobs:
         run: |
           echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Smoke Tests: ${{ needs.smoke-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Health Check: ${{ needs.daemon-health-check.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Coverage: ${{ needs.test-coverage.result }}" >> $GITHUB_STEP_SUMMARY
@@ -406,7 +351,6 @@ jobs:
 
       - name: Fail if any test failed
         if: |
-          needs.smoke-tests.result == 'failure' ||
           needs.unit-tests.result == 'failure' ||
           needs.daemon-health-check.result == 'failure'
         run: |
