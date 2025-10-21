@@ -262,6 +262,177 @@ def activity_summary(hours, save):
         sys.exit(1)
 
 
+@orchestrator.command()
+@click.option("--agent-type", default=None, help="Filter by agent type (architect, code_developer, etc.)")
+@click.option("--days", default=7, help="Number of days to analyze (default: 7)")
+def velocity(agent_type, days):
+    """Show agent velocity metrics (CFR-014 Database Tracing).
+
+    Displays throughput, average duration, and completion rates per agent type.
+
+    Example:
+        poetry run orchestrator velocity
+        poetry run orchestrator velocity --agent-type architect
+        poetry run orchestrator velocity --days 30
+    """
+    import sqlite3
+    from datetime import datetime, timedelta
+    from pathlib import Path
+
+    db_path = Path("data/orchestrator.db")
+
+    if not db_path.exists():
+        click.echo("❌ Database not found. Run migrations first.")
+        return
+
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+
+        # Calculate date threshold
+        threshold = (datetime.now() - timedelta(days=days)).isoformat()
+
+        # Query velocity metrics
+        if agent_type:
+            query = """
+                SELECT
+                    agent_type,
+                    COUNT(*) AS total_agents,
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+                    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
+                    AVG(CASE WHEN status = 'completed' THEN duration_ms ELSE NULL END) AS avg_duration_ms,
+                    MAX(duration_ms) AS max_duration_ms,
+                    MIN(duration_ms) AS min_duration_ms
+                FROM agent_lifecycle
+                WHERE agent_type = ? AND spawned_at >= ?
+                GROUP BY agent_type
+            """
+            rows = conn.execute(query, (agent_type, threshold)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM agent_velocity").fetchall()
+
+        conn.close()
+
+        if not rows:
+            click.echo(f"⚠️  No data found for the last {days} days")
+            return
+
+        click.echo(f"📊 Agent Velocity Report (last {days} days)")
+        click.echo("=" * 80)
+        click.echo("")
+
+        for row in rows:
+            agent = row["agent_type"]
+            total = row["total_agents"]
+            completed = row["completed"]
+            failed = row["failed"]
+            avg_duration = row["avg_duration_ms"]
+            max_duration = row["max_duration_ms"]
+            min_duration = row["min_duration_ms"]
+
+            click.echo(f"🤖 {agent.upper()}")
+            click.echo(f"   Total Spawned: {total}")
+            click.echo(f"   Completed: {completed} ({completed/total*100:.1f}%)")
+            click.echo(f"   Failed: {failed} ({failed/total*100:.1f}%)")
+
+            if avg_duration:
+                avg_min = avg_duration / 60000
+                max_min = max_duration / 60000 if max_duration else 0
+                min_min = min_duration / 60000 if min_duration else 0
+                click.echo(f"   Avg Duration: {avg_min:.1f} minutes")
+                click.echo(f"   Max Duration: {max_min:.1f} minutes")
+                click.echo(f"   Min Duration: {min_min:.1f} minutes")
+            else:
+                click.echo("   Avg Duration: N/A")
+
+            click.echo("")
+
+    except Exception as e:
+        click.echo(f"❌ Error: {e}", err=True)
+        logger.error(f"Velocity error: {e}", exc_info=True)
+
+
+@orchestrator.command()
+@click.option("--limit", default=20, help="Number of bottlenecks to show (default: 20)")
+@click.option("--agent-type", default=None, help="Filter by agent type")
+def bottlenecks(limit, agent_type):
+    """Show agent bottlenecks (slowest agents, CFR-014).
+
+    Identifies the slowest agents and priorities to help optimize performance.
+
+    Example:
+        poetry run orchestrator bottlenecks
+        poetry run orchestrator bottlenecks --limit 10
+        poetry run orchestrator bottlenecks --agent-type code_developer
+    """
+    import sqlite3
+    from pathlib import Path
+
+    db_path = Path("data/orchestrator.db")
+
+    if not db_path.exists():
+        click.echo("❌ Database not found. Run migrations first.")
+        return
+
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+
+        # Query bottlenecks
+        if agent_type:
+            query = """
+                SELECT
+                    agent_id,
+                    agent_type,
+                    task_id,
+                    priority_number,
+                    duration_ms,
+                    idle_time_ms,
+                    spawned_at,
+                    completed_at,
+                    CASE
+                        WHEN idle_time_ms > duration_ms * 0.5 THEN 'High Idle Time'
+                        WHEN duration_ms > 1800000 THEN 'Long Duration'
+                        ELSE 'Normal'
+                    END AS bottleneck_type
+                FROM agent_lifecycle
+                WHERE status = 'completed' AND duration_ms IS NOT NULL AND agent_type = ?
+                ORDER BY duration_ms DESC
+                LIMIT ?
+            """
+            rows = conn.execute(query, (agent_type, limit)).fetchall()
+        else:
+            rows = conn.execute(f"SELECT * FROM agent_bottlenecks LIMIT {limit}").fetchall()
+
+        conn.close()
+
+        if not rows:
+            click.echo("⚠️  No bottlenecks found (no completed agents)")
+            return
+
+        click.echo(f"🔍 Agent Bottlenecks (Top {limit})")
+        click.echo("=" * 90)
+        click.echo("")
+
+        for i, row in enumerate(rows, 1):
+            agent_type = row["agent_type"]
+            task_id = row["task_id"]
+            priority = row["priority_number"] or "N/A"
+            duration_min = row["duration_ms"] / 60000
+            idle_min = (row["idle_time_ms"] or 0) / 60000
+            bottleneck_type = row["bottleneck_type"]
+
+            click.echo(f"{i}. {agent_type} - {task_id} (Priority {priority})")
+            click.echo(f"   Duration: {duration_min:.1f} min | Idle: {idle_min:.1f} min")
+            click.echo(f"   Type: {bottleneck_type}")
+            click.echo(f"   Spawned: {row['spawned_at']}")
+            click.echo("")
+
+    except Exception as e:
+        click.echo(f"❌ Error: {e}", err=True)
+        logger.error(f"Bottlenecks error: {e}", exc_info=True)
+
+
 def main():
     """Entry point for CLI."""
     orchestrator()
