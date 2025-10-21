@@ -183,6 +183,7 @@ class FileOwnership:
         raise OwnershipUnclearError(file_path)
 
     @classmethod
+    @classmethod
     def _matches_pattern(cls, file_path: str, pattern: str) -> bool:
         """Check if file path matches glob pattern.
 
@@ -197,38 +198,7 @@ class FileOwnership:
             >>> FileOwnership._matches_pattern("coffee_maker/cli/test.py", "coffee_maker/**")
             True
         """
-        # Handle both Unix and Windows path separators
-        normalized_path = file_path.replace("\\", "/")
-        normalized_pattern = pattern.replace("\\", "/")
-
-        # Direct fnmatch for simple patterns (no **)
-        if fnmatch(normalized_path, normalized_pattern):
-            return True
-
-        # Handle ** glob patterns (match any number of directories)
-        if "**" in normalized_pattern:
-            import re
-
-            # Escape special regex characters except * and **
-            escaped_pattern = normalized_pattern
-            for char in [".", "+", "?", "^", "$", "(", ")", "[", "]", "{", "}", "|"]:
-                escaped_pattern = escaped_pattern.replace(char, "\\" + char)
-
-            # Replace ** with placeholder, then * with single-dir match, then ** with multi-dir match
-            escaped_pattern = escaped_pattern.replace("**", "__DOUBLESTAR__")
-            escaped_pattern = escaped_pattern.replace("*", "[^/]*")  # Single * matches within one directory
-            escaped_pattern = escaped_pattern.replace("__DOUBLESTAR__", ".*")  # ** matches any number of dirs
-
-            regex_pattern = "^" + escaped_pattern + "$"
-
-            try:
-                if re.match(regex_pattern, normalized_path):
-                    return True
-            except re.error:
-                logger.warning(f"Invalid regex pattern: {regex_pattern}")
-                return False
-
-        return False
+        return Path(file_path).match(pattern)
 
     @classmethod
     def check_ownership(cls, agent: AgentType, file_path: str, raise_on_violation: bool = False) -> bool:
