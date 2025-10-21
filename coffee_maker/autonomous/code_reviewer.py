@@ -66,6 +66,11 @@ class CodeReviewerAgent:
         self.reviews_dir.mkdir(parents=True, exist_ok=True)
         self.notifications = NotificationDB()
 
+        # Import SpecHandler for hierarchical spec reading
+        from coffee_maker.utils.spec_handler import SpecHandler
+
+        self.spec_handler = SpecHandler()
+
     def review_commit(self, commit_sha: str = "HEAD") -> ReviewReport:
         """Review a specific commit.
 
@@ -81,6 +86,29 @@ class CodeReviewerAgent:
         # Get commit details
         commit_info = self._get_commit_info(commit_sha)
 
+        # Extract priority ID from commit message
+        priority_id = self._extract_priority_from_commit(commit_info)
+
+        # Load technical spec using hierarchical spec reader (if priority found)
+        spec_result = None
+        if priority_id:
+            logger.info(f"📖 Loading spec for {priority_id} to verify implementation")
+            spec_result = self.spec_handler.read_hierarchical(priority_id, phase=None)
+
+            if spec_result.get("success"):
+                spec_type = spec_result.get("spec_type", "unknown")
+                context_size = spec_result.get("context_size", 0)
+                if spec_type == "hierarchical":
+                    phase = spec_result.get("current_phase", 1)
+                    total = spec_result.get("total_phases", 1)
+                    logger.info(
+                        f"✅ Loaded hierarchical spec Phase {phase}/{total} " f"({context_size} chars) for review"
+                    )
+                else:
+                    logger.info(f"✅ Loaded monolithic spec ({context_size} chars) for review")
+            else:
+                logger.warning(f"⚠️ No spec found for {priority_id}: {spec_result.get('reason')}")
+
         # Get changed files
         changed_files = self._get_changed_files(commit_sha)
 
@@ -90,8 +118,8 @@ class CodeReviewerAgent:
         # Check style guide compliance
         style_compliance = self._check_style_compliance(changed_files)
 
-        # Check architecture compliance
-        architecture_compliance = self._check_architecture_compliance(changed_files)
+        # Check architecture compliance (with spec verification if available)
+        architecture_compliance = self._check_architecture_compliance(changed_files, spec_result, commit_info)
 
         # Calculate quality score
         quality_score = self._calculate_quality_score(issues)
@@ -469,11 +497,48 @@ class CodeReviewerAgent:
 
         return compliance
 
-    def _check_architecture_compliance(self, changed_files: List[str]) -> Dict[str, bool]:
+    def _extract_priority_from_commit(self, commit_info: Dict) -> Optional[str]:
+        """Extract priority ID from commit message.
+
+        Args:
+            commit_info: Commit information dict
+
+        Returns:
+            str: Priority ID (e.g., "PRIORITY-25", "US-104") or None
+        """
+        import re
+
+        message = commit_info.get("message", "")
+
+        # Try to find PRIORITY-XX or PRIORITY XX patterns
+        priority_match = re.search(r"(?:PRIORITY[- ](\d+))|(?:US-(\d+))", message, re.IGNORECASE)
+
+        if priority_match:
+            # Prefer PRIORITY format
+            if priority_match.group(1):
+                return f"PRIORITY-{priority_match.group(1)}"
+            elif priority_match.group(2):
+                return f"US-{priority_match.group(2)}"
+
+        # Try to find in commit title or first line
+        first_line = message.split("\n")[0]
+        phase_match = re.search(r"(?:Phase \d+|SPEC-(\d+))", first_line)
+        if phase_match and phase_match.group(1):
+            return f"PRIORITY-{phase_match.group(1)}"
+
+        return None
+
+    def _check_architecture_compliance(
+        self, changed_files: List[str], spec_result: Optional[Dict], commit_info: Dict
+    ) -> Dict[str, bool]:
         """Check architecture compliance (SPEC-*, ADR-*, GUIDELINE-*).
+
+        Enhanced: Now verifies implementation against technical spec requirements!
 
         Args:
             changed_files (List[str]): List of changed file paths.
+            spec_result (Dict): Result from SpecHandler.read_hierarchical()
+            commit_info (Dict): Commit information
 
         Returns:
             Dict[str, bool]: Architecture compliance checks.
@@ -484,6 +549,7 @@ class CodeReviewerAgent:
             "follows_guidelines": True,
             "uses_mixins_pattern": True,
             "singleton_enforcement": True,
+            "spec_requirements_met": True,  # NEW: Verify against spec
         }
 
         # Check for common architecture patterns
@@ -501,7 +567,72 @@ class CodeReviewerAgent:
                 except Exception as e:
                     logger.warning(f"Error reading {file_path}: {e}")
 
+        # NEW: Verify against technical spec (if available)
+        if spec_result and spec_result.get("success"):
+            spec_content = spec_result.get("full_context", "")
+
+            # Extract acceptance criteria from spec
+            acceptance_criteria = self._extract_acceptance_criteria(spec_content)
+
+            if acceptance_criteria:
+                logger.info(f"📋 Found {len(acceptance_criteria)} acceptance criteria in spec")
+
+                # Check if implementation likely meets criteria
+                # (Simple heuristic: check if related keywords are in changed files)
+                for criterion in acceptance_criteria:
+                    # This is a simple check - in production, would need more sophisticated analysis
+                    criterion_lower = criterion.lower()
+
+                    # Extract key terms from criterion
+                    key_terms = []
+                    if "implement" in criterion_lower:
+                        # Extract what should be implemented
+                        import re
+
+                        matches = re.findall(r"`([^`]+)`", criterion)
+                        key_terms.extend(matches)
+
+                    # Check if any changed files contain these terms
+                    if key_terms:
+                        found = any(
+                            any(term in Path(f).read_text() for term in key_terms if (self.project_root / f).exists())
+                            for f in changed_files
+                        )
+
+                        if not found:
+                            logger.warning(f"⚠️ Acceptance criterion may not be met: {criterion[:80]}...")
+                            compliance["spec_requirements_met"] = False
+
         return compliance
+
+    def _extract_acceptance_criteria(self, spec_content: str) -> List[str]:
+        """Extract acceptance criteria from spec content.
+
+        Args:
+            spec_content: Full spec content (README + current phase)
+
+        Returns:
+            List[str]: List of acceptance criteria
+        """
+        import re
+
+        criteria = []
+
+        # Find "Acceptance Criteria" section
+        acc_match = re.search(
+            r"(?:## Acceptance Criteria|## Success Criteria|## Definition of Done)(.*?)(?=^##|\Z)",
+            spec_content,
+            re.MULTILINE | re.DOTALL,
+        )
+
+        if acc_match:
+            section = acc_match.group(1)
+
+            # Extract checklist items
+            checklist_items = re.findall(r"- \[[ x]\] (.+)", section)
+            criteria.extend(checklist_items)
+
+        return criteria
 
     def _calculate_quality_score(self, issues: List[Issue]) -> int:
         """Calculate quality score (0-100).

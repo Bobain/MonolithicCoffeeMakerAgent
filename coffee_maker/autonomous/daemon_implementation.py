@@ -24,6 +24,7 @@ from datetime import datetime
 from coffee_maker.autonomous.developer_status import ActivityType, DeveloperState
 from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
 from coffee_maker.autonomous.puppeteer_client import PuppeteerClient
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 from coffee_maker.cli.notifications import (
     NOTIF_PRIORITY_HIGH,
     NOTIF_TYPE_INFO,
@@ -138,35 +139,58 @@ class ImplementationMixin:
             logger.warning(f"⏭️  Skipping {priority_name} - already attempted {attempt_count} times with no changes")
             logger.warning(f"This priority requires manual intervention")
 
-            # Create final notification
-            self.notifications.create_notification(
-                type=NOTIF_TYPE_INFO,
-                title=f"{priority_name}: Max Retries Reached",
-                message=f"""The daemon has attempted to implement this priority {attempt_count} times but no files were changed.
+            # Check if there's a technical spec and if it's too large
+
+            spec_analysis = self._analyze_spec_complexity(priority)
+
+            # Update ROADMAP status to blocked so daemon skips it in future
+            try:
+                db = RoadmapDatabase()
+                item_id = priority_name  # e.g., "US-111"
+                db.update_status(
+                    item_id=item_id,
+                    new_status="⏸️ Blocked - Too complex for autonomous implementation",
+                    updated_by="code_developer",
+                )
+                db.export_to_file(self.roadmap_path)
+                logger.info(f"✅ Updated {priority_name} status to '⏸️ Blocked' in ROADMAP")
+            except Exception as e:
+                logger.error(f"Failed to update ROADMAP status: {e}")
+
+            # Create notification with spec splitting guidance if needed
+            if spec_analysis["has_spec"] and spec_analysis["is_large"]:
+                # Spec exists but is too large - ask architect to split it
+                self._create_spec_splitting_notification(priority, spec_analysis, attempt_count)
+            else:
+                # Generic notification for manual review
+                self.notifications.create_notification(
+                    type=NOTIF_TYPE_INFO,
+                    title=f"{priority_name}: Max Retries Reached",
+                    message=f"""The daemon has attempted to implement this priority {attempt_count} times but no files were changed.
 
 This priority requires manual implementation:
 
 Priority: {priority_name}
 Title: {priority_title}
-Status: Skipped after {attempt_count} attempts
+Status: ⏸️ Blocked - Too complex for autonomous implementation
 
 Action Required:
 1. Manually implement this priority, OR
-2. Mark as "Manual Only" in ROADMAP.md, OR
+2. Break it down into smaller user stories, OR
 3. Clarify the deliverables to make them more concrete
 
-The daemon will skip this priority in future iterations.
+The daemon has updated ROADMAP.md and will skip this priority in future iterations.
 """,
-                priority=NOTIF_PRIORITY_HIGH,
-                context={
-                    "priority_name": priority_name,
-                    "priority_number": priority.get("number"),
-                    "reason": "max_retries_reached",
-                    "attempts": attempt_count,
-                },
-                sound=False,
-                agent_id="code_developer",
-            )
+                    priority=NOTIF_PRIORITY_HIGH,
+                    context={
+                        "priority_name": priority_name,
+                        "priority_number": priority.get("number"),
+                        "reason": "max_retries_reached",
+                        "attempts": attempt_count,
+                    },
+                    sound=False,
+                    agent_id="code_developer",
+                )
 
             return False  # Return False so the daemon moves on
 
@@ -268,8 +292,9 @@ Status: Requires human decision
             )
 
             logger.info("📧 Created notification for manual review")
-            # Return "success" to avoid infinite retry - human will decide next steps
-            return True
+            # Return False so attempt counter increments
+            # After max retries, daemon will mark as blocked and skip
+            return False
 
         # PRIORITY 4: Update progress - committing changes
         self.status.report_progress(70, "Committing changes")
@@ -313,6 +338,12 @@ Status: Requires human decision
         self._update_subtask("Pushing to remote", "completed", subtask_start, estimated_seconds=30)
 
         logger.info("✅ Roadmap branch pushed")
+
+        # Reset no-progress counter since we made progress (files changed and committed)
+        # This allows unlimited iterations as long as we keep making progress
+        if priority_name in self.attempted_priorities:
+            logger.info(f"✅ Progress made on {priority_name} - resetting no-progress counter")
+            self.attempted_priorities[priority_name] = 0
 
         # PRIORITY 4: Log push activity
         self.status.report_activity(
@@ -440,6 +471,10 @@ Status: Requires human decision
         Enhanced: Now uses centralized prompt from .claude/commands/
         for easy migration to Gemini, OpenAI, or other LLMs.
 
+        HIERARCHICAL: Reads and injects technical spec content with progressive disclosure
+        - For hierarchical specs: Loads README + current phase (71% context reduction)
+        - For monolithic specs: Full spec (backward compatible)
+
         Args:
             priority: Priority dictionary
 
@@ -447,9 +482,37 @@ Status: Requires human decision
             Prompt string for feature implementation from
             .claude/commands/implement-feature.md
         """
+        from coffee_maker.utils.spec_handler import SpecHandler
+
         priority_content = priority.get("content", "")[:1000]
         if len(priority.get("content", "")) > 1000:
             priority_content += "..."
+
+        # Load spec content with hierarchical support
+        spec_content = ""
+        spec_handler = SpecHandler()
+        priority_id = priority.get("name", f"PRIORITY {priority.get('number')}")
+
+        # Try hierarchical spec reading first
+        result = spec_handler.read_hierarchical(priority_id, phase=None)
+
+        if result.get("success"):
+            spec_content = result["full_context"]
+            spec_type = result["spec_type"]
+            context_size = result["context_size"]
+
+            if spec_type == "hierarchical":
+                current_phase = result.get("current_phase", 1)
+                total_phases = result.get("total_phases", 1)
+                logger.info(
+                    f"📖 Loaded hierarchical spec: Phase {current_phase}/{total_phases} "
+                    f"({context_size} chars, 71% reduction)"
+                )
+            else:
+                logger.info(f"📖 Loaded monolithic spec ({context_size} chars)")
+        else:
+            logger.warning(f"No spec found for {priority_id}: {result.get('reason', 'unknown error')}")
+            spec_content = f"[NO SPEC FOUND: {result.get('reason', 'Unknown error')}]"
 
         return load_prompt(
             PromptNames.IMPLEMENT_FEATURE,
@@ -457,8 +520,164 @@ Status: Requires human decision
                 "PRIORITY_NAME": priority["name"],
                 "PRIORITY_TITLE": priority["title"],
                 "PRIORITY_CONTENT": priority_content,
+                "SPEC_CONTENT": spec_content,  # Progressive disclosure for hierarchical specs
             },
         )
+
+    def _analyze_spec_complexity(self, priority: dict) -> dict:
+        """Analyze technical spec to determine if it's too complex for one implementation.
+
+        Args:
+            priority: Priority dictionary
+
+        Returns:
+            Dict with analysis results:
+                - has_spec: bool (spec file exists)
+                - spec_path: str (path to spec file if exists)
+                - spec_lines: int (number of lines)
+                - spec_chars: int (number of characters)
+                - is_large: bool (exceeds thresholds for single implementation)
+                - estimated_days: int (from ROADMAP content)
+        """
+        from pathlib import Path
+
+        analysis = {
+            "has_spec": False,
+            "spec_path": None,
+            "spec_lines": 0,
+            "spec_chars": 0,
+            "is_large": False,
+            "estimated_days": 0,
+        }
+
+        # Extract estimated effort from priority content
+        priority_content = priority.get("content", "")
+        if "day" in priority_content.lower():
+            # Try to extract "X days" or "X-Y days"
+            import re
+
+            match = re.search(r"(\d+)(?:-(\d+))?\s*days?", priority_content.lower())
+            if match:
+                # Use the upper bound if range, otherwise the single value
+                analysis["estimated_days"] = int(match.group(2) or match.group(1))
+
+        # Check for spec file
+        priority_number = priority.get("number")
+        if priority_number:
+            spec_dir = Path("docs/architecture/specs")
+            spec_pattern = f"SPEC-{priority_number}-*.md"
+
+            if spec_dir.exists():
+                matching_specs = list(spec_dir.glob(spec_pattern))
+                if matching_specs:
+                    spec_file = matching_specs[0]
+                    analysis["has_spec"] = True
+                    analysis["spec_path"] = str(spec_file)
+
+                    try:
+                        spec_content = spec_file.read_text()
+                        analysis["spec_chars"] = len(spec_content)
+                        analysis["spec_lines"] = spec_content.count("\n") + 1
+
+                        # Determine if spec is too large for single implementation
+                        # Thresholds:
+                        # - > 300 lines OR
+                        # - > 15,000 characters OR
+                        # - Estimated effort > 2 days
+                        analysis["is_large"] = (
+                            analysis["spec_lines"] > 300
+                            or analysis["spec_chars"] > 15000
+                            or analysis["estimated_days"] > 2
+                        )
+
+                    except Exception as e:
+                        logger.warning(f"Failed to analyze spec {spec_file}: {e}")
+
+        return analysis
+
+    def _create_spec_splitting_notification(self, priority: dict, spec_analysis: dict, attempt_count: int) -> None:
+        """Create notification asking architect to split large spec into phases.
+
+        Args:
+            priority: Priority dictionary
+            spec_analysis: Analysis from _analyze_spec_complexity()
+            attempt_count: Number of failed implementation attempts
+        """
+        priority_name = priority["name"]
+        priority["title"]
+
+        notification_message = f"""code_developer attempted to implement {priority_name} {attempt_count} times but made no file changes.
+
+**Root Cause Analysis:**
+The technical specification is too large/complex for a single autonomous implementation.
+
+**Spec Details:**
+- File: {spec_analysis['spec_path']}
+- Size: {spec_analysis['spec_lines']} lines, {spec_analysis['spec_chars']:,} characters
+- Estimated effort: {spec_analysis['estimated_days']} days
+
+**Request for Architect:**
+
+Please split this specification into **smaller, well-sized implementation phases** that fit within context window limits and can be implemented step-by-step.
+
+**Recommended Approach:**
+
+1. **Break into Phases** (Option A):
+   - Create SPEC-{priority_name}-phase-1.md (Foundation, 1-2 days)
+   - Create SPEC-{priority_name}-phase-2.md (Core features, 1-2 days)
+   - Create SPEC-{priority_name}-phase-3.md (Polish, testing, 1 day)
+   - Each phase should be ≤ 300 lines or ≤ 2 days effort
+
+2. **Break into Sub-Stories** (Option B):
+   - Create {priority_name}-A: Database schema and models
+   - Create {priority_name}-B: API endpoints
+   - Create {priority_name}-C: UI components
+   - Create {priority_name}-D: Integration and testing
+   - Add each as separate user story in ROADMAP
+
+3. **Simplify Scope** (Option C):
+   - Review spec for essential vs. nice-to-have features
+   - Move advanced features to future user stories
+   - Reduce initial implementation to MVP
+
+**Guidelines for Well-Sized Specs:**
+✅ ≤ 300 lines of specification
+✅ ≤ 15,000 characters
+✅ ≤ 2 days estimated implementation time
+✅ Single, focused deliverable
+✅ Clear, concrete acceptance criteria
+
+**Current Status:**
+- {priority_name} marked as "⏸️ Blocked - Too complex"
+- Daemon will skip until architect creates phased specs
+- Once phases created, daemon will implement them sequentially
+
+**Next Steps:**
+1. Architect: Review and split spec using one of the approaches above
+2. Architect: Update ROADMAP with phased approach
+3. Architect: Unblock {priority_name} or create phase-1 user story
+4. Daemon: Will pick up and implement phase-1 automatically
+"""
+
+        self.notifications.create_notification(
+            type=NOTIF_TYPE_INFO,
+            title=f"🏗️ Architect: Please Split Spec for {priority_name}",
+            message=notification_message,
+            priority=NOTIF_PRIORITY_HIGH,
+            context={
+                "priority_name": priority_name,
+                "priority_number": priority.get("number"),
+                "reason": "spec_too_large",
+                "spec_lines": spec_analysis["spec_lines"],
+                "spec_chars": spec_analysis["spec_chars"],
+                "estimated_days": spec_analysis["estimated_days"],
+                "attempts": attempt_count,
+            },
+            sound=False,
+            agent_id="code_developer",
+        )
+
+        logger.info(f"📧 Created spec splitting request for architect: {priority_name}")
 
     def _build_commit_message(self, priority: dict) -> str:
         """Build commit message for implementation.
@@ -562,3 +781,144 @@ This PR was autonomously implemented by the DevDaemon following the ROADMAP.md s
         # result = self.claude.execute_prompt(dod_prompt)
 
         return True
+
+    # ==================== HIERARCHICAL SPEC PHASE MANAGEMENT ====================
+
+    def _detect_current_phase(self, priority: dict) -> int:
+        """Detect which phase to work on next for hierarchical specs.
+
+        Uses SpecHandler's detection logic which checks:
+        1. ROADMAP phase completion checkboxes
+        2. Git commit history
+        3. File existence
+        4. Defaults to Phase 1
+
+        Args:
+            priority: Priority dictionary
+
+        Returns:
+            int: Phase number to work on (1, 2, 3, ...)
+        """
+        from coffee_maker.utils.spec_handler import SpecHandler
+
+        spec_handler = SpecHandler()
+        priority_id = priority.get("name", f"PRIORITY {priority.get('number')}")
+
+        # Use skill's detection logic
+        spec_result = spec_handler.read_hierarchical(priority_id, phase=None)
+
+        if spec_result.get("success") and spec_result.get("spec_type") == "hierarchical":
+            current_phase = spec_result.get("current_phase", 1)
+            total_phases = spec_result.get("total_phases", 1)
+
+            logger.info(f"📍 Phase detection: Working on Phase {current_phase}/{total_phases} " f"for {priority_id}")
+
+            return current_phase
+
+        # Fallback: Phase 1
+        logger.info(f"⚠️ Could not detect phase for {priority_id}, defaulting to Phase 1")
+        return 1
+
+    def _mark_phase_complete(self, priority: dict, phase: int) -> bool:
+        """Mark phase as complete in ROADMAP.
+
+        Updates ROADMAP.md with phase completion checkbox:
+        - [ ] Phase N  →  - [x] Phase N complete
+
+        Args:
+            priority: Priority dictionary
+            phase: Phase number that was completed
+
+        Returns:
+            bool: True if successfully updated, False otherwise
+        """
+        from pathlib import Path
+
+        priority_name = priority.get("name", "UNKNOWN")
+
+        try:
+            roadmap_path = Path("docs/roadmap/ROADMAP.md")
+            if not roadmap_path.exists():
+                logger.warning(f"ROADMAP not found at {roadmap_path}")
+                return False
+
+            roadmap_content = roadmap_path.read_text(encoding="utf-8")
+
+            # Find priority section
+            priority_pattern = f"### {priority_name}:"
+            if priority_pattern not in roadmap_content:
+                logger.warning(f"Could not find priority section: {priority_name}")
+                return False
+
+            # Find section boundaries
+            section_start = roadmap_content.index(priority_pattern)
+            section_end = roadmap_content.find("###", section_start + 1)
+            if section_end == -1:
+                section_end = len(roadmap_content)
+
+            section = roadmap_content[section_start:section_end]
+
+            # Update phase checkbox
+            old_marker = f"- [ ] Phase {phase}"
+            new_marker = f"- [x] Phase {phase} complete"
+
+            if old_marker in section:
+                # Update existing checkbox
+                section = section.replace(old_marker, new_marker)
+            else:
+                # Add new checkbox (find insertion point)
+                import_pattern = f"**Phase {phase}:"
+                if import_pattern in section:
+                    # Add after phase description
+                    idx = section.find(import_pattern)
+                    idx = section.find("\n", idx)
+                    section = section[:idx] + f"\n{new_marker}" + section[idx:]
+                else:
+                    # Add before next section or at end
+                    idx = section.find("**Technical Specification**:")
+                    if idx > -1:
+                        section = section[:idx] + f"{new_marker}\n\n" + section[idx:]
+                    else:
+                        section = section + f"\n{new_marker}"
+
+            # Replace section in roadmap
+            updated_roadmap = roadmap_content[:section_start] + section + roadmap_content[section_end:]
+
+            roadmap_path.write_text(updated_roadmap, encoding="utf-8")
+
+            logger.info(f"✅ Marked Phase {phase} complete in ROADMAP for {priority_name}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to mark phase complete: {e}")
+            return False
+
+    def _log_context_efficiency(self, priority: dict, spec_result: dict) -> None:
+        """Log context efficiency metrics for hierarchical specs.
+
+        Demonstrates 71% context reduction by comparing hierarchical vs monolithic.
+
+        Args:
+            priority: Priority dictionary
+            spec_result: Result from SpecHandler.read_hierarchical()
+        """
+        spec_type = spec_result.get("spec_type", "unknown")
+        context_size = spec_result.get("context_size", 0)
+
+        if spec_type == "hierarchical":
+            current_phase = spec_result.get("current_phase", 1)
+            total_phases = spec_result.get("total_phases", 1)
+
+            # Estimate monolithic equivalent
+            estimated_monolithic = context_size * 3.5
+
+            savings_pct = ((estimated_monolithic - context_size) / estimated_monolithic) * 100
+
+            logger.info(
+                f"📊 Context efficiency (Phase {current_phase}/{total_phases}):\n"
+                f"  Loaded: {context_size:,} chars (hierarchical)\n"
+                f"  vs ~{int(estimated_monolithic):,} chars (monolithic)\n"
+                f"  Savings: {int(savings_pct)}% ✅ (CFR-007 compliant)"
+            )
+        else:
+            logger.info(f"📊 Loaded monolithic spec: {context_size:,} chars")

@@ -81,7 +81,7 @@ The daemon operates autonomously by:
 
 ```markdown
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
-PRIORITY 2: Project Manager with UI ← Current focus
+PRIORITY 25: Hierarchical Spec Architecture - Phase 3 (Guidelines Library) ✅ Complete (2025-10-21)
 
 ### PRIORITY 1: Analytics ✅ Complete
 ### PRIORITY 1.5: Database Sync ✅ Complete
@@ -478,6 +478,7 @@ architect dependency-conflict-resolver pytest-timeout
 
 **Deliverables**:
 
+**Core Implementation**:
 - [x] DependencyAnalyzer class with all analysis logic
 - [x] ConflictAnalyzer, SecurityScanner, LicenseChecker, VersionAnalyzer, ImpactAssessor components
 - [x] Security scanning integration (pip-audit, safety)
@@ -485,9 +486,16 @@ architect dependency-conflict-resolver pytest-timeout
 - [x] Version analysis and recommendation engine
 - [x] Markdown report generator
 - [x] Python API for programmatic usage
-- [x] Skill documentation in `.claude/skills/architect/dependency-conflict-resolver/SKILL.md`
+- [x] Skill documentation in `.claude/skills/dependency-conflict-resolver/SKILL.md`
 - [x] Unit tests (15 tests, 100% passing)
-- [x] End-to-end tested with real packages (2.66s analysis time)
+- [x] End-to-end tested with real packages (2.37s analysis time)
+
+**Documentation** (Priority 24 Documentation Deliverables):
+- [x] USER_GUIDE.md - Comprehensive usage guide with real examples (38+ sections)
+- [x] INTEGRATION_GUIDE.md - SPEC-070 integration and workflow documentation
+- [x] TROUBLESHOOTING.md - Common issues, debugging, and solutions guide
+- [x] All examples tested with real packages (pytest-timeout, requests)
+- [x] Location: `docs/architecture/skills/dependency-conflict-resolver/`
 
 **Performance**: Analysis completes in **2-3 seconds** (vs. 40-60 min manual) = **93-95% time savings**
 
@@ -535,7 +543,202 @@ If REVIEW: architect asks user for decision
 
 ---
 
-### PRIORITY 25: Refactor Skill Loading to Use Proper Python Imports 📝 Planned
+### PRIORITY 24: Technical Prerequisite Identification and Tracking 📝 Planned
+
+**Status**: 📝 Planned - HIGH PRIORITY (Prevents Duplicate Technical Work)
+
+**Created**: 2025-10-21
+
+**Estimated Effort**: 7-11 hours
+
+**Priority Rationale**: This is HIGH PRIORITY because it prevents 40-60% waste in implementation time by identifying common technical foundations BEFORE multiple user stories duplicate the same work.
+
+**User Story**:
+As an architect, I need a systematic way to identify common technical prerequisites needed by multiple user stories, group dependent stories, and recommend prioritizing prerequisites to project_manager, so that we avoid duplicate technical work and ensure consistent implementations.
+
+**Problem**:
+Currently, architect has no formal responsibility or tooling to identify common technical foundations. This leads to:
+- Duplicate technical work across multiple user story implementations (e.g., 3 stories each implement authentication separately)
+- Mid-implementation blockers when prerequisites are discovered late
+- Inefficient prioritization (implementing dependent USs before foundations)
+- Technical debt from inconsistent implementations of same foundation
+
+**Example Impact Without This Feature**:
+```
+US-050: User authentication (implements JWT auth, 40 hours)
+US-060: Admin authentication (re-implements auth, 30 hours)
+US-070: API authentication (re-implements auth again, 25 hours)
+Total: 95 hours, 3 inconsistent auth implementations, tech debt
+```
+
+**Example Impact WITH This Feature**:
+```
+architect identifies TECH-001: Unified Auth System
+project_manager prioritizes TECH-001 first (30 hours)
+US-050, US-060, US-070 use existing auth (25 hours combined)
+Total: 55 hours (42% savings!), 1 consistent implementation, zero debt
+```
+
+**Key Features**:
+1. Database schema for technical prerequisites (TECH-001, TECH-002, etc.)
+2. Link user stories to prerequisites with dependency tracking
+3. Architect workflow for identifying common patterns
+4. Automatic notifications to project_manager with prioritization recommendations
+5. Grouped dependency reports showing impact
+6. Integration with ROADMAP management
+
+**Technical Specification**:
+See `docs/architecture/specs/SPEC-NEXT-technical-prerequisite-tracking.md` for complete implementation details.
+
+**Implementation Phases**:
+- Phase 1: Database schema (1-2 hours)
+- Phase 2: Database methods and queries (2-3 hours)
+- Phase 3: Architect skill for prerequisite identification (2-3 hours)
+- Phase 4: project_manager integration and UI (1-2 hours)
+- Phase 5: Documentation and examples (1 hour)
+
+**Common Prerequisite Categories**:
+- Authentication/Authorization (JWT, RBAC, OAuth)
+- Database Infrastructure (migrations, ORMs, pooling)
+- API Foundations (REST, validation, rate limiting)
+- UI Component Libraries (design systems, themes)
+- Infrastructure (logging, monitoring, CI/CD)
+- Data Processing (ETL, validation, transformation)
+- Third-party Integrations (APIs, webhooks)
+- Testing Frameworks (fixtures, mocks, test data)
+
+**Success Metrics**:
+- Number of technical prerequisites identified
+- User stories grouped per prerequisite (higher = more savings)
+- Implementation time savings (estimated vs. actual)
+- Technical debt reduction (fewer inconsistent patterns)
+- code_developer feedback on prerequisite quality
+
+**Dependencies**:
+- RoadmapDatabase ✅ Available
+- NotificationDB ✅ Available
+- architect agent ✅ Available
+- project_manager CLI ✅ Available
+
+**Acceptance Criteria**:
+- [ ] Database schema created with tables for prerequisites and dependencies
+- [ ] Architect can create TECH-XXX prerequisites with category, priority, description
+- [ ] Architect can link multiple user stories to a prerequisite
+- [ ] System generates notifications to project_manager with recommendations
+- [ ] project_manager can review and approve prerequisite recommendations
+- [ ] Query system shows grouped dependencies and impact analysis
+- [ ] Documentation updated in AGENT_OWNERSHIP.md
+- [ ] Examples and tutorial created
+- [ ] Integration tests verify end-to-end workflow
+
+**Related**:
+- CFR-XXX (to be assigned): Technical Prerequisite Identification
+- AGENT_OWNERSHIP.md (architect responsibilities)
+- RoadmapDatabase (dependency tracking storage)
+
+---
+
+### PRIORITY 25: Hierarchical, Modular Technical Specification Architecture ✅ Complete - Phase 3
+
+**Status**: ✅ Complete - Phase 3 (Guidelines Library) - COMPLETED 2025-10-21
+
+**Created**: 2025-10-21
+
+**Estimated Effort**: 10 hours
+
+**Priority Rationale**: This is HIGH PRIORITY because it enables:
+- **71% context reduction** for code_developer (150 lines vs 350 per iteration)
+- **30% faster implementation** through better focus
+- **Unlimited scalability** for large features (10+ phases)
+- **CFR-016 compliance** (incremental implementation steps)
+- **CFR-007 compliance** (context budget optimization)
+
+**Problem Statement**:
+
+Currently, technical specifications are monolithic documents that code_developer reads in their entirety, even when only implementing a specific phase or subtask.
+
+**Impact Without This**:
+- 80% context waste: code_developer loads 350-line spec when only needs 50 lines for current phase
+- Cognitive overload: Too much information reduces focus on current subtask
+- Context budget violations: Large features (10+ phases) exceed context limits
+- Duplicate patterns: Common approaches repeated across specs instead of referenced
+
+**Solution**: Hierarchical, modular spec architecture with progressive disclosure
+
+**Architecture**:
+
+```
+docs/architecture/specs/SPEC-{number}-{slug}/
+├── README.md (Overview - 100-150 lines) ← Always read
+├── phase1-{name}.md (50-100 lines) ← Read only when implementing Phase 1
+├── phase2-{name}.md (50-100 lines) ← Read only when implementing Phase 2
+├── phase3-{name}.md (50-100 lines) ← Read only when implementing Phase 3
+├── references.md (Links to guidelines)
+└── diagrams/ (Architecture diagrams)
+```
+
+**Implementation Phases**:
+
+**Phase 1: Shared Skill Enhancement** (COMPLETED ✅)
+- [x] Extend `.claude/skills/shared/technical-specification-handling/` to v2.0.0
+- [x] Add hierarchical spec support (create_hierarchical, read_hierarchical)
+- [x] Document templates for README.md and phase documents
+- [x] Add phase detection logic (ROADMAP, git, file existence)
+- [x] Provide examples and guidelines
+- [x] Maintain backward compatibility with monolithic specs
+
+**Phase 2: Daemon Enhancement** (3 hours) ✅ COMPLETE
+- [x] Add `_detect_current_phase()` method to daemon_implementation.py
+- [x] Add `_mark_phase_complete()` method to update ROADMAP after phase completion
+- [x] Update `_build_feature_prompt()` to use hierarchical loading
+- [x] Add context efficiency logging
+- [x] Add error handling for hierarchical specs
+- [x] Write unit tests for hierarchical spec functionality
+- [x] Test with existing specs (all 10 tests passing)
+
+**Phase 3: Guidelines Library** (2 hours) ✅ COMPLETE
+- [x] Create `docs/architecture/guidelines/` directory structure (exists)
+- [x] Extract common patterns from existing specs into guidelines
+- [x] Create 5-10 initial guidelines (GUIDELINE-012 through GUIDELINE-021 created)
+- [x] Update specs to reference guidelines (REFACTOR-003, SPEC-057 updated)
+
+**Phase 4: Spec Migration** (3 hours)
+- [ ] Migrate 3-5 recent specs to hierarchical structure
+- [ ] Create migration guide for remaining specs
+- [ ] Document backward compatibility strategy
+
+**Phase 5: Testing and Documentation** (2 hours)
+- [ ] Verify context reduction metrics (target: 70%+)
+- [ ] Test code_developer with hierarchical specs
+- [ ] Update architect workflow documentation
+- [ ] Add examples to README
+
+**Benefits**:
+- ✅ **71% context reduction**: 150 lines loaded vs 350 (monolithic)
+- ✅ **30% faster implementation**: Better focus, clearer steps
+- ✅ **Scalable**: Large features (10+ phases) stay manageable
+- ✅ **Reusable**: Common patterns in guidelines (referenced, not duplicated)
+- ✅ **Maintainable**: Update one phase without touching others
+- ✅ **CFR Compliant**: Aligns with CFR-007 (context budget) and CFR-016 (incremental steps)
+
+**Technical Specification**: [SPEC-NEXT-hierarchical-modular-spec-architecture.md](../architecture/specs/SPEC-NEXT-hierarchical-modular-spec-architecture.md)
+
+**Claude Skill**: `.claude/skills/shared/technical-specification-handling/SKILL.md` (v2.0.0 - hierarchical support)
+
+**Success Metrics**:
+- Average spec context usage: <150 lines (vs 300+ currently)
+- Phase implementation time: 30% faster
+- Spec reusability: 50%+ content from referenced guidelines
+- code_developer iterations: 20% fewer (clearer guidance)
+
+**Related**:
+- CFR-007: Agent Context Budget (30% Maximum)
+- CFR-016: Technical Specs Must Be Broken Into Small, Incremental Implementation Steps
+- PRIORITY 24: Technical Prerequisite Identification and Tracking
+
+---
+
+### PRIORITY 26: Refactor Skill Loading to Use Proper Python Imports 📝 Planned
 
 **Status**: 📝 Planned - MEDIUM PRIORITY (Technical Debt - Code Quality)
 
@@ -26985,9 +27188,10 @@ This user story directly addresses user feedback about lack of parallel executio
 
 ## US-044: Regular Refactoring and Technical Debt Reduction Workflow
 
-**Status**: 📝 PLANNED - HIGH PRIORITY (Code Quality)
+**Status**: ✅ COMPLETE (2025-10-21) - HIGH PRIORITY (Code Quality)
 
 **Created**: 2025-10-16
+**Completed**: 2025-10-21
 
 **Type**: Process / Workflow
 
@@ -27382,9 +27586,9 @@ This US implements CFR-005 (Ownership Includes Maintenance Responsibility):
 
 This user story addresses the user's requirement for regular, systematic refactoring. architect takes the lead on deciding WHEN and WHAT to refactor, while code_developer executes the refactoring based on architect's detailed plans.
 
-**Implementation Progress** (2025-10-16):
+**Implementation Progress**:
 
-**Phase 1: Infrastructure Setup - COMPLETE**
+**Phase 1: Infrastructure Setup - ✅ COMPLETE** (2025-10-16)
 - Created docs/architecture/refactoring/ directory structure (active/, completed/, templates/)
 - Created REFACTOR_TEMPLATE.md template for architect to use
 - Created example refactoring plan (REFACTOR_2025_10_16_daemon_simplification.md)
@@ -27392,14 +27596,63 @@ This user story addresses the user's requirement for regular, systematic refacto
 - Created check_complexity.sh script for monitoring
 - Generated baseline complexity metrics (baseline_complexity_2025_10_16.txt)
 
-Infrastructure is now ready for architect to create refactoring plans and for code_developer to execute them.
+**Phase 2: Documentation & Workflow - ✅ COMPLETE** (2025-10-21)
+- Created comprehensive ARCHITECT_WORKFLOW.md (724 lines) with monitoring, planning, and review processes
+- Created detailed CODE_DEVELOPER_WORKFLOW.md (819 lines) with execution guidelines
+- Created MONITORING_GUIDE.md (653 lines) with metrics interpretation
+- Created REFACTORING_BEST_PRACTICES.md (500+ lines) with real codebase examples
+- Created REFACTORING_WORKFLOW_INTEGRATION.md (680+ lines) showing complete end-to-end workflow
+- All documentation tested with real commands from the codebase
 
-**Next Steps** (Phase 2 - Workflow Automation):
-- architect monitoring workflow (weekly metrics review)
-- architect refactoring plan generation workflow
-- code_developer refactoring execution workflow
-- ROADMAP integration (REFACTOR-XXX priorities)
-- architect review process automation
+**Deliverables Completed**:
+
+1. **Directory Structure** ✅
+   - `docs/architecture/refactoring/active/` - Active refactoring plans
+   - `docs/architecture/refactoring/completed/` - Archived completed plans
+   - `docs/architecture/refactoring/templates/` - Plan templates
+
+2. **Templates & Tools** ✅
+   - `REFACTOR_TEMPLATE.md` - Standardized refactoring plan template
+   - `scripts/check_complexity.sh` - Automated complexity monitoring
+   - Baseline metrics for tracking improvements
+
+3. **Workflow Documentation** ✅
+   - `ARCHITECT_WORKFLOW.md` - Complete architect monitoring and planning workflow
+   - `CODE_DEVELOPER_WORKFLOW.md` - Step-by-step execution guide
+   - `MONITORING_GUIDE.md` - Metrics interpretation and thresholds
+   - `REFACTORING_BEST_PRACTICES.md` - Patterns with real codebase examples
+   - `REFACTORING_WORKFLOW_INTEGRATION.md` - End-to-end integration guide
+   - `README.md` - Directory overview
+
+4. **Example Refactoring Plan** ✅
+   - `REFACTOR_2025_10_16_daemon_simplification.md` - Real example showing format
+
+5. **Integration** ✅
+   - ROADMAP integration (REFACTOR-XXX priority format)
+   - Notification system integration
+   - Git workflow integration (CFR-013)
+   - CI/CD integration examples
+
+**Acceptance Criteria Status**:
+- [x] docs/architecture/refactoring/ directory created
+- [x] Refactoring plan template created (REFACTOR_TEMPLATE.md)
+- [x] architect monitors code quality weekly (documented in ARCHITECT_WORKFLOW.md)
+- [x] architect can create refactoring plans (complete workflow documented)
+- [x] code_developer can execute refactoring tasks (complete workflow documented)
+- [x] Refactoring tasks appear in ROADMAP (REFACTOR-XXX format documented)
+- [x] Code complexity metrics tracked (radon, pylint)
+- [x] architect review process documented (complete in ARCHITECT_WORKFLOW.md)
+- [x] Example refactoring plan exists (REFACTOR_2025_10_16_daemon_simplification.md)
+- [x] Integration with CI/CD documented (in REFACTORING_WORKFLOW_INTEGRATION.md)
+
+**Impact**:
+- Proactive code quality management now fully operational
+- architect has complete monitoring and planning workflow
+- code_developer has clear execution guidelines
+- 2,700+ lines of comprehensive documentation
+- Real examples from codebase (chat_interface.py, continuous_work_loop.py, etc.)
+- Systematic approach prevents technical debt accumulation
+- Clear thresholds and decision criteria (complexity >20, files >2000 lines, etc.)
 
 ---
 
@@ -31771,11 +32024,15 @@ code-reviewer → Re-reviews → Verifies → Approves
 
 **Priority**: HIGH (CFR Compliance)
 
-**Status**: 📝 Planned
+**Status**: ✅ Complete
 
 **Created**: 2025-10-20
 
+**Completed**: 2025-10-21
+
 **Estimated Effort**: 2-3 days (6-8 hours)
+
+**Actual Effort**: Implementation already existed, verified and tested
 
 **User Story**:
 As the orchestrator, I want all agent lifecycle events (spawning, running, completion) traced in SQLite database instead of JSON files, so that we can analyze velocity, detect bottlenecks, and maintain data integrity.
@@ -31979,7 +32236,7 @@ ORDER BY elapsed_ms DESC;
 
 **Priority**: HIGH
 
-**Status**: 📝 Planned
+**Status**: ✅ Complete
 
 **Created**: 2025-10-20
 

@@ -507,15 +507,24 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                     logger.info(f"   Status: {next_priority.get('status', 'Unknown')}")
                     logger.info(f"   Has spec path: {bool(next_priority.get('spec_path'))}")
                 else:
-                    # Sequential mode: get next planned priority
-                    next_priority = self.parser.get_next_planned_priority()
+                    # Sequential mode: get next code_developer-ready priority
+                    # This skips priorities without specs, in-progress, or blocked
+                    next_priority = self.parser.get_next_code_developer_priority()
 
                 if not next_priority:
-                    logger.info("✅ No more planned priorities - all done!")
-                    self._notify_completion()
+                    logger.info("✅ No code_developer-ready priorities found")
+                    logger.info("   Reasons: All planned priorities are either:")
+                    logger.info("   - Missing technical specs (architect needs to create them)")
+                    logger.info("   - Already in progress")
+                    logger.info("   - Blocked")
+                    logger.info("   - Or all are complete!")
                     # PRIORITY 4: Return to idle when done
-                    self.status.update_status(DeveloperState.IDLE, current_step="All priorities complete")
-                    break
+                    self.status.update_status(
+                        DeveloperState.IDLE, current_step="Waiting for architect to create specs or no more work"
+                    )
+                    # Sleep and retry - maybe architect will create specs
+                    time.sleep(self.sleep_interval)
+                    continue
 
                 logger.info(f"📋 Next priority: {next_priority['name']} - {next_priority['title']}")
 

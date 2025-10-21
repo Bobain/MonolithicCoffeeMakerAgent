@@ -31,7 +31,7 @@ class TestDailyReportGenerator:
         gen.repo_root = temp_dir
         gen.status_file = temp_dir / "developer_status.json"
         gen.notifications_db = temp_dir / "notifications.db"
-        gen.interaction_file = temp_dir / "last_interaction.json"
+        gen._init_system_state_table()  # Initialize database table
         return gen
 
     def test_should_show_report_first_time(self, generator):
@@ -40,43 +40,61 @@ class TestDailyReportGenerator:
 
     def test_should_show_report_new_day(self, generator):
         """Test that report is shown on new day."""
-        # Set last report to yesterday
+        # Set last report to yesterday in database
+        import sqlite3
+
         yesterday = (datetime.now() - timedelta(days=1)).date().isoformat()
-        data = {
-            "last_check_in": datetime.now().isoformat(),
-            "last_report_shown": yesterday,
-        }
-        generator.interaction_file.parent.mkdir(parents=True, exist_ok=True)
-        generator.interaction_file.write_text(json.dumps(data))
+        conn = sqlite3.connect(generator.notifications_db)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT OR REPLACE INTO system_state (key, value, updated_at) VALUES (?, ?, ?)",
+            ("last_report_shown", yesterday, datetime.now().isoformat()),
+        )
+        conn.commit()
+        conn.close()
 
         assert generator.should_show_report() is True
 
     def test_should_not_show_report_same_day(self, generator):
         """Test that report is not shown same day."""
+        import sqlite3
+
         today = datetime.now().date().isoformat()
-        data = {
-            "last_check_in": datetime.now().isoformat(),
-            "last_report_shown": today,
-        }
-        generator.interaction_file.parent.mkdir(parents=True, exist_ok=True)
-        generator.interaction_file.write_text(json.dumps(data))
+        conn = sqlite3.connect(generator.notifications_db)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT OR REPLACE INTO system_state (key, value, updated_at) VALUES (?, ?, ?)",
+            ("last_report_shown", today, datetime.now().isoformat()),
+        )
+        conn.commit()
+        conn.close()
 
         assert generator.should_show_report() is False
 
     def test_update_interaction_timestamp(self, generator):
-        """Test updating interaction timestamp."""
-        generator.interaction_file.parent.mkdir(parents=True, exist_ok=True)
+        """Test updating interaction timestamp in database."""
+        import sqlite3
+
         generator.update_interaction_timestamp()
 
-        assert generator.interaction_file.exists()
-        data = json.loads(generator.interaction_file.read_text())
+        # Verify data in database
+        conn = sqlite3.connect(generator.notifications_db)
+        cursor = conn.cursor()
 
-        assert "last_check_in" in data
-        assert "last_report_shown" in data
+        cursor.execute("SELECT value FROM system_state WHERE key = ?", ("last_report_shown",))
+        result = cursor.fetchone()
+        assert result is not None
+        last_report_shown = result[0]
+
+        cursor.execute("SELECT value FROM system_state WHERE key = ?", ("last_check_in",))
+        result = cursor.fetchone()
+        assert result is not None
+
+        conn.close()
 
         # Verify date is today
         today = datetime.now().date().isoformat()
-        assert data["last_report_shown"] == today
+        assert last_report_shown == today
 
     def test_collect_git_commits_empty(self, generator):
         """Test collecting commits with no repository."""
