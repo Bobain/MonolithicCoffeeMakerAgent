@@ -535,6 +535,101 @@ If REVIEW: architect asks user for decision
 
 ---
 
+### PRIORITY 24: Technical Prerequisite Identification and Tracking 📝 Planned
+
+**Status**: 📝 Planned - HIGH PRIORITY (Prevents Duplicate Technical Work)
+
+**Created**: 2025-10-21
+
+**Estimated Effort**: 7-11 hours
+
+**Priority Rationale**: This is HIGH PRIORITY because it prevents 40-60% waste in implementation time by identifying common technical foundations BEFORE multiple user stories duplicate the same work.
+
+**User Story**:
+As an architect, I need a systematic way to identify common technical prerequisites needed by multiple user stories, group dependent stories, and recommend prioritizing prerequisites to project_manager, so that we avoid duplicate technical work and ensure consistent implementations.
+
+**Problem**:
+Currently, architect has no formal responsibility or tooling to identify common technical foundations. This leads to:
+- Duplicate technical work across multiple user story implementations (e.g., 3 stories each implement authentication separately)
+- Mid-implementation blockers when prerequisites are discovered late
+- Inefficient prioritization (implementing dependent USs before foundations)
+- Technical debt from inconsistent implementations of same foundation
+
+**Example Impact Without This Feature**:
+```
+US-050: User authentication (implements JWT auth, 40 hours)
+US-060: Admin authentication (re-implements auth, 30 hours)
+US-070: API authentication (re-implements auth again, 25 hours)
+Total: 95 hours, 3 inconsistent auth implementations, tech debt
+```
+
+**Example Impact WITH This Feature**:
+```
+architect identifies TECH-001: Unified Auth System
+project_manager prioritizes TECH-001 first (30 hours)
+US-050, US-060, US-070 use existing auth (25 hours combined)
+Total: 55 hours (42% savings!), 1 consistent implementation, zero debt
+```
+
+**Key Features**:
+1. Database schema for technical prerequisites (TECH-001, TECH-002, etc.)
+2. Link user stories to prerequisites with dependency tracking
+3. Architect workflow for identifying common patterns
+4. Automatic notifications to project_manager with prioritization recommendations
+5. Grouped dependency reports showing impact
+6. Integration with ROADMAP management
+
+**Technical Specification**:
+See `docs/architecture/specs/SPEC-NEXT-technical-prerequisite-tracking.md` for complete implementation details.
+
+**Implementation Phases**:
+- Phase 1: Database schema (1-2 hours)
+- Phase 2: Database methods and queries (2-3 hours)
+- Phase 3: Architect skill for prerequisite identification (2-3 hours)
+- Phase 4: project_manager integration and UI (1-2 hours)
+- Phase 5: Documentation and examples (1 hour)
+
+**Common Prerequisite Categories**:
+- Authentication/Authorization (JWT, RBAC, OAuth)
+- Database Infrastructure (migrations, ORMs, pooling)
+- API Foundations (REST, validation, rate limiting)
+- UI Component Libraries (design systems, themes)
+- Infrastructure (logging, monitoring, CI/CD)
+- Data Processing (ETL, validation, transformation)
+- Third-party Integrations (APIs, webhooks)
+- Testing Frameworks (fixtures, mocks, test data)
+
+**Success Metrics**:
+- Number of technical prerequisites identified
+- User stories grouped per prerequisite (higher = more savings)
+- Implementation time savings (estimated vs. actual)
+- Technical debt reduction (fewer inconsistent patterns)
+- code_developer feedback on prerequisite quality
+
+**Dependencies**:
+- RoadmapDatabase ✅ Available
+- NotificationDB ✅ Available
+- architect agent ✅ Available
+- project_manager CLI ✅ Available
+
+**Acceptance Criteria**:
+- [ ] Database schema created with tables for prerequisites and dependencies
+- [ ] Architect can create TECH-XXX prerequisites with category, priority, description
+- [ ] Architect can link multiple user stories to a prerequisite
+- [ ] System generates notifications to project_manager with recommendations
+- [ ] project_manager can review and approve prerequisite recommendations
+- [ ] Query system shows grouped dependencies and impact analysis
+- [ ] Documentation updated in AGENT_OWNERSHIP.md
+- [ ] Examples and tutorial created
+- [ ] Integration tests verify end-to-end workflow
+
+**Related**:
+- CFR-XXX (to be assigned): Technical Prerequisite Identification
+- AGENT_OWNERSHIP.md (architect responsibilities)
+- RoadmapDatabase (dependency tracking storage)
+
+---
+
 ### PRIORITY 25: Refactor Skill Loading to Use Proper Python Imports 📝 Planned
 
 **Status**: 📝 Planned - MEDIUM PRIORITY (Technical Debt - Code Quality)
