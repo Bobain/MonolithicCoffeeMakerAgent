@@ -110,11 +110,35 @@ class RoadmapDatabase:
             """
             )
 
+            # Create roadmap update notifications table
+            # This persists update requests from agents until project_manager actions them
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS roadmap_update_notifications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    item_id TEXT NOT NULL,
+                    requested_by TEXT NOT NULL,
+                    notification_type TEXT NOT NULL,
+                    requested_status TEXT,
+                    message TEXT,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    created_at TEXT NOT NULL,
+                    processed_at TEXT,
+                    processed_by TEXT,
+                    notes TEXT
+                )
+            """
+            )
+
             # Create indexes
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_type ON roadmap_items(item_type)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_status ON roadmap_items(status)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_order ON roadmap_items(section_order)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_item ON roadmap_audit(item_id)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_notifications_status ON roadmap_update_notifications(status)"
+            )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_notifications_item ON roadmap_update_notifications(item_id)")
 
             conn.commit()
             conn.close()
@@ -418,3 +442,317 @@ class RoadmapDatabase:
         except sqlite3.Error as e:
             logger.error(f"Error getting next planned item: {e}")
             return None
+
+    def create_update_notification(
+        self,
+        item_id: str,
+        requested_by: str,
+        notification_type: str,
+        requested_status: Optional[str] = None,
+        message: str = "",
+    ) -> int:
+        """Create a persistent notification requesting ROADMAP update.
+
+        Called by: code_developer, architect, or any agent (NOT project_manager)
+
+        Args:
+            item_id: Which roadmap item (e.g., "US-062")
+            requested_by: Agent requesting update (e.g., "code_developer")
+            notification_type: "status_update", "new_item", "modify_content"
+            requested_status: New status if type is status_update
+            message: Agent's explanation/context
+
+        Returns:
+            notification_id: ID of created notification
+
+        Example:
+            >>> db.create_update_notification(
+            ...     item_id="US-062",
+            ...     requested_by="code_developer",
+            ...     notification_type="status_update",
+            ...     requested_status="✅ Complete",
+            ...     message="Implemented database migration, all tests passing"
+            ... )
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                INSERT INTO roadmap_update_notifications
+                (item_id, requested_by, notification_type, requested_status, message, status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    item_id,
+                    requested_by,
+                    notification_type,
+                    requested_status,
+                    message,
+                    "pending",
+                    datetime.now().isoformat(),
+                ),
+            )
+
+            notification_id = cursor.lastrowid
+            conn.commit()
+            conn.close()
+
+            logger.info(
+                f"📬 Notification created: {requested_by} requests {notification_type} for {item_id} (ID: {notification_id})"
+            )
+            return notification_id
+
+        except sqlite3.Error as e:
+            logger.error(f"Error creating notification: {e}")
+            raise
+
+    def get_pending_notifications(self, item_id: Optional[str] = None) -> List[Dict]:
+        """Get all pending notifications.
+
+        Called by: project_manager, orchestrator (to review and action)
+
+        Args:
+            item_id: Optional filter by specific item
+
+        Returns:
+            List of pending notification dictionaries
+
+        Example:
+            >>> notifications = db.get_pending_notifications()
+            >>> for notif in notifications:
+            ...     print(f"{notif['requested_by']} wants to update {notif['item_id']}")
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            if item_id:
+                cursor.execute(
+                    """
+                    SELECT * FROM roadmap_update_notifications
+                    WHERE status = 'pending' AND item_id = ?
+                    ORDER BY created_at ASC
+                """,
+                    (item_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT * FROM roadmap_update_notifications
+                    WHERE status = 'pending'
+                    ORDER BY created_at ASC
+                """
+                )
+
+            rows = cursor.fetchall()
+            conn.close()
+
+            return [dict(row) for row in rows]
+
+        except sqlite3.Error as e:
+            logger.error(f"Error getting pending notifications: {e}")
+            return []
+
+    def approve_notification(self, notification_id: int, processed_by: str, notes: str = "") -> bool:
+        """Approve notification and apply the requested change.
+
+        Called by: ONLY project_manager or orchestrator
+
+        Args:
+            notification_id: Notification to approve
+            processed_by: "project_manager" or "orchestrator"
+            notes: Optional note about approval
+
+        Returns:
+            True if successful
+
+        Side effects:
+            - Updates the roadmap item as requested
+            - Marks notification as approved
+            - Logs to audit trail
+
+        Example:
+            >>> db.approve_notification(
+            ...     notification_id=5,
+            ...     processed_by="project_manager",
+            ...     notes="Verified all tests passing"
+            ... )
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # Get notification details
+            cursor.execute(
+                """
+                SELECT * FROM roadmap_update_notifications
+                WHERE id = ? AND status = 'pending'
+            """,
+                (notification_id,),
+            )
+
+            notification = cursor.fetchone()
+            if not notification:
+                logger.error(f"Notification {notification_id} not found or already processed")
+                conn.close()
+                return False
+
+            notification = dict(notification)
+
+            # Apply the requested change based on notification type
+            if notification["notification_type"] == "status_update":
+                # Update the roadmap item status
+                success = self._update_status_internal(
+                    cursor, notification["item_id"], notification["requested_status"], processed_by
+                )
+
+                if not success:
+                    conn.close()
+                    return False
+
+            elif notification["notification_type"] in ["new_item", "modify_content"]:
+                # For now, just log - these require more complex handling
+                logger.info(f"Notification type {notification['notification_type']} requires manual processing")
+
+            # Mark notification as approved
+            cursor.execute(
+                """
+                UPDATE roadmap_update_notifications
+                SET status = 'approved', processed_at = ?, processed_by = ?, notes = ?
+                WHERE id = ?
+            """,
+                (datetime.now().isoformat(), processed_by, notes, notification_id),
+            )
+
+            conn.commit()
+            conn.close()
+
+            logger.info(
+                f"✅ Notification {notification_id} approved by {processed_by}: "
+                f"{notification['requested_by']} → {notification['item_id']}"
+            )
+            return True
+
+        except sqlite3.Error as e:
+            logger.error(f"Error approving notification: {e}")
+            return False
+
+    def reject_notification(self, notification_id: int, processed_by: str, reason: str) -> bool:
+        """Reject notification with reason.
+
+        Called by: ONLY project_manager or orchestrator
+
+        Args:
+            notification_id: Notification to reject
+            processed_by: "project_manager" or "orchestrator"
+            reason: Why rejected (required)
+
+        Returns:
+            True if successful
+
+        Example:
+            >>> db.reject_notification(
+            ...     notification_id=5,
+            ...     processed_by="project_manager",
+            ...     reason="Tests still failing, please verify before marking complete"
+            ... )
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Verify notification exists and is pending
+            cursor.execute(
+                """
+                SELECT item_id, requested_by FROM roadmap_update_notifications
+                WHERE id = ? AND status = 'pending'
+            """,
+                (notification_id,),
+            )
+
+            result = cursor.fetchone()
+            if not result:
+                logger.error(f"Notification {notification_id} not found or already processed")
+                conn.close()
+                return False
+
+            item_id, requested_by = result
+
+            # Mark notification as rejected
+            cursor.execute(
+                """
+                UPDATE roadmap_update_notifications
+                SET status = 'rejected', processed_at = ?, processed_by = ?, notes = ?
+                WHERE id = ?
+            """,
+                (datetime.now().isoformat(), processed_by, reason, notification_id),
+            )
+
+            conn.commit()
+            conn.close()
+
+            logger.info(
+                f"❌ Notification {notification_id} rejected by {processed_by}: "
+                f"{requested_by} → {item_id}. Reason: {reason}"
+            )
+            return True
+
+        except sqlite3.Error as e:
+            logger.error(f"Error rejecting notification: {e}")
+            return False
+
+    def _update_status_internal(self, cursor, item_id: str, new_status: str, updated_by: str) -> bool:
+        """Internal method to update status using existing cursor.
+
+        Used by approve_notification to update status within same transaction.
+
+        Args:
+            cursor: Existing database cursor
+            item_id: Item ID to update
+            new_status: New status value
+            updated_by: Who is making the update
+
+        Returns:
+            True if successful
+        """
+        try:
+            # Get current status for audit trail
+            cursor.execute("SELECT status FROM roadmap_items WHERE id = ?", (item_id,))
+            result = cursor.fetchone()
+
+            if not result:
+                logger.error(f"Item not found: {item_id}")
+                return False
+
+            old_status = result[0]
+
+            # Update status
+            cursor.execute(
+                """
+                UPDATE roadmap_items
+                SET status = ?, updated_at = ?, updated_by = ?
+                WHERE id = ?
+            """,
+                (new_status, datetime.now().isoformat(), updated_by, item_id),
+            )
+
+            # Log audit trail
+            cursor.execute(
+                """
+                INSERT INTO roadmap_audit
+                (item_id, action, field_changed, old_value, new_value, changed_by, changed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+                (item_id, "update_status", "status", old_status, new_status, updated_by, datetime.now().isoformat()),
+            )
+
+            logger.info(f"✅ Updated {item_id} status: {old_status} → {new_status} (by {updated_by})")
+            return True
+
+        except sqlite3.Error as e:
+            logger.error(f"Error updating status: {e}")
+            return False
