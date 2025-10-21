@@ -44,6 +44,12 @@ Git operations in `daemon_git_ops.py` have **basic tests** but are missing **cri
 
 ## Proposed Solution
 
+### Related Guidelines
+
+For implementation guidance on testing strategies and git workflows, see:
+- [GUIDELINE-016: Testing Strategy](../../guidelines/GUIDELINE-016-testing-strategy.md) - Unit, integration, and E2E testing approaches
+- [GUIDELINE-021: Git Workflow](../../guidelines/GUIDELINE-021-git-workflow.md) - Git commit and branch best practices
+
 ### Simplified Approach (per ADR-003)
 
 Add **targeted test scenarios** for git edge cases:

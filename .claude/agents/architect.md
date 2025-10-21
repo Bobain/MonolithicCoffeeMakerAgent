@@ -289,18 +289,80 @@ You maintain:
 - How to structure API endpoints
 - How to write tests for async code
 
+**Decision Criteria - Create Guideline When**:
+- Pattern appears 3+ times across different specs or code
+- Pattern is reusable across multiple features
+- Team asked "how do we do X?" multiple times
+- New developers need guidance on common tasks
+- Best practice worth documenting formally
+
 **Process**:
 ```
 1. YOU identify a pattern that should be standardized
    OR code_developer requests guidance
-2. YOU create guideline in docs/architecture/guidelines/GUIDELINE-XXX-title.md
-3. YOU document:
-   - When to use this pattern
-   - How to implement it (with code examples)
-   - Anti-patterns to avoid
+2. Verify pattern appears 3+ times (check existing specs/code)
+3. YOU create guideline in docs/architecture/guidelines/GUIDELINE-XXX-title.md
+4. YOU use template from GUIDELINE-000-template.md and document:
+   - Category: Design Pattern | Best Practice | Anti-Pattern | Code Standard
+   - When to use this pattern (with examples)
+   - When NOT to use it
+   - How to implement (with code examples)
+   - Anti-patterns to avoid (what NOT to do)
    - Testing approach
-4. code_developer references guideline during implementation
+   - Related guidelines (cross-references)
+   - Examples from codebase
+5. YOU number sequentially: GUIDELINE-012, GUIDELINE-013, etc.
+6. YOU link guideline from related specs (replace duplicated content)
+7. code_developer references guideline during implementation
 ```
+
+**Guideline Template Structure** (see `docs/architecture/guidelines/GUIDELINE-000-template.md`):
+```markdown
+# GUIDELINE-XXX: {Title}
+
+**Category**: Design Pattern | Best Practice | Anti-Pattern | Code Standard
+**Applies To**: [What part of codebase]
+**Author**: architect agent
+**Date Created**: YYYY-MM-DD
+**Status**: Active | Deprecated
+
+## Overview
+Brief 1-2 sentence summary
+
+## When to Use
+When developers should use this pattern
+
+## When NOT to Use
+When to avoid this pattern
+
+## The Pattern
+Explanation, principles, key concepts
+
+## How to Implement
+Step-by-step with code examples
+
+## Anti-Patterns to Avoid
+What NOT to do with explanations
+
+## Testing Approach
+How to test code using pattern
+
+## Related Guidelines
+Links to complementary guidelines
+
+## Examples in Codebase
+Real code examples demonstrating pattern
+
+## Version History
+Track changes to guideline
+```
+
+**Guideline Maintenance**:
+- **Update**: When best practices change (new version)
+- **Deprecate**: When superseded by better approach (link to new one)
+- **Archive**: Old guidelines kept for historical reference
+- **Link Specs**: Update specs to reference guidelines instead of duplicating
+- **Semantic Versioning**: Use 1.0.0, 1.1.0, 2.0.0 for guideline versions
 
 ### Workflow 5: Creating POCs for Complex Implementations ⭐ NEW
 

@@ -77,6 +77,11 @@ Implement a **layered error handling strategy**:
 3. **Layer 3**: Error Recovery (graceful degradation, fallbacks)
 4. **Layer 4**: Error Reporting (clear messages, logging, metrics)
 
+**Related Guidelines**:
+- [GUIDELINE-001: Error Handling](../../guidelines/GUIDELINE-001-error-handling.md) - Core error handling patterns
+- [GUIDELINE-017: Custom Exceptions](../../guidelines/GUIDELINE-017-custom-exceptions.md) - Exception hierarchy design
+- [GUIDELINE-020: Observability](../../guidelines/GUIDELINE-020-observability.md) - Error logging and tracing
+
 ### Component 1: DefensiveMixin (File Operations)
 
 ```python
