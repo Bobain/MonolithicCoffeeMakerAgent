@@ -139,6 +139,10 @@ class ImplementationMixin:
             logger.warning(f"⏭️  Skipping {priority_name} - already attempted {attempt_count} times with no changes")
             logger.warning(f"This priority requires manual intervention")
 
+            # Check if there's a technical spec and if it's too large
+
+            spec_analysis = self._analyze_spec_complexity(priority)
+
             # Update ROADMAP status to blocked so daemon skips it in future
             try:
                 db = RoadmapDatabase()
@@ -153,11 +157,16 @@ class ImplementationMixin:
             except Exception as e:
                 logger.error(f"Failed to update ROADMAP status: {e}")
 
-            # Create final notification
-            self.notifications.create_notification(
-                type=NOTIF_TYPE_INFO,
-                title=f"{priority_name}: Max Retries Reached",
-                message=f"""The daemon has attempted to implement this priority {attempt_count} times but no files were changed.
+            # Create notification with spec splitting guidance if needed
+            if spec_analysis["has_spec"] and spec_analysis["is_large"]:
+                # Spec exists but is too large - ask architect to split it
+                self._create_spec_splitting_notification(priority, spec_analysis, attempt_count)
+            else:
+                # Generic notification for manual review
+                self.notifications.create_notification(
+                    type=NOTIF_TYPE_INFO,
+                    title=f"{priority_name}: Max Retries Reached",
+                    message=f"""The daemon has attempted to implement this priority {attempt_count} times but no files were changed.
 
 This priority requires manual implementation:
 
@@ -172,16 +181,16 @@ Action Required:
 
 The daemon has updated ROADMAP.md and will skip this priority in future iterations.
 """,
-                priority=NOTIF_PRIORITY_HIGH,
-                context={
-                    "priority_name": priority_name,
-                    "priority_number": priority.get("number"),
-                    "reason": "max_retries_reached",
-                    "attempts": attempt_count,
-                },
-                sound=False,
-                agent_id="code_developer",
-            )
+                    priority=NOTIF_PRIORITY_HIGH,
+                    context={
+                        "priority_name": priority_name,
+                        "priority_number": priority.get("number"),
+                        "reason": "max_retries_reached",
+                        "attempts": attempt_count,
+                    },
+                    sound=False,
+                    agent_id="code_developer",
+                )
 
             return False  # Return False so the daemon moves on
 
@@ -501,6 +510,161 @@ Status: Requires human decision
                 "SPEC_CONTENT": spec_content,  # NEW: Inject full spec content
             },
         )
+
+    def _analyze_spec_complexity(self, priority: dict) -> dict:
+        """Analyze technical spec to determine if it's too complex for one implementation.
+
+        Args:
+            priority: Priority dictionary
+
+        Returns:
+            Dict with analysis results:
+                - has_spec: bool (spec file exists)
+                - spec_path: str (path to spec file if exists)
+                - spec_lines: int (number of lines)
+                - spec_chars: int (number of characters)
+                - is_large: bool (exceeds thresholds for single implementation)
+                - estimated_days: int (from ROADMAP content)
+        """
+        from pathlib import Path
+
+        analysis = {
+            "has_spec": False,
+            "spec_path": None,
+            "spec_lines": 0,
+            "spec_chars": 0,
+            "is_large": False,
+            "estimated_days": 0,
+        }
+
+        # Extract estimated effort from priority content
+        priority_content = priority.get("content", "")
+        if "day" in priority_content.lower():
+            # Try to extract "X days" or "X-Y days"
+            import re
+
+            match = re.search(r"(\d+)(?:-(\d+))?\s*days?", priority_content.lower())
+            if match:
+                # Use the upper bound if range, otherwise the single value
+                analysis["estimated_days"] = int(match.group(2) or match.group(1))
+
+        # Check for spec file
+        priority_number = priority.get("number")
+        if priority_number:
+            spec_dir = Path("docs/architecture/specs")
+            spec_pattern = f"SPEC-{priority_number}-*.md"
+
+            if spec_dir.exists():
+                matching_specs = list(spec_dir.glob(spec_pattern))
+                if matching_specs:
+                    spec_file = matching_specs[0]
+                    analysis["has_spec"] = True
+                    analysis["spec_path"] = str(spec_file)
+
+                    try:
+                        spec_content = spec_file.read_text()
+                        analysis["spec_chars"] = len(spec_content)
+                        analysis["spec_lines"] = spec_content.count("\n") + 1
+
+                        # Determine if spec is too large for single implementation
+                        # Thresholds:
+                        # - > 300 lines OR
+                        # - > 15,000 characters OR
+                        # - Estimated effort > 2 days
+                        analysis["is_large"] = (
+                            analysis["spec_lines"] > 300
+                            or analysis["spec_chars"] > 15000
+                            or analysis["estimated_days"] > 2
+                        )
+
+                    except Exception as e:
+                        logger.warning(f"Failed to analyze spec {spec_file}: {e}")
+
+        return analysis
+
+    def _create_spec_splitting_notification(self, priority: dict, spec_analysis: dict, attempt_count: int) -> None:
+        """Create notification asking architect to split large spec into phases.
+
+        Args:
+            priority: Priority dictionary
+            spec_analysis: Analysis from _analyze_spec_complexity()
+            attempt_count: Number of failed implementation attempts
+        """
+        priority_name = priority["name"]
+        priority["title"]
+
+        notification_message = f"""code_developer attempted to implement {priority_name} {attempt_count} times but made no file changes.
+
+**Root Cause Analysis:**
+The technical specification is too large/complex for a single autonomous implementation.
+
+**Spec Details:**
+- File: {spec_analysis['spec_path']}
+- Size: {spec_analysis['spec_lines']} lines, {spec_analysis['spec_chars']:,} characters
+- Estimated effort: {spec_analysis['estimated_days']} days
+
+**Request for Architect:**
+
+Please split this specification into **smaller, well-sized implementation phases** that fit within context window limits and can be implemented step-by-step.
+
+**Recommended Approach:**
+
+1. **Break into Phases** (Option A):
+   - Create SPEC-{priority_name}-phase-1.md (Foundation, 1-2 days)
+   - Create SPEC-{priority_name}-phase-2.md (Core features, 1-2 days)
+   - Create SPEC-{priority_name}-phase-3.md (Polish, testing, 1 day)
+   - Each phase should be ≤ 300 lines or ≤ 2 days effort
+
+2. **Break into Sub-Stories** (Option B):
+   - Create {priority_name}-A: Database schema and models
+   - Create {priority_name}-B: API endpoints
+   - Create {priority_name}-C: UI components
+   - Create {priority_name}-D: Integration and testing
+   - Add each as separate user story in ROADMAP
+
+3. **Simplify Scope** (Option C):
+   - Review spec for essential vs. nice-to-have features
+   - Move advanced features to future user stories
+   - Reduce initial implementation to MVP
+
+**Guidelines for Well-Sized Specs:**
+✅ ≤ 300 lines of specification
+✅ ≤ 15,000 characters
+✅ ≤ 2 days estimated implementation time
+✅ Single, focused deliverable
+✅ Clear, concrete acceptance criteria
+
+**Current Status:**
+- {priority_name} marked as "⏸️ Blocked - Too complex"
+- Daemon will skip until architect creates phased specs
+- Once phases created, daemon will implement them sequentially
+
+**Next Steps:**
+1. Architect: Review and split spec using one of the approaches above
+2. Architect: Update ROADMAP with phased approach
+3. Architect: Unblock {priority_name} or create phase-1 user story
+4. Daemon: Will pick up and implement phase-1 automatically
+"""
+
+        self.notifications.create_notification(
+            type=NOTIF_TYPE_INFO,
+            title=f"🏗️ Architect: Please Split Spec for {priority_name}",
+            message=notification_message,
+            priority=NOTIF_PRIORITY_HIGH,
+            context={
+                "priority_name": priority_name,
+                "priority_number": priority.get("number"),
+                "reason": "spec_too_large",
+                "spec_lines": spec_analysis["spec_lines"],
+                "spec_chars": spec_analysis["spec_chars"],
+                "estimated_days": spec_analysis["estimated_days"],
+                "attempts": attempt_count,
+            },
+            sound=False,
+            agent_id="code_developer",
+        )
+
+        logger.info(f"📧 Created spec splitting request for architect: {priority_name}")
 
     def _build_commit_message(self, priority: dict) -> str:
         """Build commit message for implementation.
