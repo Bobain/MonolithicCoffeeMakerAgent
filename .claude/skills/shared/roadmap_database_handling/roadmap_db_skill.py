@@ -198,6 +198,47 @@ class RoadmapDBSkill:
 
         return processed
 
+    # Implementation tracking methods (for code_developer)
+    def claim_work(self, item_id: str) -> bool:
+        """Claim a roadmap item for implementation.
+
+        Used by code_developer to mark an item as being actively worked on.
+        Tracks start time for stale work detection.
+
+        Args:
+            item_id: Item to claim (e.g., "PRIORITY-27")
+
+        Returns:
+            True if successfully claimed, False if already claimed
+        """
+        return self.db.claim_implementation(item_id, self.agent_name)
+
+    def release_work(self, item_id: str) -> bool:
+        """Release claim on a roadmap item.
+
+        Called when work completes or is abandoned.
+
+        Args:
+            item_id: Item to release
+
+        Returns:
+            True if successfully released
+        """
+        return self.db.release_implementation(item_id, self.agent_name)
+
+    def reset_stale_work(self, stale_hours: int = 24) -> int:
+        """Find and reset stale implementations (>24h with no progress).
+
+        This should be called periodically by orchestrator or maintenance task.
+
+        Args:
+            stale_hours: Number of hours before considering work stale (default: 24)
+
+        Returns:
+            Number of stale implementations reset
+        """
+        return self.db.reset_stale_implementations(stale_hours)
+
 
 def get_roadmap_skill(agent_name: str) -> RoadmapDBSkill:
     """Factory function to get roadmap skill for an agent.

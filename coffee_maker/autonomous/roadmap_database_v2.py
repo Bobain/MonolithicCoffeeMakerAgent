@@ -772,3 +772,182 @@ class RoadmapDatabaseV2:
         except sqlite3.Error as e:
             logger.error(f"Error getting stats: {e}")
             return {}
+
+    def claim_implementation(self, item_id: str, developer: str) -> bool:
+        """Claim a roadmap item for implementation (tracks start time for stale detection).
+
+        This marks an item as being actively worked on by a code_developer.
+        Used for stale work detection (>24 hours with no progress).
+
+        Args:
+            item_id: Item to claim (e.g., "PRIORITY-27")
+            developer: code_developer agent name
+
+        Returns:
+            True if successfully claimed, False if already claimed or not found
+
+        Note:
+            This is READ-WRITE but doesn't require project_manager permission
+            since it's tracking developer work sessions, not roadmap changes.
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Check if item exists and is not already claimed
+            cursor.execute(
+                "SELECT implementation_started_by, implementation_started_at FROM roadmap_items WHERE id = ?",
+                (item_id,),
+            )
+            result = cursor.fetchone()
+
+            if not result:
+                logger.error(f"Item not found: {item_id}")
+                return False
+
+            current_owner, started_at = result
+
+            if current_owner and started_at:
+                logger.warning(f"Item {item_id} already claimed by {current_owner} at {started_at}")
+                return False
+
+            # Claim the item
+            now = datetime.now().isoformat()
+            cursor.execute(
+                """
+                UPDATE roadmap_items
+                SET implementation_started_at = ?, implementation_started_by = ?
+                WHERE id = ?
+            """,
+                (now, developer, item_id),
+            )
+
+            conn.commit()
+            conn.close()
+
+            logger.info(f"✅ code_developer {developer} claimed {item_id}")
+            return True
+
+        except sqlite3.Error as e:
+            logger.error(f"Error claiming implementation: {e}")
+            return False
+
+    def release_implementation(self, item_id: str, developer: str) -> bool:
+        """Release claim on a roadmap item (called on completion or abort).
+
+        Clears implementation tracking fields so item can be claimed by another developer.
+
+        Args:
+            item_id: Item to release (e.g., "PRIORITY-27")
+            developer: code_developer agent name (must match current owner)
+
+        Returns:
+            True if successfully released
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Verify current owner
+            cursor.execute(
+                "SELECT implementation_started_by FROM roadmap_items WHERE id = ?",
+                (item_id,),
+            )
+            result = cursor.fetchone()
+
+            if not result:
+                logger.error(f"Item not found: {item_id}")
+                return False
+
+            current_owner = result[0]
+
+            if current_owner != developer:
+                logger.warning(f"Cannot release {item_id} - owned by {current_owner}, not {developer}")
+                return False
+
+            # Release the item
+            cursor.execute(
+                """
+                UPDATE roadmap_items
+                SET implementation_started_at = NULL, implementation_started_by = NULL
+                WHERE id = ?
+            """,
+                (item_id,),
+            )
+
+            conn.commit()
+            conn.close()
+
+            logger.info(f"✅ Released {item_id} (was owned by {developer})")
+            return True
+
+        except sqlite3.Error as e:
+            logger.error(f"Error releasing implementation: {e}")
+            return False
+
+    def reset_stale_implementations(self, stale_hours: int = 24) -> int:
+        """Find and reset stale implementations (>24h with no progress).
+
+        This should be called periodically (e.g., by orchestrator or maintenance task)
+        to recover from interrupted code_developer sessions.
+
+        Args:
+            stale_hours: Number of hours before considering implementation stale (default: 24)
+
+        Returns:
+            Number of stale implementations reset
+        """
+        try:
+            from datetime import timedelta
+
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Calculate stale threshold
+            threshold = (datetime.now() - timedelta(hours=stale_hours)).isoformat()
+
+            # Find stale implementations
+            cursor.execute(
+                """
+                SELECT id, implementation_started_by, implementation_started_at
+                FROM roadmap_items
+                WHERE implementation_started_at IS NOT NULL
+                AND implementation_started_at < ?
+                AND (status LIKE '%🔄%' OR status LIKE '%Progress%')
+            """,
+                (threshold,),
+            )
+
+            stale_items = cursor.fetchall()
+
+            if not stale_items:
+                logger.info("No stale implementations found")
+                return 0
+
+            # Reset each stale item
+            count = 0
+            for item_id, owner, started_at in stale_items:
+                cursor.execute(
+                    """
+                    UPDATE roadmap_items
+                    SET implementation_started_at = NULL,
+                        implementation_started_by = NULL
+                    WHERE id = ?
+                """,
+                    (item_id,),
+                )
+
+                logger.warning(
+                    f"⚠️ Reset stale implementation: {item_id} " f"(claimed by {owner} at {started_at}, no progress)"
+                )
+                count += 1
+
+            conn.commit()
+            conn.close()
+
+            logger.info(f"✅ Reset {count} stale implementations")
+            return count
+
+        except sqlite3.Error as e:
+            logger.error(f"Error resetting stale implementations: {e}")
+            return 0
