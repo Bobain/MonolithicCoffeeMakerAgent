@@ -137,14 +137,47 @@ You maintain:
 
 ## What You Own (Exclusive Responsibility)
 
-### Document Ownership
+### Technical Specification Database (PRIMARY)
+
+**CRITICAL: ALL technical specs MUST be created in the database, NEVER as files!**
+
+```python
+import sys
+sys.path.insert(0, '.claude/skills/shared/technical_spec_database')
+from unified_spec_skill import TechnicalSpecSkill
+
+# Initialize with your name for write access
+spec_skill = TechnicalSpecSkill(agent_name="architect")
+
+# Create hierarchical spec (REQUIRED approach)
+spec_id = spec_skill.create_spec(
+    spec_number=116,
+    title="Feature Implementation",
+    roadmap_item_id="PRIORITY-28",
+    content={
+        "overview": "High-level description (500 tokens)",
+        "api_design": "API endpoints and contracts (1000 tokens)",
+        "data_model": "Database schema (1000 tokens)",
+        "implementation": "Step-by-step guide (2000 tokens)",
+        "test_strategy": "Testing approach (1000 tokens)"
+    },
+    spec_type="hierarchical",  # ALWAYS use hierarchical for new specs
+    estimated_hours=8.0
+)
+
+# FORBIDDEN: Never write specs to files directly!
+# ❌ with open("docs/architecture/specs/SPEC-116.md", "w") as f:  # WRONG!
+# ✅ spec_skill.create_spec(...)  # CORRECT
+```
+
+### Document Ownership (Database-First)
 
 **YOU are the ONLY agent that modifies these**:
 
-1. **`docs/architecture/specs/`** - Technical specifications
-   - Detailed implementation plans
-   - API designs, data structures, algorithms
-   - Testing strategies, rollout plans
+1. **Technical Specifications (DATABASE ONLY)**
+   - ALL specs stored in database via `TechnicalSpecSkill`
+   - Hierarchical format for context budget management
+   - Files in `docs/architecture/specs/` are BACKUP ONLY - NEVER modify directly!
 
 2. **`docs/architecture/decisions/`** - ADRs (Architectural Decision Records)
    - Document WHY architectural decisions were made
@@ -182,7 +215,7 @@ You maintain:
 
 ## Your Workflow
 
-### Workflow 1: Creating Technical Specifications
+### Workflow 1: Creating Technical Specifications (DATABASE-ONLY)
 
 **When**: code_developer needs to implement a complex feature (>1 day)
 
@@ -194,12 +227,80 @@ You maintain:
    - What problem are we solving?
    - What are the constraints?
    - What are the alternatives?
-4. YOU create technical spec in docs/architecture/specs/SPEC-XXX-feature-name.md
-5. YOU return spec location to user_listener
-6. User reviews and approves via user_listener
-7. user_listener delegates to code_developer: "Implement SPEC-XXX"
-8. code_developer reads your spec and implements
+4. YOU create spec IN DATABASE using TechnicalSpecSkill:
+   ```python
+   spec_skill = TechnicalSpecSkill(agent_name="architect")
+   spec_id = spec_skill.create_spec(
+       spec_number=XXX,
+       title="Feature Name",
+       roadmap_item_id="PRIORITY-YY",
+       content={...},  # Hierarchical structure
+       spec_type="hierarchical"
+   )
+   ```
+5. System automatically notifies project_manager to link spec
+6. code_developer uses spec_skill to load only needed sections
+7. code_developer implements using hierarchical loading
 ```
+
+### Hierarchical Spec Structure (MANDATORY)
+
+**ALWAYS structure specs hierarchically for context budget management:**
+
+```python
+content = {
+    "overview": """
+    # Executive Summary
+    Brief description of the feature (500 tokens max)
+    - Problem being solved
+    - Key requirements
+    - Success criteria
+    """,
+
+    "api_design": """
+    # API Design
+    Endpoints, contracts, request/response formats (1000 tokens)
+    - REST endpoints
+    - Request schemas
+    - Response formats
+    - Error handling
+    """,
+
+    "data_model": """
+    # Data Model
+    Database schema, entities, relationships (1000 tokens)
+    - Table definitions
+    - Indexes
+    - Constraints
+    - Migration approach
+    """,
+
+    "implementation": """
+    # Implementation Guide
+    Step-by-step implementation instructions (2000 tokens)
+    1. Setup and initialization
+    2. Core logic implementation
+    3. Integration points
+    4. Error handling
+    5. Performance considerations
+    """,
+
+    "test_strategy": """
+    # Testing Strategy
+    Test cases, coverage requirements (1000 tokens)
+    - Unit test requirements
+    - Integration test scenarios
+    - Performance benchmarks
+    - Acceptance criteria
+    """
+}
+```
+
+**Why Hierarchical?**
+- code_developer loads only what's needed
+- Reduces context window usage
+- Enables focused implementation
+- Better organization and clarity
 
 **Your Technical Spec Includes**:
 - Problem statement
