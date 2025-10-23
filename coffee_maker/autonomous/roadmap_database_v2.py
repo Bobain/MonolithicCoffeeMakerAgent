@@ -82,10 +82,11 @@ class RoadmapDatabaseV2:
                     status TEXT NOT NULL,           -- "📝 Planned", "🔄 In Progress", etc.
                     spec_id TEXT,                   -- Foreign key to technical_specs.id
                     content TEXT,                   -- Full markdown content
-                    phase TEXT,                     -- Optional phase grouping
                     estimated_hours TEXT,           -- Time estimation
                     dependencies TEXT,              -- Dependency information
                     section_order INTEGER NOT NULL, -- Preserve ROADMAP.md ordering
+                    implementation_started_at TEXT, -- When code_developer started work
+                    implementation_started_by TEXT, -- Which code_developer claimed this
                     updated_at TEXT NOT NULL,       -- ISO timestamp
                     updated_by TEXT NOT NULL,       -- Agent who updated
                     FOREIGN KEY (spec_id) REFERENCES technical_specs(id) ON DELETE SET NULL
@@ -168,7 +169,6 @@ class RoadmapDatabaseV2:
         title: str,
         status: str = "📝 Planned",
         content: str = "",
-        phase: Optional[str] = None,
         estimated_hours: Optional[str] = None,
         dependencies: Optional[str] = None,
         section_order: int = 999,
@@ -182,7 +182,6 @@ class RoadmapDatabaseV2:
             title: Item title
             status: Status emoji and text
             content: Full markdown content
-            phase: Optional phase grouping
             estimated_hours: Time estimate
             dependencies: Dependencies info
             section_order: Order in roadmap
@@ -193,6 +192,11 @@ class RoadmapDatabaseV2:
         Raises:
             PermissionError: If agent is not project_manager
             sqlite3.IntegrityError: If id already exists
+
+        Note:
+            Phase field has been moved to technical_specs table.
+            Each spec can have its own phase, allowing one roadmap item
+            to have multiple phases across different specs.
         """
         if not self.can_write:
             raise PermissionError(f"Only project_manager can create items, not {self.agent_name}")
@@ -207,9 +211,9 @@ class RoadmapDatabaseV2:
                 """
                 INSERT INTO roadmap_items (
                     id, item_type, number, title, status, content,
-                    phase, estimated_hours, dependencies, section_order,
+                    estimated_hours, dependencies, section_order,
                     updated_at, updated_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     item_id,
@@ -218,7 +222,6 @@ class RoadmapDatabaseV2:
                     title,
                     status,
                     content,
-                    phase,
                     estimated_hours,
                     dependencies,
                     section_order,

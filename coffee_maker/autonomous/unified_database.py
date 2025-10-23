@@ -74,6 +74,7 @@ class UnifiedDatabase:
                     roadmap_item_id TEXT,               -- e.g., "US-062", "PRIORITY-26"
                     status TEXT NOT NULL DEFAULT 'draft', -- 'draft', 'in_progress', 'complete', 'approved'
                     spec_type TEXT DEFAULT 'monolithic',  -- 'monolithic' or 'hierarchical'
+                    phase TEXT,                         -- Phase grouping (moved from roadmap_items)
                     file_path TEXT,                     -- Path to backup file (reference only)
                     content TEXT,                       -- Full content (JSON for hierarchical)
                     dependencies TEXT,                  -- JSON array of spec IDs
@@ -97,10 +98,11 @@ class UnifiedDatabase:
                     status TEXT NOT NULL,               -- "📝 Planned", "🔄 In Progress", etc.
                     spec_id TEXT,                       -- Foreign key to technical_specs
                     content TEXT,                       -- Full markdown content
-                    phase TEXT,                         -- Optional phase grouping
                     estimated_hours TEXT,
                     dependencies TEXT,
                     section_order INTEGER NOT NULL,
+                    implementation_started_at TEXT,     -- When code_developer started work
+                    implementation_started_by TEXT,     -- Which code_developer claimed this
                     updated_at TEXT NOT NULL,
                     updated_by TEXT NOT NULL,
                     FOREIGN KEY (spec_id) REFERENCES technical_specs(id) ON DELETE SET NULL
