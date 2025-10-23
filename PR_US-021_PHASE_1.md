@@ -13,7 +13,7 @@ This PR completes **Phase 1 of US-021: Code Refactoring & Technical Debt Reducti
 
 ### ✅ ConfigManager Migration (100% - 15/15 files)
 Eliminated 15+ duplicated API key loading blocks across the codebase by migrating to centralized `ConfigManager`:
-- `run_daemon.py` - Daemon startup API key check
+- `run_code_developer.py` - Daemon startup API key check
 - `scripts/merge_roadmap_pr.py` - GitHub token loading
 - Test files: `test_daemon_api_mode.py`, `test_github_integration.py`, `test_coffee_maker_mains.py`
 

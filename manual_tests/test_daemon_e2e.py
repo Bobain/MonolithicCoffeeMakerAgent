@@ -372,14 +372,14 @@ Run daemon with auto-approve on test roadmap:
 
 ```bash
 # From project root
-python run_daemon.py \\
+python run_code_developer.py \\
     --roadmap /tmp/ROADMAP_E2E_TEST.md \\
     --auto-approve \\
     --no-pr \\
     --sleep 5
 
 # Or with PR creation
-python run_daemon.py \\
+python run_code_developer.py \\
     --roadmap /tmp/ROADMAP_E2E_TEST.md \\
     --auto-approve \\
     --sleep 5

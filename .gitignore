@@ -135,9 +135,13 @@ Thumbs.db
 # diff files
 *.diff.*
 
-# SQLite WAL files
+# SQLite database files (NEVER commit these to git!)
+*.db
+*.sqlite
+*.sqlite3
 *.db-wal
 *.db-shm
+*.db-journal
 
 # Runtime database files (notifications, process state, etc.)
 data/*.db

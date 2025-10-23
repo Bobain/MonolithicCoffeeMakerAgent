@@ -372,7 +372,7 @@ Input: Refactor "daemon.py" → split into mixins
 
 Skill Execution:
 1. Analyze dependencies:
-   - daemon.py imported by: run_daemon.py, tests/test_daemon.py
+   - daemon.py imported by: run_code_developer.py, tests/test_daemon.py
    - Creates: daemon_git_ops.py, daemon_spec_manager.py, daemon_implementation.py
    - Impacts: 8 files total
 

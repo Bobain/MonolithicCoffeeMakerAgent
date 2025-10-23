@@ -16,9 +16,9 @@ This is a temporary convenience script until PRIORITY 3 (PyPI Package & Binaries
 is complete and the proper `code-developer` CLI command is available.
 
 Usage:
-    python run_daemon.py                    # Interactive mode (asks for approval)
-    python run_daemon.py --auto-approve     # Auto-approve mode (autonomous)
-    python run_daemon.py --help             # Show help
+    python run_code_developer.py                    # Interactive mode (asks for approval)
+    python run_code_developer.py --auto-approve     # Auto-approve mode (autonomous)
+    python run_code_developer.py --help             # Show help
 """
 
 import argparse
@@ -75,9 +75,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python run_daemon.py                    # Interactive mode
-  python run_daemon.py --auto-approve     # Autonomous mode
-  python run_daemon.py --no-pr            # Skip PR creation
+  python run_code_developer.py                    # Interactive mode
+  python run_code_developer.py --auto-approve     # Autonomous mode
+  python run_code_developer.py --no-pr            # Skip PR creation
 
 Note: This is a temporary script. After PRIORITY 3 is complete,
       use the `code-developer` command instead.
@@ -205,12 +205,12 @@ Note: This is a temporary script. After PRIORITY 3 is complete,
             print("  2. Anthropic API key (requires credits)")
             print("\n🔧 SOLUTION 1 (CLI Mode - Recommended):")
             print("  1. Install Claude CLI from: https://claude.ai/")
-            print("  2. Run: python run_daemon.py")
+            print("  2. Run: python run_code_developer.py")
             print("\n🔧 SOLUTION 2 (API Mode):")
             print("  1. Get your API key from: https://console.anthropic.com/")
             print("  2. Set the environment variable:")
             print("     export ANTHROPIC_API_KEY='your-api-key-here'")
-            print("  3. Run: python run_daemon.py")
+            print("  3. Run: python run_code_developer.py")
             print("\n" + "=" * 70 + "\n")
             sys.exit(1)
 

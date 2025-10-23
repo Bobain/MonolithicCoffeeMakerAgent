@@ -10,7 +10,7 @@ on:
     branches: [main]
     paths:
       - 'coffee_maker/autonomous/**'
-      - 'run_daemon.py'
+      - 'run_code_developer.py'
       - 'tests/ci_tests/**'
       - '.github/workflows/daemon-test.yml'
 

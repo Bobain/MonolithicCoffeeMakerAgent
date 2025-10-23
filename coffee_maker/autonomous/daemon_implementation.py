@@ -303,11 +303,12 @@ Status: Requires human decision
         subtask_start = datetime.now()
         self._update_subtask("Committing changes", "in_progress", subtask_start, estimated_seconds=20)
 
-        # Commit changes
+        # Commit changes using robust retry mechanism
         commit_message = self._build_commit_message(priority)
 
-        if not self.git.commit(commit_message):
-            logger.error("Failed to commit changes")
+        # Use commit_with_retry to handle pre-commit hooks automatically
+        if not self.git.commit_with_retry(commit_message, add_all=True, max_retries=10):
+            logger.error("Failed to commit changes after 10 retries")
             self._update_subtask("Committing changes", "failed", subtask_start, estimated_seconds=20)
             return False
 

@@ -586,7 +586,10 @@ class BaseAgent(ABC):
         else:
             self.git.add_all()
 
-        self.git.commit(full_message)
+        # Use robust commit with retry for pre-commit hooks
+        if not self.git.commit_with_retry(full_message, add_all=False, max_retries=10):
+            logger.error(f"Failed to commit after 10 retries - check pre-commit hooks")
+            raise RuntimeError("Failed to commit changes after multiple retries")
 
         # Push to roadmap branch
         self.git.push("roadmap")

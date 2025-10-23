@@ -655,7 +655,7 @@ poetry run project-manager view
 **Solutions**:
 ```bash
 # 1. Stop daemon
-pkill -f run_daemon.py
+pkill -f run_code_developer.py
 
 # 2. Wait for database to unlock (auto-recovers)
 

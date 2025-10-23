@@ -317,16 +317,16 @@ Space Complexity: O(1) - one PID file per agent type
 
 ```bash
 # Test 1: Singleton enforcement
-python run_daemon.py &  # Start daemon
-python run_daemon.py    # Should fail with AgentAlreadyRunningError
+python run_code_developer.py &  # Start daemon
+python run_code_developer.py    # Should fail with AgentAlreadyRunningError
 
 # Test 2: Cleanup
-python run_daemon.py &  # Start daemon
+python run_code_developer.py &  # Start daemon
 kill <PID>              # Kill daemon
-python run_daemon.py    # Should succeed (stale PID cleaned)
+python run_code_developer.py    # Should succeed (stale PID cleaned)
 
 # Test 3: Multiple agents
-python run_daemon.py &  # code_developer
+python run_code_developer.py &  # code_developer
 poetry run project-manager  # project_manager (different agent, should work)
 ```
 

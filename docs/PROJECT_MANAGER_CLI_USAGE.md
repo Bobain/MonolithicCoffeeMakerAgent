@@ -77,7 +77,7 @@ While the daemon runs in one terminal:
 
 **Terminal 1** (Daemon):
 ```bash
-python run_daemon.py
+python run_code_developer.py
 ```
 
 **Terminal 2** (You):
@@ -373,7 +373,7 @@ Sync functionality will be available in Phase 2:
 
 **Terminal 1** (Daemon):
 ```bash
-$ python run_daemon.py
+$ python run_code_developer.py
 
 [INFO] DevDaemon started
 [INFO] Found planned priority: PRIORITY 4 (Streamlit Dashboard)
@@ -687,7 +687,7 @@ Set up automatic monitoring:
 # Split screen: left=daemon, right=notifications
 tmux new-session \; \
   split-window -h \; \
-  send-keys 'python run_daemon.py' C-m \; \
+  send-keys 'python run_code_developer.py' C-m \; \
   select-pane -t 1 \; \
   send-keys 'watch -n 5 project-manager notifications' C-m
 ```
@@ -1008,7 +1008,7 @@ project-manager view PRIORITY-1   # Focus on one priority
 
 **Day 2**: Start monitoring
 ```bash
-python run_daemon.py              # Terminal 1: Start daemon
+python run_code_developer.py              # Terminal 1: Start daemon
 project-manager notifications     # Terminal 2: Watch notifications
 ```
 

@@ -3,7 +3,7 @@
 **Last Updated**: 2025-10-18 🚀 **ACE FRAMEWORK: 42 User Stories Added (US-062 through US-103) - 7 Phases**
 **Current Branch**: `roadmap`
 **Status**: **🚨 PHASE 0 - ACCELERATION ⚡ US-090 (START HERE)** | Total: 185-235 hrs → 3-4 weeks Phase 0, then 4-6 weeks Phases 1-3
-**Quick-Start**: ⚡ CLI: `project-manager` (defaults to chat!) | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py`
+**Quick-Start**: ⚡ CLI: `project-manager` (defaults to chat!) | Daemon: `python run_code_developer.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py`
 **Achievement**: 🎉 **ACE IMPLEMENTATION PLAN REORGANIZED** - Phase 0 (Force Multiplier) now HIGHEST PRIORITY!
 
 ---
@@ -315,225 +315,6 @@ See [US-106](#priority-22-us-106---code-reviewer-agent-for-quality-assurance-✅
 
 ---
 
-### PRIORITY 24: US-107 - Dependency Conflict Resolver Skill ✅ Complete
-
-**Status**: ✅ Complete - 🔴 CRITICAL PRIORITY (Highest ROI - 40 hrs/month saved)
-
-See [US-107](#us-107-dependency-conflict-resolver-skill) for full details.
-
-**Strategic Value**: Automate dependency evaluation, save 40 hrs/month (93-95% time reduction)
-
-**Created**: 2025-10-19
-
-**Estimated Effort**: 2-3 days
-
-**User Story**:
-As architect, I want an automated dependency conflict resolver skill so that I can quickly evaluate dependency additions, detect conflicts, and provide recommendations without spending 45+ minutes on manual analysis.
-
-**Problem Statement**:
-Currently, architect spends significant time on dependency management:
-- Manual dependency conflict detection (15-20 min per dependency)
-- Manual security scanning (10-15 min)
-- Manual license compatibility checks (5-10 min)
-- Manual version compatibility analysis (10-15 min)
-- **Total: 40-60 minutes per dependency addition**
-
-This is the **#1 bottleneck** identified by the Acceleration Dashboard.
-
-**Agent Role**: architect (skill)
-
-**Skill Responsibilities**:
-
-1. **Automated Dependency Evaluation**:
-   - Parse pyproject.toml and poetry.lock
-   - Check for version conflicts with existing dependencies
-   - Analyze dependency tree depth and complexity
-   - Identify circular dependencies
-
-2. **Security Scanning**:
-   - Check CVE databases (pip-audit, safety)
-   - Scan for known vulnerabilities
-   - Assess security risk level (Critical/High/Medium/Low)
-   - Provide mitigation recommendations
-
-3. **License Compatibility**:
-   - Extract license from package metadata
-   - Check compatibility with project license (Apache 2.0)
-   - Flag GPL or incompatible licenses
-   - Suggest alternatives if incompatible
-
-4. **Version Analysis**:
-   - Check if version is latest stable
-   - Identify breaking changes in release notes
-   - Suggest optimal version range (e.g., "^2.0.0")
-   - Detect if version is deprecated
-
-5. **Impact Assessment**:
-   - Estimate installation time
-   - Calculate bundle size impact
-   - Identify sub-dependencies added
-   - Check for platform compatibility
-
-**Workflow**:
-
-```bash
-# architect wants to add a new dependency
-architect dependency-conflict-resolver pytest-timeout
-
-# Skill runs automatically:
-# 1. Checks conflicts with existing deps
-# 2. Scans for security vulnerabilities
-# 3. Validates license compatibility
-# 4. Analyzes version compatibility
-# 5. Generates comprehensive report
-
-# Output:
-# ✅ pytest-timeout 2.2.0 - APPROVED
-#
-# Conflicts: None
-# Security: No vulnerabilities (0 CVEs)
-# License: MIT (✅ Compatible with Apache 2.0)
-# Version: Latest stable (2.2.0)
-# Bundle Size: +250 KB
-# Sub-dependencies: 0 (no transitive deps)
-#
-# Recommendation: SAFE TO ADD
-# Command: poetry add pytest-timeout
-```
-
-**Benefits**:
-
-- **Time Savings**: 40-60 min → 2-3 min (93-95% reduction) = **40 hrs/month saved**
-- **ROI**: Highest of all automation opportunities
-- **Risk Reduction**: Automated security and license checks
-- **Faster Development**: Quick approval for safe dependencies
-- **Better Decisions**: Comprehensive analysis in seconds
-
-**Acceptance Criteria**:
-
-✅ **Dependency Analysis**:
-- [x] Parse pyproject.toml and poetry.lock
-- [x] Detect version conflicts with existing dependencies
-- [x] Identify circular dependencies
-- [x] Calculate dependency tree depth
-
-✅ **Security Scanning**:
-- [x] Integrate pip-audit for CVE scanning
-- [x] Integrate safety for known vulnerabilities
-- [x] Severity classification (Critical/High/Medium/Low)
-- [x] Mitigation recommendations
-
-✅ **License Compatibility**:
-- [x] Extract package license from PyPI metadata
-- [x] Check compatibility with Apache 2.0
-- [x] Flag GPL/AGPL licenses
-- [x] Suggest compatible alternatives
-
-✅ **Version Analysis**:
-- [x] Check latest stable version
-- [x] Parse release notes for breaking changes
-- [x] Suggest optimal version constraint
-- [x] Detect deprecated versions
-
-✅ **Reporting**:
-- [x] Generate comprehensive markdown report
-- [x] Include approval recommendation (APPROVE/REVIEW/REJECT)
-- [x] Provide installation command if approved
-- [x] List alternatives if rejected
-
-✅ **Integration**:
-- [x] Skill usable via Python API
-- [x] Skill file: `.claude/skills/architect/dependency-conflict-resolver/SKILL.md`
-- [x] Unit tests (15 tests, 100% passing)
-- [x] Ready for SPEC-070 pre-approval matrix integration
-
-**Technical Implementation**:
-
-1. **DependencyAnalyzer** (`coffee_maker/utils/dependency_analyzer.py`):
-   ```python
-   class DependencyAnalyzer:
-       def analyze_dependency(self, package_name: str) -> AnalysisReport
-       def check_conflicts(self, package: str, version: str) -> List[Conflict]
-       def scan_security(self, package: str, version: str) -> SecurityReport
-       def check_license(self, package: str) -> LicenseInfo
-       def analyze_version(self, package: str, version: str) -> VersionInfo
-   ```
-
-2. **Integration with pip-audit and safety**:
-   - Run pip-audit for CVE scanning
-   - Run safety for known vulnerabilities
-   - Parse output and categorize severity
-
-3. **PyPI API Integration**:
-   - Fetch package metadata from PyPI
-   - Extract license information
-   - Get release notes and changelog
-   - Check deprecation status
-
-4. **Conflict Detection**:
-   - Parse poetry.lock for dependency tree
-   - Use poetry show --tree for visualization
-   - Detect version range conflicts
-   - Identify circular dependencies
-
-**Deliverables**:
-
-- [x] DependencyAnalyzer class with all analysis logic
-- [x] ConflictAnalyzer, SecurityScanner, LicenseChecker, VersionAnalyzer, ImpactAssessor components
-- [x] Security scanning integration (pip-audit, safety)
-- [x] License compatibility checker with Apache 2.0 validation
-- [x] Version analysis and recommendation engine
-- [x] Markdown report generator
-- [x] Python API for programmatic usage
-- [x] Skill documentation in `.claude/skills/architect/dependency-conflict-resolver/SKILL.md`
-- [x] Unit tests (15 tests, 100% passing)
-- [x] End-to-end tested with real packages (2.66s analysis time)
-
-**Performance**: Analysis completes in **2-3 seconds** (vs. 40-60 min manual) = **93-95% time savings**
-
-**Example Scenarios**:
-
-1. **Safe Dependency** → Analysis time: 2 min → APPROVED → Add immediately
-2. **Security Vulnerability** → Analysis time: 3 min → REJECTED → Suggest alternatives
-3. **License Conflict** → Analysis time: 2 min → REJECTED → Suggest MIT/Apache alternatives
-4. **Version Conflict** → Analysis time: 4 min → REVIEW NEEDED → Manual resolution required
-
-**Integration with Existing Workflow**:
-
-```
-architect wants to add dependency
-       ↓
-Uses dependency-conflict-resolver skill
-       ↓
-Skill analyzes: conflicts, security, license, version
-       ↓
-Generates report with recommendation
-       ↓
-If APPROVED: architect runs poetry add
-If REJECTED: architect uses suggested alternative
-If REVIEW: architect asks user for decision
-```
-
-**Dependencies**:
-- pip-audit (CVE scanning) ✅ Available
-- safety (vulnerability scanning) ✅ Available
-- poetry (dependency management) ✅ Available
-- PyPI API (package metadata) ✅ Available
-
-**Testing**:
-- Unit tests for each analysis component
-- Integration tests with real PyPI packages
-- Mock tests for CVE database queries
-- Performance tests (target: <3 min per analysis)
-
-**Success Metrics**:
-- Time per dependency analysis: <3 minutes (currently: 40-60 min)
-- Accuracy: >95% correct recommendations
-- Security: Zero vulnerabilities introduced
-- License: Zero license conflicts
-- ROI: 40 hours/month saved
-
----
 
 ### PRIORITY 24: Technical Prerequisite Identification and Tracking 📝 Planned
 
@@ -8104,13 +7885,13 @@ After implementing PRIORITY 1 & 2, we have:
 4. **Run the daemon:**
    ```bash
    # Interactive mode (asks for approval)
-   python run_daemon.py
+   python run_code_developer.py
 
    # Autonomous mode (auto-approve)
-   python run_daemon.py --auto-approve
+   python run_code_developer.py --auto-approve
 
    # See all options
-   python run_daemon.py --help
+   python run_code_developer.py --help
    ```
 
 The script includes runtime detection and will warn you if it detects a Claude session.
@@ -16829,7 +16610,7 @@ This transforms the daemon from a **sequential executor** into an **intelligent 
 #### 🚨 **KNOWN ISSUE: Daemon Infinite Loop** (Discovered: 2025-10-09)
 
 **Problem Description**:
-The autonomous daemon (run_daemon.py) is stuck in an infinite loop when trying to implement PRIORITY 2.5:
+The autonomous daemon (run_code_developer.py) is stuck in an infinite loop when trying to implement PRIORITY 2.5:
 
 1. ✅ Claude CLI executes successfully (exit code 0)
 2. ❌ BUT: No files are created or modified
@@ -16915,7 +16696,7 @@ logger.info(f"🚀 Starting implementation (attempt {attempt_count+1}/{self.max_
 - ✅ No breaking changes to existing functionality
 
 **Next Steps**:
-1. Resume daemon: `python run_daemon.py --auto-approve`
+1. Resume daemon: `python run_code_developer.py --auto-approve`
 2. Verify it skips PRIORITY 2.5 after 3 attempts
 3. Check notification: `project-manager notifications`
 4. Manually implement or clarify PRIORITY 2.5 deliverables
@@ -16993,7 +16774,7 @@ The daemon's Claude session detection always returns `True`, preventing daemon f
 
 1. **Wrong Environment Variables**: Checked for non-existent vars
    ```python
-   # run_daemon.py:49-52 (OLD)
+   # run_code_developer.py:49-52 (OLD)
    claude_env_vars = [
        "CLAUDE_SESSION_ID",      # ❌ Doesn't exist
        "CLAUDE_CLI_SESSION",     # ❌ Doesn't exist
@@ -17002,7 +16783,7 @@ The daemon's Claude session detection always returns `True`, preventing daemon f
 
 2. **Too Broad Process Check**: Matched ANY Claude process
    ```python
-   # run_daemon.py:59-62 (OLD)
+   # run_code_developer.py:59-62 (OLD)
    result = subprocess.run(["pgrep", "-f", "claude"], ...)
    if result.returncode == 0:
        return True  # ❌ Always True if ANY Claude process exists
@@ -18523,7 +18304,7 @@ All done!
 fg
 
 # OR restart daemon
-python run_daemon.py --auto-approve
+python run_code_developer.py --auto-approve
 
 # Monitor behavior - daemon should move past PRIORITY 2.5
 ```
@@ -18550,7 +18331,7 @@ on:
     branches: [main]
     paths:
       - 'coffee_maker/autonomous/**'
-      - 'run_daemon.py'
+      - 'run_code_developer.py'
 
   # Run on version tags (e.g., v1.0.0, v1.1.0)
   push:
@@ -18593,7 +18374,7 @@ jobs:
 
       - name: Run daemon for 5 minutes
         run: |
-          timeout 300 python run_daemon.py --auto-approve || true
+          timeout 300 python run_code_developer.py --auto-approve || true
 
       - name: Check for infinite loop
         run: |
@@ -18815,7 +18596,7 @@ Run this checklist before creating a new release (v1.x.x, v2.x.x, etc.)
 
 ## Production Monitoring
 
-1. Daemon runs continuously: `python run_daemon.py --auto-approve`
+1. Daemon runs continuously: `python run_code_developer.py --auto-approve`
 2. Monitor logs for issues
 3. Check notifications: `poetry run project-manager notifications`
 4. **Testing**: GitHub Actions runs all tests automatically on merge to main
@@ -19130,7 +18911,7 @@ Please check logs for details:
   tail -f logs/daemon.log
 
 To restart:
-  python run_daemon.py --auto-approve
+  python run_code_developer.py --auto-approve
 """,
                     priority=NOTIF_PRIORITY_CRITICAL,
                     context={
@@ -32446,31 +32227,3 @@ On 2025-10-20 at 10:51 AM, the architect agent crashed for 13+ hours because:
 - [ ] Zero false positives in validation
 
 ---
-
-## 🔴 TOP PRIORITY FOR orchestrator (PARALLEL EXECUTION TEST)
-
-### PRIORITY 9: US-009 - Daily Report Generator ✅ Complete
-**Spec**: docs/architecture/specs/SPEC-009-enhanced-communication.md
-**Deliverables**:
-- Implement daily report generator
-- CLI integration
-- Tests
-
-### PRIORITY 10: US-010 - User Listener Implementation ✅ Complete
-**Spec**: docs/architecture/specs/SPEC-010-USER-LISTENER-UI-SIMPLIFIED.md
-**Deliverables**:
-- ✅ User listener agent (coffee_maker/cli/user_listener.py)
-- ✅ CLI interface (poetry run user-listener)
-- ✅ Tests (unit + integration tests passing)
-
-### PRIORITY 12: US-012 - User Story Command Handler ✅ Complete
-**Spec**: docs/architecture/specs/SPEC-012-user-story-command-handler.md
-**Deliverables**:
-- ✅ User story command handler (coffee_maker/cli/commands/user_story_command.py)
-- ✅ AI service integration (prompt templates in .claude/commands/)
-- ✅ ChatSession integration
-- ✅ Tests (18 unit tests - 100% passing)
-- ✅ Zero new dependencies (uses stdlib difflib)
-
-**Usage**: `/US [description]` in chat interface
-**Example**: `/US I want users to export reports to PDF`

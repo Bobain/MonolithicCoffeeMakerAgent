@@ -26,7 +26,7 @@
 - Updated Documentation section with new files
 
 ### 3. ✅ Script Consolidation
-- Deprecated `run_dev_daemon.py` in favor of `run_daemon.py`
+- Deprecated `run_dev_daemon.py` in favor of `run_code_developer.py`
 - Added deprecation notice with migration instructions
 - Prevents confusion about which script to use
 
@@ -61,7 +61,7 @@ run_dev_daemon.py                                 | 178 lines simplified
 
 ```
 b796c1b docs: Update README with autonomous development system description
-f1cf383 refactor: Deprecate run_dev_daemon.py in favor of run_daemon.py
+f1cf383 refactor: Deprecate run_dev_daemon.py in favor of run_code_developer.py
 69d8237 docs: Add current security vulnerabilities as TODOs in ROADMAP
 13abb50 docs: Add session summary for ROADMAP update and PRIORITY 1.5 completion
 f9e9ef7 docs: Mark PRIORITY 1.5 (Database Sync) as COMPLETE in ROADMAP

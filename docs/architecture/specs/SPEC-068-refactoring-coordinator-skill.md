@@ -131,7 +131,7 @@ From Phase 0 Acceleration Plan:
 │       - status: depends on implementation                      │
 │       - daemon.py: depends on ALL mixins                       │
 │    4. Identify external impacted files:                        │
-│       - run_daemon.py (imports daemon.py)                      │
+│       - run_code_developer.py (imports daemon.py)                      │
 │       - tests/test_daemon.py (imports daemon.py)               │
 │    5. Return dependency graph (NetworkX DiGraph)               │
 └───────────────────────┬─────────────────────────────────────────┘
@@ -148,7 +148,7 @@ From Phase 0 Acceleration Plan:
 │       c. daemon_implementation.py (depends on spec_manager)   │
 │       d. daemon_status.py (depends on implementation)         │
 │       e. daemon.py (update to import mixins)                  │
-│       f. run_daemon.py (update imports if needed)             │
+│       f. run_code_developer.py (update imports if needed)             │
 │       g. tests/test_daemon.py (update imports)                │
 │    3. Detect cycles:                                           │
 │       - If cycle detected → ERROR (cannot refactor safely)    │
@@ -157,7 +157,7 @@ From Phase 0 Acceleration Plan:
 │       - Group 2: [spec_manager] (depends on Group 1)          │
 │       - Group 3: [implementation] (depends on Group 2)        │
 │       - Group 4: [status] (depends on Group 3)                │
-│       - Group 5: [daemon.py, run_daemon.py, tests] (updates) │
+│       - Group 5: [daemon.py, run_code_developer.py, tests] (updates) │
 └───────────────────────┬─────────────────────────────────────────┘
                         │
                         ▼
@@ -256,7 +256,7 @@ Dependency Graph:
 - daemon.py: [daemon_git_ops.py, daemon_spec_manager.py, daemon_implementation.py, daemon_status.py]
 
 Impacted Files (external):
-- run_daemon.py (imports daemon)
+- run_code_developer.py (imports daemon)
 - tests/test_daemon.py (imports daemon)
 
 Total files impacted: 7 files
@@ -269,14 +269,14 @@ Topological Sort:
 3. daemon_implementation.py (depends on #1, #2)
 4. daemon_status.py (depends on #3)
 5. daemon.py (depends on #1-4)
-6. run_daemon.py, tests/test_daemon.py (depends on #5)
+6. run_code_developer.py, tests/test_daemon.py (depends on #5)
 
 Parallel Groups:
 - Group 1: [daemon_git_ops.py]
 - Group 2: [daemon_spec_manager.py]
 - Group 3: [daemon_implementation.py]
 - Group 4: [daemon_status.py]
-- Group 5: [daemon.py, run_daemon.py, tests/test_daemon.py]
+- Group 5: [daemon.py, run_code_developer.py, tests/test_daemon.py]
 
 Step 3: Git Snapshot
 --------------------
@@ -304,7 +304,7 @@ Group 4: Create daemon_status.py
   ✅ File created (38 LOC)
   ✅ Tests: pytest tests/ → 127 passed (2.2s)
 
-Group 5: Update daemon.py, run_daemon.py, tests/test_daemon.py
+Group 5: Update daemon.py, run_code_developer.py, tests/test_daemon.py
   ✅ Files updated (daemon.py reduced from 1592 → 145 LOC)
   ✅ Tests: pytest tests/ → 127 passed (2.4s)
 
