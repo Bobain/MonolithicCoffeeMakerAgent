@@ -126,9 +126,9 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
     )
 
     parser.add_argument(
-        "--work-session",
+        "--work",
         type=str,
-        help="Execute a specific work_session and exit (PRIORITY 31 - parallel development)",
+        help="Execute a specific work and exit (PRIORITY 31 - parallel development, e.g., WORK-31-1)",
     )
 
     args = parser.parse_args()
@@ -257,7 +257,7 @@ By default, it uses Claude CLI (subscription). Use --use-api for Anthropic API m
             use_claude_cli=use_cli_mode,
             claude_cli_path=args.claude_path,
             specific_priority=args.priority,
-            work_session_id=args.work_session,  # PRIORITY 31: work_session support
+            work_id=args.work,  # PRIORITY 31: work support
         )
 
         # Write PID file after daemon is initialized

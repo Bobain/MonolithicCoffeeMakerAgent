@@ -251,8 +251,8 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         compact_interval: int = 10,
         # Parallel execution support
         specific_priority: Optional[int] = None,
-        # PRIORITY 31: work_session support for parallel development
-        work_session_id: Optional[str] = None,
+        # PRIORITY 31: work support for parallel development
+        work_id: Optional[str] = None,
     ) -> None:
         """Initialize development daemon.
 
@@ -268,7 +268,7 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             crash_sleep_interval: Sleep duration after crash in seconds (default: 60)
             compact_interval: Iterations between context resets (default: 10)
             specific_priority: Work on this specific priority only (for parallel execution)
-            work_session_id: Work session ID to claim and execute (e.g., "WORK-42")
+            work_id: Work ID to claim and execute (e.g., "WORK-31-1")
         """
         self.roadmap_path = Path(roadmap_path)
         self.auto_approve = auto_approve
@@ -277,17 +277,17 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         self.model = model
         self.use_claude_cli = use_claude_cli
         self.specific_priority = specific_priority
-        self.work_session_id = work_session_id
+        self.work_id = work_id
 
-        # PRIORITY 31: Initialize WorkSessionManager if work_session_id provided
-        self.work_session_manager: Optional["WorkSessionManager"] = None
-        if work_session_id:
+        # PRIORITY 31: Initialize WorkManager if work_id provided
+        self.work_manager: Optional["WorkManager"] = None
+        if work_id:
             from coffee_maker.autonomous.unified_database import get_unified_database
-            from coffee_maker.autonomous.work_session_manager import WorkSessionManager
+            from coffee_maker.autonomous.work_manager import WorkManager
 
             db = get_unified_database()
-            self.work_session_manager = WorkSessionManager(db.db_path)
-            logger.info(f"✅ WorkSessionManager initialized for work_session {work_session_id}")
+            self.work_manager = WorkManager(db.db_path)
+            logger.info(f"✅ WorkManager initialized for work {work_id}")
 
         # Initialize components
         self.parser = RoadmapParser(str(self.roadmap_path))
@@ -428,15 +428,15 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         - Fatal error occurs
 
         PRIORITY 31: Supports two execution modes:
-        1. work_session mode: Claim and execute specific work_session (parallel execution)
+        1. work mode: Claim and execute specific work (parallel execution)
         2. Legacy mode: Continuous daemon loop reading from ROADMAP
 
         Example:
             >>> daemon = DevDaemon()
             >>> daemon.run()  # Runs until complete
 
-            >>> daemon = DevDaemon(work_session_id="WORK-42")
-            >>> daemon.run()  # Claims and executes WORK-42, then exits
+            >>> daemon = DevDaemon(work_id="WORK-31-1")
+            >>> daemon.run()  # Claims and executes WORK-31-1, then exits
         """
         # US-035: Register agent in singleton registry to prevent duplicate instances
         # Using context manager ensures automatic cleanup even if exceptions occur
@@ -444,10 +444,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             with AgentRegistry.register(AgentType.CODE_DEVELOPER):
                 logger.info("✅ Agent registered in singleton registry")
 
-                # PRIORITY 31: Delegate to work_session mode or legacy mode
-                if self.work_session_id:
-                    logger.info(f"🎯 WORK_SESSION MODE: Executing work_session {self.work_session_id}")
-                    self._run_work_session_mode()
+                # PRIORITY 31: Delegate to work mode or legacy mode
+                if self.work_id:
+                    logger.info(f"🎯 WORK MODE: Executing work {self.work_id}")
+                    self._run_work_mode()
                 else:
                     logger.info("🔄 LEGACY MODE: Continuous daemon loop")
                     self._run_daemon_loop()
@@ -456,24 +456,25 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             logger.error("Another code_developer instance is already running!")
             return
 
-    def _run_work_session_mode(self):
-        """Execute specific work_session and exit (PRIORITY 31).
+    def _run_work_mode(self):
+        """Execute specific work and exit (PRIORITY 31).
 
-        This method implements work_session-based execution for parallel development:
+        This method implements work-based execution for parallel development:
 
-        1. Atomically claim work_session from database (race-safe)
-        2. Read technical spec section for this work_session
+        1. Atomically claim work from database (race-safe)
+        2. Read technical spec section for this work
         3. Update status to in_progress
         4. Implement the work using Claude
         5. Commit changes with commit_sha
         6. Update status to completed/failed
-        7. Exit (one work_session per daemon instance)
+        7. Exit (one work per daemon instance)
 
         Flow:
             ┌─────────────────────────────────────┐
-            │ 1. Claim work_session (atomic)      │
+            │ 1. Claim work (atomic)              │
             │    - UPDATE WHERE claimed_by IS NULL│
             │    - Only 1 instance succeeds       │
+            │    - Enforces sequential order      │
             └──────────────┬──────────────────────┘
                            │
             ┌──────────────▼──────────────────────┐
@@ -495,18 +496,18 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             └─────────────────────────────────────┘
 
         Raises:
-            WorkSessionNotFoundError: If work_session_id doesn't exist
-            WorkSessionAlreadyClaimedError: If already claimed by another instance
+            WorkNotFoundError: If work_id doesn't exist
+            WorkAlreadyClaimedError: If already claimed by another instance
             FileAccessViolationError: If trying to modify non-assigned files
         """
-        from coffee_maker.autonomous.work_session_manager import (
-            WorkSessionNotFoundError,
-            WorkSessionAlreadyClaimedError,
+        from coffee_maker.autonomous.work_manager import (
+            WorkNotFoundError,
+            WorkAlreadyClaimedError,
             FileAccessViolationError,
         )
 
         logger.info("=" * 80)
-        logger.info(f"🎯 WORK_SESSION MODE: {self.work_session_id}")
+        logger.info(f"🎯 WORK MODE: {self.work_id}")
         logger.info("=" * 80)
 
         try:
@@ -515,48 +516,49 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 logger.error("Prerequisites not met - cannot start")
                 return
 
-            # 1. CLAIM WORK_SESSION (atomic, race-safe)
-            logger.info(f"🔒 Attempting to claim work_session {self.work_session_id}...")
+            # 1. CLAIM WORK (atomic, race-safe, respects sequential ordering)
+            logger.info(f"🔒 Attempting to claim work {self.work_id}...")
 
-            success = self.work_session_manager.claim_work_session(self.work_session_id)
+            success = self.work_manager.claim_work(self.work_id)
 
             if not success:
-                logger.error(
-                    f"❌ Failed to claim work_session {self.work_session_id} - already claimed by another instance"
-                )
-                logger.error("   This work_session is being executed by a different code_developer")
+                logger.error(f"❌ Failed to claim work {self.work_id} - already claimed by another instance")
+                logger.error("   This work is being executed by a different code_developer")
+                logger.error("   OR earlier works in sequence are not completed yet")
                 return
 
-            logger.info(f"✅ Successfully claimed work_session {self.work_session_id}")
-            logger.info(f"   Assigned files: {self.work_session_manager.assigned_files}")
+            logger.info(f"✅ Successfully claimed work {self.work_id}")
+            logger.info(f"   Group: {self.work_manager.current_work['related_works_id']}")
+            logger.info(f"   Order: {self.work_manager.current_work['priority_order']}")
+            logger.info(f"   Assigned files: {self.work_manager.assigned_files}")
 
             # 2. READ TECHNICAL SPEC SECTION
-            logger.info("📖 Reading technical spec section for this work_session...")
+            logger.info("📖 Reading technical spec section for this work...")
 
-            spec_content = self.work_session_manager.read_technical_spec_for_work()
+            spec_content = self.work_manager.read_technical_spec_for_work()
 
             logger.info(f"✅ Loaded spec section ({len(spec_content)} chars)")
-            logger.info(f"   Scope: {self.work_session_manager.current_work_session['scope_description']}")
+            logger.info(f"   Scope: {self.work_manager.current_work['scope_description']}")
 
             # 3. UPDATE STATUS TO IN_PROGRESS
-            self.work_session_manager.update_work_session_status("in_progress")
+            self.work_manager.update_work_status("in_progress")
 
             # Update developer status
             self.status.update_status(
                 DeveloperState.WORKING,
                 task={
-                    "work_session_id": self.work_session_id,
-                    "scope": self.work_session_manager.current_work_session["scope_description"],
+                    "work_id": self.work_id,
+                    "scope": self.work_manager.current_work["scope_description"],
                 },
                 progress=0,
-                current_step="Starting work_session implementation",
+                current_step="Starting work implementation",
             )
 
             # 4. IMPLEMENT USING CLAUDE
             logger.info("🤖 Executing implementation with Claude...")
 
             # Build implementation prompt
-            prompt = self._build_work_session_prompt(spec_content)
+            prompt = self._build_work_prompt(spec_content)
 
             # Execute Claude API
             response = self.claude.send_message(prompt)
@@ -565,9 +567,9 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             logger.debug(f"   Response: {response[:500]}...")
 
             # 5. COMMIT CHANGES
-            logger.info("💾 Committing work_session changes...")
+            logger.info("💾 Committing work changes...")
 
-            commit_message = self._build_work_session_commit_message()
+            commit_message = self._build_work_commit_message()
 
             # Get commit SHA
             commit_sha = self.git.commit(commit_message)
@@ -577,49 +579,52 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
             logger.info(f"✅ Committed changes: {commit_sha[:8]}")
 
-            # 6. UPDATE STATUS TO COMPLETED
-            self.work_session_manager.update_work_session_status("completed", commit_sha=commit_sha)
+            # 6. RECORD COMMIT (for code_reviewer sync)
+            self.work_manager.record_commit(commit_sha, commit_message)
 
-            self.status.update_status(DeveloperState.IDLE, current_step="work_session completed successfully")
+            # 7. UPDATE STATUS TO COMPLETED
+            self.work_manager.update_work_status("completed")
+
+            self.status.update_status(DeveloperState.IDLE, current_step="work completed successfully")
 
             logger.info("=" * 80)
-            logger.info(f"✅ work_session {self.work_session_id} COMPLETED SUCCESSFULLY")
+            logger.info(f"✅ work {self.work_id} COMPLETED SUCCESSFULLY")
             logger.info(f"   Commit: {commit_sha}")
-            logger.info(f"   Files modified: {self.work_session_manager.assigned_files}")
+            logger.info(f"   Files modified: {self.work_manager.assigned_files}")
             logger.info("=" * 80)
 
-        except WorkSessionNotFoundError as e:
-            logger.error(f"❌ work_session not found: {e}")
+        except WorkNotFoundError as e:
+            logger.error(f"❌ work not found: {e}")
             self.status.update_status(DeveloperState.IDLE, current_step=f"Error: {e}")
 
-        except WorkSessionAlreadyClaimedError as e:
-            logger.error(f"❌ work_session already claimed: {e}")
+        except WorkAlreadyClaimedError as e:
+            logger.error(f"❌ work already claimed: {e}")
             self.status.update_status(DeveloperState.IDLE, current_step=f"Error: {e}")
 
         except FileAccessViolationError as e:
             logger.error(f"❌ File access violation: {e}")
-            logger.error("   This work_session tried to modify files outside assigned_files")
+            logger.error("   This work tried to modify files outside assigned_files")
 
             # Update status to failed
-            if self.work_session_manager:
-                self.work_session_manager.update_work_session_status("failed", error_message=str(e))
+            if self.work_manager:
+                self.work_manager.update_work_status("failed", error_message=str(e))
 
             self.status.update_status(DeveloperState.IDLE, current_step=f"Error: {e}")
 
         except Exception as e:
-            logger.error(f"❌ work_session execution failed: {e}")
+            logger.error(f"❌ work execution failed: {e}")
             import traceback
 
             traceback.print_exc()
 
             # Update status to failed
-            if self.work_session_manager and self.work_session_manager.current_work_session:
-                self.work_session_manager.update_work_session_status("failed", error_message=str(e))
+            if self.work_manager and self.work_manager.current_work:
+                self.work_manager.update_work_status("failed", error_message=str(e))
 
             self.status.update_status(DeveloperState.IDLE, current_step=f"Error: {e}")
 
-    def _build_work_session_prompt(self, spec_content: str) -> str:
-        """Build implementation prompt for work_session.
+    def _build_work_prompt(self, spec_content: str) -> str:
+        """Build implementation prompt for work.
 
         Args:
             spec_content: Technical spec section content
@@ -627,15 +632,16 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         Returns:
             Formatted prompt for Claude
         """
-        work_session = self.work_session_manager.current_work_session
+        work = self.work_manager.current_work
 
-        prompt = f"""# work_session Implementation: {self.work_session_id}
+        prompt = f"""# Work Implementation: {self.work_id}
 
-## work_session Details
-- ID: {work_session['work_id']}
-- Spec: {work_session['spec_id']}
-- Scope: {work_session['scope_description']}
-- Assigned Files: {', '.join(self.work_session_manager.assigned_files)}
+## Work Details
+- ID: {work['work_id']}
+- Spec: {work['spec_id']}
+- Scope: {work['scope_description']}
+- Group: {work['related_works_id']} (order {work['priority_order']})
+- Assigned Files: {', '.join(self.work_manager.assigned_files)}
 
 ## Technical Specification
 {spec_content}
@@ -649,7 +655,7 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
 ## File Access Restrictions (CRITICAL)
 You are ONLY allowed to modify these files:
-{chr(10).join(f'- {f}' for f in self.work_session_manager.assigned_files)}
+{chr(10).join(f'- {f}' for f in self.work_manager.assigned_files)}
 
 Attempting to modify any other files will result in FileAccessViolationError.
 
@@ -659,26 +665,27 @@ Attempting to modify any other files will result in FileAccessViolationError.
 - Code follows project style guide
 - No files outside assigned_files are modified
 
-Please implement this work_session now.
+Please implement this work now.
 """
         return prompt
 
-    def _build_work_session_commit_message(self) -> str:
-        """Build commit message for work_session.
+    def _build_work_commit_message(self) -> str:
+        """Build commit message for work.
 
         Returns:
             Formatted commit message
         """
-        work_session = self.work_session_manager.current_work_session
+        work = self.work_manager.current_work
 
-        message = f"""feat({work_session['work_id']}): {work_session['scope_description']}
+        message = f"""feat({work['work_id']}): {work['scope_description']}
 
-Implements work_session {work_session['work_id']} for {work_session['spec_id']}.
+Implements work {work['work_id']} for {work['spec_id']}.
 
-Scope: {work_session['scope_description']}
-Files: {', '.join(self.work_session_manager.assigned_files)}
+Group: {work['related_works_id']} (order {work['priority_order']})
+Scope: {work['scope_description']}
+Files: {', '.join(self.work_manager.assigned_files)}
 
-Related: PRIORITY 31, SPEC-131, CFR-000
+Related: PRIORITY 31, CFR-000
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
