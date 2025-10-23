@@ -896,6 +896,246 @@ code_reviewer writes review reports but doesn't notify architect. This breaks th
 
 ---
 
+### PRIORITY 31: Integrate work_sessions Table into code_developer Spawning 🔴 P0 CRITICAL
+
+**Status**: 📝 Planned - CRITICAL (Parallel Development Infrastructure)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 4-6 hours
+
+**User Story**:
+As code_developer, I need to claim work_sessions from the database before starting implementation so that parallel development is properly tracked and file conflicts are prevented through CFR-000 enforcement.
+
+**Problem Statement**:
+The work_sessions table was created (commit 64e78e7) and CFR-000 documentation updated for parallel development, but the actual agent spawning logic does NOT use it:
+- code_developer still works directly on priority_id without checking work_sessions
+- No work claiming mechanism (UPDATE work_sessions SET status='in_progress')
+- No assigned_files validation before starting work
+- parallel_execution_coordinator.py creates worktrees but doesn't create work_sessions entries
+- architect creates work_sessions but no agent consumes them
+
+**Current State**:
+```python
+# parallel_execution_coordinator.py creates worktrees directly
+# Does NOT create work_sessions entries
+# Does NOT query work_sessions for available work
+```
+
+**Required State**:
+```python
+# 1. architect creates work_sessions with assigned_files
+# 2. orchestrator creates worktrees for each work_session
+# 3. code_developer queries available work_sessions (status='pending')
+# 4. code_developer claims work_session (UPDATE status='in_progress')
+# 5. code_developer works only on assigned_files
+# 6. code_developer updates work_session on completion
+```
+
+**Critical Files**:
+- `coffee_maker/autonomous/daemon.py` - Add work_session claiming logic
+- `coffee_maker/orchestrator/parallel_execution_coordinator.py` - Create work_sessions before spawning
+- `coffee_maker/orchestrator/continuous_work_loop.py` - Check work_sessions for available work
+
+**Dependencies**:
+- work_sessions table (✅ exists - commit 64e78e7)
+- CFR-000 documentation (✅ complete)
+- parallel_execution_coordinator (✅ exists but needs work_sessions integration)
+
+**Related Documents**:
+- `docs/CFR-000-PARALLEL-DEVELOPMENT.md` (complete workflow specification)
+- `docs/ARCHITECT_REVIEW_PROCESS.md` (architect workflow)
+- `coffee_maker/autonomous/migrate_add_work_sessions.py` (migration script)
+
+**Implementation Plan**:
+1. **Phase 1: code_developer Claims Work**
+   - Add method: `daemon._claim_work_session(work_id)` → queries work_sessions, claims if available
+   - Modify: `daemon.run()` → check for work_session argument, claim before starting
+   - Add: File validation - only touch files in assigned_files JSON array
+
+2. **Phase 2: orchestrator Creates work_sessions**
+   - Modify: `parallel_execution_coordinator._create_worktrees()` → insert work_sessions entries first
+   - Add: work_id generation logic (e.g., "WORK-{timestamp}-{priority}")
+   - Link: work_session.branch_name = worktree branch name
+
+3. **Phase 3: Stale Detection**
+   - Add: Method to reset stale work_sessions (claimed_at >24 hours ago, status='in_progress')
+   - Call in: continuous_work_loop before spawning new instances
+
+**Success Criteria**:
+- [ ] code_developer queries work_sessions table on startup
+- [ ] code_developer claims work_session (UPDATE status='in_progress')
+- [ ] code_developer updates work_session.started_at timestamp
+- [ ] code_developer validates assigned_files before touching files
+- [ ] orchestrator creates work_sessions entries before spawning
+- [ ] work_session.commit_sha recorded on completion
+- [ ] work_session.completed_at recorded on success
+- [ ] Stale work_sessions reset after 24 hours
+- [ ] Tests verify work claiming race conditions handled
+- [ ] Integration test: spawn 2 code_developers, both claim different work_sessions
+
+**Blocks**:
+- True parallel development with file conflict prevention
+- CFR-000 enforcement at runtime
+- Work tracking and progress visibility
+
+---
+
+### PRIORITY 32: Integrate work_sessions Table into code_reviewer Spawning 🔴 P0 CRITICAL
+
+**Status**: 📝 Planned - CRITICAL (Parallel Code Review Infrastructure)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 3-4 hours
+
+**User Story**:
+As code_reviewer, I need to claim work_sessions for review tasks so that multiple code_reviewers can operate in parallel on independent commits without conflicts.
+
+**Problem Statement**:
+code_reviewer currently operates autonomously but without work_sessions tracking:
+- Reviews all commits sequentially
+- No parallel review capability
+- No work claiming to prevent duplicate reviews
+- Can't track which reviewer is handling which commit
+
+**Solution**:
+Integrate work_sessions for code_reviewer tasks:
+- architect creates work_sessions with scope='review' for commits needing review
+- code_reviewer queries available review work_sessions
+- code_reviewer claims work_session before starting review
+- Multiple code_reviewers can work in parallel on different commits
+
+**Implementation Notes**:
+- code_reviewer does NOT need git worktrees (read-only operations)
+- Work sessions track review tasks, not file modifications
+- assigned_files = files modified in commit being reviewed
+
+**Critical Files**:
+- `coffee_maker/autonomous/code_reviewer.py` - Add work_session claiming
+- `coffee_maker/orchestrator/architect_coordinator.py` - Create review work_sessions
+
+**Success Criteria**:
+- [ ] code_reviewer queries work_sessions for review tasks (scope='review')
+- [ ] code_reviewer claims work_session before starting review
+- [ ] work_session.commit_sha links to commit being reviewed
+- [ ] Multiple code_reviewers can run in parallel
+- [ ] No duplicate reviews of same commit
+- [ ] work_session completed on review finish
+
+**Depends On**:
+- PRIORITY 31 (code_developer work_sessions integration - establishes pattern)
+
+---
+
+### PRIORITY 33: Enable Parallel Architect Instances for Technical Spec Creation 🔴 HIGH PRIORITY
+
+**Status**: 📝 Planned - HIGH PRIORITY (Velocity Multiplier)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 5-7 hours
+
+**User Story**:
+As orchestrator, I want to spawn multiple architect instances in parallel to create technical specifications for different roadmap items simultaneously, dramatically accelerating the spec creation pipeline.
+
+**Problem Statement**:
+Currently, architect operates as singleton:
+- Only ONE architect can work at a time
+- Many roadmap items lack technical specs and sit idle
+- Spec creation is bottleneck for code_developer velocity
+- architect creates specs sequentially when they could be parallelized
+
+**Key Insight: No Git Worktrees Needed**:
+Unlike code_developer, architect does NOT need git worktrees:
+- architect writes to database only (technical_specs table)
+- architect reads from ROADMAP.md and database
+- No file modifications (specs stored in DB, not files)
+- No file conflicts possible between parallel architects
+- Much simpler than code_developer parallelization
+
+**Solution**:
+1. orchestrator identifies roadmap items without technical specs
+2. orchestrator spawns multiple architect instances (2-3)
+3. Each architect claims a work_session with scope='spec_creation'
+4. architect writes spec to database (technical_specs table)
+5. No worktrees required - all work in shared database
+
+**Example Workflow**:
+```python
+# orchestrator finds 5 roadmap items without specs
+roadmap_items_needing_specs = [
+    "PRIORITY-35",
+    "PRIORITY-36",
+    "PRIORITY-37",
+    "PRIORITY-38",
+    "PRIORITY-39"
+]
+
+# orchestrator creates work_sessions for spec creation
+for priority_id in roadmap_items_needing_specs:
+    create_work_session(
+        work_id=f"SPEC-WORK-{priority_id}",
+        scope="spec_creation",
+        roadmap_item_id=priority_id,
+        assigned_files=[]  # No files, database only
+    )
+
+# Spawn 3 parallel architects
+spawn_architect(work_session_query="scope='spec_creation' AND status='pending'")
+spawn_architect(work_session_query="scope='spec_creation' AND status='pending'")
+spawn_architect(work_session_query="scope='spec_creation' AND status='pending'")
+
+# Each architect claims different work_session and creates spec
+```
+
+**Critical Files**:
+- `coffee_maker/orchestrator/architect_coordinator.py` - Add parallel architect spawning
+- `coffee_maker/orchestrator/continuous_work_loop.py` - Check for items needing specs
+- New: `coffee_maker/autonomous/architect_daemon.py` - Architect daemon that claims work_sessions
+
+**Advantages**:
+- ✅ No git worktrees needed (database-only operations)
+- ✅ No file conflicts possible
+- ✅ Simpler than code_developer parallelization
+- ✅ High impact: unblocks code_developer pipeline
+- ✅ 2-3x faster spec creation velocity
+
+**Implementation Plan**:
+1. **Phase 1: architect Work Session Support**
+   - Create: `architect_daemon.py` with work_session claiming logic
+   - Add: Method to query work_sessions with scope='spec_creation'
+   - Add: Claim logic (UPDATE status='in_progress')
+
+2. **Phase 2: orchestrator Spawns Parallel Architects**
+   - Add: Method to identify roadmap items without specs
+   - Add: Create work_sessions for spec creation tasks
+   - Add: Spawn multiple architect instances (2-3 max)
+
+3. **Phase 3: Coordination**
+   - Add: Stale detection for architect work_sessions (>24 hours)
+   - Add: architect completion notifications
+   - Add: Dashboard visibility for parallel architects
+
+**Success Criteria**:
+- [ ] orchestrator identifies roadmap items without technical specs
+- [ ] orchestrator creates work_sessions with scope='spec_creation'
+- [ ] Multiple architect instances can run simultaneously
+- [ ] Each architect claims different work_session
+- [ ] architect writes technical spec to database
+- [ ] work_session marked completed when spec finished
+- [ ] No git worktrees created (database only)
+- [ ] Stale detection resets abandoned spec work (>24h)
+- [ ] Integration test: spawn 3 architects, each creates different spec
+- [ ] Dashboard shows parallel architect progress
+
+**Blocks**:
+- Rapid technical spec creation
+- Unblocking code_developer pipeline
+- Acceleration of development velocity
+
+---
+
 ### PRIORITY 23: US-108 - Parallel Agent Execution with Git Worktree ✅ Complete
 
 **Status**: ✅ COMPLETE (2025-10-20) - 🔴 CRITICAL PRIORITY (2x-3x Velocity Increase)
