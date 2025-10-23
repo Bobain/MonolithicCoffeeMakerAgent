@@ -427,20 +427,264 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         - User stops the daemon (Ctrl+C)
         - Fatal error occurs
 
+        PRIORITY 31: Supports two execution modes:
+        1. work_session mode: Claim and execute specific work_session (parallel execution)
+        2. Legacy mode: Continuous daemon loop reading from ROADMAP
+
         Example:
             >>> daemon = DevDaemon()
             >>> daemon.run()  # Runs until complete
+
+            >>> daemon = DevDaemon(work_session_id="WORK-42")
+            >>> daemon.run()  # Claims and executes WORK-42, then exits
         """
         # US-035: Register agent in singleton registry to prevent duplicate instances
         # Using context manager ensures automatic cleanup even if exceptions occur
         try:
             with AgentRegistry.register(AgentType.CODE_DEVELOPER):
                 logger.info("✅ Agent registered in singleton registry")
-                self._run_daemon_loop()
+
+                # PRIORITY 31: Delegate to work_session mode or legacy mode
+                if self.work_session_id:
+                    logger.info(f"🎯 WORK_SESSION MODE: Executing work_session {self.work_session_id}")
+                    self._run_work_session_mode()
+                else:
+                    logger.info("🔄 LEGACY MODE: Continuous daemon loop")
+                    self._run_daemon_loop()
         except Exception as e:
             logger.error(f"❌ Failed to register agent: {e}")
             logger.error("Another code_developer instance is already running!")
             return
+
+    def _run_work_session_mode(self):
+        """Execute specific work_session and exit (PRIORITY 31).
+
+        This method implements work_session-based execution for parallel development:
+
+        1. Atomically claim work_session from database (race-safe)
+        2. Read technical spec section for this work_session
+        3. Update status to in_progress
+        4. Implement the work using Claude
+        5. Commit changes with commit_sha
+        6. Update status to completed/failed
+        7. Exit (one work_session per daemon instance)
+
+        Flow:
+            ┌─────────────────────────────────────┐
+            │ 1. Claim work_session (atomic)      │
+            │    - UPDATE WHERE claimed_by IS NULL│
+            │    - Only 1 instance succeeds       │
+            └──────────────┬──────────────────────┘
+                           │
+            ┌──────────────▼──────────────────────┐
+            │ 2. Read spec section                │
+            │    - Parse scope_description        │
+            │    - Read only assigned sections    │
+            └──────────────┬──────────────────────┘
+                           │
+            ┌──────────────▼──────────────────────┐
+            │ 3. Implement using Claude           │
+            │    - File access validation         │
+            │    - Only touch assigned_files      │
+            └──────────────┬──────────────────────┘
+                           │
+            ┌──────────────▼──────────────────────┐
+            │ 4. Commit & update status           │
+            │    - Record commit_sha              │
+            │    - Mark completed/failed          │
+            └─────────────────────────────────────┘
+
+        Raises:
+            WorkSessionNotFoundError: If work_session_id doesn't exist
+            WorkSessionAlreadyClaimedError: If already claimed by another instance
+            FileAccessViolationError: If trying to modify non-assigned files
+        """
+        from coffee_maker.autonomous.work_session_manager import (
+            WorkSessionNotFoundError,
+            WorkSessionAlreadyClaimedError,
+            FileAccessViolationError,
+        )
+
+        logger.info("=" * 80)
+        logger.info(f"🎯 WORK_SESSION MODE: {self.work_session_id}")
+        logger.info("=" * 80)
+
+        try:
+            # Check prerequisites
+            if not self._check_prerequisites():
+                logger.error("Prerequisites not met - cannot start")
+                return
+
+            # 1. CLAIM WORK_SESSION (atomic, race-safe)
+            logger.info(f"🔒 Attempting to claim work_session {self.work_session_id}...")
+
+            success = self.work_session_manager.claim_work_session(self.work_session_id)
+
+            if not success:
+                logger.error(
+                    f"❌ Failed to claim work_session {self.work_session_id} - already claimed by another instance"
+                )
+                logger.error("   This work_session is being executed by a different code_developer")
+                return
+
+            logger.info(f"✅ Successfully claimed work_session {self.work_session_id}")
+            logger.info(f"   Assigned files: {self.work_session_manager.assigned_files}")
+
+            # 2. READ TECHNICAL SPEC SECTION
+            logger.info("📖 Reading technical spec section for this work_session...")
+
+            spec_content = self.work_session_manager.read_technical_spec_for_work()
+
+            logger.info(f"✅ Loaded spec section ({len(spec_content)} chars)")
+            logger.info(f"   Scope: {self.work_session_manager.current_work_session['scope_description']}")
+
+            # 3. UPDATE STATUS TO IN_PROGRESS
+            self.work_session_manager.update_work_session_status("in_progress")
+
+            # Update developer status
+            self.status.update_status(
+                DeveloperState.WORKING,
+                task={
+                    "work_session_id": self.work_session_id,
+                    "scope": self.work_session_manager.current_work_session["scope_description"],
+                },
+                progress=0,
+                current_step="Starting work_session implementation",
+            )
+
+            # 4. IMPLEMENT USING CLAUDE
+            logger.info("🤖 Executing implementation with Claude...")
+
+            # Build implementation prompt
+            prompt = self._build_work_session_prompt(spec_content)
+
+            # Execute Claude API
+            response = self.claude.send_message(prompt)
+
+            logger.info("✅ Claude implementation complete")
+            logger.debug(f"   Response: {response[:500]}...")
+
+            # 5. COMMIT CHANGES
+            logger.info("💾 Committing work_session changes...")
+
+            commit_message = self._build_work_session_commit_message()
+
+            # Get commit SHA
+            commit_sha = self.git.commit(commit_message)
+
+            if not commit_sha:
+                raise RuntimeError("Failed to create commit - no changes or commit failed")
+
+            logger.info(f"✅ Committed changes: {commit_sha[:8]}")
+
+            # 6. UPDATE STATUS TO COMPLETED
+            self.work_session_manager.update_work_session_status("completed", commit_sha=commit_sha)
+
+            self.status.update_status(DeveloperState.IDLE, current_step="work_session completed successfully")
+
+            logger.info("=" * 80)
+            logger.info(f"✅ work_session {self.work_session_id} COMPLETED SUCCESSFULLY")
+            logger.info(f"   Commit: {commit_sha}")
+            logger.info(f"   Files modified: {self.work_session_manager.assigned_files}")
+            logger.info("=" * 80)
+
+        except WorkSessionNotFoundError as e:
+            logger.error(f"❌ work_session not found: {e}")
+            self.status.update_status(DeveloperState.IDLE, current_step=f"Error: {e}")
+
+        except WorkSessionAlreadyClaimedError as e:
+            logger.error(f"❌ work_session already claimed: {e}")
+            self.status.update_status(DeveloperState.IDLE, current_step=f"Error: {e}")
+
+        except FileAccessViolationError as e:
+            logger.error(f"❌ File access violation: {e}")
+            logger.error("   This work_session tried to modify files outside assigned_files")
+
+            # Update status to failed
+            if self.work_session_manager:
+                self.work_session_manager.update_work_session_status("failed", error_message=str(e))
+
+            self.status.update_status(DeveloperState.IDLE, current_step=f"Error: {e}")
+
+        except Exception as e:
+            logger.error(f"❌ work_session execution failed: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+            # Update status to failed
+            if self.work_session_manager and self.work_session_manager.current_work_session:
+                self.work_session_manager.update_work_session_status("failed", error_message=str(e))
+
+            self.status.update_status(DeveloperState.IDLE, current_step=f"Error: {e}")
+
+    def _build_work_session_prompt(self, spec_content: str) -> str:
+        """Build implementation prompt for work_session.
+
+        Args:
+            spec_content: Technical spec section content
+
+        Returns:
+            Formatted prompt for Claude
+        """
+        work_session = self.work_session_manager.current_work_session
+
+        prompt = f"""# work_session Implementation: {self.work_session_id}
+
+## work_session Details
+- ID: {work_session['work_id']}
+- Spec: {work_session['spec_id']}
+- Scope: {work_session['scope_description']}
+- Assigned Files: {', '.join(self.work_session_manager.assigned_files)}
+
+## Technical Specification
+{spec_content}
+
+## Implementation Instructions
+1. Implement ONLY the scope described above
+2. Modify ONLY files in assigned_files list
+3. Follow all coding standards and patterns in the codebase
+4. Write tests for new functionality
+5. Ensure all tests pass before completing
+
+## File Access Restrictions (CRITICAL)
+You are ONLY allowed to modify these files:
+{chr(10).join(f'- {f}' for f in self.work_session_manager.assigned_files)}
+
+Attempting to modify any other files will result in FileAccessViolationError.
+
+## Success Criteria
+- Implementation matches technical spec
+- All tests pass
+- Code follows project style guide
+- No files outside assigned_files are modified
+
+Please implement this work_session now.
+"""
+        return prompt
+
+    def _build_work_session_commit_message(self) -> str:
+        """Build commit message for work_session.
+
+        Returns:
+            Formatted commit message
+        """
+        work_session = self.work_session_manager.current_work_session
+
+        message = f"""feat({work_session['work_id']}): {work_session['scope_description']}
+
+Implements work_session {work_session['work_id']} for {work_session['spec_id']}.
+
+Scope: {work_session['scope_description']}
+Files: {', '.join(self.work_session_manager.assigned_files)}
+
+Related: PRIORITY 31, SPEC-131, CFR-000
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+"""
+        return message
 
     def _run_daemon_loop(self):
         """Internal daemon loop (extracted for cleaner agent registry management)."""
