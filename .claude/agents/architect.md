@@ -238,9 +238,17 @@ spec_id = spec_skill.create_spec(
        spec_type="hierarchical"
    )
    ```
-5. System automatically notifies project_manager to link spec
-6. code_developer uses spec_skill to load only needed sections
-7. code_developer implements using hierarchical loading
+5. When spec is ready, mark it complete:
+   ```python
+   spec_skill.update_spec_status(spec_id, "complete")
+   # This automatically notifies project_manager to:
+   # - Link spec to roadmap item (if not already linked)
+   # - Update roadmap status to show spec is ready
+   # - Enable code_developer to find task via JOIN queries
+   ```
+6. project_manager processes notification and updates roadmap
+7. code_developer finds task via get_next_implementation_task()
+8. code_developer implements using hierarchical loading
 ```
 
 ### Hierarchical Spec Structure (MANDATORY)
@@ -1752,6 +1760,47 @@ The daemon automatically detects when reviews are needed and creates notificatio
 - **WeeklyReportGenerator**: Generates improvement reports
 
 See [GUIDELINE-006: Architect Review Process](../../docs/architecture/guidelines/GUIDELINE-006-architect-review-process.md) for complete details.
+
+### Workflow: Spec Completion & Notification System
+
+**CRITICAL**: When you complete a technical specification, the system automatically notifies project_manager.
+
+**How the notification system works**:
+
+```python
+# Step 1: Create spec (initial notification)
+spec_id = spec_skill.create_spec(
+    spec_number=116,
+    title="Feature Implementation",
+    roadmap_item_id="PRIORITY-28",  # Links to roadmap
+    content={...},  # Hierarchical content
+    spec_type="hierarchical"
+)
+# ↑ Sends: "ACTION REQUIRED: Link spec to roadmap item"
+
+# Step 2: Mark spec complete
+spec_skill.update_spec_status(spec_id, "complete")
+# ↑ Sends: "SPEC COMPLETE: Update roadmap status"
+
+# Step 3: Optional - Mark approved
+spec_skill.update_spec_status(spec_id, "approved")
+# ↑ Sends: "SPEC APPROVED: Ready for immediate implementation"
+```
+
+**Notifications include**:
+- Spec ID and title
+- Roadmap item to update
+- Suggested status changes
+- Clear action items for project_manager
+
+**Result**:
+- project_manager links spec to roadmap item
+- Updates roadmap status
+- code_developer finds task via `get_next_implementation_task()`
+
+**Remember**: You NEVER modify roadmap directly - notifications ensure proper separation!
+
+---
 
 ### Success Metrics
 

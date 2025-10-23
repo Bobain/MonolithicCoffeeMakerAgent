@@ -475,9 +475,13 @@ class TechnicalSpecSkill:
             conn.commit()
             conn.close()
 
-            if success and new_status == "complete":
-                # Notify project_manager that spec is ready
-                self._notify_spec_complete(spec_id)
+            if success:
+                if new_status == "complete":
+                    # Notify project_manager that spec is ready
+                    self._notify_spec_complete(spec_id)
+                elif new_status == "approved":
+                    # Notify project_manager that spec is approved and ready for implementation
+                    self._notify_spec_approved(spec_id)
 
             return success
 
@@ -560,15 +564,25 @@ class TechnicalSpecSkill:
             from coffee_maker.autonomous.roadmap_database_v2 import RoadmapDatabaseV2
 
             roadmap_db = RoadmapDatabaseV2(agent_name=self.agent_name)
+
+            # Create detailed notification for project_manager
+            message = (
+                f"ACTION REQUIRED: Link technical spec to roadmap\n"
+                f"- Spec ID: {spec_id}\n"
+                f"- Roadmap Item: {roadmap_item_id}\n"
+                f"- Action: Use unified_db.link_spec_to_roadmap('{roadmap_item_id}', '{spec_id}')\n"
+                f"- This will enable code_developer to find this task via JOIN queries"
+            )
+
             roadmap_db.create_update_notification(
                 item_id=roadmap_item_id,
                 requested_by="architect",
                 notification_type="link_spec",
                 requested_status=None,
-                message=f"Technical spec {spec_id} created. Please link to {roadmap_item_id}.",
+                message=message,
             )
 
-            logger.info(f"Notified project_manager to link {spec_id} to {roadmap_item_id}")
+            logger.info(f"📬 Notified project_manager to link {spec_id} to {roadmap_item_id}")
 
         except Exception as e:
             logger.warning(f"Could not notify project_manager: {e}")
@@ -583,16 +597,66 @@ class TechnicalSpecSkill:
             from coffee_maker.autonomous.roadmap_database_v2 import RoadmapDatabaseV2
 
             roadmap_db = RoadmapDatabaseV2(agent_name=self.agent_name)
+
+            # Create detailed notification
+            message = (
+                f"SPEC COMPLETE: Technical specification ready for implementation\n"
+                f"- Spec ID: {spec_id}\n"
+                f"- Title: {spec.get('title', 'Unknown')}\n"
+                f"- Roadmap Item: {spec.get('roadmap_item_id', 'Not linked')}\n"
+                f"- Status: Complete\n"
+                f"- Estimated Hours: {spec.get('estimated_hours', 'Not specified')}\n"
+                f"\nACTIONS REQUIRED:\n"
+                f"1. Verify spec is linked to roadmap item\n"
+                f"2. Update roadmap item status to '🔄 In Progress' or '📋 Ready for Implementation'\n"
+                f"3. code_developer can now implement this feature"
+            )
+
             roadmap_db.create_update_notification(
                 item_id=spec.get("roadmap_item_id", "UNKNOWN"),
                 requested_by="architect",
-                notification_type="status_update",
+                notification_type="spec_complete",
                 requested_status="🔄 In Progress",
-                message=f"Technical spec {spec_id} is complete. Ready for implementation.",
+                message=message,
             )
+
+            logger.info(f"✅ Notified project_manager that {spec_id} is complete")
 
         except Exception as e:
             logger.warning(f"Could not notify about spec completion: {e}")
+
+    def _notify_spec_approved(self, spec_id: str) -> None:
+        """Notify project_manager that spec is approved for implementation."""
+        try:
+            spec = self.get_spec_by_id(spec_id)
+            if not spec:
+                return
+
+            from coffee_maker.autonomous.roadmap_database_v2 import RoadmapDatabaseV2
+
+            roadmap_db = RoadmapDatabaseV2(agent_name=self.agent_name)
+
+            message = (
+                f"SPEC APPROVED: Ready for immediate implementation\n"
+                f"- Spec ID: {spec_id}\n"
+                f"- Title: {spec.get('title', 'Unknown')}\n"
+                f"- Roadmap Item: {spec.get('roadmap_item_id', 'Not linked')}\n"
+                f"- Status: Approved\n"
+                f"\ncode_developer can now find this via get_next_implementation_task()"
+            )
+
+            roadmap_db.create_update_notification(
+                item_id=spec.get("roadmap_item_id", "UNKNOWN"),
+                requested_by="architect",
+                notification_type="spec_approved",
+                requested_status="🔄 In Progress",
+                message=message,
+            )
+
+            logger.info(f"✅ Notified project_manager that {spec_id} is approved")
+
+        except Exception as e:
+            logger.warning(f"Could not notify about spec approval: {e}")
 
 
 # ==================== SKILL FACTORY ====================
