@@ -12,13 +12,27 @@ import logging
 import psutil
 import shutil
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from coffee_maker.skills import get_skill
+
 logger = logging.getLogger(__name__)
+
+# Add .claude to sys.path for skill imports (PRIORITY 26: Pythonic skill loading)
+repo_root = Path(__file__).parent.parent.parent
+skills_parent = repo_root / ".claude"
+if str(skills_parent) not in sys.path:
+    sys.path.insert(0, str(skills_parent))
+
+# Import skills using proper Python imports (PRIORITY 26)
+from claude.skills.shared.orchestrator_agent_management.agent_management import (
+    OrchestratorAgentManagementSkill,
+)
 
 
 @dataclass
@@ -123,6 +137,9 @@ class ParallelExecutionCoordinator:
         self.resource_monitor = ResourceMonitor()
         self.worktrees: List[WorktreeConfig] = []
 
+        # Initialize agent management skill for database tracking
+        self.agent_mgmt = OrchestratorAgentManagementSkill()
+
         # Validate git repository
         if not (self.repo_root / ".git").exists():
             raise ValueError(f"Not a git repository: {self.repo_root}")
@@ -214,24 +231,12 @@ class ParallelExecutionCoordinator:
             Dict with validation result
         """
         # Import task-separator skill
-        skill_path = self.repo_root / ".claude" / "skills" / "architect" / "task-separator" / "task_separator.py"
-
-        if not skill_path.exists():
-            return {
-                "valid": False,
-                "reason": f"Task-separator skill not found: {skill_path}",
-            }
-
-        # Load skill dynamically
+        # Load skill using Pythonic imports (PRIORITY 26)
         try:
-            import importlib.util
-
-            spec = importlib.util.spec_from_file_location("task_separator", skill_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            task_separator_module = get_skill("architect.task_separator", repo_root=self.repo_root)
 
             # Call main function
-            result = module.main({"priority_ids": priority_ids})
+            result = task_separator_module.main({"priority_ids": priority_ids})
 
             # Check if we have independent pairs
             independent_pairs = result.get("independent_pairs", [])
@@ -315,7 +320,7 @@ class ParallelExecutionCoordinator:
             # Check if worktree already exists
             if worktree_path.exists():
                 logger.warning(f"Worktree already exists: {worktree_path}, removing...")
-                self._remove_worktree(worktree_path)
+                self._remove_worktree(worktree_path, branch_name)
 
             # Create worktree
             try:
@@ -404,6 +409,24 @@ class ParallelExecutionCoordinator:
                 logger.info(f"  Logs: {log_file}")
                 logger.info(f"  Error logs: {error_log_file}")
 
+                # Register agent in database for tracking/dashboard visibility
+                task_id = f"impl-{worktree.priority_id}-parallel"
+                register_result = self.agent_mgmt.execute(
+                    action="register_agent",
+                    agent_type="code_developer",
+                    pid=process.pid,
+                    task_id=task_id,
+                    task_type="implementation",
+                    priority_number=worktree.priority_id,
+                    command=" ".join(cmd),
+                    worktree_path=str(worktree.worktree_path),
+                    worktree_branch=worktree.branch_name,
+                )
+                if register_result.get("error"):
+                    logger.warning(f"Failed to register agent in database: {register_result['error']}")
+                else:
+                    logger.debug(f"Registered code_developer in database (task_id: {task_id})")
+
             except Exception as e:
                 logger.error(f"Failed to spawn code_developer for PRIORITY {worktree.priority_id}: {e}")
                 worktree.status = "failed"
@@ -447,6 +470,17 @@ class ParallelExecutionCoordinator:
                                 f"PRIORITY {worktree.priority_id} completed successfully (duration: {duration:.1f}s)"
                             )
 
+                            # Update agent status in database
+                            task_id = f"impl-{worktree.priority_id}-parallel"
+                            update_result = self.agent_mgmt.execute(
+                                action="update_agent_status",
+                                task_id=task_id,
+                                status="completed",
+                                exit_code=poll_result,
+                            )
+                            if update_result.get("error"):
+                                logger.warning(f"Failed to update agent status in database: {update_result['error']}")
+
                             # Log last 50 lines of output for debugging
                             if log_file.exists():
                                 with open(log_file, "r") as f:
@@ -457,6 +491,17 @@ class ParallelExecutionCoordinator:
                             worktree.status = "failed"
                             failed_count += 1
                             logger.error(f"PRIORITY {worktree.priority_id} failed with code {poll_result}")
+
+                            # Update agent status in database
+                            task_id = f"impl-{worktree.priority_id}-parallel"
+                            update_result = self.agent_mgmt.execute(
+                                action="update_agent_status",
+                                task_id=task_id,
+                                status="failed",
+                                exit_code=poll_result,
+                            )
+                            if update_result.get("error"):
+                                logger.warning(f"Failed to update agent status in database: {update_result['error']}")
 
                             # Read and log error output
                             if error_log_file.exists():

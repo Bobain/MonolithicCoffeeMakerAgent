@@ -630,9 +630,9 @@ See `docs/architecture/specs/SPEC-NEXT-technical-prerequisite-tracking.md` for c
 
 ---
 
-### PRIORITY 25: Hierarchical, Modular Technical Specification Architecture ✅ Complete - Phase 3
+### PRIORITY 25: Hierarchical, Modular Technical Specification Architecture 📝 Planned - Phase 4
 
-**Status**: ✅ Complete - Phase 3 (Guidelines Library) - COMPLETED 2025-10-21
+**Status**: 📝 Planned - Phase 4 (Spec Migration) - READY FOR IMPLEMENTATION
 
 **Created**: 2025-10-21
 
@@ -730,11 +730,12 @@ docs/architecture/specs/SPEC-{number}-{slug}/
 
 ---
 
-### PRIORITY 26: Refactor Skill Loading to Use Proper Python Imports 📝 Planned
+### PRIORITY 26: Refactor Skill Loading to Use Proper Python Imports ✅ Complete
 
-**Status**: 📝 Planned - MEDIUM PRIORITY (Technical Debt - Code Quality)
+**Status**: ✅ COMPLETE (2025-10-23) - MEDIUM PRIORITY (Technical Debt - Code Quality)
 
 **Created**: 2025-10-20
+**Completed**: 2025-10-23
 
 **Estimated Effort**: 4-6 hours
 

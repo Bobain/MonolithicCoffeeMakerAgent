@@ -45,6 +45,10 @@ class OrchestratorAgentManagementSkill:
         self.db_path = db_path or Path("data/orchestrator.db")
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
+        # Store process handles for exit code retrieval
+        # Maps PID -> subprocess.Popen object
+        self._process_handles: Dict[int, subprocess.Popen] = {}
+
         # Initialize database connection
         self._init_db()
 
@@ -113,6 +117,10 @@ class OrchestratorAgentManagementSkill:
                 return self._detect_hung_agents(**kwargs)
             elif action == "kill_agent":
                 return self._kill_agent(**kwargs)
+            elif action == "register_agent":
+                return self._register_agent(**kwargs)
+            elif action == "update_agent_status":
+                return self._update_agent_status(**kwargs)
             else:
                 return {"error": f"Unknown action: {action}", "result": None}
 
@@ -150,6 +158,10 @@ class OrchestratorAgentManagementSkill:
         elif task_type == "refactoring_analysis":
             cmd.extend(["analyze-codebase", "--force"])
 
+        # Add auto-approve flag if requested
+        if auto_approve:
+            cmd.append("--auto-approve")
+
         # Spawn process
         process = subprocess.Popen(
             cmd,
@@ -158,6 +170,9 @@ class OrchestratorAgentManagementSkill:
             text=True,
             cwd=Path.cwd(),
         )
+
+        # Store process handle for later polling
+        self._process_handles[process.pid] = process
 
         # Track agent in database
         if priority_number:
@@ -507,6 +522,9 @@ class OrchestratorAgentManagementSkill:
             cwd=Path.cwd(),
         )
 
+        # Store process handle for later polling
+        self._process_handles[process.pid] = process
+
         # Track agent in database
         task_id = f"review-{commit_sha[:8]}"
         spawned_at = datetime.now().isoformat()
@@ -580,17 +598,66 @@ class OrchestratorAgentManagementSkill:
             # Convert row to dict
             agent_info = dict(row)
 
-            # Check if process still running
-            try:
-                os.kill(pid, 0)  # Signal 0 = check if process exists
-                status = "running"
-                exit_code = None
-            except OSError:
-                # Process finished
-                status = (
-                    agent_info["status"] if agent_info["status"] in ["completed", "failed", "killed"] else "completed"
-                )
-                exit_code = agent_info.get("exit_code", 0)
+            # Check if we have process handle
+            process = self._process_handles.get(pid)
+            exit_code = None
+            stdout_output = None
+            stderr_output = None
+
+            if process:
+                # Poll the process to get exit code
+                exit_code = process.poll()
+
+                if exit_code is not None:
+                    # Process finished - read output
+                    try:
+                        stdout_output, stderr_output = process.communicate(timeout=1)
+                    except subprocess.TimeoutExpired:
+                        # If somehow it's still outputting, kill it
+                        process.kill()
+                        stdout_output, stderr_output = process.communicate()
+
+                    # Update database with exit code and output
+                    cursor.execute(
+                        """
+                        UPDATE agent_lifecycle
+                        SET exit_code = ?, stdout_output = ?, stderr_output = ?,
+                            status = ?, completed_at = ?
+                        WHERE pid = ?
+                        """,
+                        (
+                            exit_code,
+                            stdout_output,
+                            stderr_output,
+                            "completed" if exit_code == 0 else "failed",
+                            datetime.now().isoformat(),
+                            pid,
+                        ),
+                    )
+                    conn.commit()
+
+                    # Remove from process handles
+                    del self._process_handles[pid]
+
+                    # Log failure details
+                    if exit_code != 0:
+                        logger.error(f"Agent {agent_info['agent_type']} (PID {pid}) failed with exit code {exit_code}")
+                        if stderr_output:
+                            logger.error(f"Error output: {stderr_output[:500]}")  # First 500 chars
+
+                    status = "completed" if exit_code == 0 else "failed"
+                else:
+                    # Still running
+                    status = "running"
+            else:
+                # No process handle - check if process exists via OS
+                try:
+                    os.kill(pid, 0)  # Signal 0 = check if process exists
+                    status = "running"
+                except OSError:
+                    # Process finished but we don't have handle
+                    status = agent_info.get("status", "completed")
+                    exit_code = agent_info.get("exit_code")
 
             # Calculate duration
             started_at = datetime.fromisoformat(agent_info["spawned_at"])
@@ -604,6 +671,12 @@ class OrchestratorAgentManagementSkill:
                 "task_id": agent_info["task_id"],
                 "agent_type": agent_info["agent_type"],
             }
+
+            # Include output if available
+            if stdout_output:
+                result["stdout"] = stdout_output
+            if stderr_output:
+                result["stderr"] = stderr_output
 
             return {"error": None, "result": result}
 
@@ -625,17 +698,30 @@ class OrchestratorAgentManagementSkill:
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM agent_lifecycle WHERE pid = ?", (pid,))
+            cursor.execute("SELECT stdout_output, stderr_output FROM agent_lifecycle WHERE pid = ?", (pid,))
             row = cursor.fetchone()
 
             if not row:
                 return {"error": f"Agent PID {pid} not found", "result": None}
 
-            # For now, return placeholder (would need to capture output to file)
+            stdout = row["stdout_output"] or ""
+            stderr = row["stderr_output"] or ""
+
+            # Limit to last N lines if requested
+            if last_n_lines and stdout:
+                stdout_lines = stdout.splitlines()
+                if len(stdout_lines) > last_n_lines:
+                    stdout = "\n".join(stdout_lines[-last_n_lines:])
+
+            if last_n_lines and stderr:
+                stderr_lines = stderr.splitlines()
+                if len(stderr_lines) > last_n_lines:
+                    stderr = "\n".join(stderr_lines[-last_n_lines:])
+
             result = {
                 "pid": pid,
-                "stdout": f"(Output capture not implemented yet for PID {pid})",
-                "stderr": "",
+                "stdout": stdout,
+                "stderr": stderr,
                 "lines": last_n_lines,
             }
 
@@ -872,6 +958,137 @@ class OrchestratorAgentManagementSkill:
 
             except OSError as e:
                 return {"error": f"Failed to kill PID {pid}: {e}", "result": None}
+
+        finally:
+            conn.close()
+
+    def _register_agent(
+        self,
+        pid: int,
+        agent_type: str,
+        task_id: str,
+        task_type: str,
+        priority_number: Optional[int] = None,
+        command: Optional[str] = None,
+        worktree_path: Optional[str] = None,
+        worktree_branch: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        Register an already-spawned agent in the database.
+
+        This is used by ParallelExecutionCoordinator which spawns processes directly.
+
+        Args:
+            pid: Process ID
+            agent_type: Type of agent (code_developer, architect, etc.)
+            task_id: Task identifier (e.g., impl-24, spec-031)
+            task_type: Type of task (implementation, create_spec, etc.)
+            priority_number: Priority number (optional)
+            command: Command used to spawn agent (optional)
+            worktree_path: Path to git worktree (optional)
+            worktree_branch: Git branch name (optional)
+
+        Returns:
+            Registration result
+        """
+        spawned_at = datetime.now().isoformat()
+
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO agent_lifecycle (
+                    pid, agent_type, task_id, task_type, priority_number,
+                    spawned_at, started_at, status, command, worktree_path, worktree_branch
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    pid,
+                    agent_type,
+                    task_id,
+                    task_type,
+                    priority_number,
+                    spawned_at,
+                    spawned_at,
+                    "spawned",
+                    command,
+                    worktree_path,
+                    worktree_branch,
+                ),
+            )
+            conn.commit()
+
+            agent_info = {
+                "pid": pid,
+                "agent_type": agent_type,
+                "task_id": task_id,
+                "task_type": task_type,
+                "priority_number": priority_number,
+                "started_at": spawned_at,
+                "status": "spawned",
+            }
+
+            logger.info(f"Registered {agent_type} (PID {pid}) for task {task_id}")
+
+            return {"error": None, "result": agent_info}
+
+        finally:
+            conn.close()
+
+    def _update_agent_status(
+        self, task_id: str, status: str, exit_code: Optional[int] = None, **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Update agent status in the database.
+
+        Args:
+            task_id: Task identifier (e.g., impl-24-parallel, spec-031)
+            status: New status (completed, failed, running, etc.)
+            exit_code: Process exit code (optional)
+
+        Returns:
+            Update result
+        """
+        completed_at = datetime.now().isoformat()
+
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+
+            # Build update query based on provided parameters
+            update_fields = ["status = ?"]
+            update_values = [status]
+
+            if status in ["completed", "failed", "killed"]:
+                update_fields.append("completed_at = ?")
+                update_values.append(completed_at)
+
+            if exit_code is not None:
+                update_fields.append("exit_code = ?")
+                update_values.append(exit_code)
+
+            update_values.append(task_id)
+
+            cursor.execute(
+                f"UPDATE agent_lifecycle SET {', '.join(update_fields)} WHERE task_id = ?",
+                update_values,
+            )
+            conn.commit()
+
+            # Verify update
+            cursor.execute("SELECT * FROM agent_lifecycle WHERE task_id = ?", (task_id,))
+            row = cursor.fetchone()
+
+            if not row:
+                return {"error": f"Task {task_id} not found", "result": None}
+
+            agent_info = dict(row)
+
+            logger.info(f"Updated agent {agent_info['agent_type']} (task: {task_id}) status to {status}")
+
+            return {"error": None, "result": agent_info}
 
         finally:
             conn.close()
