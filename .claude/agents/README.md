@@ -100,6 +100,25 @@ This directory contains agent definitions for the MonolithicCoffeeMakerAgent pro
 
 ---
 
+### 8. code-reviewer
+**Purpose**: Automated code quality assurance and review agent
+
+**Use When**:
+- Reviewing commits from code_developer
+- Generating quality reports
+- Checking style guide compliance
+- Running security scans
+- Verifying test coverage
+- Communicating findings to architect
+
+**Invoke**: `> Use the code-reviewer subagent to review commit abc1234`
+
+**CLI**: `poetry run code-reviewer review [commit-sha]`
+
+**Status**: Active (Background agent - silent notifications)
+
+---
+
 ## How to Use
 
 ### Via Claude CLI
@@ -239,6 +258,20 @@ Each agent has been configured to read specific critical documents at startup. T
 - Existing UI components
 - `docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md` - Feature requirements
 
+#### code-reviewer - Startup Documents
+
+**READ AT STARTUP (MANDATORY)**:
+1. 🔴 `.gemini/styleguide.md` - Style guide compliance rules (read FIRST)
+2. 🔴 `.claude/CLAUDE.md` - Project standards (read SECOND)
+3. 🔴 `.claude/agents/code-reviewer.md` - Own role definition (read THIRD)
+
+**READ AS NEEDED**:
+- `docs/architecture/specs/SPEC-*.md` - Technical specs for compliance checking
+- `docs/architecture/decisions/ADR-*.md` - Architectural decisions
+- `docs/architecture/guidelines/GUIDELINE-*.md` - Implementation guidelines
+- `docs/code-reviews/INDEX.md` - Review history
+- Changed files from git diff (for review analysis)
+
 ---
 
 ## File Format
@@ -268,14 +301,21 @@ Agent system prompt and instructions go here...
 
 ## Version
 
-**Version**: 2.1 (US-072 - Orchestrator Agent Added)
-**Last Updated**: 2025-10-19
+**Version**: 2.2 (code-reviewer Agent Added)
+**Last Updated**: 2025-10-21
 
 All agents equipped with:
 - Puppeteer MCP for browser automation
 - GitHub CLI for issue/PR management
 - DoD verification capabilities
 - Comprehensive context files
+
+**New in v2.2**:
+- ✅ code-reviewer agent configuration added
+- ✅ Automated code quality assurance
+- ✅ Style guide and architecture compliance checking
+- ✅ Security scanning and test coverage verification
+- ✅ Automated feedback loop with architect
 
 **New in v2.1**:
 - ✅ Orchestrator agent configuration added

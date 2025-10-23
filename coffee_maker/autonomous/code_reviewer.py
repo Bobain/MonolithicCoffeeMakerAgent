@@ -950,18 +950,18 @@ This index lists all code reviews performed by code-reviewer agent.
         """
         commit_short = report.commit_sha[:7]
 
-        # Determine notification level
+        # Determine notification priority
         if report.quality_score >= 90:
-            level = "info"
+            priority = "normal"
             title = f"Code Review: {commit_short} - Approved ✅"
         elif report.quality_score >= 70:
-            level = "info"
+            priority = "normal"
             title = f"Code Review: {commit_short} - Approved with Notes ⚠️"
         elif report.quality_score >= 50:
-            level = "high"
+            priority = "high"
             title = f"Code Review: {commit_short} - Changes Requested ⚠️"
         else:
-            level = "high"
+            priority = "high"
             title = f"Code Review: {commit_short} - Critical Issues ❌"
 
         message = (
@@ -972,9 +972,10 @@ This index lists all code reviews performed by code-reviewer agent.
 
         # Create notification (background agent - MUST use sound=False)
         self.notifications.create_notification(
+            type="code_review",
             title=title,
             message=message,
-            level=level,
+            priority=priority,
             sound=False,  # CFR-009: code-reviewer is background agent
             agent_id="code_reviewer",
         )

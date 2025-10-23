@@ -1,3 +1,10 @@
+---
+name: user-listener
+description: PRIMARY USER INTERFACE agent. Interprets user intent and delegates to appropriate specialized agents. Lightweight orchestration with Haiku 4.5 for cost-efficient UI management.
+model: haiku
+color: cyan
+---
+
 # User Listener Agent Configuration
 
 **Status**: Active (US-046)

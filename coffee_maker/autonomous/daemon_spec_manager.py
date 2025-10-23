@@ -128,7 +128,7 @@ class SpecManagerMixin:
             else:
                 # Fallback to priority number
                 priority_num = priority_name.replace("PRIORITY", "").strip()
-                spec_prefix = f"SPEC-{priority_num.zfill(3)}"
+                spec_prefix = f"SPEC-{priority_num}"
         elif priority_name.startswith("US-"):
             spec_number = priority_name.split("-")[1]
             spec_prefix = f"SPEC-{spec_number}"
@@ -136,9 +136,9 @@ class SpecManagerMixin:
             priority_num = priority_name.replace("PRIORITY", "").strip()
             if "." in priority_num:
                 major, minor = priority_num.split(".")
-                spec_prefix = f"SPEC-{major.zfill(3)}-{minor}"
+                spec_prefix = f"SPEC-{major}-{minor}"
             else:
-                spec_prefix = f"SPEC-{priority_num.zfill(3)}"
+                spec_prefix = f"SPEC-{priority_num}"
         else:
             spec_prefix = f"SPEC-{priority_name.replace(' ', '-')}"
 
@@ -150,13 +150,44 @@ class SpecManagerMixin:
 
         # Step 1: Check if spec already exists
         if architect_spec_dir.exists():
-            spec_pattern = f"{spec_prefix}-*.md"
-            matching_specs = list(architect_spec_dir.glob(spec_pattern))
-            logger.info(f"   Pattern: {spec_pattern}, Found {len(matching_specs)} matches")
+            # Try multiple patterns to handle inconsistent naming (with/without zero-padding)
+            patterns_to_try = []
 
-            for spec_file in matching_specs:
-                logger.info(f"✅ Technical spec found: {spec_file.name}")
-                return True
+            # Extract the number from spec_prefix (e.g., "SPEC-24" -> "24")
+            import re
+
+            match = re.search(r"SPEC-(\d+)", spec_prefix)
+            if match:
+                num = match.group(1)
+                # Try both with and without zero-padding
+                patterns_to_try.append(f"SPEC-{num}-*.md")  # Without padding
+                patterns_to_try.append(f"SPEC-{num.zfill(3)}-*.md")  # With padding (3 digits)
+                patterns_to_try.append(f"SPEC-{num.zfill(2)}-*.md")  # With padding (2 digits)
+
+                # Also check for directories (like SPEC-025-hierarchical-modular-spec-architecture)
+                patterns_to_try.append(f"SPEC-{num}-*")  # Directory without .md
+                patterns_to_try.append(f"SPEC-{num.zfill(3)}-*")  # Directory with padding
+            else:
+                patterns_to_try.append(f"{spec_prefix}-*.md")
+                patterns_to_try.append(f"{spec_prefix}-*")
+
+            for spec_pattern in patterns_to_try:
+                matching_specs = list(architect_spec_dir.glob(spec_pattern))
+                if matching_specs:
+                    logger.info(f"   Pattern: {spec_pattern}, Found {len(matching_specs)} matches")
+                    for spec_file in matching_specs:
+                        # Check if it's a directory with phase files or a regular .md file
+                        if spec_file.is_dir():
+                            # Check if directory contains phase files (indicates hierarchical spec)
+                            phase_files = list(spec_file.glob("phase*.md")) + list(spec_file.glob("README.md"))
+                            if phase_files:
+                                logger.info(
+                                    f"✅ Technical spec directory found: {spec_file.name} (contains {len(phase_files)} phase files)"
+                                )
+                                return True
+                        elif spec_file.suffix == ".md":
+                            logger.info(f"✅ Technical spec found: {spec_file.name}")
+                            return True
         else:
             logger.error(f"   Spec directory doesn't exist: {architect_spec_dir}")
 

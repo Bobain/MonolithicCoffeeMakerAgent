@@ -102,10 +102,22 @@ class ArchitectCoordinator:
             # Fallback to priority number if no us_id
             spec_number = priority.get("number")
 
-        spec_pattern = f"SPEC-{spec_number}-*.md"
+        # Zero-pad spec number to 3 digits (SPEC-001, SPEC-025, SPEC-104)
+        if spec_number and spec_number.isdigit():
+            spec_number = spec_number.zfill(3)
+
         spec_path = Path("docs/architecture/specs")
 
-        return len(list(spec_path.glob(spec_pattern))) > 0
+        # Check for both monolithic (.md files) and hierarchical (directories) specs
+        # Monolithic: SPEC-{number}-{slug}.md
+        file_pattern = f"SPEC-{spec_number}-*.md"
+        monolithic_specs = list(spec_path.glob(file_pattern))
+
+        # Hierarchical: SPEC-{number}-{slug}/ directory
+        dir_pattern = f"SPEC-{spec_number}-*"
+        hierarchical_specs = [p for p in spec_path.glob(dir_pattern) if p.is_dir()]
+
+        return len(monolithic_specs) > 0 or len(hierarchical_specs) > 0
 
     def create_spec_backlog(self, priorities: List[Dict]) -> List[str]:
         """

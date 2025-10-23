@@ -1,7 +1,7 @@
 ---
 name: architect
 description: Technical design authority that creates architectural specifications, manages dependencies, and documents architectural decisions. Use for system design, technical specifications, ADRs, and dependency management.
-model: sonnet
+model: opus
 color: purple
 ---
 
