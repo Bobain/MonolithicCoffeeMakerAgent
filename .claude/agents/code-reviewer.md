@@ -52,34 +52,116 @@ The code-reviewer agent automatically reviews all code committed by code_develop
 
 ---
 
-## Workflow
+## Workflow (NEW - Spec-Based Reviews)
 
 ```
-1. code_developer commits code
+1. code_developer commits code and requests review (linking to spec)
    ↓
-2. code-reviewer (triggered automatically):
-   - git diff to see changes
-   - Analyze changed files
+2. code-reviewer finds pending reviews:
+   - Get list of commits needing review
+   - Read linked technical spec to understand requirements
+   - Review code against spec requirements
+   ↓
+3. code-reviewer performs review:
+   - Verify implementation matches spec
    - Run quality checks (static analysis)
-   - Generate review report
+   - Check style guide compliance
+   - Add review comments
    ↓
-3. code-reviewer writes to docs/code-reviews/REVIEW-{commit}.md:
-   - Summary of changes
-   - Quality score (0-100)
-   - Issues found (Critical/High/Medium/Low)
-   - Architecture compliance assessment
-   - Recommendations for architect
+4. code-reviewer marks review as done:
+   - Status: 'approved' or 'changes_requested'
+   - Provides overall feedback
+   - Notifies code_developer of results
    ↓
-4. code-reviewer notifies architect (high-priority notification)
-   ↓
-5. architect reads review:
-   - If OK: Approves (no action)
-   - If issues: Updates technical spec with corrections
-   - Creates follow-up task for code_developer
-   ↓
-6. code_developer implements corrections
-   ↓
-7. code-reviewer re-reviews (verification cycle)
+5. If changes requested:
+   - code_developer fixes issues
+   - Requests re-review
+   - code-reviewer verifies fixes
+```
+
+## 📋 CODE REVIEW TRACKING SKILL (MANDATORY)
+
+### Finding and Processing Reviews
+
+**Use the shared review tracking skill to manage reviews:**
+
+```python
+import sys
+sys.path.insert(0, '.claude/skills/shared/code_review_tracking')
+from review_tracking_skill import CodeReviewTrackingSkill
+
+# Initialize skill
+review_skill = CodeReviewTrackingSkill(agent_name="code_reviewer")
+
+# Step 1: Find pending reviews
+pending_reviews = review_skill.get_pending_reviews()
+for review in pending_reviews:
+    print(f"Review #{review['id']}: {review['description']}")
+    print(f"  Spec: {review['spec_id']} - {review['spec_title']}")
+    print(f"  Commit: {review['commit_sha'][:8]}")
+    print(f"  Files: {', '.join(review['files_changed'])}")
+
+# Step 2: Claim a review to work on
+review_id = pending_reviews[0]['id']
+review_skill.claim_review(review_id)
+
+# Step 3: READ THE SPEC to understand requirements
+spec = review_skill.get_spec_for_review(review_id)
+if spec:
+    print(f"Reviewing against spec: {spec['title']}")
+    # Read spec content to understand what should have been implemented
+    # Compare implementation against spec requirements
+
+# Step 4: Perform the review
+# ... analyze code, run tests, check style ...
+
+# Step 5: Add specific comments
+review_skill.add_review_comment(
+    review_id=review_id,
+    file_path="coffee_maker/api/endpoints.py",
+    comment="Missing error handling for edge case described in spec section 3.2",
+    comment_type="issue",  # or "suggestion", "praise"
+    line_number=42
+)
+
+# Step 6: MARK REVIEW AS DONE (CRITICAL)
+review_skill.complete_review(
+    review_id=review_id,
+    status="approved",  # or "changes_requested"
+    feedback="Implementation correctly follows SPEC-115. All requirements met. Minor suggestions added for future improvement."
+)
+
+print(f"✅ Review #{review_id} marked as done")
+```
+
+### Key Points:
+- **ALWAYS read the spec** before reviewing to understand requirements
+- **Link review to spec** so you know what was supposed to be implemented
+- **Mark reviews as done** when complete (approved or changes_requested)
+- **Provide clear feedback** for code_developer to act on
+
+## 📖 READING TECHNICAL SPECS (For Context)
+
+**Use the unified spec skill to read specs hierarchically:**
+
+```python
+import sys
+sys.path.insert(0, '.claude/skills/shared/technical_spec_database')
+from unified_spec_skill import TechnicalSpecSkill
+
+# Initialize spec skill (read-only for code_reviewer)
+spec_skill = TechnicalSpecSkill(agent_name="code_reviewer")
+
+# Get spec ID from review
+spec_id = "SPEC-115"  # From review_skill.get_spec_for_review()
+
+# Load spec hierarchically for efficient context
+overview = spec_skill.get_spec_overview(spec_id)  # High-level requirements
+api_section = spec_skill.get_spec_section(spec_id, 'api_design')  # If reviewing API
+impl_details = spec_skill.get_spec_implementation_details(spec_id)  # For detailed review
+
+# Review code against spec requirements
+# Ensure implementation matches what was specified
 ```
 
 ---

@@ -82,8 +82,8 @@ Your mission is to:
    - **git-workflow-automation** - Automate git operations (saves 7-12 min per commit)
 4. Verify Definition of Done with dod-verification skill
 5. Create pull requests with git-workflow-automation skill
-6. **⭐ COLLABORATION**: Send commit review requests to architect after each commit
-7. **⭐ COLLABORATION**: Process tactical feedback from architect
+6. **⭐ COLLABORATION**: Request code review after each commit using review skill
+7. **⭐ COLLABORATION**: Process feedback from code_reviewer
 8. Move to the next priority
 
 You operate autonomously with minimal human intervention, using skills to accelerate common tasks.
@@ -143,6 +143,56 @@ content = Path("docs/architecture/specs/SPEC-115.md").read_text()  # WRONG!
 # ✅ ALWAYS use the database skill
 spec = spec_skill.get_spec_by_id("SPEC-115")  # CORRECT
 ```
+
+## 📝 CODE REVIEW WORKFLOW (MANDATORY)
+
+### Requesting Reviews After Commits
+
+**ALWAYS request code review after committing implementation for a spec:**
+
+```python
+import sys
+sys.path.insert(0, '.claude/skills/shared/code_review_tracking')
+from review_tracking_skill import CodeReviewTrackingSkill
+
+# Initialize review skill
+review_skill = CodeReviewTrackingSkill(agent_name="code_developer")
+
+# After git commit for a spec implementation
+commit_sha = "abc123def456"  # Get from git log
+spec_id = "SPEC-115"  # The spec you implemented
+
+# Request review linking commit to spec
+review_id = review_skill.request_review(
+    commit_sha=commit_sha,
+    spec_id=spec_id,  # CRITICAL: Links to spec for context
+    description="Implemented database schema and API endpoints per spec",
+    files_changed=[
+        "coffee_maker/models/database.py",
+        "coffee_maker/api/endpoints.py",
+        "tests/test_api.py"
+    ]
+)
+
+print(f"✅ Review requested: #{review_id}")
+print(f"code_reviewer will review against {spec_id}")
+
+# Check review status later
+my_reviews = review_skill.get_my_reviews()
+for review in my_reviews:
+    if review['review_status'] == 'approved':
+        print(f"✅ Review #{review['id']} approved!")
+    elif review['review_status'] == 'changes_requested':
+        print(f"🔄 Review #{review['id']} needs changes: {review['review_feedback']}")
+```
+
+### Review Workflow:
+1. Implement spec requirements
+2. Commit code with descriptive message
+3. Request review linking to spec
+4. code_reviewer reviews against spec
+5. Process feedback and make changes if needed
+6. Continue to next task when approved
 
 ## ⚠️ CRITICAL DOCUMENTS ⚠️
 
