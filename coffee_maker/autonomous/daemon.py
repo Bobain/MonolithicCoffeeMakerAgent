@@ -251,6 +251,8 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         compact_interval: int = 10,
         # Parallel execution support
         specific_priority: Optional[int] = None,
+        # PRIORITY 31: work_session support for parallel development
+        work_session_id: Optional[str] = None,
     ) -> None:
         """Initialize development daemon.
 
@@ -266,6 +268,7 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             crash_sleep_interval: Sleep duration after crash in seconds (default: 60)
             compact_interval: Iterations between context resets (default: 10)
             specific_priority: Work on this specific priority only (for parallel execution)
+            work_session_id: Work session ID to claim and execute (e.g., "WORK-42")
         """
         self.roadmap_path = Path(roadmap_path)
         self.auto_approve = auto_approve
@@ -274,6 +277,17 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         self.model = model
         self.use_claude_cli = use_claude_cli
         self.specific_priority = specific_priority
+        self.work_session_id = work_session_id
+
+        # PRIORITY 31: Initialize WorkSessionManager if work_session_id provided
+        self.work_session_manager: Optional["WorkSessionManager"] = None
+        if work_session_id:
+            from coffee_maker.autonomous.unified_database import get_unified_database
+            from coffee_maker.autonomous.work_session_manager import WorkSessionManager
+
+            db = get_unified_database()
+            self.work_session_manager = WorkSessionManager(db.db_path)
+            logger.info(f"✅ WorkSessionManager initialized for work_session {work_session_id}")
 
         # Initialize components
         self.parser = RoadmapParser(str(self.roadmap_path))
