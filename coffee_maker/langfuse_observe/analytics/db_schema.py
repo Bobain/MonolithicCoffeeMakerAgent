@@ -701,7 +701,7 @@ def enable_sqlite_wal(engine: Engine) -> None:
 
     Example:
         >>> from sqlalchemy import create_engine
-        >>> engine = create_engine("sqlite:///llm_metrics.db")
+        >>> engine = create_engine("sqlite:///data/metrics.db")
         >>> enable_sqlite_wal(engine)
     """
     if engine.dialect.name == "sqlite":

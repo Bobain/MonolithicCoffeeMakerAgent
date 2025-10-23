@@ -78,6 +78,12 @@ MonolithicCoffeeMakerAgent/
 
 **CFR-014 - Database Tracing**: ALL orchestrator activities in SQLite database. JSON files FORBIDDEN.
 
+**CFR-015 - Centralized Database Storage**: ALL database files MUST be stored in `data/` directory ONLY.
+- **Implementation**: All .db, .sqlite, .sqlite3 files in `data/` directory
+- **Prohibited**: Database files in root, `.claude/`, or any other location
+- **Reason**: Organization, backup, security, and deployment simplicity
+- **Docs**: See [docs/CFR-015-CENTRALIZED-DATABASE-STORAGE.md](../docs/CFR-015-CENTRALIZED-DATABASE-STORAGE.md)
+
 ### Prompts
 - **Location**: `.claude/commands/` (centralized, MANDATORY)
 - **Usage**: `load_prompt(PromptNames.X, {...})` from `coffee_maker.autonomous.prompt_loader`

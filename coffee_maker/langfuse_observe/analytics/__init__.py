@@ -26,7 +26,7 @@ Example:
     Analyze LLM performance:
     >>> from coffee_maker.langfuse_observe.analytics import PerformanceAnalyzer
     >>>
-    >>> analyzer = PerformanceAnalyzer("llm_metrics.db")
+    >>> analyzer = PerformanceAnalyzer("data/metrics.db")
     >>> perf = analyzer.get_llm_performance(days=7)
     >>> print(f"Average latency: {perf['avg_latency_ms']:.0f}ms")
 
