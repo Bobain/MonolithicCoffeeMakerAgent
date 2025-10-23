@@ -85,8 +85,7 @@ class RoadmapDatabaseV2:
                     estimated_hours TEXT,           -- Time estimation
                     dependencies TEXT,              -- Dependency information
                     section_order INTEGER NOT NULL, -- Preserve ROADMAP.md ordering
-                    implementation_started_at TEXT, -- When code_developer started work
-                    implementation_started_by TEXT, -- Which code_developer claimed this
+                    implementation_started_at TEXT, -- When code_developer started work (for stale detection)
                     updated_at TEXT NOT NULL,       -- ISO timestamp
                     updated_by TEXT NOT NULL,       -- Agent who updated
                     FOREIGN KEY (spec_id) REFERENCES technical_specs(id) ON DELETE SET NULL
@@ -776,22 +775,22 @@ class RoadmapDatabaseV2:
             logger.error(f"Error getting stats: {e}")
             return {}
 
-    def claim_implementation(self, item_id: str, developer: str) -> bool:
+    def claim_implementation(self, item_id: str, developer: str = "code_developer") -> bool:
         """Claim a roadmap item for implementation (tracks start time for stale detection).
 
-        This marks an item as being actively worked on by a code_developer.
+        This marks an item as being actively worked on by code_developer.
         Used for stale work detection (>24 hours with no progress).
 
         Args:
             item_id: Item to claim (e.g., "PRIORITY-27")
-            developer: code_developer agent name
+            developer: Ignored (kept for API compatibility, uses singleton code_developer)
 
         Returns:
             True if successfully claimed, False if already claimed or not found
 
         Note:
-            This is READ-WRITE but doesn't require project_manager permission
-            since it's tracking developer work sessions, not roadmap changes.
+            With singleton agent enforcement (CFR-000), there's only ever ONE code_developer,
+            so we only track when work started, not who started it.
         """
         try:
             conn = sqlite3.connect(self.db_path)
@@ -799,7 +798,7 @@ class RoadmapDatabaseV2:
 
             # Check if item exists and is not already claimed
             cursor.execute(
-                "SELECT implementation_started_by, implementation_started_at FROM roadmap_items WHERE id = ?",
+                "SELECT implementation_started_at FROM roadmap_items WHERE id = ?",
                 (item_id,),
             )
             result = cursor.fetchone()
@@ -808,10 +807,10 @@ class RoadmapDatabaseV2:
                 logger.error(f"Item not found: {item_id}")
                 return False
 
-            current_owner, started_at = result
+            started_at = result[0]
 
-            if current_owner and started_at:
-                logger.warning(f"Item {item_id} already claimed by {current_owner} at {started_at}")
+            if started_at:
+                logger.warning(f"Item {item_id} already claimed at {started_at}")
                 return False
 
             # Claim the item
@@ -819,30 +818,30 @@ class RoadmapDatabaseV2:
             cursor.execute(
                 """
                 UPDATE roadmap_items
-                SET implementation_started_at = ?, implementation_started_by = ?
+                SET implementation_started_at = ?
                 WHERE id = ?
             """,
-                (now, developer, item_id),
+                (now, item_id),
             )
 
             conn.commit()
             conn.close()
 
-            logger.info(f"✅ code_developer {developer} claimed {item_id}")
+            logger.info(f"✅ code_developer claimed {item_id}")
             return True
 
         except sqlite3.Error as e:
             logger.error(f"Error claiming implementation: {e}")
             return False
 
-    def release_implementation(self, item_id: str, developer: str) -> bool:
+    def release_implementation(self, item_id: str, developer: str = "code_developer") -> bool:
         """Release claim on a roadmap item (called on completion or abort).
 
-        Clears implementation tracking fields so item can be claimed by another developer.
+        Clears implementation tracking timestamp so item can be claimed again if needed.
 
         Args:
             item_id: Item to release (e.g., "PRIORITY-27")
-            developer: code_developer agent name (must match current owner)
+            developer: Ignored (kept for API compatibility)
 
         Returns:
             True if successfully released
@@ -851,9 +850,9 @@ class RoadmapDatabaseV2:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            # Verify current owner
+            # Check if item exists
             cursor.execute(
-                "SELECT implementation_started_by FROM roadmap_items WHERE id = ?",
+                "SELECT id FROM roadmap_items WHERE id = ?",
                 (item_id,),
             )
             result = cursor.fetchone()
@@ -862,17 +861,11 @@ class RoadmapDatabaseV2:
                 logger.error(f"Item not found: {item_id}")
                 return False
 
-            current_owner = result[0]
-
-            if current_owner != developer:
-                logger.warning(f"Cannot release {item_id} - owned by {current_owner}, not {developer}")
-                return False
-
             # Release the item
             cursor.execute(
                 """
                 UPDATE roadmap_items
-                SET implementation_started_at = NULL, implementation_started_by = NULL
+                SET implementation_started_at = NULL
                 WHERE id = ?
             """,
                 (item_id,),
@@ -881,7 +874,7 @@ class RoadmapDatabaseV2:
             conn.commit()
             conn.close()
 
-            logger.info(f"✅ Released {item_id} (was owned by {developer})")
+            logger.info(f"✅ Released {item_id}")
             return True
 
         except sqlite3.Error as e:
@@ -912,7 +905,7 @@ class RoadmapDatabaseV2:
             # Find stale implementations
             cursor.execute(
                 """
-                SELECT id, implementation_started_by, implementation_started_at
+                SELECT id, implementation_started_at
                 FROM roadmap_items
                 WHERE implementation_started_at IS NOT NULL
                 AND implementation_started_at < ?
@@ -929,20 +922,17 @@ class RoadmapDatabaseV2:
 
             # Reset each stale item
             count = 0
-            for item_id, owner, started_at in stale_items:
+            for item_id, started_at in stale_items:
                 cursor.execute(
                     """
                     UPDATE roadmap_items
-                    SET implementation_started_at = NULL,
-                        implementation_started_by = NULL
+                    SET implementation_started_at = NULL
                     WHERE id = ?
                 """,
                     (item_id,),
                 )
 
-                logger.warning(
-                    f"⚠️ Reset stale implementation: {item_id} " f"(claimed by {owner} at {started_at}, no progress)"
-                )
+                logger.warning(f"⚠️ Reset stale implementation: {item_id} " f"(claimed at {started_at}, no progress)")
                 count += 1
 
             conn.commit()

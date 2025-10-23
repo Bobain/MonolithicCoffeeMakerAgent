@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def migrate_database():
-    """Add implementation tracking fields to roadmap_items table."""
+    """Add implementation tracking field to roadmap_items table."""
     db_path = Path("data/roadmap.db")
 
     if not db_path.exists():
@@ -28,34 +28,38 @@ def migrate_database():
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # Check if columns already exist
+        # Check if column already exists
         cursor.execute("PRAGMA table_info(roadmap_items)")
         columns = [col[1] for col in cursor.fetchall()]
 
-        needs_migration = False
-        fields_to_add = []
+        if "implementation_started_at" in columns:
+            logger.info("Migration not needed - field already exists")
 
-        if "implementation_started_at" not in columns:
-            fields_to_add.append(("implementation_started_at", "TEXT", "When code_developer started work"))
-            needs_migration = True
+            # Remove implementation_started_by if it exists (legacy field)
+            if "implementation_started_by" in columns:
+                logger.info("Removing legacy implementation_started_by field...")
+                # SQLite requires table recreation to drop column
+                cursor.execute("PRAGMA foreign_keys=off")
+                cursor.execute("BEGIN TRANSACTION")
 
-        if "implementation_started_by" not in columns:
-            fields_to_add.append(("implementation_started_by", "TEXT", "Which code_developer claimed this"))
-            needs_migration = True
+                # Get all columns except implementation_started_by
+                all_cols = [col for col in columns if col != "implementation_started_by"]
+                cols_str = ", ".join(all_cols)
 
-        if not needs_migration:
-            logger.info("Migration not needed - fields already exist")
+                cursor.execute(f"CREATE TABLE roadmap_items_temp AS SELECT {cols_str} FROM roadmap_items")
+                cursor.execute("DROP TABLE roadmap_items")
+                cursor.execute("ALTER TABLE roadmap_items_temp RENAME TO roadmap_items")
+                cursor.execute("COMMIT")
+                cursor.execute("PRAGMA foreign_keys=on")
+                logger.info("✅ Removed legacy implementation_started_by field")
+
             conn.close()
             return True
 
-        logger.info(f"Adding {len(fields_to_add)} fields to roadmap_items table...")
-
-        for field_name, field_type, description in fields_to_add:
-            logger.info(f"  Adding field: {field_name} ({description})")
-            cursor.execute(f"ALTER TABLE roadmap_items ADD COLUMN {field_name} {field_type}")
-
+        logger.info("Adding implementation_started_at field to roadmap_items table...")
+        cursor.execute("ALTER TABLE roadmap_items ADD COLUMN implementation_started_at TEXT")
         conn.commit()
-        logger.info("✅ Successfully added implementation tracking fields")
+        logger.info("✅ Successfully added implementation tracking field")
 
         conn.close()
         return True

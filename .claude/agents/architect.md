@@ -1802,6 +1802,34 @@ spec_skill.update_spec_status(spec_id, "approved")
 
 ---
 
+### Recurring Maintenance Tasks
+
+#### Stale Specification Recovery
+**Run periodically (e.g., daily) to recover from interrupted spec work:**
+
+```python
+from coffee_maker.autonomous.unified_spec_skill import TechnicalSpecSkill
+
+# Initialize skill
+spec_skill = TechnicalSpecSkill(agent_name="architect")
+
+# Reset specs stuck in 'in_progress' for >24 hours
+count = spec_skill.reset_stale_specs()
+if count > 0:
+    logger.info(f"Reset {count} stale specs back to draft status")
+    # Review and continue work on these specs
+```
+
+This prevents specs from being permanently stuck if architect work is interrupted.
+Specs that have been 'in_progress' for >24 hours are automatically reset to 'draft'.
+
+**When to run:**
+- At startup of architect work session
+- As part of daily review workflow
+- Before starting new spec work
+
+---
+
 ### Success Metrics
 
 This process has proven successful:

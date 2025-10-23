@@ -640,6 +640,262 @@ result = task_separator_main({"priority_ids": priority_ids})
 
 ---
 
+### PRIORITY 28: BUG-XXX - Implement Notification Processing Loop (CFR-015 Workflow) 🔴 P0 CRITICAL - DO THIS FIRST!
+
+**Status**: 📝 Planned - CRITICAL (HIGHEST PRIORITY - DO THIS FIRST! Blocks all workflow automation)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 4-6 hours
+
+**Implementation Order**: #1 - MOST CRITICAL - DO THIS FIRST!
+
+**User Story**:
+As project_manager, I want to process pending notifications so that specs get linked to roadmap items, architect gets notified of issues, and the workflow automation loop is complete.
+
+**Problem Statement**:
+Notifications pile up in the database but no one processes them. This breaks the entire workflow:
+1. architect creates spec → notification created ✅
+2. **NO ONE PROCESSES NOTIFICATION** ❌
+3. Spec never linked to roadmap (spec_id stays NULL)
+4. code_developer can't find task
+5. Task never implemented despite having complete spec
+
+**Critical Issue**:
+- **Location**: Missing entirely
+- **Problem**: Notifications accumulate in database with no processing mechanism
+- **Impact**: Workflow stalls, specs never linked, tasks never start
+
+**Deadlock Scenarios**:
+1. **Spec Never Linked**: architect creates spec → notification ignored → roadmap.spec_id = NULL → code_developer can't find task → STUCK
+2. **Status Never Updates**: code_developer completes work → no completion notification → roadmap shows "In Progress" forever
+3. **Reviews Never Read**: code_reviewer finds issues → notification ignored → issues never addressed → STUCK
+
+**Why This Must Be Done First**:
+- PRIORITY-27 (code_reviewer DB integration) DEPENDS on this notification processor
+- PRIORITY-29 (code_developer notifications) DEPENDS on this notification processor
+- PRIORITY-30 (architect feedback loop) DEPENDS on this notification processor
+- Blocks all workflow automation until complete
+- No other priorities can be truly verified without this processor running
+
+**Solution**:
+1. Create notification processor in orchestrator or project_manager
+2. Process pending notifications every 60 seconds
+3. Handle notification types:
+   - `spec_complete` → Link spec to roadmap item
+   - `implementation_complete` → Update roadmap status to "✅ Complete"
+   - `review_changes_needed` → Create bug ticket or update spec
+4. Mark notifications as processed when done
+5. Log all notification processing for observability
+
+**Files to Create**:
+- `coffee_maker/autonomous/notification_processor.py` (or integrate into orchestrator)
+
+**Files to Modify**:
+- `coffee_maker/orchestrator/continuous_work_loop.py` (add notification processing loop)
+- `coffee_maker/orchestrator/orchestrator.py` (if separate orchestrator)
+
+**Dependencies**:
+- None - this is a foundational service
+
+**Enables**:
+- PRIORITY 27 (code_reviewer database integration) - required for architect notifications
+- PRIORITY 29 (code_developer completion notifications) - required for status updates
+- PRIORITY 30 (architect feedback) - required for notification delivery
+- Complete workflow automation
+
+**Related Documents**:
+- `docs/WORKFLOW_FLAW_ANALYSIS.md` (detailed workflow analysis with deadlock scenarios)
+- `docs/WORKFLOW_FLAWS_EXECUTIVE_SUMMARY.md` (executive summary)
+
+**Success Criteria**:
+- [ ] Notification processor implemented
+- [ ] Processes at least 3 notification types (spec_complete, implementation_complete, review_changes_needed)
+- [ ] Runs every 60 seconds
+- [ ] Marks notifications as processed in database
+- [ ] Spec links created automatically within 5 minutes of creation
+- [ ] architect receives notifications for review issues
+- [ ] Roadmap status updates automatically on implementation completion
+- [ ] Comprehensive tests (15+ tests, all passing)
+- [ ] No stale/unprocessed notifications after 1 hour
+
+---
+
+### PRIORITY 27: BUG-XXX - Fix code_reviewer Database Integration (CFR-015 Violation) 🔴 P0 CRITICAL
+
+**Status**: 📝 Planned - CRITICAL (Depends on PRIORITY-28)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 4-5 hours
+
+**Implementation Order**: #2 - After PRIORITY-28
+
+**User Story**:
+As code_reviewer, I want to write review reports to the database instead of files so that architect can receive automatic notifications and the workflow automation loop is complete.
+
+**Problem Statement**:
+Currently, code_reviewer writes review reports to `docs/code-reviews/*.md` files instead of storing them in the database. This breaks CFR-015 (database-only pattern) and prevents workflow automation:
+- architect never gets notified when reviews find issues
+- No automated feedback loop between code_reviewer and architect
+- Can't query reviews by spec or quality score
+- File-based communication breaks automation
+
+**Critical Issue**:
+- **Location**: `coffee_maker/autonomous/code_reviewer.py:713, 943`
+- **Problem**: `report_path.write_text(content)` writes to files
+- **Impact**: No architect notification, broken workflow, data inconsistency
+
+**Dependencies**:
+- PRIORITY-28 must be complete (notification processor required)
+
+**Blocks**:
+- PRIORITY-29, PRIORITY-30
+- Complete workflow automation
+
+**Solution**:
+1. Create `review_reports` table in unified_database.py
+2. Move review report writing from files to database
+3. Add database trigger to notify architect on low-quality reviews
+4. Update code_reviewer to write to database instead of files
+5. Add helper methods for architect to query review reports
+
+**Files to Modify**:
+- `coffee_maker/autonomous/unified_database.py` (add review_reports table)
+- `coffee_maker/autonomous/code_reviewer.py` (stop writing files, write to database)
+- `.claude/skills/shared/code_review_tracking/review_tracking_skill.py` (add query methods)
+
+**Related Documents**:
+- `docs/DATABASE_VS_FILE_VIOLATIONS.md` (detailed analysis with code fixes)
+- `docs/WORKFLOW_FLAW_ANALYSIS.md` (workflow impact analysis)
+
+**Success Criteria**:
+- [ ] review_reports table created with proper schema
+- [ ] code_reviewer writes all reviews to database
+- [ ] Database trigger notifies architect on review_quality_score < 80 or approved = 0
+- [ ] architect can query reviews needing attention via skill methods
+- [ ] Old file-based review code removed
+- [ ] Tests pass (existing + new)
+- [ ] Zero regression in code_reviewer functionality
+
+---
+
+### PRIORITY 29: BUG-XXX - Add code_developer Completion Notifications 🔴 P0 CRITICAL
+
+**Status**: 📝 Planned - CRITICAL (Depends on PRIORITY-28)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 2-3 hours
+
+**Implementation Order**: #3 - After PRIORITY-28 (notification processor required)
+
+**User Story**:
+As code_developer, I want to notify project_manager when implementation is complete so that roadmap status updates automatically and DoD verification is triggered.
+
+**Problem Statement**:
+When code_developer completes implementation, no one is notified. This causes:
+- Roadmap status never updates (stays "🔄 In Progress" forever)
+- DoD verification never happens
+- project_manager doesn't know work is done
+- Tasks appear stuck even when actually complete
+
+**Critical Issue**:
+- **Location**: Missing from code_developer workflow
+- **Problem**: No notification sent when implementation completes
+- **Impact**: Status never updates, DoD never verified, tasks stuck in "In Progress"
+
+**Dependencies**:
+- PRIORITY-28 (notification processor) - must be running first to process these notifications
+- PRIORITY-27 should also be done (database integration for code_reviewer)
+
+**Blocks**:
+- DoD verification automation
+- Roadmap status updates
+- Workflow completion signaling
+
+**Solution**:
+1. Add completion notification when code_developer finishes implementation
+2. Create notification: `implementation_complete` with roadmap_item_id and commit_sha
+3. Send notification to project_manager
+4. Include link to commit and spec details
+
+**Files to Modify**:
+- `coffee_maker/autonomous/code_developer.py` (add notification on completion)
+
+**Related Documents**:
+- `docs/WORKFLOW_FLAW_ANALYSIS.md` (deadlock scenarios section)
+
+**Success Criteria**:
+- [ ] code_developer sends notification when implementation complete
+- [ ] Notification includes: roadmap_item_id, commit_sha, spec_id
+- [ ] Notification type: "implementation_complete"
+- [ ] Notification recipient: "project_manager"
+- [ ] Tests verify notification is created
+- [ ] No regression in code_developer functionality
+
+---
+
+### PRIORITY 30: BUG-XXX - Architect Adds Review Notification on Code Issues 🔴 P0 CRITICAL
+
+**Status**: 📝 Planned - CRITICAL (Depends on PRIORITY-28, 27)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 2-3 hours
+
+**Implementation Order**: #4 - After PRIORITY-28 and PRIORITY-27
+
+**User Story**:
+As code_reviewer, I want to notify architect when code reviews find issues so that the feedback loop is complete and issues are addressed.
+
+**Problem Statement**:
+code_reviewer writes review reports but doesn't notify architect. This breaks the feedback loop:
+- code_reviewer finds issues ❌ No notification
+- architect doesn't know review exists
+- architect must manually check review files (won't happen)
+- issues never get addressed
+- bugs ship to production
+
+**Critical Issue**:
+- **Location**: `coffee_maker/autonomous/code_reviewer.py` (complete_review method)
+- **Problem**: Review marked as `changes_requested` but no notification sent to architect
+- **Impact**: Issues never addressed, no feedback loop, bugs not caught
+
+**Dependencies**:
+- PRIORITY-28 (notification processor) - must be running first to deliver notifications
+- PRIORITY-27 (code_reviewer database integration) - reviews must be stored in database
+
+**Blocks**:
+- Complete feedback loop
+- Issue remediation
+- Quality assurance automation
+
+**Solution**:
+1. Add notification when code_reviewer completes review with issues
+2. Create notification: `review_changes_needed` when quality_score < 80 or approved = 0
+3. Include review details, issues found, recommendations
+4. architect automatically receives notification in database
+5. architect can query database for detailed review information
+
+**Files to Modify**:
+- `coffee_maker/autonomous/code_reviewer.py` (add architect notification in complete_review method)
+
+**Related Documents**:
+- `docs/WORKFLOW_FLAW_ANALYSIS.md` (communication gap analysis)
+
+**Success Criteria**:
+- [ ] Notification sent when quality_score < 80
+- [ ] Notification sent when approved = 0
+- [ ] Notification includes: review_report_id, commit_sha, quality_score, issues summary
+- [ ] Notification recipient: "architect"
+- [ ] Notification type: "review_changes_needed"
+- [ ] architect can query reviews needing attention
+- [ ] Tests verify notification is created
+- [ ] No regression in code_reviewer functionality
+
+---
+
 ### PRIORITY 23: US-108 - Parallel Agent Execution with Git Worktree ✅ Complete
 
 **Status**: ✅ COMPLETE (2025-10-20) - 🔴 CRITICAL PRIORITY (2x-3x Velocity Increase)
@@ -946,10 +1202,41 @@ Clean up worktrees, continue with next tasks
 
 ## 🔴 TOP PRIORITY FOR orchestrator (START HERE)
 
-**CURRENT PRIORITY**: PRIORITY 23 - US-108 Parallel Agent Execution with Git Worktree 🔴 (HIGHEST PRIORITY - 2x-3x Velocity)
+**🚨 WORKFLOW AUTOMATION CRITICAL - BLOCKS ALL PROGRESS 🚨**
 
-**NEXT PRIORITIES**:
-- PRIORITY 24 - US-107 Dependency Conflict Resolver Skill 🔴 (CRITICAL - Highest ROI: 40 hrs/month)
+**PHASE 0 CRITICAL BUGS** (Must fix before continuing):
+1. **PRIORITY 27** - Fix code_reviewer Database Integration (CFR-015) 🔴 (4-5 hrs)
+   - Stop writing reviews to files
+   - Write to database instead
+   - Enable architect notifications
+2. **PRIORITY 28** - Implement Notification Processing Loop 🔴 (4-6 hrs)
+   - Core workflow automation missing
+   - Specs never get linked to roadmap
+   - Tasks stuck because notifications aren't processed
+3. **PRIORITY 29** - Add code_developer Completion Notifications 🔴 (2-3 hrs)
+   - No one knows when work is done
+   - Roadmap status never updates
+   - DoD verification never triggered
+4. **PRIORITY 30** - Architect Review Notifications 🔴 (2-3 hrs)
+   - Feedback loop broken
+   - Issues never addressed
+   - Reviews go unread
+
+**Why These Are Critical**:
+- Current state: Workflow completely broken (architect creates spec → notification ignored → task never starts → DEADLOCK)
+- Impact: All future work stalls, entire system unusable
+- Estimated velocity loss: 100% (nothing works without these fixes)
+- Duration to fix: ~12-15 hours total (can be done in 1-2 days)
+- Then can continue with PRIORITY 23 and beyond
+
+**Related Analysis Documents**:
+- `docs/WORKFLOW_FLAWS_EXECUTIVE_SUMMARY.md` - Executive summary of issues
+- `docs/WORKFLOW_FLAW_ANALYSIS.md` - Detailed 200+ line analysis
+- `docs/DATABASE_VS_FILE_VIOLATIONS.md` - Code violations with fixes
+
+**NEXT PRIORITIES** (after workflow bugs fixed):
+- PRIORITY 23 - US-108 Parallel Agent Execution with Git Worktree 🔴 (2x-3x Velocity)
+- PRIORITY 24 - US-107 Dependency Conflict Resolver Skill 🔴 (Highest ROI: 40 hrs/month)
 - PRIORITY 25 - US-109 Advanced Task Separator (Check: Shared Files, Critical Paths, Race Conditions)
 
 **RECENTLY COMPLETED**:

@@ -93,7 +93,7 @@ from review_tracking_skill import CodeReviewTrackingSkill
 # Initialize skill
 review_skill = CodeReviewTrackingSkill(agent_name="code_reviewer")
 
-# Step 1: Find pending reviews
+# Step 1: Find pending reviews (excludes stale in_progress reviews)
 pending_reviews = review_skill.get_pending_reviews()
 for review in pending_reviews:
     print(f"Review #{review['id']}: {review['description']}")
@@ -101,9 +101,12 @@ for review in pending_reviews:
     print(f"  Commit: {review['commit_sha'][:8]}")
     print(f"  Files: {', '.join(review['files_changed'])}")
 
-# Step 2: Claim a review to work on
+# Step 2: CLAIM REVIEW (CRITICAL - marks as 'in_progress')
 review_id = pending_reviews[0]['id']
-review_skill.claim_review(review_id)
+if not review_skill.claim_review(review_id):
+    print("Failed to claim review - may already be claimed")
+    # Move to next review
+    continue
 
 # Step 3: READ THE SPEC to understand requirements
 spec = review_skill.get_spec_for_review(review_id)
@@ -124,15 +127,29 @@ review_skill.add_review_comment(
     line_number=42
 )
 
-# Step 6: MARK REVIEW AS DONE (CRITICAL)
-review_skill.complete_review(
-    review_id=review_id,
-    status="approved",  # or "changes_requested"
-    feedback="Implementation correctly follows SPEC-115. All requirements met. Minor suggestions added for future improvement."
-)
-
-print(f"✅ Review #{review_id} marked as done")
+# Step 6: ALWAYS COMPLETE REVIEW (CRITICAL - never leave in_progress)
+try:
+    # MUST mark as done - either approved or changes_requested
+    review_skill.complete_review(
+        review_id=review_id,
+        status="approved",  # or "changes_requested"
+        feedback="Implementation correctly follows SPEC-115. All requirements met. Minor suggestions added for future improvement."
+    )
+    print(f"✅ Review #{review_id} marked as done")
+except Exception as e:
+    # Even on error, try to complete with changes_requested
+    review_skill.complete_review(
+        review_id=review_id,
+        status="changes_requested",
+        feedback=f"Review interrupted due to error: {e}. Please re-review."
+    )
 ```
+
+### CRITICAL State Management Rules:
+- **ALWAYS claim review first** - This marks it as 'in_progress' with timestamp
+- **NEVER leave reviews in_progress** - Always call complete_review()
+- **Use try/except** - Ensure review is completed even if errors occur
+- **Stale recovery** - Reviews stuck in_progress >24h auto-reset to pending
 
 ### Key Points:
 - **ALWAYS read the spec** before reviewing to understand requirements
@@ -198,6 +215,22 @@ See `docs/code-reviews/REVIEW-{commit}.md` for examples.
 8. **Performance**: Performance concerns
 9. **Recommendations for architect**: Actionable suggestions
 10. **Overall Assessment**: Approval status and next steps
+
+---
+
+## Recurring Maintenance Tasks
+
+### Stale Review Recovery
+**Run periodically (e.g., every 6 hours) to recover from interrupted reviews:**
+
+```python
+# Reset reviews stuck in 'in_progress' for >24 hours
+count = review_skill.reset_stale_reviews()
+if count > 0:
+    logger.info(f"Reset {count} stale reviews back to pending")
+```
+
+This prevents reviews from being permanently stuck if code_reviewer crashes or is interrupted.
 
 ---
 

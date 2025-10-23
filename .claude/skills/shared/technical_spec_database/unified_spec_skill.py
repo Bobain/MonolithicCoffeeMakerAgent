@@ -80,6 +80,8 @@ class TechnicalSpecSkill:
         from coffee_maker.autonomous.unified_database import get_unified_database
 
         self.db = get_unified_database()
+        # Use the database path from unified database
+        self.spec_db_path = self.db.db_path
 
         if not self.can_write and agent_name != "unknown":
             logger.info(f"Agent {agent_name} has read-only access to technical specs")
@@ -456,6 +458,14 @@ class TechnicalSpecSkill:
             update_fields = ["status = ?", "updated_at = ?", "updated_by = ?"]
             params = [new_status, datetime.now().isoformat(), self.agent_name]
 
+            # Track when spec work starts (for stale detection)
+            if new_status == "in_progress":
+                update_fields.append("started_at = ?")
+                params.append(datetime.now().isoformat())
+            elif new_status in ["complete", "approved"]:
+                # Clear started_at when spec is complete
+                update_fields.append("started_at = NULL")
+
             if actual_hours is not None:
                 update_fields.append("actual_hours = ?")
                 params.append(actual_hours)
@@ -657,6 +667,69 @@ class TechnicalSpecSkill:
 
         except Exception as e:
             logger.warning(f"Could not notify about spec approval: {e}")
+
+    # ==================== MAINTENANCE OPERATIONS ====================
+
+    def reset_stale_specs(self) -> int:
+        """Reset specs that have been in 'in_progress' status for too long.
+
+        This is a maintenance task that should be run periodically to recover
+        from interrupted work. Specs that have been 'in_progress' for more than
+        24 hours are reset to 'draft' status.
+
+        Returns:
+            Number of specs reset
+        """
+        try:
+            conn = sqlite3.connect(self.spec_db_path)
+            cursor = conn.cursor()
+
+            # Find stale specs (in_progress for >24 hours)
+            cursor.execute(
+                """
+                SELECT id, title, started_at
+                FROM technical_specs
+                WHERE status = 'in_progress'
+                AND started_at IS NOT NULL
+                AND datetime(started_at) < datetime('now', '-24 hours')
+            """
+            )
+
+            stale_specs = cursor.fetchall()
+
+            if stale_specs:
+                # Reset them back to draft
+                spec_ids = [spec[0] for spec in stale_specs]
+                placeholders = ",".join(["?" for _ in spec_ids])
+
+                cursor.execute(
+                    f"""
+                    UPDATE technical_specs
+                    SET status = 'draft',
+                        started_at = NULL,
+                        updated_at = ?,
+                        updated_by = 'system_maintenance'
+                    WHERE id IN ({placeholders})
+                """,
+                    [datetime.now().isoformat()] + spec_ids,
+                )
+
+                count = cursor.rowcount
+                conn.commit()
+
+                for spec_id, title, started_at in stale_specs:
+                    logger.warning(f"Reset stale spec {spec_id}: '{title}' " f"(was in_progress since {started_at})")
+
+                logger.info(f"✅ Reset {count} stale specs from in_progress to draft")
+            else:
+                count = 0
+
+            conn.close()
+            return count
+
+        except sqlite3.Error as e:
+            logger.error(f"Error resetting stale specs: {e}")
+            return 0
 
 
 # ==================== SKILL FACTORY ====================

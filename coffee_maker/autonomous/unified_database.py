@@ -101,8 +101,7 @@ class UnifiedDatabase:
                     estimated_hours TEXT,
                     dependencies TEXT,
                     section_order INTEGER NOT NULL,
-                    implementation_started_at TEXT,     -- When code_developer started work
-                    implementation_started_by TEXT,     -- Which code_developer claimed this
+                    implementation_started_at TEXT,     -- When code_developer started work (for stale detection)
                     updated_at TEXT NOT NULL,
                     updated_by TEXT NOT NULL,
                     FOREIGN KEY (spec_id) REFERENCES technical_specs(id) ON DELETE SET NULL

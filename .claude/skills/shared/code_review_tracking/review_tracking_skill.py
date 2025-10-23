@@ -46,7 +46,7 @@ For code_reviewer:
 import json
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -98,8 +98,9 @@ class CodeReviewTrackingSkill:
                     files_changed TEXT,                    -- JSON array of file paths
                     requested_by TEXT NOT NULL,            -- code_developer
                     requested_at TEXT NOT NULL,            -- When review requested
-                    review_status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'in_review', 'approved', 'changes_requested'
+                    review_status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'in_progress', 'approved', 'changes_requested'
                     reviewer TEXT,                         -- code_reviewer who took it
+                    claimed_at TEXT,                       -- When review was claimed (for timeout)
                     reviewed_at TEXT,                      -- When review completed
                     review_feedback TEXT,                  -- Feedback from reviewer
                     related_pr TEXT,                       -- Optional PR link
@@ -293,6 +294,9 @@ class CodeReviewTrackingSkill:
     def claim_review(self, review_id: int) -> bool:
         """Claim a review for processing (code_reviewer only).
 
+        Marks the review as 'in_progress' and sets claimed_at timestamp.
+        Reviews in_progress for >24 hours will be automatically reset to pending.
+
         Args:
             review_id: ID of review to claim
 
@@ -309,13 +313,16 @@ class CodeReviewTrackingSkill:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
+            # Set review to in_progress with claimed timestamp
             cursor.execute(
                 """
                 UPDATE commit_reviews
-                SET review_status = 'in_review', reviewer = ?
+                SET review_status = 'in_progress',
+                    reviewer = ?,
+                    claimed_at = ?
                 WHERE id = ? AND review_status = 'pending'
             """,
-                (self.agent_name, review_id),
+                (self.agent_name, datetime.now().isoformat(), review_id),
             )
 
             success = cursor.rowcount > 0
@@ -323,7 +330,9 @@ class CodeReviewTrackingSkill:
             conn.close()
 
             if success:
-                logger.info(f"📋 Claimed review #{review_id}")
+                logger.info(f"📋 Claimed review #{review_id} - marked as in_progress")
+            else:
+                logger.warning(f"Could not claim review #{review_id} - may already be in_progress")
 
             return success
 
@@ -487,6 +496,66 @@ class CodeReviewTrackingSkill:
             return False
 
     # ==================== SHARED METHODS ====================
+
+    def reset_stale_reviews(self) -> int:
+        """Reset reviews that have been in_progress for >24 hours back to pending.
+
+        This is a recurring maintenance task that should be run periodically
+        to handle interrupted reviews. Reviews stuck in 'in_progress' for more
+        than 24 hours are reset to 'pending' so another reviewer can claim them.
+
+        Can be called by any agent, but typically run by code_reviewer or orchestrator.
+
+        Returns:
+            Number of reviews reset
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Calculate 24 hours ago
+            cutoff_time = (datetime.now() - timedelta(hours=24)).isoformat()
+
+            # Find stale reviews before updating (for logging)
+            cursor.execute(
+                """
+                SELECT id, commit_sha, reviewer
+                FROM commit_reviews
+                WHERE review_status = 'in_progress'
+                AND claimed_at < ?
+            """,
+                (cutoff_time,),
+            )
+
+            stale_reviews = cursor.fetchall()
+
+            # Reset stale in_progress reviews back to pending
+            cursor.execute(
+                """
+                UPDATE commit_reviews
+                SET review_status = 'pending',
+                    reviewer = NULL,
+                    claimed_at = NULL
+                WHERE review_status = 'in_progress'
+                AND claimed_at < ?
+            """,
+                (cutoff_time,),
+            )
+
+            reset_count = cursor.rowcount
+            conn.commit()
+            conn.close()
+
+            if reset_count > 0:
+                logger.info(f"🔄 Reset {reset_count} stale reviews back to pending")
+                for review in stale_reviews:
+                    logger.info(f"  - Review #{review[0]} (commit {review[1][:8]}) was abandoned by {review[2]}")
+
+            return reset_count
+
+        except sqlite3.Error as e:
+            logger.error(f"Error resetting stale reviews: {e}")
+            return 0
 
     def get_review_status(self, commit_sha: str) -> Optional[Dict]:
         """Get review status for a commit (all agents).
