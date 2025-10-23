@@ -444,6 +444,43 @@ class SpecDatabase:
             logger.error(f"Error finding spec by number: {e}")
             return None
 
+    def find_spec_by_id(self, spec_id: str) -> Optional[Dict]:
+        """Find a spec by its ID.
+
+        Args:
+            spec_id: Spec ID (e.g., "SPEC-112")
+
+        Returns:
+            Spec dictionary or None if not found
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                SELECT * FROM technical_specs
+                WHERE id = ?
+            """,
+                (spec_id,),
+            )
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                spec = dict(row)
+                if spec.get("dependencies"):
+                    spec["dependencies"] = json.loads(spec["dependencies"])
+                return spec
+
+            return None
+
+        except sqlite3.Error as e:
+            logger.error(f"Error finding spec by ID: {e}")
+            return None
+
     def get_all_specs(self) -> List[Dict]:
         """Get all technical specifications.
 

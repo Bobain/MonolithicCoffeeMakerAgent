@@ -17,7 +17,6 @@
 | **code_developer** | Autonomous implementation from ROADMAP | Backend only |
 | **project_manager** | Project coordination, GitHub monitoring, notifications | Backend only |
 | **assistant** | Documentation expert, intelligent dispatcher, demo creator | Mixed |
-| **code-searcher** | Deep codebase analysis and forensic examination | Backend only |
 | **ux-design-expert** | UI/UX design guidance and Tailwind CSS | Through user_listener |
 | **code-reviewer** | Automated QA, reviews commits, notifies architect | Backend only |
 
@@ -178,7 +177,6 @@ UI needed? → user_listener
 Architectural design? → architect
 Quick question? → assistant
 Demo creation? → assistant
-Code internals? → code-searcher
 Project status? → project_manager
 Design? → ux-design-expert
 Implementation? → code_developer

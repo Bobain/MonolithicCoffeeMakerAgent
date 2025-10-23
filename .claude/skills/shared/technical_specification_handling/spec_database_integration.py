@@ -204,9 +204,15 @@ class SpecDatabaseIntegration:
         if not self.can_write:
             raise PermissionError(f"Only architect can update specs, not {self.agent_name}")
 
-        return self.db.update_status(
+        success = self.db.update_status(
             spec_id=spec_id, new_status=new_status, updated_by=self.agent_name, actual_hours=actual_hours
         )
+
+        # Notify project_manager if spec is complete and needs roadmap update
+        if success and new_status == "complete":
+            self._notify_project_manager_roadmap_update(spec_id, "spec_complete")
+
+        return success
 
     def get_spec_summary(self) -> Dict:
         """Get summary statistics about specs.
@@ -262,6 +268,44 @@ class SpecDatabaseIntegration:
             raise PermissionError("Only architect can sync specs to database")
 
         return self.db.import_existing_specs()
+
+    def _notify_project_manager_roadmap_update(self, spec_id: str, notification_type: str) -> None:
+        """Send notification to project_manager about roadmap update needed.
+
+        This creates a notification that project_manager will see and act upon.
+
+        Args:
+            spec_id: Spec ID that triggered the notification
+            notification_type: Type of notification (e.g., "spec_complete", "spec_ready")
+        """
+        try:
+            # Import roadmap database to create notification
+            from coffee_maker.autonomous.roadmap_database_v2 import RoadmapDatabaseV2
+
+            roadmap_db = RoadmapDatabaseV2(agent_name=self.agent_name)
+
+            # Find the spec details
+            spec = self.db.find_spec_by_id(spec_id)
+            if not spec:
+                logger.warning(f"Could not find spec {spec_id} to notify about")
+                return
+
+            # Create notification for project_manager
+            notification_id = roadmap_db.create_update_notification(
+                item_id=spec.get("roadmap_item_id", "UNKNOWN"),
+                requested_by="architect",
+                notification_type="status_update",
+                requested_status="🔄 In Progress" if notification_type == "spec_complete" else None,
+                message=f"Technical specification {spec_id} is complete and ready for implementation. "
+                f"Please update the roadmap item {spec.get('roadmap_item_id', '')} status accordingly.",
+            )
+
+            logger.info(f"✅ Notified project_manager about {spec_id} completion (notification #{notification_id})")
+
+        except ImportError:
+            logger.warning("RoadmapDatabaseV2 not available yet, skipping notification")
+        except Exception as e:
+            logger.error(f"Failed to notify project_manager: {e}")
 
 
 # Skill integration function for use in prompts

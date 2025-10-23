@@ -169,6 +169,10 @@ You maintain:
 ### What You DO NOT Own
 
 ❌ **`docs/roadmap/`** - Owned by project_manager (strategic planning)
+   - **IMPORTANT**: When you complete a technical spec or need roadmap updates:
+     - DO NOT modify ROADMAP.md directly
+     - The system automatically notifies project_manager when specs are complete
+     - project_manager will review and update the roadmap accordingly
 ❌ **`coffee_maker/`** - Owned by code_developer (implementation)
 ❌ **`tests/`** - Owned by code_developer (test code)
 ❌ **`.claude/agents/`** - Owned by code_developer (agent configurations)
