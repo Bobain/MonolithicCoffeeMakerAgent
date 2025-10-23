@@ -156,6 +156,35 @@ class UnifiedDatabase:
             """
             )
 
+            # Work sessions table for parallel development tracking
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS work_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    work_id TEXT NOT NULL UNIQUE,           -- e.g., "WORK-42"
+                    spec_id TEXT NOT NULL,                  -- Links to technical_specs.id
+                    roadmap_item_id TEXT,                   -- Links to roadmap_items.id
+                    scope TEXT NOT NULL,                    -- "phase", "section", "module"
+                    scope_description TEXT,                 -- Human-readable scope description
+                    assigned_files TEXT,                    -- JSON array of file paths this work touches
+                    branch_name TEXT NOT NULL UNIQUE,       -- e.g., "roadmap-work-42"
+                    worktree_path TEXT,                     -- Path to git worktree
+                    status TEXT NOT NULL DEFAULT 'pending', -- "pending", "in_progress", "completed", "failed"
+                    claimed_by TEXT,                        -- "code_developer"
+                    claimed_at TEXT,                        -- When work was claimed
+                    started_at TEXT,                        -- When work actually started
+                    completed_at TEXT,                      -- When work finished
+                    commit_sha TEXT,                        -- Final commit SHA
+                    merged_at TEXT,                         -- When merged to roadmap branch
+                    created_by TEXT NOT NULL DEFAULT 'architect', -- Who created this work session
+                    created_at TEXT NOT NULL,               -- When work session was created
+
+                    FOREIGN KEY (spec_id) REFERENCES technical_specs(id) ON DELETE CASCADE,
+                    FOREIGN KEY (roadmap_item_id) REFERENCES roadmap_items(id) ON DELETE SET NULL
+                )
+            """
+            )
+
             # Code review reports table (replaces file-based reviews)
             cursor.execute(
                 """
@@ -225,6 +254,13 @@ class UnifiedDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_table ON audit_trail(table_name)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_notifications_target ON notifications(target_agent)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status)")
+
+            # Work sessions indexes
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_work_sessions_status ON work_sessions(status)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_work_sessions_spec ON work_sessions(spec_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_work_sessions_roadmap ON work_sessions(roadmap_item_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_work_sessions_branch ON work_sessions(branch_name)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_work_sessions_claimed_at ON work_sessions(claimed_at)")
 
             conn.commit()
             conn.close()
