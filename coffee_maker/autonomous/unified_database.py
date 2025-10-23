@@ -79,6 +79,7 @@ class UnifiedDatabase:
                     dependencies TEXT,                  -- JSON array of spec IDs
                     estimated_hours REAL,
                     actual_hours REAL,
+                    started_at TEXT,                    -- When spec work started (for stale detection)
                     updated_at TEXT NOT NULL,
                     updated_by TEXT NOT NULL
                 )
@@ -154,6 +155,49 @@ class UnifiedDatabase:
             """
             )
 
+            # Code review reports table (replaces file-based reviews)
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS review_reports (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    commit_review_id INTEGER NOT NULL,       -- Links to commit_reviews
+                    commit_sha TEXT NOT NULL,
+                    spec_id TEXT,                            -- Links to technical_specs
+
+                    -- Report metadata
+                    date TEXT NOT NULL,
+                    reviewer TEXT NOT NULL DEFAULT 'code_reviewer',
+                    review_duration_seconds REAL,
+
+                    -- Metrics
+                    files_changed INTEGER,
+                    lines_added INTEGER,
+                    lines_deleted INTEGER,
+                    quality_score INTEGER NOT NULL,          -- 0-100
+                    approved BOOLEAN NOT NULL,
+
+                    -- Issues (JSON)
+                    issues TEXT,                             -- JSON array of Issue objects
+                    style_compliance TEXT,                   -- JSON dict
+                    architecture_compliance TEXT,            -- JSON dict
+
+                    -- Content
+                    overall_assessment TEXT NOT NULL,
+                    full_report_markdown TEXT,               -- Full markdown content
+
+                    -- Architect follow-up
+                    needs_architect_review BOOLEAN DEFAULT 0,
+                    architect_reviewed_at TEXT,
+                    architect_notes TEXT,
+
+                    created_at TEXT NOT NULL,
+
+                    FOREIGN KEY (commit_review_id) REFERENCES commit_reviews(id) ON DELETE CASCADE,
+                    FOREIGN KEY (spec_id) REFERENCES technical_specs(id) ON DELETE SET NULL
+                )
+            """
+            )
+
             # Create indexes for performance
             # Specs indexes
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_specs_roadmap ON technical_specs(roadmap_item_id)")
@@ -165,6 +209,15 @@ class UnifiedDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_roadmap_status ON roadmap_items(status)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_roadmap_order ON roadmap_items(section_order)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_roadmap_type ON roadmap_items(item_type)")
+
+            # Review reports indexes
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_review_reports_score ON review_reports(quality_score)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_review_reports_spec ON review_reports(spec_id)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_review_reports_needs_review ON review_reports(needs_architect_review)"
+            )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_review_reports_approved ON review_reports(approved)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_review_reports_commit ON review_reports(commit_review_id)")
 
             # Audit/notification indexes
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_item ON audit_trail(item_id)")
