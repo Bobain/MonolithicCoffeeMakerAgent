@@ -309,13 +309,15 @@ class ParallelExecutionCoordinator:
         worktrees = []
 
         for priority_id in priority_ids:
-            # Create worktree path: ../MonolithicCoffeeMakerAgent-wt{N}
-            worktree_name = f"{self.repo_root.name}-wt{priority_id}"
+            # Create worktree path: ../MonolithicCoffeeMakerAgent-work-{N}
+            # CFR-000: Use roadmap-work-{id} naming convention for parallel development
+            worktree_name = f"{self.repo_root.name}-work-{priority_id}"
             worktree_path = self.repo_root.parent / worktree_name
 
-            # Create branch name: roadmap-{priority_id} (CFR-013 compliant)
-            # CFR-013 requires all agents to work on roadmap or roadmap-* branches
-            branch_name = f"roadmap-{priority_id}"
+            # Create branch name: roadmap-work-{priority_id} (CFR-000/CFR-013 compliant)
+            # CFR-000: Parallel development uses roadmap-work-{work_id} branches
+            # CFR-013: All agents work on roadmap or roadmap-* branches
+            branch_name = f"roadmap-work-{priority_id}"
 
             # Check if worktree already exists
             if worktree_path.exists():
