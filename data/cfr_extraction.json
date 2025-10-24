@@ -1,0 +1,375 @@
+{
+  "document_metadata": {
+    "file": "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md",
+    "version": "2.4",
+    "date": "2025-10-21",
+    "status": "Active",
+    "owner": "project_manager",
+    "total_cfrs": 16,
+    "notes": "CFR-011 references deleted 'code-searcher' agent and should be reviewed for retirement or updating"
+  },
+  "cfrs": {
+    "CFR-000": {
+      "title": "Prevent File Conflicts At All Costs (Master Requirement)",
+      "core_rule": "EXACTLY ZERO or ONE agent must be writing to any file at any given moment. NEVER two or more agents writing to the same file simultaneously.",
+      "why_critical": "File conflicts cause data corruption, inconsistencies, lost work, merge conflicts, and system failure. This is the master requirement that all other CFRs exist to prevent.",
+      "implementation_location": [
+        "coffee_maker/autonomous/agent_registry.py",
+        "coffee_maker/autonomous/ace/file_tool_config.py",
+        "docs/AGENT_SINGLETON_ARCHITECTURE.md"
+      ],
+      "related_cfrs": [
+        "CFR-001 (Document Ownership Boundaries)",
+        "CFR-002 (Agent Role Boundaries)",
+        "CFR-003 (No Overlap - Documents)",
+        "CFR-004 (No Overlap - Responsibilities)",
+        "US-035 (Singleton Agent Enforcement)",
+        "US-038 (File Ownership Enforcement)",
+        "US-039 (Comprehensive CFR Enforcement)"
+      ],
+      "enforcement": "4 layers: Singleton enforcement + Tool-level enforcement + generator enforcement + Multi-level validation"
+    },
+    "CFR-001": {
+      "title": "Document Ownership Boundaries",
+      "core_rule": "Each directory/file has EXACTLY ONE owner agent. Only the owner can modify. All others are READ-ONLY.",
+      "why_critical": "Implements CFR-000 by ensuring only one agent can write to any file, preventing concurrent modification conflicts.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 158-225)",
+        ".claude/CLAUDE.md (Ownership Matrix section)",
+        "coffee_maker/autonomous/ace/file_tool_config.py"
+      ],
+      "ownership_matrix": {
+        "user_interface": "user_listener",
+        "docs/roadmap/": "project_manager",
+        "docs/architecture/": "architect",
+        "docs/generator/": "generator",
+        "docs/reflector/": "reflector",
+        "docs/curator/": "curator",
+        ".claude/": "code_developer",
+        "coffee_maker/": "code_developer",
+        "tests/": "code_developer",
+        "pyproject.toml": "architect",
+        "poetry.lock": "architect"
+      },
+      "enforcement": "generator checks ownership before allowing file modifications. Auto-delegates to correct owner if violation detected.",
+      "related_cfrs": ["CFR-000", "CFR-003", "CFR-005", "US-038"]
+    },
+    "CFR-002": {
+      "title": "Agent Role Boundaries",
+      "core_rule": "Each agent has EXACTLY ONE primary role. NO overlaps allowed. Role clarity prevents confusion and concurrent modifications.",
+      "why_critical": "Role confusion leads to multiple agents trying to do the same work, creating conflicts and violating CFR-000.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 228-276)",
+        ".claude/agents/*.md (individual agent definitions)"
+      ],
+      "roles": {
+        "user_listener": "User Interface (ONLY UI)",
+        "project_manager": "Strategic Planning (WHAT/WHY)",
+        "architect": "Technical Design (HOW)",
+        "code_developer": "Implementation (DOING)",
+        "assistant": "Demos + Documentation + Dispatch",
+        "generator": "Ownership Enforcement + Trace Capture",
+        "reflector": "Insight Extraction",
+        "curator": "Playbook Maintenance"
+      },
+      "enforcement": "Before delegating work, verify requested work matches agent's primary role. If not, redirect to appropriate agent.",
+      "related_cfrs": ["CFR-000", "CFR-004"]
+    },
+    "CFR-003": {
+      "title": "No Overlap - Documents",
+      "core_rule": "No two agents can own the same directory/file. Ownership must be EXCLUSIVE.",
+      "why_critical": "Shared ownership creates ambiguity about who should modify files, leading to concurrent modification conflicts.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 279-323)",
+        "coffee_maker/autonomous/ace/file_tool_config.py"
+      ],
+      "enforcement": "Source of truth is ownership matrix in CFR-001. Any ownership change requires user approval and updates to CFR-001, CLAUDE.md, and generator registry.",
+      "related_cfrs": ["CFR-000", "CFR-001"]
+    },
+    "CFR-004": {
+      "title": "No Overlap - Responsibilities",
+      "core_rule": "No two agents can have overlapping primary responsibilities. Clear role boundaries are exclusive.",
+      "why_critical": "Responsibility confusion leads to multiple agents working on same task, creating inefficiency and potential conflicts.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 326-366)",
+        "docs/AGENT_OWNERSHIP.md"
+      ],
+      "enforcement": "Before work assignment, check responsibility matrix. If overlap detected, escalate to user for clarification.",
+      "related_cfrs": ["CFR-000", "CFR-002"]
+    },
+    "CFR-005": {
+      "title": "Ownership Includes Maintenance Responsibility",
+      "core_rule": "Owning files/directories means maintaining them. Owners must proactively clean, simplify, update, and improve their owned materials.",
+      "why_critical": "Without maintenance, directories become cluttered, files become unmaintainable, and technical debt accumulates unchecked, degrading system quality.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 369-594)",
+        "CFR-001 ownership matrix (Maintenance Duties column)"
+      ],
+      "maintenance_duties": {
+        "code_developer": "Refactor complex code, remove unused functions, update comments, organize test files, clean temp files",
+        "project_manager": "Archive completed priorities, remove obsolete specs, consolidate duplicates, keep ROADMAP organized",
+        "architect": "Archive superseded ADRs, update specs with system changes, organize directories, monitor code quality weekly",
+        "generator": "Archive old traces, rotate trace files, summarize historical traces",
+        "reflector": "Archive old deltas, consolidate similar insights, remove duplicated learnings",
+        "curator": "Prune playbook duplicates, remove low-effectiveness patterns"
+      },
+      "enforcement": "Triggered maintenance when: directory >50 files, single file >2000 lines, architect identifies technical debt, >4 hours maintenance needed triggers escalation",
+      "related_cfrs": ["CFR-001", "CFR-007"]
+    },
+    "CFR-006": {
+      "title": "Lessons Learned Must Be Captured and Applied",
+      "core_rule": "All key lessons (failures and successes) MUST be documented, owned, and actively used to prevent recurrence.",
+      "why_critical": "Without capturing and applying lessons, the system repeats the same mistakes endlessly, degrading trust and improvement.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 1777-2169)",
+        "docs/roadmap/learnings/ (owner: project_manager)",
+        "data/architect_last_review.json"
+      ],
+      "lesson_types": [
+        "WORKFLOW_FAILURE_*.md (process breakdowns)",
+        "TECHNICAL_FAILURE_*.md (architecture/implementation errors)",
+        "USER_FRUSTRATION_*.md (user experience gaps)",
+        "SUCCESS_PATTERN_*.md (effective patterns)",
+        "LESSONS_YYYY_MM.md (monthly summaries)"
+      ],
+      "enforcement": "Capture lesson within 24 hours of failure. Update documents within 1 week. Prevent lesson recurrence. Monthly summaries track patterns.",
+      "related_cfrs": ["CFR-001", "CFR-005"]
+    },
+    "CFR-007": {
+      "title": "Agent Context Budget (30% Maximum)",
+      "core_rule": "Agent core materials (prompt, role, responsibilities, tools, critical owned documents) MUST fit in at most 30% of context window.",
+      "why_critical": "If core materials consume too much context, agents have no room to work, cannot read additional files, and cannot generate thoughtful responses.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 2813-3242)",
+        ".claude/agents/*.md (Always Read vs Read On-Demand distinction)"
+      ],
+      "breakdown_example": "200K context window: Max 60K tokens core materials (30%), min 140K tokens remaining for work (70%)",
+      "remediation_strategies": [
+        "Strategy 1: Sharpen main knowledge document into concise version",
+        "Strategy 2: Create detail documents (read on-demand, not counted in 30%)",
+        "Strategy 3: Use line number references for surgical precision",
+        "Strategy 4: Compress verbose examples"
+      ],
+      "enforcement": "Measurement at agent startup. If >30%: VIOLATION, agent cannot start. Monthly context budget reviews.",
+      "related_cfrs": ["CFR-001", "CFR-005"]
+    },
+    "CFR-008": {
+      "title": "Architect Creates ALL Specs - code_developer NEVER Creates Specs",
+      "core_rule": "ONLY the architect agent creates technical specifications. code_developer MUST NEVER create specs.",
+      "why_critical": "architect needs full ROADMAP context for optimal architectural decisions. Multiple spec creators cause inconsistent patterns and architectural drift.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 2734-2810)",
+        "coffee_maker/orchestrator/daemon.py (_ensure_technical_spec method)",
+        "docs/architecture/specs/ (all technical specifications)"
+      ],
+      "correct_flow": "architect reviews ROADMAP → creates ALL specs proactively → code_developer implements per spec (no spec creation)",
+      "violation_prevention": "If code_developer needs spec: Block immediately, notify user, delegate to architect",
+      "enforcement": "In daemon.py: Check if spec exists. If missing, delegate to architect. code_developer CANNOT create specs.",
+      "related_cfrs": ["CFR-002", "CFR-010", "CFR-011"]
+    },
+    "CFR-009": {
+      "title": "ONLY user_listener Uses Sound Notifications",
+      "core_rule": "ONLY the user_listener agent can use sound notifications (sound=True). All background agents MUST use silent notifications only (sound=False).",
+      "why_critical": "Prevents notification spam and clarifies that only user-facing interactions should produce audio alerts.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 2666-2731)",
+        "coffee_maker/notifications/ (NotificationDB implementation)"
+      ],
+      "allowed": "user_listener: Play sound for user interactions, use sound=True",
+      "forbidden": "code_developer, architect, project_manager, assistant: NEVER play sounds, use sound=False always",
+      "enforcement": "NotificationDB validates sound parameter based on requesting agent. Background agents cannot override.",
+      "related_cfrs": ["CFR-002"]
+    },
+    "CFR-010": {
+      "title": "Architect Must Continuously Review and Improve Specs",
+      "core_rule": "architect MUST regularly re-read ALL specs and FULL ROADMAP to proactively improve specifications and anticipate implementation complexities.",
+      "why_critical": "Specs improve with fresh perspectives. Early complexity detection prevents wasted implementation effort. Continuous improvement enables knowledge integration.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 2172-2282)",
+        "coffee_maker/autonomous/architect_spec_review.py (proactive review)"
+      ],
+      "frequency": [
+        "Daily: Quick review of ROADMAP changes",
+        "Weekly: Deep review of all active specs",
+        "Before Each New Spec: Review existing specs for patterns",
+        "After Implementation: Review spec based on what was built"
+      ],
+      "deliverables": [
+        "Weekly Improvement Report (docs/architecture/WEEKLY_SPEC_REVIEW_[date].md)",
+        "Updated Specs (simpler implementations, better examples, clearer warnings)",
+        "New ADRs (document significant improvements)"
+      ],
+      "enforcement": "Weekly review is required. Effort savings tracked as metric.",
+      "related_cfrs": ["CFR-001", "CFR-008"]
+    },
+    "CFR-011": {
+      "title": "Architect Must Integrate Code Analysis Findings Daily",
+      "core_rule": "architect MUST read code analysis reports daily AND proactively analyze codebase to identify refactoring opportunities and technical debt, integrating findings into specifications.",
+      "why_critical": "Prevents technical debt accumulation. Data-driven refactoring addresses actual code issues. Continuous code quality through systematic improvement.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 2285-2662)",
+        "coffee_maker/autonomous/architect_daily_routine.py",
+        "coffee_maker/cli/architect_cli.py (daily-integration, analyze-codebase commands)"
+      ],
+      "three_part_mandate": [
+        "Part 1: Proactively create specs for ALL ROADMAP priorities BEFORE code_developer needs them (NEVER reactive)",
+        "Part 2: Read assistant (with code analysis skills) analysis reports daily and extract refactoring items",
+        "Part 3: Proactively analyze code yourself weekly (recent commits, problem areas, complexity hotspots, duplicate patterns)"
+      ],
+      "deprecation_note": "CFR-011 references 'code-searcher' agent which was deleted. Consider retiring or updating this CFR to reference current agents.",
+      "enforcement": "ArchitectDailyRoutine class enforces checks. Violation if new reports unread or analysis overdue.",
+      "related_cfrs": ["CFR-001", "CFR-008", "CFR-010"]
+    },
+    "CFR-012": {
+      "title": "Agent Responsiveness Priority",
+      "core_rule": "ALL agents MUST prioritize immediate requests from users/other agents OVER their continuous background work loops.",
+      "why_critical": "Team collaboration takes precedence over focus work. Users and agents shouldn't wait for background loops to complete.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 3265-3408)",
+        "daemon.py (work loop implementation for all agents)"
+      ],
+      "priority_order": [
+        "Priority 1 (HIGHEST): User requests",
+        "Priority 2 (HIGH): Inter-agent delegation requests",
+        "Priority 3 (NORMAL): Continuous background work"
+      ],
+      "implementation_pattern": "At start of each loop iteration, check for new requests. If found, INTERRUPT background work immediately. Resume after handling request.",
+      "enforcement": "Every continuous work loop MUST implement check_for_immediate_requests() at loop start.",
+      "related_cfrs": ["CFR-000", "CFR-008", "CFR-011"]
+    },
+    "CFR-013": {
+      "title": "All Agents Must Work on `roadmap` Branch Only",
+      "core_rule": "ALL agents MUST stay on the `roadmap` branch at ALL times. NO agent can switch branches or create new branches (except temporary worktrees for parallel execution).",
+      "why_critical": "Single source of truth prevents branch conflicts, simplifies workflow, prevents work loss, and enables easy rollback.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 3412-4052)",
+        ".pre-commit-config.yaml (CFR-013 validation hook)",
+        "coffee_maker/autonomous/git_operations.py (validate_cfr_013 function)"
+      ],
+      "allowed": [
+        "git status, git add, git commit, git push/pull on roadmap",
+        "Temporary worktrees for parallel execution: roadmap-implementation_task-*"
+      ],
+      "forbidden": [
+        "git checkout <other-branch>",
+        "git checkout -b <new-branch>",
+        "Working on main or feature/* branches"
+      ],
+      "exception": "Orchestrator MAY create temporary `roadmap-implementation_task-*` branches for parallel execution using git worktrees. These MUST be merged back and deleted after each task.",
+      "enforcement": "Pre-commit hook and agent validation check current branch. Error on violation.",
+      "related_cfrs": ["CFR-000", "CFR-008", "CFR-014"]
+    },
+    "CFR-014": {
+      "title": "All Orchestrator Activities Must Be Traced in Database",
+      "core_rule": "ALL orchestrator activities, agent lifecycle events, state transitions, and metrics MUST be persisted in SQLite database. JSON files are FORBIDDEN for orchestrator state storage.",
+      "why_critical": "Cannot measure velocity or identify bottlenecks without historical data. JSON files accumulate stale data causing data integrity bugs. Database enables business intelligence.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 4055-4487)",
+        "data/orchestrator.db (SQLite database)",
+        "coffee_maker/orchestrator/agent_management.py (database writes)"
+      ],
+      "required_tables": [
+        "agent_lifecycle (PID, agent_type, task_id, spawned_at, started_at, completed_at, status, duration_ms, idle_time_ms)",
+        "planning_loop_metrics (planned_priorities, alerts, timing data)"
+      ],
+      "required_views": [
+        "active_agents (running agents only)",
+        "agent_velocity (throughput metrics)",
+        "agent_bottlenecks (slowest agents)",
+        "priority_timeline (priority implementation timeline)"
+      ],
+      "forbidden": "JSON files for agent_state.json, work_loop_state.json, or any persistent orchestrator state",
+      "enforcement": "Startup validation ensures database exists. All agent spawns write to database. Migration from JSON phased over 5 phases.",
+      "migration_status": "Phase 1: Schema added, Phase 2-5: Gradual transition to database-only",
+      "related_cfrs": ["CFR-000", "CFR-001", "CFR-015"]
+    },
+    "CFR-015": {
+      "title": "Continuous Planning Loop - System Must Always Be Working",
+      "core_rule": "The autonomous system MUST continuously plan, create specs, and implement code. ROADMAP must NEVER become empty without immediate corrective action.",
+      "why_critical": "System designed to work 24/7. Empty ROADMAP with no automated planning is a failure. Resource utilization is wasted if agents sit idle.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 4491-5045)",
+        "coffee_maker/orchestrator/work_availability_monitor.py (monitoring)",
+        "coffee_maker/orchestrator/continuous_work_loop.py (orchestrator loop)"
+      ],
+      "buffer_requirement": "project_manager MUST maintain 3-5 planned priorities ahead of current work at all times",
+      "architect_sla": "architect MUST create specs within 2 hours of new priorities being planned (95% SLA target)",
+      "orchestrator_checks": [
+        "Check 1: Planned priorities exist? (count >= 1)",
+        "Check 2: Specs ready for implementation? (has_spec=true)",
+        "Check 3: Wait or stop decision (timeout handling)"
+      ],
+      "enforcement": "orchestrator calls check_work_availability() before stopping. Triggers planning notifications if buffer low. Tracks metrics in database.",
+      "planning_triggers": [
+        "Completion of any priority",
+        "Every 30 minutes (scheduled check)",
+        "orchestrator notification: ROADMAP running low",
+        "User request: Plan upcoming work"
+      ],
+      "related_cfrs": ["CFR-008", "CFR-013", "CFR-014"]
+    },
+    "CFR-016": {
+      "title": "Technical Specs Must Be Broken Into Small, Incremental Implementation Steps",
+      "core_rule": "Technical specifications MUST be divided into small, incremental implementation steps achievable in single code_developer iterations. Each step builds progressively.",
+      "why_critical": "Complex features naturally require multiple steps. Prevents 'too complex' blocking. Enables continuous forward progress without giving up.",
+      "implementation_location": [
+        "docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md (lines 5048-5200+)",
+        "docs/architecture/specs/SPEC-*.md (phase-based specifications)"
+      ],
+      "key_principle": "Track CONSECUTIVE no-progress attempts, not total attempts. Progress iteration resets counter. Only give up after 3 CONSECUTIVE no-progress attempts.",
+      "iteration_logic": "Each iteration with file changes resets no-progress counter to 0. Can iterate unlimited times while making progress.",
+      "architect_responsibilities": [
+        "Divide complex specs into phases (1-2 hours max each)",
+        "Provide clear, actionable steps (not vague guidance)",
+        "Estimate time per phase",
+        "Document sequential dependencies"
+      ],
+      "example": "Authentication system: Phase 1 (DB schema) → Phase 2 (Auth logic) → Phase 3 (API endpoints) → Phase 4 (Tests). Each phase: 1 iteration.",
+      "enforcement": "In daemon.py: Track consecutive no-progress only. Reset on file changes. Code iterates unlimited times while making progress.",
+      "related_cfrs": ["CFR-008", "CFR-010"]
+    }
+  },
+  "summary_analysis": {
+    "total_cfrs": 16,
+    "active_cfrs": 15,
+    "deprecated_cfrs": 1,
+    "issues": [
+      {
+        "issue": "CFR-011 references deleted 'code-searcher' agent",
+        "location": "CFR-011 (Multiple references throughout the section)",
+        "recommendation": "Review CFR-011 for retirement or update to reference current agents (assistant with code analysis skills). Consider splitting responsibilities.",
+        "severity": "MEDIUM"
+      }
+    ],
+    "coverage": {
+      "file_conflicts": "CFR-000, CFR-001, CFR-003, CFR-014",
+      "agent_coordination": "CFR-002, CFR-004, CFR-012",
+      "maintenance": "CFR-005, CFR-006",
+      "context_management": "CFR-007",
+      "specification": "CFR-008, CFR-010, CFR-011, CFR-016",
+      "notifications": "CFR-009",
+      "source_control": "CFR-013",
+      "observability": "CFR-014",
+      "continuous_work": "CFR-015"
+    }
+  },
+  "quick_reference": {
+    "master_requirement": "CFR-000: Prevent file conflicts at all costs",
+    "ownership": "CFR-001: One owner per file",
+    "roles": "CFR-002: One primary role per agent",
+    "no_overlap_docs": "CFR-003: Exclusive document ownership",
+    "no_overlap_roles": "CFR-004: Exclusive role boundaries",
+    "maintenance": "CFR-005: Ownership includes upkeep",
+    "lessons": "CFR-006: Capture and apply learnings",
+    "context": "CFR-007: Core materials max 30% of context",
+    "specs": "CFR-008: Only architect creates specs",
+    "sound": "CFR-009: Only user_listener uses sound",
+    "spec_review": "CFR-010: Architect continuously reviews specs",
+    "code_analysis": "CFR-011: Architect integrates analysis findings daily",
+    "responsiveness": "CFR-012: Prioritize user/agent requests over background work",
+    "branches": "CFR-013: Always work on roadmap branch",
+    "database": "CFR-014: All orchestrator activities traced in database",
+    "planning": "CFR-015: Maintain continuous planning loop",
+    "incremental": "CFR-016: Break specs into small implementation steps"
+  }
+}
