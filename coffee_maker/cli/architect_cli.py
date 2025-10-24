@@ -5,7 +5,6 @@ This module provides CLI commands for architect's workflows:
 """
 
 import click
-from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -14,6 +13,7 @@ load_dotenv()
 
 from coffee_maker.autonomous.roadmap_parser import RoadmapParser
 from coffee_maker.autonomous.spec_generator import SpecGenerator
+from coffee_maker.autonomous.technical_spec_skill import TechnicalSpecSkill
 from coffee_maker.cli.ai_service import AIService
 
 
@@ -88,7 +88,7 @@ def create_spec(priority: str, auto_approve: bool):
         default_tech_design = "### Architecture\n\nTBD\n\n### Implementation\n\nTBD"
         technical_design = spec.technical_design if hasattr(spec, "technical_design") else default_tech_design
 
-        total_hours = spec.total_hours if hasattr(spec, "total_hours") else "TBD"
+        total_hours = spec.total_hours if hasattr(spec, "total_hours") else None
 
         # Testing strategy with multiline default
         default_testing = "- Unit tests\n- Integration tests\n- Manual testing"
@@ -97,10 +97,6 @@ def create_spec(priority: str, auto_approve: bool):
         # DoD with multiline default
         default_dod = "- [ ] All tests passing\n- [ ] Code reviewed\n- [ ] Documentation updated"
         definition_of_done = spec.definition_of_done if hasattr(spec, "definition_of_done") else default_dod
-
-        # Save spec to file
-        spec_path = Path(f"docs/architecture/specs/SPEC-{spec_number}-{spec_title_slug}.md")
-        spec_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Format spec content
         spec_content = f"""# SPEC-{spec_number}: {priority_title}
@@ -140,8 +136,32 @@ def create_spec(priority: str, auto_approve: bool):
 Co-Authored-By: Claude <noreply@anthropic.com>
 """
 
-        spec_path.write_text(spec_content)
-        click.echo(f"✅ Spec created: {spec_path}\n")
+        # Create spec in database (with file backup)
+        spec_skill = TechnicalSpecSkill(agent_name="architect")
+
+        # Extract US number from priority (e.g., "US-104" or "042")
+        try:
+            # Try to extract US number from priority name
+            if "US-" in priority_name:
+                us_number = int(priority_name.split("US-")[1].split()[0])
+            else:
+                # Use priority number as fallback
+                us_number = int(priority.replace(".", "").replace("-", ""))
+        except (ValueError, IndexError):
+            # If extraction fails, use a placeholder
+            click.echo(f"⚠️  Warning: Could not extract US number from {priority_name}, using priority number")
+            us_number = int(priority.replace(".", "").replace("-", ""))
+
+        spec_id = spec_skill.create_monolithic_spec(
+            us_number=us_number,
+            title=priority_title,
+            roadmap_item_id=priority_name,
+            content=spec_content,
+            estimated_hours=total_hours,
+        )
+
+        click.echo(f"✅ Spec created in database: {spec_id}")
+        click.echo(f"   File backup: docs/architecture/specs/SPEC-{us_number:03d}-{spec_title_slug}.md\n")
 
         return 0
 

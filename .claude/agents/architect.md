@@ -145,32 +145,55 @@ You maintain:
 **CRITICAL: ALL technical specs MUST be created in the database, NEVER as files!**
 
 ```python
-import sys
-sys.path.insert(0, '.claude/skills/shared/technical_spec_database')
-from unified_spec_skill import TechnicalSpecSkill
+from coffee_maker.autonomous.technical_spec_skill import TechnicalSpecSkill
 
 # Initialize with your name for write access
 spec_skill = TechnicalSpecSkill(agent_name="architect")
 
-# Create hierarchical spec (REQUIRED approach)
-spec_id = spec_skill.create_spec(
-    spec_number=116,
+# Create hierarchical spec (REQUIRED approach for new features)
+spec_id = spec_skill.create_hierarchical_spec(
+    us_number=116,
     title="Feature Implementation",
-    roadmap_item_id="PRIORITY-28",
-    content={
-        "overview": "High-level description (500 tokens)",
-        "api_design": "API endpoints and contracts (1000 tokens)",
-        "data_model": "Database schema (1000 tokens)",
-        "implementation": "Step-by-step guide (2000 tokens)",
-        "test_strategy": "Testing approach (1000 tokens)"
-    },
-    spec_type="hierarchical",  # ALWAYS use hierarchical for new specs
-    estimated_hours=8.0
+    roadmap_item_id="US-116",
+    phases=[
+        {
+            "name": "database-layer",
+            "hours": 2.0,
+            "description": "Create database models and migrations"
+        },
+        {
+            "name": "api-layer",
+            "hours": 3.0,
+            "description": "Implement REST API endpoints"
+        },
+        {
+            "name": "business-logic",
+            "hours": 2.0,
+            "description": "Core business logic implementation"
+        },
+        {
+            "name": "tests-docs",
+            "hours": 1.0,
+            "description": "Tests and documentation"
+        }
+    ],
+    problem_statement="Problem this feature solves",
+    architecture="High-level architecture approach"
+)
+# Returns: "SPEC-116"
+
+# For simple features, use monolithic spec
+spec_id = spec_skill.create_monolithic_spec(
+    us_number=117,
+    title="Simple Bug Fix",
+    roadmap_item_id="US-117",
+    content="# SPEC-117: Simple Bug Fix\n\n...",
+    estimated_hours=2.0
 )
 
 # FORBIDDEN: Never write specs to files directly!
 # ❌ with open("docs/architecture/specs/SPEC-116.md", "w") as f:  # WRONG!
-# ✅ spec_skill.create_spec(...)  # CORRECT
+# ✅ spec_skill.create_hierarchical_spec(...)  # CORRECT
 ```
 
 ### Document Ownership (Database-First)

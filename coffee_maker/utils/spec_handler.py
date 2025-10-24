@@ -1008,12 +1008,32 @@ pytest tests/test_phase_{phase_number}.py -v
     def _find_spec_by_priority_id(self, priority_id: str) -> Optional[Path]:
         """Find spec by priority ID (e.g., "PRIORITY 25", "US-104").
 
+        This method queries the database first, then falls back to file system search.
+
         Args:
             priority_id: Priority identifier
 
         Returns:
             Path to spec (directory for hierarchical, file for monolithic) or None
         """
+        # Try database first
+        try:
+            from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+
+            db = RoadmapDatabase(agent_name="code_developer")
+            spec_data = db.get_technical_spec(roadmap_item_id=priority_id)
+
+            if spec_data and spec_data.get("file_path"):
+                file_path = Path(spec_data["file_path"])
+                if file_path.exists():
+                    logger.debug(f"Found spec in database: {file_path}")
+                    return file_path
+                else:
+                    logger.warning(f"Database has spec entry but file not found: {file_path}")
+        except Exception as e:
+            logger.debug(f"Database query failed (falling back to file system): {e}")
+
+        # Fallback: file system search
         spec_dir = Path("docs/architecture/specs")
         if not spec_dir.exists():
             return None
