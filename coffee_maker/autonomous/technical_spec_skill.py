@@ -29,13 +29,12 @@ Date: 2025-10-24
 Related: PRIORITY 25 Phase 4
 """
 
-import json
 import logging
-import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+from coffee_maker.utils.spec_handler import SpecHandler
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +60,7 @@ class TechnicalSpecSkill:
         """
         self.agent_name = agent_name
         self.db = RoadmapDatabase(agent_name=agent_name)
-        self.skill_path = Path(".claude/skills/shared/technical_specification_handling")
+        self.handler = SpecHandler()
 
     def create_hierarchical_spec(
         self,
@@ -109,11 +108,17 @@ class TechnicalSpecSkill:
         """
         logger.info(f"Creating hierarchical spec for US-{us_number}: {title}")
 
-        # Step 1: Create directory structure via skill
-        spec_dir = self._invoke_skill_create_hierarchical(us_number, title, phases)
+        # Step 1: Create directory structure via SpecHandler
+        spec_dir = self.handler.create_hierarchical_spec(
+            us_number=str(us_number),
+            title=title,
+            phases=phases,
+            problem_statement=problem_statement or "",
+            architecture=architecture or "",
+        )
 
-        if not spec_dir or not Path(spec_dir).exists():
-            raise RuntimeError(f"Skill failed to create spec directory: {spec_dir}")
+        if not spec_dir or not spec_dir.exists():
+            raise RuntimeError(f"Failed to create spec directory: {spec_dir}")
 
         logger.info(f"✅ Created spec directory: {spec_dir}")
 
@@ -131,7 +136,7 @@ class TechnicalSpecSkill:
             title=title,
             roadmap_item_id=roadmap_item_id,
             spec_type="hierarchical",
-            file_path=spec_dir,
+            file_path=str(spec_dir),
             content=readme_content,
             estimated_hours=total_hours,
             total_phases=len(phases),
@@ -178,7 +183,7 @@ class TechnicalSpecSkill:
         logger.info(f"Creating monolithic spec for US-{us_number}: {title}")
 
         # Create file
-        spec_file = Path(f"docs/architecture/specs/SPEC-{us_number:03d}-{self._slugify(title)}.md")
+        spec_file = Path(f"docs/architecture/specs/SPEC-{us_number:03d}-{self.handler._slugify(title)}.md")
         spec_file.parent.mkdir(parents=True, exist_ok=True)
         spec_file.write_text(content)
 
@@ -222,62 +227,3 @@ class TechnicalSpecSkill:
             bool: True if updated successfully
         """
         return self.db.update_technical_spec(spec_id=spec_id, current_phase=current_phase, phase_status=phase_status)
-
-    def _invoke_skill_create_hierarchical(self, us_number: int, title: str, phases: List[Dict]) -> Optional[str]:
-        """Invoke the technical-specification-handling skill to create directory structure.
-
-        Args:
-            us_number: User story number
-            title: Spec title
-            phases: List of phase dictionaries
-
-        Returns:
-            Path to created spec directory, or None if failed
-        """
-        try:
-            # Prepare context for skill
-            context = {"action": "create_hierarchical", "us_number": us_number, "title": title, "phases": phases}
-
-            # Invoke skill via subprocess (simpler than importing)
-            skill_script = self.skill_path / "technical_specification_handling.py"
-
-            if not skill_script.exists():
-                logger.error(f"Skill script not found: {skill_script}")
-                return None
-
-            result = subprocess.run(
-                ["python", str(skill_script)],
-                input=json.dumps(context),
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-
-            if result.returncode != 0:
-                logger.error(f"Skill execution failed: {result.stderr}")
-                return None
-
-            # Parse result
-            output = json.loads(result.stdout)
-            return output.get("spec_dir")
-
-        except Exception as e:
-            logger.error(f"Error invoking skill: {e}")
-            return None
-
-    def _slugify(self, text: str) -> str:
-        """Convert text to kebab-case slug.
-
-        Args:
-            text: Text to slugify
-
-        Returns:
-            Kebab-case slug
-        """
-        import re
-
-        text = text.lower()
-        text = re.sub(r"[^\w\s-]", "", text)
-        text = re.sub(r"[\s_-]+", "-", text)
-        text = re.sub(r"^-+|-+$", "", text)
-        return text

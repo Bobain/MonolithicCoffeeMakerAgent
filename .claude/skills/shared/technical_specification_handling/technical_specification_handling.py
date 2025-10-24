@@ -98,6 +98,26 @@ class TechnicalSpecificationHandlingSkill:
                 filename = self.handler.generate_spec_filename(us_number, title)
                 return {"result": filename, "error": None}
 
+            elif action == "create_hierarchical":
+                # Create hierarchical spec structure
+                us_number = kwargs.get("us_number")
+                title = kwargs.get("title")
+                phases = kwargs.get("phases")
+
+                if not all([us_number, title, phases]):
+                    return {"result": None, "error": "Missing required parameters: us_number, title, phases"}
+
+                spec_dir = self.handler.create_hierarchical_spec(
+                    us_number=us_number,
+                    title=title,
+                    phases=phases,
+                    problem_statement=kwargs.get("problem_statement", ""),
+                    architecture=kwargs.get("architecture", ""),
+                    technology_stack=kwargs.get("technology_stack", ""),
+                )
+
+                return {"result": str(spec_dir), "error": None}
+
             elif action == "update":
                 spec_path = kwargs.get("spec_path")
                 changes = kwargs.get("changes")

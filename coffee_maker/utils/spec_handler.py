@@ -456,6 +456,270 @@ class SpecHandler:
 
         return f"SPEC-{us_number.zfill(3)}-{kebab_title}.md"
 
+    def create_hierarchical_spec(
+        self,
+        us_number: str,
+        title: str,
+        phases: list,
+        problem_statement: str = "",
+        architecture: str = "",
+        technology_stack: str = "",
+    ) -> Path:
+        """Create hierarchical specification directory structure.
+
+        Args:
+            us_number: User story number (e.g., "104")
+            title: Spec title
+            phases: List of phase dicts with keys:
+                - name: Phase name (e.g., "database-schema")
+                - hours: Estimated hours
+                - description: Optional phase description
+            problem_statement: What problem does this solve?
+            architecture: High-level architecture description
+            technology_stack: Technologies used
+
+        Returns:
+            Path: Path to created spec directory
+
+        Example:
+            >>> handler = SpecHandler()
+            >>> spec_dir = handler.create_hierarchical_spec(
+            ...     us_number="104",
+            ...     title="Authentication System",
+            ...     phases=[
+            ...         {"name": "database", "hours": 1, "description": "Create tables"},
+            ...         {"name": "auth-logic", "hours": 2, "description": "Login/logout"}
+            ...     ]
+            ... )
+        """
+        # Create directory
+        kebab_title = self._slugify(title)
+        spec_dir = self.specs_dir / f"SPEC-{us_number.zfill(3)}-{kebab_title}"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+
+        # Calculate total hours
+        total_hours = sum(phase.get("hours", 0) for phase in phases)
+
+        # Create README.md
+        readme_content = self._create_hierarchical_readme(
+            us_number,
+            title,
+            phases,
+            total_hours,
+            problem_statement,
+            architecture,
+            technology_stack,
+        )
+
+        readme_path = spec_dir / "README.md"
+        readme_path.write_text(readme_content)
+
+        # Create phase files
+        for i, phase in enumerate(phases, start=1):
+            phase_content = self._create_phase_file(
+                us_number,
+                i,
+                phase["name"],
+                phase.get("hours", 1),
+                phase.get("description", ""),
+                len(phases),
+            )
+
+            phase_file = spec_dir / f"phase{i}-{phase['name']}.md"
+            phase_file.write_text(phase_content)
+
+        logger.info(f"Created hierarchical spec: {spec_dir}")
+        return spec_dir
+
+    def _create_hierarchical_readme(
+        self,
+        us_number: str,
+        title: str,
+        phases: list,
+        total_hours: float,
+        problem_statement: str,
+        architecture: str,
+        technology_stack: str,
+    ) -> str:
+        """Create README.md for hierarchical spec."""
+        date_str = datetime.now().strftime("%Y-%m-%d")
+
+        problem_content = problem_statement or "TODO: What problem does this solve?"
+        arch_content = architecture or "TODO: Add architecture description"
+        tech_content = (
+            technology_stack
+            or """- **Language**: Python 3.11+
+- **Framework**: TBD
+- **Database**: SQLite"""
+        )
+
+        # Build phase summary
+        phase_summary = ""
+        for i, phase in enumerate(phases, start=1):
+            phase_name = phase["name"].replace("-", " ").title()
+            phase_hours = phase.get("hours", 1)
+            phase_desc = phase.get("description", "TODO: Add description")
+            phase_summary += f"""### Phase {i}: {phase_name} ({phase_hours} hours)
+{phase_desc}
+
+**[Details →](phase{i}-{phase['name']}.md)**
+
+"""
+
+        return f"""# SPEC-{us_number.zfill(3)}: {title}
+
+**Status**: Draft
+**Created**: {date_str}
+**Estimated Effort**: {total_hours} hours
+**Type**: Hierarchical (Progressive Disclosure)
+
+---
+
+## Problem Statement
+
+{problem_content}
+
+---
+
+## High-Level Architecture
+
+{arch_content}
+
+---
+
+## Technology Stack
+
+{tech_content}
+
+---
+
+## Implementation Phases (Summary)
+
+{phase_summary}
+
+---
+
+## Success Criteria
+
+- [ ] All phases complete
+- [ ] All tests passing
+- [ ] Documentation updated
+- [ ] Code review approved
+
+---
+
+## Version History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0.0 | {date_str} | architect | Initial hierarchical specification |
+"""
+
+    def _create_phase_file(
+        self,
+        us_number: str,
+        phase_number: int,
+        phase_name: str,
+        estimated_hours: float,
+        description: str,
+        total_phases: int,
+    ) -> str:
+        """Create individual phase file."""
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        phase_title = phase_name.replace("-", " ").title()
+        next_phase = phase_number + 1 if phase_number < total_phases else None
+
+        prerequisites = f"- [ ] Phase {phase_number - 1} complete" if phase_number > 1 else "- [ ] None (first phase)"
+
+        next_phase_link = (
+            f"\n\n**[Next Phase →](phase{next_phase}-*.md)**"
+            if next_phase
+            else "\n\n**Final phase - Ready for deployment!**"
+        )
+
+        return f"""# SPEC-{us_number.zfill(3)} - Phase {phase_number}: {phase_title}
+
+**Estimated Time**: {estimated_hours} hours
+**Dependencies**: Phase {phase_number - 1} complete (or None)
+**Created**: {date_str}
+
+---
+
+## Goal
+
+{description or f"TODO: What does Phase {phase_number} accomplish?"}
+
+---
+
+## Prerequisites
+
+{prerequisites}
+
+---
+
+## Detailed Steps
+
+### Step 1: TODO
+
+**What**: Describe the task
+
+**How**:
+1. Action 1
+2. Action 2
+
+**Code Example**:
+```python
+# TODO: Add example implementation
+```
+
+**Files to Create/Modify**:
+- `path/to/file.py` (new file)
+
+---
+
+### Step 2: TODO
+
+**What**: Describe the task
+
+**How**:
+1. Action 1
+2. Action 2
+
+---
+
+## Acceptance Criteria
+
+- [ ] Specific criterion 1
+- [ ] Specific criterion 2
+- [ ] Specific criterion 3
+
+---
+
+## Testing This Phase
+
+```bash
+# TODO: Add test commands
+pytest tests/test_phase_{phase_number}.py -v
+```
+
+---
+
+## References
+
+- [GUIDELINE-XXX](../../guidelines/GUIDELINE-XXX.md)
+- [ADR-XXX](../../decisions/ADR-XXX.md)
+{next_phase_link}
+"""
+
+    def _slugify(self, text: str) -> str:
+        """Convert text to kebab-case slug."""
+        text = text.lower()
+        text = re.sub(r"[^a-z0-9\s-]", "", text)
+        text = re.sub(r"\s+", "-", text)
+        text = re.sub(r"-+", "-", text)
+        text = text.strip("-")
+        return text
+
     # ==================== UPDATING SPECIFICATIONS ====================
 
     def update_spec(self, spec_path: Path, changes: Dict[str, Any]) -> str:
