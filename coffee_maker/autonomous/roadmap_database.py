@@ -1681,3 +1681,308 @@ class RoadmapDatabase:
         except sqlite3.Error as e:
             logger.error(f"Error getting database stats: {e}")
             return {}
+
+    # ========================================================================
+    # Technical Specifications (Hierarchical Spec Support)
+    # ========================================================================
+
+    def create_technical_spec(
+        self,
+        spec_number: int,
+        title: str,
+        roadmap_item_id: str,
+        spec_type: str = "monolithic",
+        file_path: Optional[str] = None,
+        content: Optional[str] = None,
+        estimated_hours: Optional[float] = None,
+        dependencies: Optional[str] = None,
+        total_phases: Optional[int] = None,
+        phase_files: Optional[List[str]] = None,
+    ) -> str:
+        """Create a technical specification entry in the database.
+
+        This method is ONLY callable by architect agent. It creates a new
+        technical spec record and optionally links it to a roadmap item.
+
+        Args:
+            spec_number: Unique spec number (e.g., 104 for SPEC-104)
+            title: Spec title (e.g., "Orchestrator Continuous Work Loop")
+            roadmap_item_id: Roadmap item this spec implements (e.g., "US-104")
+            spec_type: "monolithic" or "hierarchical" (default: "monolithic")
+            file_path: Path to spec file or directory
+            content: Full spec content (for monolithic) or README content (for hierarchical)
+            estimated_hours: Total estimated implementation time
+            dependencies: JSON string of spec dependencies
+            total_phases: Number of phases (for hierarchical specs)
+            phase_files: List of phase file names (for hierarchical specs)
+
+        Returns:
+            spec_id: The created spec ID (e.g., "SPEC-104")
+
+        Raises:
+            PermissionError: If agent is not architect
+            ValueError: If spec_number already exists
+        """
+        if not self.can_write:
+            raise PermissionError(f"Only architect can create specs, not {self.agent_name}")
+
+        spec_id = f"SPEC-{spec_number:03d}"
+        now = datetime.now().isoformat()
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Check if spec_number already exists
+            cursor.execute("SELECT id FROM technical_specs WHERE spec_number = ?", (spec_number,))
+            if cursor.fetchone():
+                conn.close()
+                raise ValueError(f"Spec number {spec_number} already exists")
+
+            # Prepare phase_files JSON
+            phase_files_json = None
+            if phase_files:
+                import json
+
+                phase_files_json = json.dumps(phase_files)
+
+            # Insert spec
+            cursor.execute(
+                """
+                INSERT INTO technical_specs (
+                    id, spec_number, title, roadmap_item_id,
+                    status, spec_type, file_path, content,
+                    dependencies, estimated_hours,
+                    updated_at, updated_by,
+                    total_phases, phase_files
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    spec_id,
+                    spec_number,
+                    title,
+                    roadmap_item_id,
+                    "draft",
+                    spec_type,
+                    file_path,
+                    content,
+                    dependencies,
+                    estimated_hours,
+                    now,
+                    self.agent_name,
+                    total_phases,
+                    phase_files_json,
+                ),
+            )
+
+            # Update roadmap item to link spec (if roadmap_item_id provided)
+            if roadmap_item_id:
+                cursor.execute(
+                    """
+                    UPDATE roadmap_items
+                    SET spec_id = ?, updated_at = ?, updated_by = ?
+                    WHERE id = ?
+                """,
+                    (spec_id, now, self.agent_name, roadmap_item_id),
+                )
+
+            conn.commit()
+            conn.close()
+
+            logger.info(f"Created {spec_type} spec: {spec_id} for {roadmap_item_id}")
+            return spec_id
+
+        except sqlite3.Error as e:
+            logger.error(f"Error creating technical spec: {e}")
+            raise
+
+    def update_technical_spec(
+        self,
+        spec_id: str,
+        status: Optional[str] = None,
+        content: Optional[str] = None,
+        current_phase: Optional[int] = None,
+        phase_status: Optional[str] = None,
+        actual_hours: Optional[float] = None,
+        **kwargs,
+    ) -> bool:
+        """Update an existing technical specification.
+
+        Args:
+            spec_id: Spec ID to update (e.g., "SPEC-104")
+            status: New status ("draft", "approved", "complete", "deprecated")
+            content: Updated content
+            current_phase: Current phase number (for hierarchical specs)
+            phase_status: Status of current phase ("in_progress", "completed")
+            actual_hours: Actual implementation time
+            **kwargs: Other fields to update
+
+        Returns:
+            bool: True if updated successfully
+
+        Raises:
+            PermissionError: If agent is not architect
+        """
+        if not self.can_write:
+            raise PermissionError(f"Only architect can update specs, not {self.agent_name}")
+
+        now = datetime.now().isoformat()
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Build dynamic UPDATE query
+            updates = []
+            values = []
+
+            if status is not None:
+                updates.append("status = ?")
+                values.append(status)
+
+            if content is not None:
+                updates.append("content = ?")
+                values.append(content)
+
+            if current_phase is not None:
+                updates.append("phase = ?")
+                values.append(str(current_phase))
+
+            if phase_status is not None:
+                updates.append("current_phase_status = ?")
+                values.append(phase_status)
+
+            if actual_hours is not None:
+                updates.append("actual_hours = ?")
+                values.append(actual_hours)
+
+            # Add any extra kwargs
+            for key, value in kwargs.items():
+                updates.append(f"{key} = ?")
+                values.append(value)
+
+            # Always update metadata
+            updates.extend(["updated_at = ?", "updated_by = ?"])
+            values.extend([now, self.agent_name])
+
+            # Add spec_id to WHERE clause
+            values.append(spec_id)
+
+            query = f"""
+                UPDATE technical_specs
+                SET {', '.join(updates)}
+                WHERE id = ?
+            """
+
+            cursor.execute(query, values)
+            rows_affected = cursor.rowcount
+
+            conn.commit()
+            conn.close()
+
+            if rows_affected > 0:
+                logger.info(f"Updated spec {spec_id}")
+                return True
+            else:
+                logger.warning(f"Spec {spec_id} not found")
+                return False
+
+        except sqlite3.Error as e:
+            logger.error(f"Error updating technical spec: {e}")
+            return False
+
+    def get_technical_spec(
+        self, spec_id: Optional[str] = None, roadmap_item_id: Optional[str] = None
+    ) -> Optional[Dict]:
+        """Get technical specification by ID or roadmap item.
+
+        Args:
+            spec_id: Spec ID (e.g., "SPEC-104")
+            roadmap_item_id: Roadmap item ID (e.g., "US-104")
+
+        Returns:
+            Dict with spec information, or None if not found
+        """
+        if not spec_id and not roadmap_item_id:
+            raise ValueError("Must provide either spec_id or roadmap_item_id")
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            if spec_id:
+                cursor.execute("SELECT * FROM technical_specs WHERE id = ?", (spec_id,))
+            else:
+                cursor.execute("SELECT * FROM technical_specs WHERE roadmap_item_id = ?", (roadmap_item_id,))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                spec = dict(row)
+                # Parse phase_files JSON if present
+                if spec.get("phase_files"):
+                    import json
+
+                    try:
+                        spec["phase_files"] = json.loads(spec["phase_files"])
+                    except json.JSONDecodeError:
+                        spec["phase_files"] = []
+                return spec
+            return None
+
+        except sqlite3.Error as e:
+            logger.error(f"Error getting technical spec: {e}")
+            return None
+
+    def get_all_technical_specs(self, status: Optional[str] = None, spec_type: Optional[str] = None) -> List[Dict]:
+        """Get all technical specifications with optional filtering.
+
+        Args:
+            status: Filter by status ("draft", "approved", "complete", "deprecated")
+            spec_type: Filter by type ("monolithic", "hierarchical")
+
+        Returns:
+            List of spec dictionaries
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            query = "SELECT * FROM technical_specs WHERE 1=1"
+            params = []
+
+            if status:
+                query += " AND status = ?"
+                params.append(status)
+
+            if spec_type:
+                query += " AND spec_type = ?"
+                params.append(spec_type)
+
+            query += " ORDER BY spec_number ASC"
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            conn.close()
+
+            specs = []
+            for row in rows:
+                spec = dict(row)
+                # Parse phase_files JSON
+                if spec.get("phase_files"):
+                    import json
+
+                    try:
+                        spec["phase_files"] = json.loads(spec["phase_files"])
+                    except json.JSONDecodeError:
+                        spec["phase_files"] = []
+                specs.append(spec)
+
+            return specs
+
+        except sqlite3.Error as e:
+            logger.error(f"Error getting all technical specs: {e}")
+            return []
