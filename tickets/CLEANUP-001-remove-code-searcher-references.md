@@ -100,7 +100,7 @@ When updating references, use this pattern:
 
 **Old**:
 ```
-code-searcher agent performs deep code analysis
+assistant agent (with code-forensics and security-audit skills) performs deep code analysis
 ```
 
 **New**:
