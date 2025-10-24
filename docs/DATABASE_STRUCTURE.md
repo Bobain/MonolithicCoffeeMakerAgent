@@ -27,7 +27,7 @@ This document shows the complete database structure used by the autonomous agent
 │ • content                      TEXT   Full markdown content                │
 │ • estimated_hours              TEXT   Time estimate                        │
 │ • dependencies                 TEXT   Dependency info                      │
-│ • section_order                INT    Display order                        │
+│ • priority_order                INT    Display order                        │
 │ • implementation_started_at    TEXT   When code_developer claimed (stale)  │
 │ • updated_at                   TEXT   Last modification timestamp          │
 │ • updated_by                   TEXT   Agent who updated                    │
@@ -521,7 +521,7 @@ WHERE
     (r.status LIKE '%📝%' OR r.status LIKE '%Planned%')
     AND s.status IN ('complete', 'approved')
     AND r.implementation_started_at IS NULL  -- Not claimed
-ORDER BY r.section_order ASC
+ORDER BY r.priority_order ASC
 LIMIT 1;
 ```
 

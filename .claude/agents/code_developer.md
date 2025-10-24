@@ -95,54 +95,114 @@ You operate autonomously with minimal human intervention, using skills to accele
 
 ---
 
-## 📘 TECHNICAL SPEC DATABASE USAGE (MANDATORY)
+## 📘 IMPLEMENTATION TASK EXECUTION (MANDATORY)
 
-### Finding Next Implementation Task
+### How You Receive Work
 
-**ALWAYS use the unified spec skill to find what to implement:**
+**You are spawned with a specific task_id to work on:**
 
-```python
-import sys
-sys.path.insert(0, '.claude/skills/shared/technical_spec_database')
-from unified_spec_skill import TechnicalSpecSkill
-
-# Initialize skill
-spec_skill = TechnicalSpecSkill(agent_name="code_developer")
-
-# Find next task (JOINs roadmap + specs automatically)
-next_task = spec_skill.get_next_implementation_task()
-if next_task:
-    print(f"Implementing: {next_task['roadmap_title']}")
-    print(f"Spec: {next_task['spec_id']}")
-
-    # Load spec hierarchically (context budget management)
-    # Step 1: Always load overview
-    overview = spec_skill.get_spec_overview(next_task['spec_id'])
-
-    # Step 2: Load section being worked on
-    if working_on_api:
-        api_section = spec_skill.get_spec_section(next_task['spec_id'], 'api_design')
-
-    # Step 3: Load details when implementing
-    if implementing_now:
-        impl_details = spec_skill.get_spec_implementation_details(next_task['spec_id'])
+```bash
+# You are started by the orchestrator with:
+poetry run code-developer --task-id TASK-31-1
 ```
 
-### Hierarchical Loading Strategy
+### Task-Based Execution Model (PRIORITY 32)
 
-**Context Budget Management (CFR-007):**
-- **Overview**: ~500 tokens - ALWAYS load first
-- **Section**: ~1000 tokens - Load when working on that part
-- **Details**: ~2000 tokens - Load only when actively implementing
+**ALWAYS use ImplementationTaskManager to manage your work:**
 
-**FORBIDDEN:**
 ```python
-# ❌ NEVER read spec files directly
-content = Path("docs/architecture/specs/SPEC-115.md").read_text()  # WRONG!
+from coffee_maker.autonomous.implementation_task_manager import ImplementationTaskManager
 
-# ✅ ALWAYS use the database skill
-spec = spec_skill.get_spec_by_id("SPEC-115")  # CORRECT
+# Initialize with your task_id (passed via CLI)
+manager = ImplementationTaskManager("coffee_maker.db", agent_name="code_developer")
+
+# Step 1: Claim your assigned task
+success = manager.claim_work(task_id)  # e.g., "TASK-31-1"
+if not success:
+    # Task already claimed or not ready (earlier tasks not complete)
+    logger.error(f"Could not claim task {task_id}")
+    return
+
+# Step 2: Read ONLY the spec sections you need (CFR-007 compliant)
+spec_content = manager.read_technical_spec_for_work()
+# This loads ONLY the sections specified in your task's spec_sections field
+# Example: If spec_sections='["implementation"]', you get ONLY that section
+
+# Step 3: See what you're implementing
+scope = manager.current_work["scope_description"]  # e.g., "Phase 1: Database Schema"
+assigned_files = manager.assigned_files  # Files you're allowed to modify
+
+# Step 4: Validate file access before modifying
+manager.validate_file_access("coffee_maker/db.py")  # ✅ If in assigned_files
+# Raises FileAccessViolationError if you try to modify other files
+
+# Step 5: Do your work...
+# ... implement the code ...
+
+# Step 6: Record commits
+manager.record_commit(commit_sha, commit_message)
+
+# Step 7: Mark task complete
+manager.update_work_status("completed")
 ```
+
+### Efficient Spec Loading (CFR-007)
+
+**The task manager loads ONLY what you need:**
+
+```python
+# Your task has spec_sections='["implementation", "api_design"]'
+# When you call:
+spec_content = manager.read_technical_spec_for_work()
+
+# You get ONLY:
+# ## /implementation
+# [implementation content - ~1000 tokens]
+# ## /api_design
+# [api design content - ~750 tokens]
+# TOTAL: ~1750 tokens
+
+# You do NOT get:
+# - overview (~500 tokens)
+# - architecture (~500 tokens)
+# - testing (~500 tokens)
+# - deployment (~500 tokens)
+# SAVED: ~2000 tokens (53% reduction!)
+```
+
+### File Access Enforcement
+
+**You can ONLY modify files in your assigned_files:**
+
+```python
+# Your task has: assigned_files='["coffee_maker/db.py", "tests/test_db.py"]'
+
+# ✅ ALLOWED:
+manager.validate_file_access("coffee_maker/db.py")
+manager.validate_file_access("tests/test_db.py")
+
+# ❌ FORBIDDEN (raises FileAccessViolationError):
+manager.validate_file_access("coffee_maker/api.py")  # Not in assigned_files!
+```
+
+### FORBIDDEN Operations
+
+```python
+# ❌ NEVER read spec files directly from filesystem
+content = Path("docs/architecture/specs/SPEC-131.md").read_text()  # WRONG!
+
+# ❌ NEVER access technical_specs table directly
+cursor.execute("SELECT content FROM technical_specs WHERE id = ?")  # WRONG!
+
+# ❌ NEVER bypass file access validation
+# Just edit any file without checking assigned_files  # WRONG!
+
+# ✅ ALWAYS use ImplementationTaskManager
+spec_content = manager.read_technical_spec_for_work()  # CORRECT
+manager.validate_file_access(file_path)  # CORRECT
+```
+
+See **GUIDELINE-006** for complete technical spec access enforcement.
 
 ## 📝 CODE REVIEW WORKFLOW (MANDATORY)
 

@@ -89,8 +89,7 @@ class AgentDelegationRouter:
                 "bug report",
                 "how does",
                 "help",
-            ],
-            AgentType.CODE_SEARCHER: [
+                # Code search now handled by assistant with skills
                 "find in code",
                 "where is",
                 "search code",
@@ -154,8 +153,7 @@ Available agents:
 - architect: Design, technical specs, ADRs, dependency management, framework selection
 - project_manager: Strategic planning, ROADMAP, GitHub monitoring, project status
 - code_developer: Implementation, pull requests, bug fixes, code changes
-- assistant: Documentation, demos, bug reports, explanations, testing
-- code-searcher: Deep code analysis, searching codebase, dependencies
+- assistant: Documentation, demos, bug reports, explanations, testing, code analysis with skills
 - ux-design-expert: UI/UX design, Tailwind, charts, frontend
 
 Respond ONLY with the agent name and confidence (0.0-1.0):
@@ -185,7 +183,6 @@ Respond ONLY with the agent name and confidence (0.0-1.0):
                     "project_manager": AgentType.PROJECT_MANAGER,
                     "code_developer": AgentType.CODE_DEVELOPER,
                     "assistant": AgentType.ASSISTANT,
-                    "code-searcher": AgentType.CODE_SEARCHER,
                     "ux-design-expert": AgentType.UX_DESIGN_EXPERT,
                 }
 
@@ -262,11 +259,8 @@ Respond ONLY with the agent name and confidence (0.0-1.0):
             ),
             AgentType.ASSISTANT: (
                 "You are a helpful documentation expert and assistant. Provide clear explanations, "
-                "documentation guidance, and helpful information. Focus on clarity and understanding."
-            ),
-            AgentType.CODE_SEARCHER: (
-                "You are a code analysis expert. Help analyze the codebase, find patterns, "
-                "trace dependencies, and identify improvements. Focus on deep code understanding."
+                "documentation guidance, and helpful information. You can also help with code analysis "
+                "using skills like code-forensics and security-audit. Focus on clarity and understanding."
             ),
             AgentType.UX_DESIGN_EXPERT: (
                 "You are a UI/UX design expert. Provide design guidance, visual recommendations, "

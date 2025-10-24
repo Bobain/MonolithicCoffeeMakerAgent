@@ -68,9 +68,9 @@ class TestContextLoading:
         assert ".claude/commands/PROMPTS_INDEX.md" in context
 
     def test_load_context_code_searcher(self):
-        """Test context loading for code-searcher agent."""
+        """Test context loading for assistant agent (with code-forensics and security-audit skills)."""
         generator = Generator()
-        context = generator.load_agent_context(AgentType.CODE_SEARCHER)
+        context = generator.load_agent_context(AgentType.ASSISTANT)
 
         # code-searcher gets minimal context (project overview)
         assert ".claude/CLAUDE.md" in context
@@ -179,7 +179,7 @@ class TestSearchMonitoring:
         generator = Generator()
 
         # code-searcher searching is EXPECTED (that's its role)
-        generator.monitor_file_search(AgentType.CODE_SEARCHER, "glob", "**/*.py", context_provided=True)
+        generator.monitor_file_search(AgentType.ASSISTANT, "glob", "**/*.py", context_provided=True)
 
         # Should NOT log as unexpected
         stats = generator.get_search_stats()

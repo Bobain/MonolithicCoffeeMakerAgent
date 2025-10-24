@@ -516,7 +516,7 @@ Then rebuild: `python scripts/build_index.py`
 - ❌ Predict runtime behavior
 
 **Workarounds**:
-- For semantic understanding: Use code-searcher agent or Langfuse trace
+- For semantic understanding: Use assistant agent (with code-forensics and security-audit skills) or Langfuse trace
 - For non-Python: Index manually or add support in indexer.py
 - For runtime relationships: Combine with Langfuse execution tracing
 

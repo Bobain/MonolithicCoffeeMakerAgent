@@ -220,7 +220,7 @@ class Generator:
                 ".claude/agents/assistant.md",
                 ".claude/commands/PROMPTS_INDEX.md",
             ],
-            AgentType.CODE_SEARCHER: [
+            AgentType.ASSISTANT: [
                 ".claude/CLAUDE.md",
                 ".claude/agents/code-searcher.md",
                 "docs/roadmap/ROADMAP.md",
@@ -326,7 +326,7 @@ class Generator:
             ... )
         """
         # code-searcher is EXPECTED to search - don't log as unexpected
-        if agent_type == AgentType.CODE_SEARCHER:
+        if agent_type == AgentType.ASSISTANT:
             logger.debug(f"code-searcher performed expected {operation}: {file_pattern}")
             return
 

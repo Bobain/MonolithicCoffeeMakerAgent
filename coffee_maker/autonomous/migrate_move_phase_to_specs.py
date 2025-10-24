@@ -84,7 +84,7 @@ def migrate_unified_database():
                 content TEXT,
                 estimated_hours TEXT,
                 dependencies TEXT,
-                section_order INTEGER NOT NULL,
+                priority_order INTEGER NOT NULL,
                 updated_at TEXT NOT NULL,
                 updated_by TEXT NOT NULL,
                 implementation_started_at TEXT,
@@ -99,12 +99,12 @@ def migrate_unified_database():
             """
             INSERT INTO roadmap_items_new (
                 id, item_type, number, title, status, spec_id, content,
-                estimated_hours, dependencies, section_order, updated_at, updated_by,
+                estimated_hours, dependencies, priority_order, updated_at, updated_by,
                 implementation_started_at, implementation_started_by
             )
             SELECT
                 id, item_type, number, title, status, spec_id, content,
-                estimated_hours, dependencies, section_order, updated_at, updated_by,
+                estimated_hours, dependencies, priority_order, updated_at, updated_by,
                 implementation_started_at, implementation_started_by
             FROM roadmap_items
         """
@@ -117,7 +117,7 @@ def migrate_unified_database():
         # Recreate indexes
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_type ON roadmap_items(item_type)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_status ON roadmap_items(status)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_order ON roadmap_items(section_order)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_order ON roadmap_items(priority_order)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_number ON roadmap_items(number)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_spec ON roadmap_items(spec_id)")
         cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_id ON roadmap_items(id)")
@@ -171,7 +171,7 @@ def migrate_roadmap_database():
                 content TEXT,
                 estimated_hours TEXT,
                 dependencies TEXT,
-                section_order INTEGER NOT NULL,
+                priority_order INTEGER NOT NULL,
                 updated_at TEXT NOT NULL,
                 updated_by TEXT NOT NULL,
                 implementation_started_at TEXT,
@@ -186,12 +186,12 @@ def migrate_roadmap_database():
             """
             INSERT INTO roadmap_items_new (
                 id, item_type, number, title, status, spec_id, content,
-                estimated_hours, dependencies, section_order, updated_at, updated_by,
+                estimated_hours, dependencies, priority_order, updated_at, updated_by,
                 implementation_started_at, implementation_started_by
             )
             SELECT
                 id, item_type, number, title, status, spec_id, content,
-                estimated_hours, dependencies, section_order, updated_at, updated_by,
+                estimated_hours, dependencies, priority_order, updated_at, updated_by,
                 implementation_started_at, implementation_started_by
             FROM roadmap_items
         """
@@ -204,7 +204,7 @@ def migrate_roadmap_database():
         # Recreate indexes
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_type ON roadmap_items(item_type)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_status ON roadmap_items(status)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_order ON roadmap_items(section_order)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_order ON roadmap_items(priority_order)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_number ON roadmap_items(number)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_spec ON roadmap_items(spec_id)")
         cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_id ON roadmap_items(id)")

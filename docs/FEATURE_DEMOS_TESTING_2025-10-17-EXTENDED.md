@@ -288,7 +288,6 @@ test_registry_reset_clears_all_agents PASSED
 - project_manager
 - architect
 - assistant
-- code-searcher
 - ux-design-expert
 - user-listener
 

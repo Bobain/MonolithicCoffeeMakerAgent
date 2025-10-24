@@ -24,7 +24,7 @@ def temp_dirs(monkeypatch):
 
         # Override class constants
         tracking_file = temp_path / "data" / "architect_integration_status.json"
-        reports_dir = temp_path / "docs" / "code-searcher"
+        reports_dir = temp_path / "docs" / "assistant"
 
         monkeypatch.setattr(ArchitectDailyRoutine, "TRACKING_FILE", tracking_file)
         monkeypatch.setattr(ArchitectDailyRoutine, "REPORTS_DIR", reports_dir)

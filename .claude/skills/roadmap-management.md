@@ -454,7 +454,7 @@ db.create_update_notification("US-062", "code_developer", "status_update", "✅ 
 - `title`: Item title
 - `status`: 📝 Planned, 🔄 In Progress, ✅ Complete
 - `content`: Full markdown content
-- `section_order`: Order in file (for export)
+- `priority_order`: Order in file (for export)
 - `updated_by`: Last agent to update
 
 **roadmap_update_notifications table**:

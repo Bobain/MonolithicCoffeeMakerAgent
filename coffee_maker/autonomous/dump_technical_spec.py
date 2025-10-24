@@ -12,7 +12,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from coffee_maker.autonomous.unified_database import get_unified_database
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
 
 def dump_spec_to_markdown(spec_id: str, output_dir: Path) -> None:
@@ -22,7 +22,7 @@ def dump_spec_to_markdown(spec_id: str, output_dir: Path) -> None:
         spec_id: Spec ID (e.g., "SPEC-131")
         output_dir: Directory to write markdown file
     """
-    db = get_unified_database()
+    db = RoadmapDatabase(agent_name="dump_tool")
     conn = sqlite3.connect(db.db_path)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -118,7 +118,7 @@ def dump_spec_to_markdown(spec_id: str, output_dir: Path) -> None:
 
 def dump_all_specs(output_dir: Path) -> None:
     """Dump all technical specs to markdown files."""
-    db = get_unified_database()
+    db = RoadmapDatabase(agent_name="dump_tool")
     conn = sqlite3.connect(db.db_path)
     cursor = conn.cursor()
 
@@ -135,7 +135,7 @@ def dump_all_specs(output_dir: Path) -> None:
 
 def dump_recent_specs(count: int, output_dir: Path) -> None:
     """Dump N most recent technical specs."""
-    db = get_unified_database()
+    db = RoadmapDatabase(agent_name="dump_tool")
     conn = sqlite3.connect(db.db_path)
     cursor = conn.cursor()
 

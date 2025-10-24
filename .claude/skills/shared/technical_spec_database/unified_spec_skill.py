@@ -76,11 +76,11 @@ class TechnicalSpecSkill:
         self.agent_name = agent_name
         self.can_write = agent_name == "architect"
 
-        # Use unified database for efficient JOINs
-        from coffee_maker.autonomous.unified_database import get_unified_database
+        # Use RoadmapDatabase for efficient JOINs
+        from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
-        self.db = get_unified_database()
-        # Use the database path from unified database
+        self.db = RoadmapDatabase(agent_name=agent_name)
+        # Use the database path from roadmap database
         self.spec_db_path = self.db.db_path
 
         if not self.can_write and agent_name != "unknown":
@@ -352,6 +352,10 @@ class TechnicalSpecSkill:
         except sqlite3.Error as e:
             logger.error(f"Error getting pending specs: {e}")
             return []
+
+    # ==================== PROGRESSIVE SPEC CREATION ====================
+    # NOTE: plan_and_summary is now stored at roadmap_items level, not technical_specs
+    # Use RoadmapDatabase.update_plan_and_summary() and get_plan_and_summary() instead
 
     # ==================== WRITE OPERATIONS (Architect Only) ====================
 
@@ -775,11 +779,54 @@ if next_task:
 
 ### For architect (Creating/Updating Specs):
 ```python
-# Create hierarchical spec
+# PROGRESSIVE WORKFLOW (recommended for large roadmap items):
+# NOTE: plan_and_summary is now at roadmap_items level
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+
+roadmap_db = RoadmapDatabase(agent_name="architect")
+
+# Session 1: Create plan for roadmap item
+roadmap_db.update_plan_and_summary(
+    item_id="PRIORITY-28",
+    plan_and_summary={
+        "overview": "Implement auth system: user model spec, login API spec, password reset spec, tests",
+        "sections_planned": ["user_model_spec", "login_api_spec", "password_reset_spec", "tests"],
+        "sections_completed": [],
+        "next_steps": "Start with user model spec and database schema design",
+        "blockers": [],
+        "work_sessions": 1
+    }
+)
+
+# Create first spec
 spec_id = spec_skill.create_spec(
     spec_number=116,
-    title="New Feature Implementation",
+    title="Authentication System - User Model",
     roadmap_item_id="PRIORITY-28",
+    content={"overview": "Complete user model design...", "user_model": "..."},
+    spec_type="hierarchical",
+    estimated_hours=4.0
+)
+
+# Session 2: Resume work and check progress
+progress = roadmap_db.get_plan_and_summary("PRIORITY-28")
+print(f"Next: {progress['next_steps']}")  # "Start with user model spec..."
+# ... work on next spec ...
+roadmap_db.update_plan_and_summary(
+    "PRIORITY-28",
+    {
+        **progress,
+        "sections_completed": ["user_model_spec"],
+        "next_steps": "Create login API spec",
+        "work_sessions": 2
+    }
+)
+
+# TRADITIONAL WORKFLOW (for small roadmap items):
+spec_id = spec_skill.create_spec(
+    spec_number=117,
+    title="Small Feature",
+    roadmap_item_id="PRIORITY-29",
     content={
         "overview": "High-level feature description...",
         "api_design": "Detailed API endpoints...",

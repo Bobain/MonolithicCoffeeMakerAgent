@@ -70,8 +70,12 @@ MonolithicCoffeeMakerAgent/
 **CFR-009 - Sound Notifications**: ONLY `user_listener` uses `sound=True`. All background agents MUST use `sound=False`
 
 **CFR-013 - Git Workflow**: ALL agents work on `roadmap` branch ONLY. NO feature branches.
-- **Exception**: orchestrator may create temporary `roadmap-*` worktree branches for parallel execution
-- architect merges `roadmap-*` → `roadmap`, then orchestrator cleans up
+- **Exception**: orchestrator may create temporary `roadmap-implementation_task-*` worktree branches for parallel execution
+- **Branch naming**: `roadmap-implementation_task-{task_id}` (e.g., `roadmap-implementation_task-TASK-31-1`)
+- **One worktree per task**: Each implementation task gets its own isolated worktree and branch
+- architect merges `roadmap-implementation_task-*` → `roadmap` after EACH task completes, then orchestrator cleans up
+- **Sequential within group**: TASK-31-1 → merge → TASK-31-2 → merge (each in own worktree)
+- **Parallel across groups**: TASK-31-1 and TASK-32-1 can run simultaneously (different worktrees)
 - See [GUIDELINE-004](../docs/architecture/guidelines/GUIDELINE-004-git-tagging-workflow.md) for tagging
 - See CFR-013 "Git Worktree Workflow" section for complete lifecycle
 

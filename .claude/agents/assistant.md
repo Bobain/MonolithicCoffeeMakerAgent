@@ -770,7 +770,7 @@ gh issue view 12
 **You**:
 ```
 This requires deep codebase analysis. Let me delegate to the
-code-searcher agent, which specializes in finding and mapping code.
+assistant agent (with code-forensics and security-audit skills), which specializes in finding and mapping code.
 
 [Use Task tool with code-searcher]
 ```

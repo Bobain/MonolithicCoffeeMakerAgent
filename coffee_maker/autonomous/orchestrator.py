@@ -280,7 +280,7 @@ class OrchestratorAgent(BaseAgent):
                 "check_interval": 1800,  # 30 minutes - demo creation
                 "priority": 3,  # Normal: reactive demos and bug reporting
             },
-            AgentType.CODE_SEARCHER: {
+            AgentType.ASSISTANT: {
                 "name": "code_searcher",
                 "module": "coffee_maker.autonomous.agents.code_searcher_agent",
                 "class": "CodeSearcherAgent",

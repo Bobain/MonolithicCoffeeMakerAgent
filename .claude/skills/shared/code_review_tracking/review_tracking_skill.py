@@ -70,7 +70,7 @@ class CodeReviewTrackingSkill:
         self.can_perform_review = agent_name == "code_reviewer"
 
         # Use unified database for integration with specs
-        self.db_path = Path("data/unified_roadmap_specs.db")
+        self.db_path = Path("data/roadmap.db")
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         self._init_review_tables()
@@ -638,9 +638,9 @@ class CodeReviewTrackingSkill:
     def _notify_code_reviewer(self, review_id: int, spec_id: str, description: str) -> None:
         """Notify code_reviewer about new review request."""
         try:
-            from coffee_maker.autonomous.unified_database import get_unified_database
+            from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
-            db = get_unified_database()
+            db = RoadmapDatabase(agent_name=self.agent_name)
             conn = sqlite3.connect(db.db_path)
             cursor = conn.cursor()
 
@@ -680,9 +680,9 @@ class CodeReviewTrackingSkill:
     def _notify_developer_review_complete(self, review: Dict, status: str, feedback: str) -> None:
         """Notify code_developer that review is complete."""
         try:
-            from coffee_maker.autonomous.unified_database import get_unified_database
+            from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
-            db = get_unified_database()
+            db = RoadmapDatabase(agent_name=self.agent_name)
             conn = sqlite3.connect(db.db_path)
             cursor = conn.cursor()
 

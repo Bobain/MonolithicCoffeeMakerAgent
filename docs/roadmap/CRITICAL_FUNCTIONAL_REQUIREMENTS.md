@@ -3641,11 +3641,19 @@ git push origin stable-v1.3.0
 
 ### Git Worktree Workflow for Parallel Execution
 
-**Exception to CFR-013**: While all agents normally work on the `roadmap` branch, the orchestrator MAY create temporary `roadmap-*` branches for parallel execution using git worktrees.
+**Exception to CFR-013**: While all agents normally work on the `roadmap` branch, the orchestrator MAY create temporary `roadmap-implementation_task-*` branches for parallel execution using git worktrees.
 
-**Purpose**: Enable multiple code_developer agents to work in parallel on different priorities without conflicts.
+**Purpose**: Enable code_developer agents to work on implementation tasks in isolated environments, preventing conflicts and enforcing CFR-000.
 
-**Critical Constraint**: These `roadmap-*` branches are TEMPORARY and MUST be merged back to `roadmap` by architect, then deleted.
+**Branch Naming**: `roadmap-implementation_task-{task_id}` where `{task_id}` is the implementation task ID (e.g., `roadmap-implementation_task-TASK-31-1`, `roadmap-implementation_task-TASK-32-1`)
+
+**Key Design**:
+- **One worktree = One implementation task = One code_developer**
+- **Sequential execution within task group**: TASK-31-1 → merge → TASK-31-2 → merge → TASK-31-3 → merge
+- **Parallel execution across task groups**: TASK-31-1 and TASK-32-1 can run simultaneously in different worktrees
+- **File isolation**: architect creates tasks that touch different files, enabling safe parallel execution
+
+**Critical Constraint**: These `roadmap-implementation_task-*` branches are TEMPORARY and MUST be merged back to `roadmap` by architect after EACH task completes, then deleted.
 
 #### **MANDATORY ISOLATION RULE** (Added 2025-10-20)
 
@@ -3673,94 +3681,141 @@ git push origin stable-v1.3.0
 - Second code_developer: Create worktree-2, spawn in worktree-2
 - NO exceptions - worktrees are MANDATORY for ALL code_developer spawns
 
-#### Worktree Branch Lifecycle
+#### Worktree Branch Lifecycle (Single Task)
 
 ```
-1. orchestrator spawns code_developer in worktree
+1. orchestrator creates worktree for implementation task
    ↓
-   orchestrator: git worktree add ../worktree-us-048 -b roadmap-wt1
-   orchestrator: spawn code_developer in worktree (PID 12345)
+   orchestrator: git worktree add ../worktree-TASK-31-1 -b roadmap-implementation_task-TASK-31-1
+   orchestrator: spawn code_developer with task_id=TASK-31-1 in worktree (PID 12345)
    ↓
-2. code_developer works on roadmap-wt1 branch
+2. code_developer works on roadmap-implementation_task-TASK-31-1 branch
    ↓
-   code_developer: Implements US-048
+   code_developer: Claims TASK-31-1 from implementation_tasks table
+   code_developer: Reads spec sections specified in task
+   code_developer: Validates file access (only files in assigned_files)
+   code_developer: Implements Phase 1 of PRIORITY 31
    code_developer: Runs tests (all passing)
-   code_developer: Commits to roadmap-wt1
-   code_developer: Exits (work complete)
+   code_developer: Commits to roadmap-implementation_task-TASK-31-1
+   code_developer: Updates task status to 'completed'
+   code_developer: Exits (task complete)
    ↓
 3. orchestrator detects completion
    ↓
    orchestrator: Check agent PID 12345 → completed
-   orchestrator: Check tests on roadmap-wt1 → passing
-   orchestrator: Notify architect → "roadmap-wt1 ready for merge (US-048)"
+   orchestrator: Check TASK-31-1 status → completed
+   orchestrator: Check tests on roadmap-implementation_task-TASK-31-1 → passing
+   orchestrator: Notify architect → "roadmap-implementation_task-TASK-31-1 ready for merge (Phase 1 complete)"
    ↓
 4. architect merges work to roadmap
    ↓
    architect: git checkout roadmap
    architect: git pull origin roadmap
-   architect: git merge roadmap-wt1 --no-ff -m "Merge US-048 from roadmap-wt1"
+   architect: git merge roadmap-implementation_task-TASK-31-1 --no-ff -m "Merge TASK-31-1: Phase 1 of PRIORITY 31"
    architect: Run validation (tests, ROADMAP.md consistency)
    architect: git push origin roadmap
-   architect: Notify orchestrator → "roadmap-wt1 merged successfully"
+   architect: Notify orchestrator → "roadmap-implementation_task-TASK-31-1 merged successfully"
    ↓
 5. orchestrator cleans up worktree
    ↓
-   orchestrator: git worktree remove ../worktree-us-048
-   orchestrator: git branch -D roadmap-wt1
-   orchestrator: Record in agent_lifecycle table (completed, merged, cleaned)
+   orchestrator: git worktree remove ../worktree-TASK-31-1
+   orchestrator: git branch -D roadmap-implementation_task-TASK-31-1
+   orchestrator: Updates TASK-31-1 record: worktree_path=NULL, branch_name=NULL
    ↓
 6. orchestrator decides next action
    ↓
-   Option A: Assign new task to code_developer → spawn in new worktree
-   Option B: No more work → shutdown code_developer agent
+   Option A: Start next task in sequence (TASK-31-2) → spawn in NEW worktree
+   Option B: Start parallel task from different group (TASK-32-1) → spawn in NEW worktree
+   Option C: No more work → shutdown orchestrator
 ```
+
+**Key Points**:
+- Each task gets its own isolated worktree
+- Sequential tasks in same group (TASK-31-1 → TASK-31-2) use DIFFERENT worktrees
+- Parallel tasks from different groups (TASK-31-1 + TASK-32-1) use DIFFERENT worktrees
+- Merge happens after EACH task completes
+- Fresh worktree for every task ensures no conflicts
 
 #### Orchestrator Responsibilities
 
 **MUST**:
-1. ✅ Create worktree with `roadmap-*` branch name (e.g., roadmap-wt1, roadmap-wt2)
-2. ✅ Track worktree location and branch name in `agent_lifecycle` table
-3. ✅ Monitor code_developer completion (via PID, exit code, or status file)
-4. ✅ Verify tests pass on worktree branch before requesting merge
-5. ✅ Notify architect when work ready for merge
-6. ✅ **WAIT for architect to complete merge** before cleanup
-7. ✅ Delete worktree directory: `git worktree remove <path>`
-8. ✅ Delete branch: `git branch -D roadmap-wt1`
-9. ✅ Record lifecycle: spawned → working → completed → merged → cleaned
-10. ✅ Decide: reassign agent to new task OR shutdown agent
-11. ✅ **Monitor ROADMAP for work availability** - NEVER allow empty ROADMAP:
-   - Check if ROADMAP has planned priorities (Planned status)
-   - Check if priorities have technical specs ready (from architect)
-   - If ROADMAP becomes empty or low on planned work: notify project_manager
-   - Ensure continuous planning loop works (project_manager plans → architect specs → code_developer implements)
-   - If no work available and no agents can plan: STOP and wait for user input
+1. ✅ Create worktree with `roadmap-implementation_task-*` branch name (e.g., roadmap-implementation_task-TASK-31-1, roadmap-implementation_task-TASK-32-1)
+2. ✅ Track worktree location and branch name in `implementation_tasks` table (worktree_path, branch_name columns)
+3. ✅ **One worktree per task**: Create NEW worktree for EACH implementation task
+4. ✅ Monitor code_developer completion (via process_id in implementation_tasks table)
+5. ✅ Verify task is completed before requesting merge
+6. ✅ Verify tests pass on worktree branch before requesting merge
+7. ✅ Notify architect when task ready for merge
+8. ✅ **WAIT for architect to complete merge** before cleanup
+9. ✅ Delete worktree directory: `git worktree remove <path>`
+10. ✅ Delete branch: `git branch -D roadmap-implementation_task-TASK-31-1`
+11. ✅ Clear worktree fields in task record: SET worktree_path=NULL, branch_name=NULL
+12. ✅ Record lifecycle: spawned → working → completed → merged → cleaned
+13. ✅ Decide next action:
+   - Sequential: Start next task in same group (TASK-31-2) in NEW worktree
+   - Parallel: Start task from different group (TASK-32-1) in NEW worktree
+   - None: Shutdown if no more work
+14. ✅ **Monitor implementation_tasks table for work availability**:
+   - Check if implementation_tasks table has pending tasks
+   - **Respect task_group_dependencies**: Only assign tasks from groups whose dependencies are completed
+   - Check if priorities have technical specs and tasks created (from architect)
+   - If task queue becomes empty: notify architect to create more tasks from specs
+   - Ensure continuous work loop: architect creates tasks → code_developer implements
+   - If no work available and architect cannot create tasks: STOP and wait for user input
+
+15. ✅ **Query available task groups respecting dependencies**:
+```python
+# Find task groups ready to start
+cursor.execute("""
+    SELECT DISTINCT task_group_id
+    FROM implementation_tasks
+    WHERE status = 'pending'
+      AND task_group_id NOT IN (
+          -- Exclude groups with incomplete dependencies
+          SELECT tgd.task_group_id
+          FROM task_group_dependencies tgd
+          WHERE tgd.dependency_type = 'hard'
+            AND EXISTS (
+                SELECT 1
+                FROM implementation_tasks dep_tasks
+                WHERE dep_tasks.task_group_id = tgd.depends_on_group_id
+                  AND dep_tasks.status != 'completed'
+            )
+      )
+""")
+# Returns: Only groups whose hard dependencies are fully completed
+```
 
 **MUST NOT**:
 ❌ Merge worktree branches yourself (architect's responsibility)
 ❌ Delete worktree before architect confirms merge complete
 ❌ Leave stale worktrees or branches (cleanup is mandatory)
-❌ Create worktree branches without `roadmap-` prefix
-❌ Continue spawning agents when ROADMAP is empty
+❌ Create worktree branches without `roadmap-implementation_task-` prefix
+❌ Reuse worktree for multiple tasks (each task gets its own worktree)
+❌ Allow multiple code_developers in same worktree (violates CFR-000)
+❌ Continue spawning agents when task queue is empty
 
 #### Architect Responsibilities
 
 **MUST**:
-1. ✅ Respond to orchestrator notification: "roadmap-wt1 ready for merge"
+1. ✅ Respond to orchestrator notification: "roadmap-implementation_task-TASK-31-1 ready for merge"
 2. ✅ Switch to roadmap branch: `git checkout roadmap && git pull`
-3. ✅ Merge worktree branch: `git merge roadmap-wt1 --no-ff`
+3. ✅ Merge worktree branch: `git merge roadmap-implementation_task-TASK-31-1 --no-ff`
 4. ✅ Resolve conflicts if any (with clear resolution strategy)
 5. ✅ Validate merge:
    - Run tests: `pytest`
    - Check ROADMAP.md for duplicates or inconsistencies
    - Verify no breaking changes
+   - Verify task is marked as completed in implementation_tasks table
 6. ✅ Push to remote: `git push origin roadmap`
-7. ✅ Notify orchestrator: "roadmap-wt1 merged, ready for cleanup"
+7. ✅ Notify orchestrator: "roadmap-implementation_task-TASK-31-1 merged, ready for cleanup"
 8. ✅ Use `.claude/skills/architect/merge-worktree-branches/` skill for efficiency
 
 **MUST NOT**:
 ❌ Delete worktree branches yourself (orchestrator's responsibility)
 ❌ Skip validation before pushing
 ❌ Merge if tests failing (request fix first)
+❌ Merge multiple tasks at once (one task at a time)
 
 #### Orchestrator State Tracking (CFR-014 Integration)
 

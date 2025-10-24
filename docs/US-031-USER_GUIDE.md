@@ -98,4 +98,4 @@ $ poetry run user-listener
 
 You: Where is the notification database code?
 
-[Routes to code-searcher agent...]
+[Routes to assistant agent (with code-forensics and security-audit skills)...]

@@ -279,15 +279,17 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         self.specific_priority = specific_priority
         self.work_id = work_id
 
-        # PRIORITY 31: Initialize WorkManager if work_id provided
-        self.work_manager: Optional["WorkManager"] = None
+        # PRIORITY 31: Initialize ImplementationTaskManager if work_id provided
+        self.task_manager: Optional["ImplementationTaskManager"] = None
         if work_id:
-            from coffee_maker.autonomous.unified_database import get_unified_database
-            from coffee_maker.autonomous.work_manager import WorkManager
+            from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+            from coffee_maker.autonomous.implementation_task_manager import (
+                ImplementationTaskManager,
+            )
 
-            db = get_unified_database()
-            self.work_manager = WorkManager(db.db_path)
-            logger.info(f"✅ WorkManager initialized for work {work_id}")
+            db = RoadmapDatabase(agent_name="code_developer")
+            self.task_manager = ImplementationTaskManager(db.db_path)
+            logger.info(f"✅ ImplementationTaskManager initialized for work {work_id}")
 
         # Initialize components
         self.parser = RoadmapParser(str(self.roadmap_path))
@@ -519,7 +521,7 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             # 1. CLAIM WORK (atomic, race-safe, respects sequential ordering)
             logger.info(f"🔒 Attempting to claim work {self.work_id}...")
 
-            success = self.work_manager.claim_work(self.work_id)
+            success = self.task_manager.claim_work(self.work_id)
 
             if not success:
                 logger.error(f"❌ Failed to claim work {self.work_id} - already claimed by another instance")
@@ -528,27 +530,27 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
                 return
 
             logger.info(f"✅ Successfully claimed work {self.work_id}")
-            logger.info(f"   Group: {self.work_manager.current_work['related_works_id']}")
-            logger.info(f"   Order: {self.work_manager.current_work['priority_order']}")
-            logger.info(f"   Assigned files: {self.work_manager.assigned_files}")
+            logger.info(f"   Group: {self.task_manager.current_work['related_works_id']}")
+            logger.info(f"   Order: {self.task_manager.current_work['priority_order']}")
+            logger.info(f"   Assigned files: {self.task_manager.assigned_files}")
 
             # 2. READ TECHNICAL SPEC SECTION
             logger.info("📖 Reading technical spec section for this work...")
 
-            spec_content = self.work_manager.read_technical_spec_for_work()
+            spec_content = self.task_manager.read_technical_spec_for_work()
 
             logger.info(f"✅ Loaded spec section ({len(spec_content)} chars)")
-            logger.info(f"   Scope: {self.work_manager.current_work['scope_description']}")
+            logger.info(f"   Scope: {self.task_manager.current_work['scope_description']}")
 
             # 3. UPDATE STATUS TO IN_PROGRESS
-            self.work_manager.update_work_status("in_progress")
+            self.task_manager.update_work_status("in_progress")
 
             # Update developer status
             self.status.update_status(
                 DeveloperState.WORKING,
                 task={
                     "work_id": self.work_id,
-                    "scope": self.work_manager.current_work["scope_description"],
+                    "scope": self.task_manager.current_work["scope_description"],
                 },
                 progress=0,
                 current_step="Starting work implementation",
@@ -580,17 +582,17 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             logger.info(f"✅ Committed changes: {commit_sha[:8]}")
 
             # 6. RECORD COMMIT (for code_reviewer sync)
-            self.work_manager.record_commit(commit_sha, commit_message)
+            self.task_manager.record_commit(commit_sha, commit_message)
 
             # 7. UPDATE STATUS TO COMPLETED
-            self.work_manager.update_work_status("completed")
+            self.task_manager.update_work_status("completed")
 
             self.status.update_status(DeveloperState.IDLE, current_step="work completed successfully")
 
             logger.info("=" * 80)
             logger.info(f"✅ work {self.work_id} COMPLETED SUCCESSFULLY")
             logger.info(f"   Commit: {commit_sha}")
-            logger.info(f"   Files modified: {self.work_manager.assigned_files}")
+            logger.info(f"   Files modified: {self.task_manager.assigned_files}")
             logger.info("=" * 80)
 
         except WorkNotFoundError as e:
@@ -606,8 +608,8 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             logger.error("   This work tried to modify files outside assigned_files")
 
             # Update status to failed
-            if self.work_manager:
-                self.work_manager.update_work_status("failed", error_message=str(e))
+            if self.task_manager:
+                self.task_manager.update_work_status("failed", error_message=str(e))
 
             self.status.update_status(DeveloperState.IDLE, current_step=f"Error: {e}")
 
@@ -618,8 +620,8 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
             traceback.print_exc()
 
             # Update status to failed
-            if self.work_manager and self.work_manager.current_work:
-                self.work_manager.update_work_status("failed", error_message=str(e))
+            if self.task_manager and self.task_manager.current_work:
+                self.task_manager.update_work_status("failed", error_message=str(e))
 
             self.status.update_status(DeveloperState.IDLE, current_step=f"Error: {e}")
 
@@ -632,7 +634,7 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         Returns:
             Formatted prompt for Claude
         """
-        work = self.work_manager.current_work
+        work = self.task_manager.current_work
 
         prompt = f"""# Work Implementation: {self.work_id}
 
@@ -641,7 +643,7 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 - Spec: {work['spec_id']}
 - Scope: {work['scope_description']}
 - Group: {work['related_works_id']} (order {work['priority_order']})
-- Assigned Files: {', '.join(self.work_manager.assigned_files)}
+- Assigned Files: {', '.join(self.task_manager.assigned_files)}
 
 ## Technical Specification
 {spec_content}
@@ -655,7 +657,7 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
 
 ## File Access Restrictions (CRITICAL)
 You are ONLY allowed to modify these files:
-{chr(10).join(f'- {f}' for f in self.work_manager.assigned_files)}
+{chr(10).join(f'- {f}' for f in self.task_manager.assigned_files)}
 
 Attempting to modify any other files will result in FileAccessViolationError.
 
@@ -675,7 +677,7 @@ Please implement this work now.
         Returns:
             Formatted commit message
         """
-        work = self.work_manager.current_work
+        work = self.task_manager.current_work
 
         message = f"""feat({work['work_id']}): {work['scope_description']}
 
@@ -683,7 +685,7 @@ Implements work {work['work_id']} for {work['spec_id']}.
 
 Group: {work['related_works_id']} (order {work['priority_order']})
 Scope: {work['scope_description']}
-Files: {', '.join(self.work_manager.assigned_files)}
+Files: {', '.join(self.task_manager.assigned_files)}
 
 Related: PRIORITY 31, CFR-000
 
@@ -785,7 +787,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>
                     logger.info("   - Or all are complete!")
                     # PRIORITY 4: Return to idle when done
                     self.status.update_status(
-                        DeveloperState.IDLE, current_step="Waiting for architect to create specs or no more work"
+                        DeveloperState.IDLE,
+                        current_step="Waiting for architect to create specs or no more work",
                     )
                     # Sleep and retry - maybe architect will create specs
                     time.sleep(self.sleep_interval)

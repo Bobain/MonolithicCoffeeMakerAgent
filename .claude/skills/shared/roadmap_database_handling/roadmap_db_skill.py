@@ -9,10 +9,10 @@ Access Control:
     - Notifications: All agents can request updates via notifications
 
 Usage Example:
-    >>> from coffee_maker.autonomous.roadmap_database_v2 import RoadmapDatabaseV2
+    >>> from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
     >>>
     >>> # Initialize with agent name for access control
-    >>> roadmap_db = RoadmapDatabaseV2(agent_name="code_developer")
+    >>> roadmap_db = RoadmapDatabase(agent_name="code_developer")
     >>>
     >>> # Read operations (allowed for all agents)
     >>> items = roadmap_db.get_all_items()
@@ -50,7 +50,7 @@ Integration with Technical Specs:
 
 IMPORTANT Rules:
     1. NEVER read/write ROADMAP.md file directly
-    2. Always use RoadmapDatabaseV2 for roadmap operations
+    2. Always use RoadmapDatabase for roadmap operations
     3. Non-PM agents must use notifications for status updates
     4. project_manager reviews and approves all notifications
     5. Database is the single source of truth for roadmap
@@ -59,7 +59,7 @@ IMPORTANT Rules:
 import logging
 from typing import Dict, List, Optional
 
-from coffee_maker.autonomous.roadmap_database_v2 import RoadmapDatabaseV2
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class RoadmapDBSkill:
             agent_name: Name of agent using this skill (for access control)
         """
         self.agent_name = agent_name
-        self.db = RoadmapDatabaseV2(agent_name=agent_name)
+        self.db = RoadmapDatabase(agent_name=agent_name)
         self.can_write = agent_name == "project_manager"
 
         if not self.can_write:
@@ -258,10 +258,10 @@ ROADMAP_SKILL_USAGE = """
 
 ### For All Agents (Read Access):
 ```python
-from coffee_maker.autonomous.roadmap_database_v2 import RoadmapDatabaseV2
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
 # Initialize with your agent name
-roadmap_db = RoadmapDatabaseV2(agent_name="code_developer")
+roadmap_db = RoadmapDatabase(agent_name="code_developer")
 
 # Get next planned item
 next_item = roadmap_db.get_next_planned()

@@ -155,7 +155,6 @@ Agents can call other agents:
 ```
 project_manager
   ↓ (uses Task tool)
-code-searcher
   ↓ (finds code)
 project_manager
   ↓ (warns user with findings)

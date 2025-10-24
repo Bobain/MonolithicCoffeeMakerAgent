@@ -129,6 +129,6 @@ result = skill.execute(action="analyze_file", file="coffee_maker/cli/foo.py")
 
 ## Related
 
-- **code-searcher agent**: Uses this for deep code analysis
+- **assistant agent (with code-forensics and security-audit skills)**: Uses this for deep code analysis
 - **assistant agent**: Uses this for quick lookups
 - **architect agent**: Uses this for dependency analysis

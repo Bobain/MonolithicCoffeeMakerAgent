@@ -1,10 +1,60 @@
 # Coffee Maker Agent - Prioritized Roadmap
 
-**Last Updated**: 2025-10-18 🚀 **ACE FRAMEWORK: 42 User Stories Added (US-062 through US-103) - 7 Phases**
+**Last Updated**: 2025-10-24 🚀 **MAJOR UPDATES: Task Group Dependencies, Database Schema Cleanup, Priority Ordering**
 **Current Branch**: `roadmap`
 **Status**: **🚨 PHASE 0 - ACCELERATION ⚡ US-090 (START HERE)** | Total: 185-235 hrs → 3-4 weeks Phase 0, then 4-6 weeks Phases 1-3
 **Quick-Start**: ⚡ CLI: `project-manager` (defaults to chat!) | Daemon: `python run_code_developer.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py`
-**Achievement**: 🎉 **ACE IMPLEMENTATION PLAN REORGANIZED** - Phase 0 (Force Multiplier) now HIGHEST PRIORITY!
+**Achievement**: 🎉 **DEPENDENCY SYSTEM COMPLETE** - Architect can now define prerequisite task groups!
+
+---
+
+## 🎉 Recent Completions (2025-10-24)
+
+### ✅ Task Group Dependency Management System (PRIORITY 32)
+**Completed**: 2025-10-24 | **Effort**: 4 hours
+
+architect can now define dependencies between task groups to prevent code_developer from starting dependent work before prerequisites complete.
+
+**Key Features**:
+- `task_group_dependencies` table with hard (blocking) and soft (preferred) dependencies
+- Automatic enforcement in `ImplementationTaskManager` - blocks dependent groups
+- Example: GROUP-20 and GROUP-35 cannot start until GROUP-36 (shared library) completes
+- Comprehensive test suite (5 tests, all passing)
+
+**Files**:
+- Migration: `coffee_maker/autonomous/migrate_add_task_group_dependencies.py`
+- Enforcement: `coffee_maker/autonomous/implementation_task_manager.py`
+- Tests: `tests/unit/test_implementation_task_manager.py::TestTaskGroupDependencies`
+
+**Documentation**: Updated in `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` (CFR-013) and `.claude/agents/architect.md` (Workflow 2)
+
+---
+
+### ✅ Database Schema Cleanup (Multiple Improvements)
+**Completed**: 2025-10-24 | **Effort**: 3 hours
+
+**Changes**:
+1. **Renamed `section_order` → `priority_order`**: More accurate field name with UNIQUE constraint
+2. **Auto-increment default**: New items default to `MAX(priority_order) + 1`
+3. **Removed version suffixes**: `roadmap_database_v2.py` → `roadmap_database.py`
+
+**Rationale**: Git handles versioning, code should use clean names. `priority_order` clearly indicates roadmap priority position.
+
+**Files**:
+- Migration: `coffee_maker/autonomous/migrate_rename_section_order_to_priority_order.py`
+- Updated: All 17+ references in codebase
+- Class renamed: `RoadmapDatabaseV2` → `RoadmapDatabase`
+
+---
+
+### ✅ Architect Workflow Enhancement (PRIORITY 33)
+**Completed**: 2025-10-24 | **Effort**: 1 hour
+
+architect now uses `RoadmapDBSkill` for consistent priority ordering with project_manager.
+
+**Key Addition**: Workflow 0 in `.claude/agents/architect.md` - "Finding Next Priority to Work On"
+
+**Benefit**: Both agents use the same `priority_order` field, ensuring alignment.
 
 ---
 
