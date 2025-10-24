@@ -72,21 +72,7 @@ This directory contains agent definitions for the MonolithicCoffeeMakerAgent pro
 
 ---
 
-### 6. code-searcher
-**Purpose**: Deep codebase analysis and forensic examination
-
-**Use When**:
-- Finding code patterns across the codebase
-- Security audits
-- Dependency tracing
-- Architectural analysis of existing code
-- Identifying refactoring opportunities
-
-**Invoke**: `> Use the code-searcher subagent to find all authentication code`
-
----
-
-### 7. ux-design-expert
+### 6. ux-design-expert
 **Purpose**: UI/UX design guidance and Tailwind CSS expertise
 
 **Use When**:
@@ -234,17 +220,6 @@ Each agent has been configured to read specific critical documents at startup. T
 - `docs/architecture/decisions/ADR-*.md` - Historical architectural decisions
 - `docs/architecture/guidelines/GUIDELINE-*.md` - Existing implementation guidelines
 - `pyproject.toml` - Current dependencies (when evaluating new dependencies)
-
-#### code-searcher - Startup Documents
-
-**READ AT STARTUP (MANDATORY)**:
-1. 🔴 `.claude/CLAUDE.md` - Project overview (read FIRST)
-2. 🔴 `.claude/agents/code-searcher.md` - Own role definition (read SECOND)
-
-**READ AS NEEDED**:
-- All codebase files (comprehensive access for analysis)
-- `docs/roadmap/ROADMAP.md` - Context for analysis requests
-- Specific files/directories requested by user
 
 #### ux-design-expert - Startup Documents
 

@@ -8,7 +8,7 @@ Architecture:
     - Identifies priorities that need specs
     - Maintains spec backlog target (default: 3 specs ahead)
     - Tracks spec creation progress
-    - Ensures CFR-011 compliance (architect reads code-searcher reports)
+    - Ensures architect reads code review summaries
     - Detects completed worktrees (roadmap-* branches)
     - Notifies architect when merges are needed
 
@@ -36,7 +36,7 @@ class ArchitectCoordinator:
     - Maintain 2-3 specs ahead of code_developer (spec backlog)
     - Prioritize spec creation by ROADMAP order
     - Track spec creation progress
-    - Ensure CFR-011 compliance (architect reads code-searcher reports)
+    - Ensure architect reads code review summaries
     - Detect completed worktrees (roadmap-* branches)
     - Notify architect when merges are needed
     """

@@ -362,7 +362,7 @@ class ImplementationTaskCreator:
 
         Note:
             This is a simplified implementation. In production, this would:
-            - Use code-searcher skill to find related code
+            - Use code analysis skills to find related code
             - Use dependency-tracer to analyze imports
             - Parse spec content for file mentions
         """

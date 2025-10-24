@@ -281,7 +281,7 @@ class BaseAgent(ABC):
         3. Remain responsive to user signals (Ctrl+C)
 
         This solves the "stale heartbeat" problem where agents with long
-        check_intervals (architect=1h, code-searcher=24h) don't update their
+        check_intervals (architect=1h) don't update their
         status for hours, causing monitoring systems to report them as unhealthy.
 
         Args:
@@ -650,7 +650,7 @@ class BaseAgent(ABC):
         ArchitectAgent:
             - Check ROADMAP for spec coverage
             - Create missing specs proactively
-            - Read code-searcher reports
+            - Read code review summaries
             - Analyze codebase for refactoring
 
         CodeDeveloperAgent:
