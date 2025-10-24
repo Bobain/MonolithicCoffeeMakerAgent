@@ -8,16 +8,16 @@
 
 ## Overview
 
-This guide describes the architect agent's daily integration workflow for code-searcher findings and weekly codebase analysis, as required by CFR-011.
+This guide describes the architect agent's daily integration workflow for assistant (with code analysis skills) findings and weekly codebase analysis, as required by CFR-011.
 
-**Key Principle**: architect MUST integrate code-searcher findings daily and analyze the codebase weekly BEFORE creating new technical specifications.
+**Key Principle**: architect MUST integrate assistant (with code analysis skills) findings daily and analyze the codebase weekly BEFORE creating new technical specifications.
 
 ---
 
 ## CFR-011 Requirements
 
 ### Daily Integration (Every Day)
-1. **Read ALL code-searcher reports** in `docs/code-searcher/*.md`
+1. **Read ALL assistant (with code analysis skills) reports** in `docs/assistant (with code analysis skills)/*.md`
 2. **Extract action items** from each report
 3. **Update tracking file** to mark reports as read
 
@@ -48,7 +48,7 @@ $ poetry run architect cfr-011-status
 ============================================================
  COMPLIANT - No violations detected
 
-Last code-searcher read: 2025-10-18
+Last assistant (with code analysis skills) read: 2025-10-18
 Last codebase analysis: 2025-10-18
 Next analysis due: 2025-10-25
 
@@ -67,14 +67,14 @@ $ poetry run architect daily-integration
 ```
 
 **What this does**:
-1. Finds all unread code-searcher reports
+1. Finds all unread assistant (with code analysis skills) reports
 2. Displays each report for review
 3. Asks: "Have you read this report and extracted action items?"
 4. Marks reports as read in tracking file
 
 **Example Session**:
 ```
-=== Found 2 unread code-searcher report(s):
+=== Found 2 unread assistant (with code analysis skills) report(s):
 
   1. CODE_QUALITY_ANALYSIS_2025-10-17.md
   2. SECURITY_AUDIT_2025-10-18.md
@@ -181,7 +181,7 @@ Based on analysis, create:
 ```
 L CFR-011 violation detected!
 
-Unread code-searcher reports: SECURITY_AUDIT_2025-10-18.md
+Unread assistant (with code analysis skills) reports: SECURITY_AUDIT_2025-10-18.md
 
 Actions required:
   1. Run: architect daily-integration
@@ -292,7 +292,7 @@ def _create_spec_for_priority(self, priority: Dict):
 
 ### Spec Creation
 1. **Check compliance first**: Run `architect cfr-011-status` before creating specs
-2. **Integrate findings**: Use code-searcher insights to improve spec quality
+2. **Integrate findings**: Use assistant (with code analysis skills) insights to improve spec quality
 3. **Avoid rework**: Don't create specs that ignore known refactoring opportunities
 4. **Update metrics**: Increment counters when creating/updating specs
 
@@ -325,7 +325,7 @@ Check:
 
 ### `architect daily-integration`
 
-Guided workflow for reading code-searcher reports.
+Guided workflow for reading assistant (with code analysis skills) reports.
 
 **Usage**:
 ```bash
@@ -391,8 +391,8 @@ Track your CFR-011 compliance with these metrics:
 ## Related Documentation
 
 - [CFR-011 Definition](../roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md#cfr-011)
-- [SPEC-054: Technical Specification](specs/SPEC-054-architect-code-searcher-daily-integration.md)
-- [code-searcher Documentation](.claude/agents/code-searcher.md)
+- [SPEC-054: Technical Specification](specs/SPEC-054-architect-assistant (with code analysis skills)-daily-integration.md)
+- [assistant (with code analysis skills) Documentation](.claude/agents/assistant (with code analysis skills).md)
 - [Architect Agent Implementation](../../coffee_maker/autonomous/agents/architect_agent.py)
 
 ---

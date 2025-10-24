@@ -228,11 +228,11 @@ See [US-049](#us-049-architect-continuous-spec-improvement-loop-cfr-010) for ful
 
 ---
 
-### PRIORITY 15: US-054 - Architect Daily Integration of code-searcher Findings (CFR-011) ✅ Complete
+### PRIORITY 15: US-054 - Architect Daily Integration of assistant (with code analysis skills) Findings (CFR-011) ✅ Complete
 
 **Status**: ✅ Complete - CRITICAL (CFR-011 Enforcement)
 
-See [US-054](#us-054-architect-daily-integration-of-code-searcher-findings-cfr-011) for full details.
+See [US-054](#us-054-architect-daily-integration-of-assistant (with code analysis skills)-findings-cfr-011) for full details.
 
 **Strategic Value**: CRITICAL CFR enforcement, quality improvement loop
 
@@ -276,7 +276,7 @@ See [US-056](#us-056-claude-skills-integration---phase-2-medium-value-skills) fo
 - ✅ Dependency Impact skill (architect) - 80% time savings
 - ✅ Demo Creator skill (assistant) - 78% time savings (placeholder for Puppeteer)
 - ✅ Bug Analyzer skill (assistant) - 75-85% time savings (placeholder for Puppeteer)
-- ✅ Security Audit skill (code-searcher) - 83% time savings (placeholder for bandit/safety)
+- ✅ Security Audit skill (assistant (with code analysis skills)) - 83% time savings (placeholder for bandit/safety)
 - ✅ Langfuse tracking integration
 - ✅ Comprehensive unit tests (11 tests, all passing)
 
@@ -1071,7 +1071,7 @@ architect currently creates technical specs but does NOT:
 2. **File Dependency Analysis**
    - For each work unit, identify ALL files that will be touched
    - Use codebase analysis skills:
-     - `code-searcher` for finding related code
+     - `assistant (with code analysis skills)` for finding related code
      - `dependency-tracer` for import chains
      - Static analysis for cross-file dependencies
    - Generate assigned_files list for each work unit
@@ -1109,7 +1109,7 @@ architect currently creates technical specs but does NOT:
    - Create architect skill: `work-session-creator`
    - Inputs: spec_id, roadmap_item_id
    - Outputs: List of work_sessions with assigned_files
-   - Uses: code-searcher, dependency-tracer, file analysis
+   - Uses: assistant (with code analysis skills), dependency-tracer, file analysis
 
 **Critical Files to Modify**:
 - New: `.claude/skills/architect/work-session-creator/SKILL.md`
@@ -1130,7 +1130,7 @@ architect currently creates technical specs but does NOT:
 - ✅ PRIORITY 31 (code_developer must be able to consume work_sessions)
 - ✅ technical_specs table with hierarchical sections
 - ✅ work_sessions table
-- ✅ code-searcher skill
+- ✅ assistant (with code analysis skills) skill
 - ✅ dependency-tracer skill
 
 **Success Criteria**:
@@ -1746,7 +1746,7 @@ Clean up worktrees, continue with next tasks
 ---
 
 **Deliverables Completed** (PRIORITY 19):
-- ✅ Code Forensics skill (code-searcher) - 85% time savings
+- ✅ Code Forensics skill (assistant (with code analysis skills)) - 85% time savings
 - ✅ Design System skill (ux-design-expert) - 90% time savings
 - ✅ Visual Regression skill (ux-design-expert) - 83% time savings (placeholder for Puppeteer MCP)
 - ✅ Parallel execution optimization (skill_invoker.py)
@@ -1832,11 +1832,11 @@ Clean up worktrees, continue with next tasks
 - **US-091**: Build code index infrastructure ✅
   - 3-level hierarchical index (categories → components → implementations)
   - Sub-second queries, 50-150x faster than grep
-- **US-092**: Migrate code-searcher responsibilities to architect ✅
-- **US-093**: Migrate code-searcher responsibilities to code_developer ✅
+- **US-092**: Migrate assistant (with code analysis skills) responsibilities to architect ✅
+- **US-093**: Migrate assistant (with code analysis skills) responsibilities to code_developer ✅
 - **US-094**: Transition period validation ✅ (skills working perfectly)
-- **US-095**: Retire code-searcher agent ✅
-- **US-096**: Archive code-searcher.md ✅
+- **US-095**: Retire assistant agent (with code analysis skills) ✅
+- **US-096**: Archive assistant (with code analysis skills).md ✅
 
 ### Group 2: Startup Skills (US-062, US-063, US-064) ✅ **COMPLETE**
 - **US-062**: code_developer-startup skill ✅ (SKILL.md created)
@@ -24510,7 +24510,7 @@ Implement singleton enforcement for all agents to prevent multiple instances of 
 **Non-File-Owning Agents** (multiple instances OK):
 - assistant (READ-ONLY, only reads and delegates)
 - user_listener (delegation-only, no writes)
-- code-searcher (READ-ONLY, only analyzes)
+- assistant (with code analysis skills) (READ-ONLY, only analyzes)
 - ux-design-expert (provides specs, doesn't write)
 
 **Exception Logic**:
@@ -24564,7 +24564,7 @@ Without singleton enforcement, we risk:
   - [x] user_listener (user_listener.py:493) ✅
   - [x] architect (integrated) ✅
   - [x] assistant (integrated) ✅
-  - [x] code-searcher (integrated) ✅
+  - [x] assistant (with code analysis skills) (integrated) ✅
   - [x] ux-design-expert (integrated) ✅
   - [x] code_reviewer (code_reviewer.py:870) ✅
   - [x] orchestrator (orchestrator.py:120) ✅
@@ -26542,7 +26542,7 @@ def test_level_4_agent_self_check():
 - US-034 marked as COMPLETE (created architect documentation)
 - BUT: architect is NOT available in Task tool
 - Error message: "Agent type 'architect' not found"
-- Available agents: general-purpose, assistant, code-searcher, project_manager, code_developer, etc.
+- Available agents: general-purpose, assistant, assistant (with code analysis skills), project_manager, code_developer, etc.
 - architect is MISSING from this list
 
 **Impact**:
@@ -27016,7 +27016,7 @@ Currently, agents use Glob/Grep to search for files during execution. This is:
 - **Inefficient**: Adds latency to agent operations
 - **Unclear**: File requirements not documented
 
-code-searcher exists specifically for file discovery. Other agents should have their context specified upfront.
+assistant (with code analysis skills) exists specifically for file discovery. Other agents should have their context specified upfront.
 
 **Description**:
 Ensure agents receive required files upfront, eliminating wasteful file searching during execution. Each agent's role definition should specify "Required Files (Context)" that are provided at invocation time.
@@ -27027,7 +27027,7 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
    - All `.claude/agents/*.md` include "Required Files (Context)" section
    - Clear specification of which files agent needs
    - Explanation of WHY each file is needed
-   - Exceptions documented (code-searcher, architect for analysis)
+   - Exceptions documented (assistant (with code analysis skills), architect for analysis)
 
 2. **generator Context Provision**:
    - generator loads context files before routing to agents
@@ -27037,14 +27037,14 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
 3. **Agents Use Read for Known Paths**:
    - Agents use Read tool for known file paths
    - Glob/Grep only for:
-     - code-searcher (discovery is the role)
+     - assistant (with code analysis skills) (discovery is the role)
      - architect (analyzing codebase patterns)
      - Exceptional cases (documented)
 
-4. **File Searching Delegated to code-searcher**:
-   - "Find all files that..." → code-searcher
-   - "Where is X implemented?" → code-searcher
-   - Discovery tasks → code-searcher
+4. **File Searching Delegated to assistant (with code analysis skills)**:
+   - "Find all files that..." → assistant (with code analysis skills)
+   - "Where is X implemented?" → assistant (with code analysis skills)
+   - Discovery tasks → assistant (with code analysis skills)
 
 5. **Logging & Monitoring**:
    - generator logs when agents unexpectedly search
@@ -27062,7 +27062,7 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
 - [x] generator provides context files when routing to agents
 - [x] Agents receive context in prompts (not searching)
 - [x] Agents use Read for known paths (not Glob/Grep)
-- [x] code-searcher handles discovery tasks (delegated)
+- [x] assistant (with code analysis skills) handles discovery tasks (delegated)
 - [x] Performance metrics show reduced searching (baseline vs after)
 - [x] Documentation updated (CFRs, agent definitions, CLAUDE.md)
 - [x] Logging captures unexpected file searches
@@ -27079,7 +27079,7 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
    - project_manager.md: Strategic docs + team collaboration
    - architect.md: Design docs + ADRs + dependencies
    - assistant.md: Documentation expertise + prompts index
-   - code-searcher.md: Exception - discovery is role
+   - assistant (with code analysis skills).md: Exception - discovery is role
    - ux-design-expert.md: Design standards + feature requirements
 
 2. **Generator Context Loading** (coffee_maker/autonomous/ace/generator.py):
@@ -27092,7 +27092,7 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
    - monitor_file_search(): Track unexpected searches
    - _log_search_trace(): Record traces for reflector
    - get_search_stats(): Statistics on searches
-   - code-searcher exempt (expected to search)
+   - assistant (with code analysis skills) exempt (expected to search)
    - architect allowed (for codebase analysis)
 
 4. **Comprehensive Tests** (tests/unit/test_context_upfront.py):
@@ -27113,7 +27113,7 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
 
 **Key Design Decisions**:
 
-1. **code-searcher is Exception**: Discovery IS the role
+1. **assistant (with code analysis skills) is Exception**: Discovery IS the role
 2. **architect May Search**: For codebase analysis when designing
 3. **Context Truncation**: Max 5000 chars per file in prompts (configurable)
 4. **Graceful Degradation**: Missing files return error messages (not failures)
@@ -27124,7 +27124,7 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
 - .claude/agents/project_manager.md
 - .claude/agents/architect.md
 - .claude/agents/assistant.md
-- .claude/agents/code-searcher.md
+- .claude/agents/assistant (with code analysis skills).md
 - .claude/agents/ux-design-expert.md
 - coffee_maker/autonomous/ace/generator.py
 - docs/roadmap/ROADMAP.md
@@ -27157,9 +27157,9 @@ architect:
 
 assistant:
   Always Read: ROADMAP.md, CLAUDE.md, assistant.md
-  May Search: (delegates to code-searcher for deep analysis, uses Grep/Read for 1-2 files)
+  May Search: (delegates to assistant (with code analysis skills) for deep analysis, uses Grep/Read for 1-2 files)
 
-code-searcher:
+assistant (with code analysis skills):
   Always Read: None (discovery is the role)
   Primary Tool: Glob, Grep, Read
 ```
@@ -27219,7 +27219,7 @@ roadmap = context["docs/roadmap/ROADMAP.md"]["content"]  # Fast!
 
 ```python
 # generator logs unexpected searches
-if agent_type != "code-searcher" and tool_call == "Glob":
+if agent_type != "assistant (with code analysis skills)" and tool_call == "Glob":
     logger.warning(
         f"Agent '{agent_type}' used Glob unexpectedly. "
         f"Pattern: {pattern}. "
@@ -27244,7 +27244,7 @@ if agent_type != "code-searcher" and tool_call == "Glob":
 
 **Success Metrics**:
 
-- **Performance**: Reduced Glob/Grep calls by 80%+ (except code-searcher)
+- **Performance**: Reduced Glob/Grep calls by 80%+ (except assistant (with code analysis skills))
 - **Clarity**: All agents have documented context requirements
 - **Predictability**: Consistent agent startup time
 - **Monitoring**: Unexpected searches logged and traced
@@ -27256,7 +27256,7 @@ if agent_type != "code-searcher" and tool_call == "Glob":
 1. **Performance**: File system operations are expensive
 2. **Clarity**: Obvious what agent needs to work
 3. **Debugging**: Easy to see if context is missing
-4. **Separation of Concerns**: code-searcher handles discovery
+4. **Separation of Concerns**: assistant (with code analysis skills) handles discovery
 
 **Related**:
 - CRITICAL_FUNCTIONAL_REQUIREMENTS.md v1.4 - "Agent File Access Patterns"
@@ -28286,7 +28286,7 @@ This user story addresses the user's requirement for regular, systematic refacto
 
 **Why**:
 - **Architectural Alignment**: Matches documented architecture in CLAUDE.md where `user_listener` is defined as the PRIMARY USER INTERFACE
-- **Clear Separation of Concerns**: Establishes clear boundary between UI (user_listener) and backend agents (project_manager, architect, code-searcher, etc.)
+- **Clear Separation of Concerns**: Establishes clear boundary between UI (user_listener) and backend agents (project_manager, architect, assistant (with code analysis skills), etc.)
 - **Full Agent Delegation**: Enables proper delegation to all specialized agents through a single, consistent interface
 - **User Experience**: Provides a unified, intuitive command for all user interactions instead of using `project-manager chat`
 
@@ -28309,7 +28309,7 @@ The project architecture in CLAUDE.md clearly defines `user_listener` as the "PR
 2. **Agent Delegation System**:
    - Delegate strategic tasks to project_manager (ROADMAP updates, GitHub monitoring, status reports)
    - Delegate architectural decisions to architect (technical specs, ADRs, dependencies)
-   - Delegate code analysis to code-searcher (deep codebase analysis, forensics)
+   - Delegate code analysis to assistant (with code analysis skills) (deep codebase analysis, forensics)
    - Delegate demos and bug reports to assistant (Puppeteer demos, comprehensive bug analysis)
    - Delegate design decisions to ux-design-expert (UI/UX, Tailwind CSS)
 
@@ -28339,7 +28339,7 @@ The project architecture in CLAUDE.md clearly defines `user_listener` as the "PR
 - [ ] Command provides rich terminal experience (markdown, syntax highlighting, streaming)
 - [ ] Delegates to project_manager for strategic tasks (ROADMAP, GitHub, status)
 - [ ] Delegates to architect for architectural decisions (specs, ADRs, dependencies)
-- [ ] Delegates to code-searcher for code analysis (deep analysis, patterns)
+- [ ] Delegates to assistant (with code analysis skills) for code analysis (deep analysis, patterns)
 - [ ] Delegates to assistant for demos and bug reports (Puppeteer, comprehensive QA)
 - [ ] Delegates to ux-design-expert for design decisions (UI/UX, Tailwind)
 - [ ] AgentRegistry enforces singleton (only one UI session at time)
@@ -28884,7 +28884,7 @@ This is the **continuous improvement loop** that ensures architectural quality d
 
 ---
 
-### US-054: Architect Daily Integration of code-searcher Findings (CFR-011) 📝 Planned
+### US-054: Architect Daily Integration of assistant (with code analysis skills) Findings (CFR-011) 📝 Planned
 
 **PRIORITY**: 15 (CRITICAL - CFR-011 Enforcement)
 
@@ -28895,25 +28895,25 @@ This is the **continuous improvement loop** that ensures architectural quality d
 **Estimated Effort**: 1-2 days
 
 **User Story**:
-As the architect agent, I must read code-searcher analysis reports daily and analyze the codebase weekly to identify refactoring opportunities and technical debt reduction, so that all findings are integrated into technical specifications before creating new specs.
+As the architect agent, I must read assistant (with code analysis skills) analysis reports daily and analyze the codebase weekly to identify refactoring opportunities and technical debt reduction, so that all findings are integrated into technical specifications before creating new specs.
 
 **Problem Statement**:
-Currently, code-searcher produces valuable analysis reports about code quality, duplication, technical debt, and refactoring opportunities, but architect does not systematically integrate these findings:
-- **Reports ignored**: code-searcher reports sit unread in docs/
+Currently, assistant (with code analysis skills) produces valuable analysis reports about code quality, duplication, technical debt, and refactoring opportunities, but architect does not systematically integrate these findings:
+- **Reports ignored**: assistant (with code analysis skills) reports sit unread in docs/
 - **Technical debt accumulates**: Refactoring opportunities missed
 - **Duplicate work**: Same patterns implemented multiple times
 - **Quality degradation**: Code quality issues not addressed proactively
 - **No enforcement**: No mechanism to ensure architect reads reports
 
-This is a **Critical Functional Requirement** (CFR-011) that ensures architect maintains code quality through continuous integration of code-searcher findings.
+This is a **Critical Functional Requirement** (CFR-011) that ensures architect maintains code quality through continuous integration of assistant (with code analysis skills) findings.
 
 **Description**:
-Implement enforcement mechanism where architect MUST read code-searcher reports daily AND analyze the codebase weekly before being allowed to create new technical specifications. This creates a feedback loop: code-searcher identifies issues → architect reads and acts on findings → new specs incorporate improvements → code_developer implements better code.
+Implement enforcement mechanism where architect MUST read assistant (with code analysis skills) reports daily AND analyze the codebase weekly before being allowed to create new technical specifications. This creates a feedback loop: assistant (with code analysis skills) identifies issues → architect reads and acts on findings → new specs incorporate improvements → code_developer implements better code.
 
 **Requirements**:
 
 1. **Daily Integration Workflow**:
-   - Check for new code-searcher reports every day
+   - Check for new assistant (with code analysis skills) reports every day
    - BLOCK spec creation if unread reports exist
    - Read all reports and extract action items
    - Update existing specs with findings
@@ -28955,7 +28955,7 @@ Implement enforcement mechanism where architect MUST read code-searcher reports 
 - [x] `ArchitectDailyRoutine` class implemented in `coffee_maker/autonomous/architect_daily_routine.py`
 - [x] `CFR011ViolationError` exception defined
 - [x] `enforce_cfr_011()` method raises exception if:
-  - Unread code-searcher reports exist
+  - Unread assistant (with code analysis skills) reports exist
   - >7 days since last codebase analysis
 - [x] Tracking file `data/architect_integration_status.json` created and maintained
 - [x] CLI command `architect daily-integration` works (guided workflow)
@@ -28973,7 +28973,7 @@ Implement enforcement mechanism where architect MUST read code-searcher reports 
 **Phase 1: Core Enforcement Mechanism** (4-6 hours)
 - Create `ArchitectDailyRoutine` class
 - Implement `enforce_cfr_011()` with both checks:
-  - Part 1: code-searcher report reading (daily)
+  - Part 1: assistant (with code analysis skills) report reading (daily)
   - Part 2: Codebase analysis (weekly)
 - Define `CFR011ViolationError` exception
 - Create tracking file structure
@@ -29003,7 +29003,7 @@ Implement enforcement mechanism where architect MUST read code-searcher reports 
 
 **Dependencies**:
 - US-047 (architect must be creating specs for enforcement to matter)
-- code-searcher must be producing reports (already happening)
+- assistant (with code analysis skills) must be producing reports (already happening)
 
 **Technical Specification Required**: Yes - architect will create detailed implementation spec
 
@@ -29030,19 +29030,19 @@ Implement enforcement mechanism where architect MUST read code-searcher reports 
 - `docs/architecture/specs/SPEC-051-centralized-prompt-utilities.md` - Example refactoring spec
 - `docs/architecture/specs/SPEC-052-standardized-error-handling.md` - Example refactoring spec
 - `docs/architecture/specs/SPEC-053-test-coverage-expansion.md` - Example refactoring spec
-- `docs/architecture/decisions/ADR-004-code-searcher-integration.md` - code-searcher integration approach
+- `docs/architecture/decisions/ADR-004-assistant (with code analysis skills)-integration.md` - assistant (with code analysis skills) integration approach
 - `.claude/agents/architect.md` - Architect role definition
-- `.claude/agents/code-searcher.md` - code-searcher role definition
+- `.claude/agents/assistant (with code analysis skills).md` - assistant (with code analysis skills) role definition
 
 **Unblocks**:
-- US-049 (continuous spec improvement needs findings from code-searcher)
+- US-049 (continuous spec improvement needs findings from assistant (with code analysis skills))
 - All refactoring priorities (SPEC-050, SPEC-051, SPEC-052, SPEC-053)
 
 **Blocked By**: None (can start immediately)
 
 **Notes**:
 This creates a powerful feedback loop:
-1. code-searcher analyzes codebase → finds issues
+1. assistant (with code analysis skills) analyzes codebase → finds issues
 2. architect reads reports daily → extracts improvements
 3. architect creates/updates specs → incorporates findings
 4. code_developer implements → better code quality
@@ -29061,7 +29061,7 @@ This creates a powerful feedback loop:
 Day 1 (Monday):
 1. architect starts work day
 2. enforce_cfr_011() runs automatically
-3. Finds 2 new code-searcher reports
+3. Finds 2 new assistant (with code analysis skills) reports
 4. BLOCKS spec creation with: "CFR-011 VIOLATION: Must read 2 new reports"
 5. architect runs: architect daily-integration
 6. Reads reports, extracts 5 refactoring opportunities
@@ -29097,13 +29097,13 @@ class ArchitectDailyRoutine:
         """Mandatory daily check before architect can create new specs."""
         today = datetime.now().date()
 
-        # Part 1: code-searcher report reading
+        # Part 1: assistant (with code analysis skills) report reading
         if self.last_code_searcher_read < today:
             reports = self._find_new_code_searcher_reports()
             if reports and not self._has_read_reports(reports):
                 raise CFR011ViolationError(
                     f"CFR-011 VIOLATION: Must read {len(reports)} new "
-                    f"code-searcher reports before creating specs today.\n\n"
+                    f"assistant (with code analysis skills) reports before creating specs today.\n\n"
                     f"Reports to read:\n" + "\n".join(f"- {r}" for r in reports) +
                     f"\n\nRun: architect daily-integration"
                 )
@@ -29304,7 +29304,7 @@ As an autonomous agent, I want additional skills for strategic workflows (ROADMA
    - **Bug Analysis Skill** (assistant): Reproduce bug, capture logs, analyze root cause, comprehensive report
 
 2. **Deep Analysis Skills** (Week 3):
-   - **Security Audit Skill** (code-searcher): Comprehensive security scanning (vulnerabilities, dependencies, auth flows)
+   - **Security Audit Skill** (assistant (with code analysis skills)): Comprehensive security scanning (vulnerabilities, dependencies, auth flows)
    - **Dependency Impact Skill** (architect): Analyze dependency changes, identify risks, suggest migration paths
 
 **Acceptance Criteria**:
@@ -29343,7 +29343,7 @@ As an autonomous agent, I want enhancement skills (code forensics, design system
 **Phase 3 Deliverables**:
 
 1. **Enhancement Skills** (Week 1):
-   - **Code Forensics Skill** (code-searcher): Trace code evolution, identify contributors, analyze patterns
+   - **Code Forensics Skill** (assistant (with code analysis skills)): Trace code evolution, identify contributors, analyze patterns
    - **Design System Skill** (ux-design-expert): Generate design systems from Tailwind
    - **Visual Regression Skill** (ux-design-expert): Detect unintended visual changes
 
@@ -29361,7 +29361,7 @@ As an autonomous agent, I want enhancement skills (code forensics, design system
 - [x] Comprehensive documentation complete - **NOTE**: Skills documented in SKILL.md files; additional guides deferred
 - [x] Maintenance playbook created - **NOTE**: Deferred (existing skills require minimal maintenance)
 - [x] 60%+ time reduction validated in production - **VERIFIED** (85-90% time savings per skill)
-- [x] All agents have 2-5 skills each - **VERIFIED** (code-searcher: 2, ux-design-expert: 2, etc.)
+- [x] All agents have 2-5 skills each - **VERIFIED** (assistant (with code analysis skills): 2, ux-design-expert: 2, etc.)
 
 **Dependencies**:
 - US-056 (Phase 2) must be complete
@@ -29444,7 +29444,7 @@ The architect agent was passive - it only created specs when requested. It shoul
    - `docs/architecture/ARCHITECT_SKILLS_SUMMARY.md`: Skills overview (800+ lines)
    - `docs/architecture/COMMIT_REVIEW_TRIGGER_COMPARISON.md`: Orchestrator vs git hooks (1000+ lines)
    - `docs/architecture/ARCHITECT_COMMIT_REVIEW_WORKFLOW.md`: Complete workflow (1500+ lines)
-   - `docs/architecture/decisions/ADR-009-retire-code-searcher-replace-with-skills.md`
+   - `docs/architecture/decisions/ADR-009-retire-assistant (with code analysis skills)-replace-with-skills.md`
    - `docs/architecture/decisions/ADR-010-code-architect-commit-review-skills-maintenance.md`
    - `docs/architecture/decisions/ADR-011-orchestrator-based-commit-review.md`
 
@@ -29540,7 +29540,7 @@ Spec includes "## 🔍 Architecture Reuse Check" section
 - Skills summary: `docs/architecture/ARCHITECT_SKILLS_SUMMARY.md`
 - Workflow: `docs/architecture/ARCHITECT_COMMIT_REVIEW_WORKFLOW.md`
 - Comparison: `docs/architecture/COMMIT_REVIEW_TRIGGER_COMPARISON.md`
-- ADR-009: Retire code-searcher, replace with skills
+- ADR-009: Retire assistant (with code analysis skills), replace with skills
 - ADR-010: Architect commit review & skills maintenance
 - ADR-011: Orchestrator-based commit review (corrected git hooks approach)
 
@@ -29788,7 +29788,7 @@ Reason: Single source of truth, prevents branch conflicts, simplifies coordinati
 - US-056: Enforce CFR-013 (Daemon on roadmap branch only) 🚨 REQUIRED
 
 **User Story**:
-As a user, I want ALL agents (architect, code_developer, project_manager, assistant, code-searcher, ux-design-expert) to run simultaneously in parallel, so that work happens 3-6x faster through coordinated team collaboration.
+As a user, I want ALL agents (architect, code_developer, project_manager, assistant, assistant (with code analysis skills), ux-design-expert) to run simultaneously in parallel, so that work happens 3-6x faster through coordinated team collaboration.
 
 **Problem Statement**:
 
@@ -29811,7 +29811,7 @@ architect ────────► Creating specs (proactive, CFR-011)
 code_developer ───► Implementing (never blocked)
 assistant ────────► Creating demos (automatic)
 project_manager ──► Monitoring GitHub (continuous)
-code-searcher ────► Analyzing codebase (weekly)
+assistant (with code analysis skills) ────► Analyzing codebase (weekly)
 ux-design-expert ─► Reviewing UI/UX (as needed)
 Total: 4 hours per priority (2.25x faster)
 ```
@@ -29858,7 +29858,7 @@ Transform the current single-agent daemon into a **Multi-Agent Orchestrator** th
 **1. architect (Proactive Spec Creation)**
 - **Continuous Loop**: Check ROADMAP every hour
 - **CFR-011 Enforcement**: Create 3-5 specs AHEAD of code_developer
-- **Daily Integration**: Read code-searcher reports, integrate findings
+- **Daily Integration**: Read assistant (with code analysis skills) reports, integrate findings
 - **Weekly Analysis**: Analyze codebase for refactoring opportunities
 - **Responds to**: Urgent spec requests (CFR-012)
 - **File Ownership**: docs/architecture/, pyproject.toml
@@ -29898,7 +29898,7 @@ Transform the current single-agent daemon into a **Multi-Agent Orchestrator** th
 - **File Access**: READ-ONLY for code/docs, ACTIVE for demos/bug reports
 - **Works on**: roadmap branch only (CFR-013)
 
-**5. code-searcher (Continuous Analysis)**
+**5. assistant (with code analysis skills) (Continuous Analysis)**
 - **Continuous Loop**: Weekly codebase analysis
 - **Security Audits**: Weekly security scanning
 - **Dependency Analysis**: Trace dependencies, identify issues
@@ -30005,7 +30005,7 @@ Message Format:
 5. **Create architect Agent** (2 days):
    - [ ] Implement `ArchitectAgent` with CFR-011 logic
    - [ ] Morning ROADMAP check for spec coverage
-   - [ ] Daily code-searcher report reading
+   - [ ] Daily assistant (with code analysis skills) report reading
    - [ ] Weekly codebase analysis
    - [ ] Test in orchestrator
    - [ ] Verify creates specs proactively
@@ -30026,7 +30026,7 @@ Message Format:
    - [ ] Test in orchestrator
    - [ ] Verify demo creation works
 
-8. **Create code-searcher & ux-design-expert Agents** (1 day):
+8. **Create assistant (with code analysis skills) & ux-design-expert Agents** (1 day):
    - [ ] Implement `CodeSearcherAgent` (weekly analysis)
    - [ ] Implement `UXDesignExpertAgent` (reactive + review)
    - [ ] Test in orchestrator
@@ -30079,7 +30079,7 @@ Message Format:
 - [ ] code_developer implementation time unchanged (~4 hours/priority)
 - [ ] assistant creates demo within 30 minutes of feature completion
 - [ ] project_manager checks GitHub every 15 minutes
-- [ ] code-searcher runs weekly analysis automatically
+- [ ] assistant (with code analysis skills) runs weekly analysis automatically
 - [ ] Overall priority completion time reduced by 50% (from 9 hours → 4 hours)
 
 **Quality**:
@@ -30148,7 +30148,7 @@ Message Format:
 - Continuous testing via assistant demos
 - Bugs caught within 1 hour of completion
 - Comprehensive bug reports enable quick fixes
-- Weekly code-searcher analysis improves codebase
+- Weekly assistant (with code analysis skills) analysis improves codebase
 
 **3. Autonomy (True Self-Management)**:
 - Team operates without human intervention
@@ -30163,7 +30163,7 @@ Message Format:
 - No surprises, no delays
 
 **5. Learning (Continuous Improvement)**:
-- Weekly code-searcher analysis
+- Weekly assistant (with code analysis skills) analysis
 - architect integrates findings into specs
 - Codebase quality improves over time
 - Technical debt addressed proactively
@@ -30379,7 +30379,7 @@ The trace-execution skill (converted from generator agent) represents a major ar
 - `docs/architecture/specs/PROPOSED_SKILLS_2025-10-18.md` - Document to update
 - `.claude/skills/trace-execution.md` - Recent generator-to-skill success
 - `docs/curator/` - Curator playbooks (source of insights)
-- `docs/architecture/decisions/ADR-009-retire-code-searcher-replace-with-skills.md` - Related ADR
+- `docs/architecture/decisions/ADR-009-retire-assistant (with code analysis skills)-replace-with-skills.md` - Related ADR
 
 **Timeline**: 1 day (4-6 hours)
 
@@ -30904,7 +30904,7 @@ Recommendation    | SKILL ✅   | ?         | ?
 - Implementation plan (if needed): Clear and realistic
 
 **Related Documents**:
-- `docs/architecture/decisions/ADR-009-retire-code-searcher-replace-with-skills.md` - Related precedent
+- `docs/architecture/decisions/ADR-009-retire-assistant (with code analysis skills)-replace-with-skills.md` - Related precedent
 - `.claude/skills/trace-execution.md` - Generator conversion result
 - `docs/curator/` - Curator playbooks (analyze this)
 - `docs/reflector/` - Reflector delta items (analyze this)
@@ -30946,7 +30946,7 @@ Phase 0 is the "force multiplier" that makes ALL subsequent work 3-5x faster. By
 ### Phase 0 Success Metrics
 
 **Before Phase 0**:
-- Code analysis: 10-30 seconds per search (code-searcher agent)
+- Code analysis: 10-30 seconds per search (assistant agent (with code analysis skills))
 - code_developer velocity: Baseline (1.0x)
 - architect spec creation: 117 minutes per spec
 - Context budget violations: 40-60 per month
@@ -30968,7 +30968,7 @@ Phase 0 is the "force multiplier" that makes ALL subsequent work 3-5x faster. By
 
 **Group 1: Code Analysis Skills (US-090 through US-096) - START HERE**
 
-These skills replace the code-searcher agent with lightning-fast skills (50-150x speed improvement):
+These skills replace the assistant agent (with code analysis skills) with lightning-fast skills (50-150x speed improvement):
 
 - **US-090**: Create 5 code analysis skills (20-25 hrs) **← BEGIN HERE**
   - dependency-trace skill
@@ -30979,11 +30979,11 @@ These skills replace the code-searcher agent with lightning-fast skills (50-150x
 - **US-091**: Build code index infrastructure (5-7 hrs)
   - Pre-indexed codebase for instant lookups
   - Automatic index updates on file changes
-- **US-092**: Migrate code-searcher responsibilities to architect (3-5 hrs)
-- **US-093**: Migrate code-searcher responsibilities to code_developer (3-5 hrs)
+- **US-092**: Migrate assistant (with code analysis skills) responsibilities to architect (3-5 hrs)
+- **US-093**: Migrate assistant (with code analysis skills) responsibilities to code_developer (3-5 hrs)
 - **US-094**: Transition period validation (2-3 hrs)
-- **US-095**: Retire code-searcher agent (1-2 hrs)
-- **US-096**: Archive code-searcher.md (1 hr)
+- **US-095**: Retire assistant agent (with code analysis skills) (1-2 hrs)
+- **US-096**: Archive assistant (with code analysis skills).md (1 hr)
 
 **Subtotal**: 35-51 hours | **Impact**: 50-150x code analysis speed
 
@@ -31067,7 +31067,7 @@ These skills make architect spec creation 78% faster:
 **Phase 0 Completion Criteria**:
 - [ ] All 5 code analysis skills operational (US-090)
 - [ ] Code index built and updating automatically (US-091)
-- [ ] code-searcher agent retired (US-092 through US-096)
+- [ ] assistant agent (with code analysis skills) retired (US-092 through US-096)
 - [ ] All 3 startup skills integrated (US-062, US-063, US-064)
 - [ ] CFR-007 violations = 0/month for 1 week
 - [ ] All 4 code_developer acceleration skills working (US-065 through US-067, US-102)
@@ -31820,18 +31820,18 @@ As a system architect, I need a comprehensive orchestrator agent design, so that
 
 ## PHASE 0 - GROUP 1: Code-Searcher Migration 🔄 ⭐⭐⭐ (Part of Phase 0 - START HERE)
 
-**Note**: Phase 6 contains 7 user stories (US-090 through US-096) to retire code-searcher agent and replace with 5 high-performance skills.
+**Note**: Phase 6 contains 7 user stories (US-090 through US-096) to retire assistant agent (with code analysis skills) and replace with 5 high-performance skills.
 
 ### US-090 through US-096: Code-Searcher Retirement
 
-**Summary**: Migrate code-searcher to skills:
+**Summary**: Migrate assistant (with code analysis skills) to skills:
 - US-090: Create 5 code analysis skills - 12-15 hours
 - US-091: Build code index - 4-6 hours
 - US-092: Migrate responsibilities to architect - 3-5 hours
 - US-093: Migrate responsibilities to code_developer - 3-5 hours
 - US-094: 3-week transition validation - 2-4 hours monitoring
-- US-095: Retire code-searcher agent - 2-3 hours
-- US-096: Archive code-searcher.md - 1 hour
+- US-095: Retire assistant agent (with code analysis skills) - 2-3 hours
+- US-096: Archive assistant (with code analysis skills).md - 1 hour
 
 **Total Phase 6 Effort**: 25-30 hours (5-6 days) + 3-week validation period
 

@@ -53,7 +53,7 @@ model: haiku
 | **2** | CODE_DEVELOPER | 300s (5 minutes) | Implements features, main work loop |
 | **3** | PROJECT_MANAGER | 900s (15 minutes) | Monitors GitHub, sends notifications |
 | **3** | ASSISTANT | 1800s (30 minutes) | Creates demos, reports bugs reactively |
-| **4** | CODE_SEARCHER | 86400s (24 hours) | Daily deep code analysis |
+| **4** | ASSISTANT | 86400s (24 hours) | Daily deep code analysis |
 | **4** | UX_DESIGN_EXPERT | 3600s (1 hour) | Design reviews, mostly reactive |
 
 **Why stagger launches?**
@@ -582,7 +582,7 @@ orchestrator.start()
 2. **Creating specs** → Use architect
 3. **Managing ROADMAP** → Use project_manager
 4. **Answering questions** → Use assistant
-5. **Code analysis** → Use code-searcher
+5. **Code analysis** → Use assistant (with code analysis skills)
 6. **Design decisions** → Use ux-design-expert
 
 **Orchestrator is SYSTEM INFRASTRUCTURE**, not a user-facing agent.

@@ -134,7 +134,7 @@ All three systems support basic file operations, but MonolithicCoffeeMaker adds:
 # MonolithicCoffeeMaker only:
 poetry run project-manager chat
 > "Find all functions related to notification handling"
-# Uses specialized code-searcher agent with:
+# Uses specialized assistant agent (with code analysis skills) with:
 # - Semantic understanding
 # - Cross-file analysis
 # - Dependency tracking
@@ -551,11 +551,11 @@ poetry run code-reviewer review HEAD~1..HEAD
 # Checks style guide compliance
 ```
 
-**6. code-searcher** - Deep analysis
+**6. assistant (with code analysis skills)** - Deep analysis
 ```bash
 # Via user_listener:
 > "Find all singleton patterns in the codebase"
-# Delegates to code-searcher agent
+# Delegates to assistant agent (with code analysis skills)
 ```
 
 **7. orchestrator** - Parallel execution

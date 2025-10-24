@@ -1,7 +1,7 @@
 ---
 name: security-audit
 version: 1.0.0
-agent: code-searcher
+agent: assistant (with code analysis skills)
 scope: agent-specific
 description: >
   Comprehensive security audit: scan for OWASP Top 10 vulnerabilities,
@@ -42,7 +42,7 @@ created: 2025-10-19
 
 # Security Audit Skill
 
-Comprehensive security audit for code-searcher.
+Comprehensive security audit for assistant (with code analysis skills).
 
 ## Workflow
 

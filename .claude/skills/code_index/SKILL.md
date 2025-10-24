@@ -546,7 +546,7 @@ Then rebuild: `python scripts/build_index.py`
 - **spec-creation-automation**: Uses code index to discover affected files
 - **refactoring-coordinator**: Uses dependency graph from code index
 - **test-failure-analysis**: Uses code index to find related tests
-- **code-searcher**: Legacy skill (being replaced by this + other skills)
+- **assistant (with code analysis skills)**: Legacy skill (being replaced by this + other skills)
 
 ---
 

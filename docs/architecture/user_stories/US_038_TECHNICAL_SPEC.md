@@ -334,7 +334,7 @@ class WriteTool:
 | `docs/*.md` | project_manager | Top-level docs only |
 | `docs/roadmap/**` | project_manager | Strategic planning |
 | `docs/templates/**` | project_manager | Documentation templates |
-| `docs/code-searcher/**` | project_manager | Code analysis docs |
+| `docs/assistant (with code analysis skills)/**` | project_manager | Code analysis docs |
 | `docs/architecture/**` | architect | Technical specs & ADRs |
 | `pyproject.toml` | architect | Dependency management |
 | `poetry.lock` | architect | Dependency lock file |

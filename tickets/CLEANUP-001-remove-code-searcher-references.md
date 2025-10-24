@@ -1,4 +1,4 @@
-# CLEANUP-001: Remove Remaining code-searcher Agent References
+# CLEANUP-001: Remove Remaining assistant (with code analysis skills) Agent References
 
 **Type**: Cleanup
 **Priority**: Medium
@@ -9,19 +9,19 @@
 
 ## Background
 
-The `code-searcher` agent has been removed from the system. The agent's **skills** (code-forensics, security-audit) remain in `.claude/skills/code-searcher/` and can be used by other agents (primarily `assistant`).
+The `assistant (with code analysis skills)` agent has been removed from the system. The agent's **skills** (code-forensics, security-audit) remain in `.claude/skills/assistant (with code analysis skills)/` and can be used by other agents (primarily `assistant`).
 
 **Partial cleanup completed**: 2025-10-24
 - Evidence files moved to backup (121 files)
-- `docs/code-searcher/` directory moved to backup
+- `docs/assistant (with code analysis skills)/` directory moved to backup
 - Critical Python routing updated (`agent_router.py`, `file_ownership.py`)
-- AgentType enum no longer includes CODE_SEARCHER
+- AgentType enum no longer includes ASSISTANT
 
 ---
 
 ## Remaining Work
 
-**612 references** to `code-searcher` agent remain across:
+**612 references** to `assistant (with code analysis skills)` agent remain across:
 
 ### Documentation Files (~200 references)
 - `.claude/agents/architect.md` - 7 references
@@ -75,15 +75,15 @@ The `code-searcher` agent has been removed from the system. The agent's **skills
 
 2. **Integration Tests**
    - Update test_cfr_011_integration.py
-   - Remove CFR-011 code-searcher report requirements
+   - Remove CFR-011 assistant (with code analysis skills) report requirements
 
 ### Phase 3: Update Python Code (1 hour)
 1. **CLI Files**
    - architect_cli.py - Update daily-integration command
-   - Remove code-searcher report reading logic
+   - Remove assistant (with code analysis skills) report reading logic
 
 2. **Autonomous Files**
-   - daemon_spec_manager.py - Remove CFR-011 code-searcher checks
+   - daemon_spec_manager.py - Remove CFR-011 assistant (with code analysis skills) checks
    - architect_daily_routine.py - Update report reading
    - orchestrator.py - Update comments
 
@@ -111,7 +111,7 @@ assistant agent performs code analysis using skills (code-forensics, security-au
 **Skills to mention**:
 - `code-forensics` - Deep code pattern analysis
 - `security-audit` - Security vulnerability scanning
-- Available in `.claude/skills/code-searcher/` (directory name kept for organization)
+- Available in `.claude/skills/assistant (with code analysis skills)/` (directory name kept for organization)
 
 ---
 
@@ -119,9 +119,9 @@ assistant agent performs code analysis using skills (code-forensics, security-au
 
 1. **Search Verification**:
    ```bash
-   grep -r "code-searcher" --include="*.py" --include="*.md" . | \
+   grep -r "assistant (with code analysis skills)" --include="*.py" --include="*.md" . | \
      grep -v ".git/" | \
-     grep -v ".claude/skills/code-searcher/" | \
+     grep -v ".claude/skills/assistant (with code analysis skills)/" | \
      wc -l
    # Target: 0 references (except in skills directory)
    ```
@@ -132,7 +132,7 @@ assistant agent performs code analysis using skills (code-forensics, security-au
    # Should pass enum validation
 
    pytest tests/unit/ -x
-   # Should have no code-searcher import errors
+   # Should have no assistant (with code analysis skills) import errors
    ```
 
 3. **Agent Routing**:
@@ -162,8 +162,8 @@ This cleanup is part of larger repository cleanup (2025-10-24):
 
 ## Success Criteria
 
-- [ ] Zero references to `code-searcher` agent in active codebase
-- [ ] Skills directory `.claude/skills/code-searcher/` kept and documented
+- [ ] Zero references to `assistant (with code analysis skills)` agent in active codebase
+- [ ] Skills directory `.claude/skills/assistant (with code analysis skills)/` kept and documented
 - [ ] All tests passing (especially test_agent_registry.py)
 - [ ] Documentation updated with correct agent routing
 - [ ] Code search functionality works via assistant + skills
@@ -174,7 +174,7 @@ This cleanup is part of larger repository cleanup (2025-10-24):
 
 - **Skills are NOT being removed** - Only the agent
 - Skills can be invoked by assistant or other agents
-- Directory name `.claude/skills/code-searcher/` kept for organizational clarity
+- Directory name `.claude/skills/assistant (with code analysis skills)/` kept for organizational clarity
 - Evidence files archived (not deleted) for historical reference
 
 ---

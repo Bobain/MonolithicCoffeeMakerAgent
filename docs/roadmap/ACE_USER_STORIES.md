@@ -1477,13 +1477,13 @@ As a Curator agent, I need a startup skill, so that I can load delta items and p
 **Estimated Effort**: 12-15 hours (2.5-3 days)
 
 **User Story**:
-As an architect and code_developer, I need 5 code analysis skills (code-forensics, security-audit, dependency-tracer, functional-search, code-explainer), so that I can perform code analysis 50-150x faster than the code-searcher agent.
+As an architect and code_developer, I need 5 code analysis skills (code-forensics, security-audit, dependency-tracer, functional-search, code-explainer), so that I can perform code analysis 50-150x faster than the assistant agent (with code analysis skills).
 
 **Business Value**:
 - **Performance**: 10-30s agent time → 200ms skill time
 - **Scalability**: No context budget overhead
 - **Reliability**: Consistent, repeatable results
-- **Foundation**: Enables code-searcher retirement
+- **Foundation**: Enables assistant (with code analysis skills) retirement
 
 **Technical Spec**: SPEC-064 - Code-Searcher Responsibility Migration
 
@@ -1491,7 +1491,7 @@ As an architect and code_developer, I need 5 code analysis skills (code-forensic
 - [ ] 5 skills created: code-forensics, security-audit, dependency-tracer, functional-search, code-explainer
 - [ ] Each skill executes in <200ms
 - [ ] Code index built for fast lookups
-- [ ] Quality matches or exceeds code-searcher
+- [ ] Quality matches or exceeds assistant (with code analysis skills)
 - [ ] Unit tests for each skill
 - [ ] Integration tests with real codebase
 - [ ] Documentation with examples
@@ -1513,8 +1513,8 @@ As an architect and code_developer, I need 5 code analysis skills (code-forensic
 
 **Success Metrics**:
 - Execution time: <200ms per skill
-- Quality: ≥code-searcher
-- Coverage: 100% of code-searcher capabilities
+- Quality: ≥assistant (with code analysis skills)
+- Coverage: 100% of assistant (with code analysis skills) capabilities
 
 ---
 
@@ -1570,7 +1570,7 @@ As a skills developer, I need a code index, so that code analysis skills can per
 
 ---
 
-### US-092: Migrate code-searcher Responsibilities to architect
+### US-092: Migrate assistant (with code analysis skills) Responsibilities to architect
 
 **Status**: �v Planned
 
@@ -1579,7 +1579,7 @@ As a skills developer, I need a code index, so that code analysis skills can per
 **Estimated Effort**: 3-5 hours (0.5-1 day)
 
 **User Story**:
-As an architect agent, I need code-searcher responsibilities migrated to me, so that I can perform architectural code analysis using skills.
+As an architect agent, I need assistant (with code analysis skills) responsibilities migrated to me, so that I can perform architectural code analysis using skills.
 
 **Business Value**:
 - **Clarity**: Clear ownership boundaries
@@ -1619,7 +1619,7 @@ As an architect agent, I need code-searcher responsibilities migrated to me, so 
 
 ---
 
-### US-093: Migrate code-searcher Responsibilities to code_developer
+### US-093: Migrate assistant (with code analysis skills) Responsibilities to code_developer
 
 **Status**: 📝 Planned
 
@@ -1628,7 +1628,7 @@ As an architect agent, I need code-searcher responsibilities migrated to me, so 
 **Estimated Effort**: 3-5 hours (0.5-1 day)
 
 **User Story**:
-As a code_developer agent, I need code-searcher responsibilities migrated to me, so that I can perform implementation code analysis using skills.
+As a code_developer agent, I need assistant (with code analysis skills) responsibilities migrated to me, so that I can perform implementation code analysis using skills.
 
 **Business Value**:
 - **Performance**: Uses fast skills
@@ -1677,7 +1677,7 @@ As a code_developer agent, I need code-searcher responsibilities migrated to me,
 **Estimated Effort**: 2-4 hours monitoring (spread over 3 weeks)
 
 **User Story**:
-As a project_manager, I need a 3-week transition period, so that we can validate skills work correctly before retiring code-searcher.
+As a project_manager, I need a 3-week transition period, so that we can validate skills work correctly before retiring assistant (with code analysis skills).
 
 **Business Value**:
 - **Risk Mitigation**: Catch issues before permanent retirement
@@ -1717,7 +1717,7 @@ As a project_manager, I need a 3-week transition period, so that we can validate
 
 ---
 
-### US-095: Retire code-searcher Agent
+### US-095: Retire assistant (with code analysis skills) Agent
 
 **Status**: 📝 Planned
 
@@ -1726,7 +1726,7 @@ As a project_manager, I need a 3-week transition period, so that we can validate
 **Estimated Effort**: 2-3 hours (0.5 day)
 
 **User Story**:
-As a project_manager, I need to retire code-searcher agent, so that we reduce agent count from 6 to 5 and simplify the system.
+As a project_manager, I need to retire assistant agent (with code analysis skills), so that we reduce agent count from 6 to 5 and simplify the system.
 
 **Business Value**:
 - **Simplicity**: 6 agents → 5 agents
@@ -1737,15 +1737,15 @@ As a project_manager, I need to retire code-searcher agent, so that we reduce ag
 **Technical Spec**: SPEC-064 - Code-Searcher Responsibility Migration
 
 **Acceptance Criteria**:
-- [ ] code-searcher.md moved to archive
-- [ ] Agent registry updated (remove code-searcher)
-- [ ] All references to code-searcher updated
+- [ ] assistant (with code analysis skills).md moved to archive
+- [ ] Agent registry updated (remove assistant (with code analysis skills))
+- [ ] All references to assistant (with code analysis skills) updated
 - [ ] Documentation reflects retirement
 - [ ] No broken workflows
 - [ ] User announcement
 
 **Deliverables**:
-1. Archive .claude/agents/code-searcher.md
+1. Archive .claude/agents/assistant (with code analysis skills).md
 2. Update agent registry
 3. Update all documentation
 4. Retirement announcement
@@ -1766,7 +1766,7 @@ As a project_manager, I need to retire code-searcher agent, so that we reduce ag
 
 ---
 
-### US-096: Archive code-searcher.md
+### US-096: Archive assistant (with code analysis skills).md
 
 **Status**: 📝 Planned
 
@@ -1775,7 +1775,7 @@ As a project_manager, I need to retire code-searcher agent, so that we reduce ag
 **Estimated Effort**: 1 hour
 
 **User Story**:
-As a project_manager, I need code-searcher.md archived properly, so that we preserve history and rationale.
+As a project_manager, I need assistant (with code analysis skills).md archived properly, so that we preserve history and rationale.
 
 **Business Value**:
 - **History**: Preserves agent evolution
@@ -1786,14 +1786,14 @@ As a project_manager, I need code-searcher.md archived properly, so that we pres
 **Technical Spec**: SPEC-064 - Code-Searcher Responsibility Migration
 
 **Acceptance Criteria**:
-- [ ] code-searcher.md moved to .claude/agents/archive/
+- [ ] assistant (with code analysis skills).md moved to .claude/agents/archive/
 - [ ] Archive README explains retirement
 - [ ] Retirement date and rationale documented
 - [ ] Links to replacement skills
 - [ ] Git history preserved
 
 **Deliverables**:
-1. .claude/agents/archive/code-searcher.md
+1. .claude/agents/archive/assistant (with code analysis skills).md
 2. Archive README with context
 3. Documentation links updated
 4. Git commit with clear message

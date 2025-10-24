@@ -1,7 +1,7 @@
 ---
 name: code-forensics
 version: 1.0.0
-agent: code-searcher
+agent: assistant (with code analysis skills)
 scope: agent-specific
 description: >
   Code forensics analysis: trace file evolution, identify contributors,
@@ -50,7 +50,7 @@ created: 2025-10-19
 
 # Code Forensics Skill
 
-Code forensics analysis for code-searcher.
+Code forensics analysis for assistant (with code analysis skills).
 
 ## Workflow
 

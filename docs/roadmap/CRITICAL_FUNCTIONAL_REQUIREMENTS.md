@@ -109,7 +109,7 @@ Some agents are READ-ONLY or delegation-only and own NO files:
 |-------|-------------|------------------------|------|
 | assistant | NO (only reads/delegates) | YES | Cannot cause file conflicts |
 | user_listener | NO (only delegates) | YES | Cannot cause file conflicts |
-| code-searcher | NO (only reads) | YES | Cannot cause file conflicts |
+| assistant (with code analysis skills) | NO (only reads) | YES | Cannot cause file conflicts |
 | code_developer | YES (.claude/, coffee_maker/, tests/) | NO | Could cause conflicts |
 | project_manager | YES (docs/roadmap/) | NO | Could cause conflicts |
 | architect | YES (docs/architecture/) | NO | Could cause conflicts |
@@ -181,7 +181,7 @@ If file conflict detected despite all safeguards:
 | **docs/generator/** | generator | YES - Execution traces | Rotate trace files, archive old, summarize | All others: READ-ONLY |
 | **docs/reflector/** | reflector | YES - Delta items (insights) | Archive old deltas, consolidate similar insights | All others: READ-ONLY |
 | **docs/curator/** | curator | YES - Playbooks and curation | Prune duplicates, remove low-effectiveness patterns | All others: READ-ONLY |
-| **docs/code-searcher/** | project_manager | YES - Code analysis documentation | Archive old analyses, organize by type | code-searcher: Prepares findings (READ-ONLY) |
+| **docs/assistant (with code analysis skills)/** | project_manager | YES - Code analysis documentation | Archive old analyses, organize by type | assistant (with code analysis skills): Prepares findings (READ-ONLY) |
 | **docs/templates/** | project_manager | YES - Documentation templates | Update templates, keep aligned with practices | All others: READ-ONLY |
 | **docs/tutorials/** | project_manager | YES - Tutorial content | Update examples, verify links work | All others: READ-ONLY |
 | **docs/user_interpret/** | project_manager | YES - Meta-docs about user_interpret | Keep current with user_interpret changes | All others: READ-ONLY |
@@ -242,7 +242,7 @@ assistant delegates to code_developer for code changes
 | **architect** | Technical Design (HOW) | Technical specs, ADRs, architecture, dependencies | Strategic planning (WHAT/WHY), implementation (DOING) |
 | **code_developer** | Implementation (DOING) | Code, tests, technical configs, PRs | Strategic planning, technical design |
 | **assistant** | Demos + Documentation + Dispatch | Visual demos, bug reports, documentation expert, intelligent routing | Code/doc modifications (READ-ONLY) |
-| **code-searcher** | Deep Code Analysis | Security audits, dependency tracing, refactoring analysis | Writing documentation (prepares findings only) |
+| **assistant (with code analysis skills)** | Deep Code Analysis | Security audits, dependency tracing, refactoring analysis | Writing documentation (prepares findings only) |
 | **ux-design-expert** | UI/UX Design | Design decisions, Tailwind CSS, visual specifications | Implementation (provides specs only) |
 | **generator** | Ownership Enforcement + Trace Capture | Central enforcement point, auto-delegation, execution observation | Direct file modifications (orchestrates only) |
 | **reflector** | Insight Extraction | Analyzes execution traces, identifies patterns | Direct actions (analytical only) |
@@ -346,7 +346,7 @@ architect requests approval → user approves → code_developer adds dependency
 | **GitHub PR Creation** | code_developer | Autonomous implementation workflow | project_manager: Monitoring only |
 | **GitHub Monitoring** | project_manager | Project health tracking | code_developer: Creates PRs only |
 | **Ownership Enforcement** | generator | Central enforcement point, ACE framework | All others: Subject to enforcement |
-| **Deep Code Analysis** | code-searcher | Forensic examination, security audits | assistant: Simple searches only |
+| **Deep Code Analysis** | assistant (with code analysis skills) | Forensic examination, security audits | assistant: Simple searches only |
 
 ### Enforcement
 
@@ -689,7 +689,7 @@ Every agent is equipped with two file operation tools:
 - Reading never causes file conflicts
 - Agents need context from multiple sources
 - assistant needs to read entire codebase
-- code-searcher analyzes all files
+- assistant (with code analysis skills) analyzes all files
 - No risk of corruption from reads
 
 **Usage**:
@@ -733,7 +733,7 @@ project_manager_write = WriteTool(
         "docs/roadmap/",
         "docs/templates/",
         "docs/tutorials/",
-        "docs/code-searcher/",
+        "docs/assistant (with code analysis skills)/",
         "docs/user_interpret/",
         "docs/code_developer/",
     ]
@@ -811,7 +811,7 @@ except OwnershipViolationError as e:
     #   - docs/roadmap/
     #   - docs/templates/
     #   - docs/tutorials/
-    #   - docs/code-searcher/
+    #   - docs/assistant (with code analysis skills)/
     #   - docs/user_interpret/
     #   - docs/code_developer/
 ```
@@ -882,7 +882,7 @@ FILE_TOOL_OWNERSHIP = {
         "docs/roadmap/",
         "docs/templates/",
         "docs/tutorials/",
-        "docs/code-searcher/",
+        "docs/assistant (with code analysis skills)/",
         "docs/user_interpret/",
         "docs/code_developer/",
     ],
@@ -907,7 +907,7 @@ FILE_TOOL_OWNERSHIP = {
 
     AgentType.ASSISTANT: [],  # READ-ONLY
     AgentType.USER_LISTENER: [],  # Delegation-only
-    AgentType.CODE_SEARCHER: [],  # READ-ONLY
+    AgentType.ASSISTANT: [],  # READ-ONLY
     AgentType.UX_DESIGN_EXPERT: [],  # Provides specs only
 }
 
@@ -2282,9 +2282,9 @@ Friday (30 min):
 
 ---
 
-## CFR-011: Architect Must Integrate code-searcher Findings Daily
+## CFR-011: Architect Must Integrate assistant (with code analysis skills) Findings Daily
 
-**Rule**: The architect MUST read code-searcher analysis reports daily AND proactively analyze the codebase itself to identify **refactoring opportunities and technical debt reduction**, then integrate ALL findings into technical specifications.
+**Rule**: The architect MUST read assistant (with code analysis skills) analysis reports daily AND proactively analyze the codebase itself to identify **refactoring opportunities and technical debt reduction**, then integrate ALL findings into technical specifications.
 
 **What "Improvements" Means**:
 - ✅ **Refactoring**: Code restructuring (splitting large files, extracting utilities, removing duplication)
@@ -2299,7 +2299,7 @@ Friday (30 min):
 2. **Data-Driven Refactoring**: Use actual codebase metrics, not assumptions
 3. **Continuous Code Quality**: Codebase improves daily through systematic refactoring
 4. **Proactive Maintenance**: Fix problems before they become blockers
-5. **Knowledge Integration**: code-searcher finds patterns architect must address through refactoring specs
+5. **Knowledge Integration**: assistant (with code analysis skills) finds patterns architect must address through refactoring specs
 
 **Three-Part Mandate**:
 
@@ -2387,7 +2387,7 @@ Morning (Every Day):
    - YES → Continue with daily integration (Part 2)
    - NO → CREATE missing specs immediately (top priority)
 5. Update spec coverage report
-6. THEN: Continue with code-searcher integration (Part 2)
+6. THEN: Continue with assistant (with code analysis skills) integration (Part 2)
 ```
 
 **Spec Coverage Report** (`docs/architecture/SPEC_COVERAGE_REPORT.md`):
@@ -2420,7 +2420,7 @@ Generated: 2025-10-17 06:00:00
 - ✅ **Quality Specs**: Time to research, not rushed to unblock
 - ✅ **Parallel Work**: architect works on future, code_developer on present
 
-### Part 2: Read code-searcher Analysis Reports Daily
+### Part 2: Read assistant (with code analysis skills) Analysis Reports Daily
 
 **Frequency**: EVERY DAY (automated enforcement)
 
@@ -2482,12 +2482,12 @@ class ArchitectDailyRoutine:
         """Mandatory daily check before architect can create new specs."""
         today = datetime.now().date()
 
-        # Part 1: code-searcher report reading
+        # Part 1: assistant (with code analysis skills) report reading
         if self.last_code_searcher_read < today:
             reports = self._find_new_code_searcher_reports()
             if reports and not self._has_read_reports(reports):
                 raise CFR011ViolationError(
-                    f"CFR-011 VIOLATION: Must read {len(reports)} new code-searcher "
+                    f"CFR-011 VIOLATION: Must read {len(reports)} new assistant (with code analysis skills) "
                     f"reports before creating specs today.\n\n"
                     f"Reports to read:\n" + "\n".join(f"- {r}" for r in reports) +
                     f"\n\nRun: architect daily-integration"
@@ -2505,7 +2505,7 @@ class ArchitectDailyRoutine:
             )
 
     def daily_integration_workflow(self):
-        """Guided workflow for integrating code-searcher findings."""
+        """Guided workflow for integrating assistant (with code analysis skills) findings."""
         # 1. Read all new reports
         reports = self._find_new_code_searcher_reports()
         for report in reports:
@@ -2561,7 +2561,7 @@ class ArchitectDailyRoutine:
 
 **Deliverables**:
 
-1. **Daily Integration Report** (`docs/architecture/CODE_SEARCHER_INTEGRATION_[date].md`):
+1. **Daily Integration Report** (`docs/architecture/ASSISTANT_INTEGRATION_[date].md`):
    - Which reports were read
    - Refactoring opportunities extracted
    - Refactoring specs created/updated
@@ -2605,7 +2605,7 @@ Daily (Every Morning):
    - Check which have specs
    - If <3 specs ready: CREATE missing specs immediately
    - Update spec coverage report
-4. PART 2: If new code-searcher reports exist: MUST read and integrate
+4. PART 2: If new assistant (with code analysis skills) reports exist: MUST read and integrate
    - Run daily-integration workflow
    - Extract refactoring opportunities
    - Create/update refactoring specs
@@ -2627,7 +2627,7 @@ Weekly (Every Monday):
 **Incorrect Workflow** (BLOCKED):
 
 ```
-❌ architect tries to create new spec without reading code-searcher reports
+❌ architect tries to create new spec without reading assistant (with code analysis skills) reports
    → CFR011ViolationError raised
    → Spec creation BLOCKED
    → Clear error message with reports to read
@@ -2640,8 +2640,8 @@ Weekly (Every Monday):
 
 **Metrics**:
 
-- **Integration Rate**: % of code-searcher findings addressed
-- **Response Time**: Days from code-searcher report to spec integration
+- **Integration Rate**: % of assistant (with code analysis skills) findings addressed
+- **Response Time**: Days from assistant (with code analysis skills) report to spec integration
 - **Improvement Velocity**: Number of improvement specs created per week
 - **Quality Trend**: Are quality metrics improving over time?
 
@@ -2650,16 +2650,16 @@ Weekly (Every Monday):
 - **Proactive**: Issues caught before they become blockers
 - **Data-Driven**: Decisions based on real code analysis
 - **Continuous**: Architecture improves every day
-- **Comprehensive**: Both automated (code-searcher) and manual (architect) analysis
+- **Comprehensive**: Both automated (assistant (with code analysis skills)) and manual (architect) analysis
 - **Enforced**: Code prevents violations, not just guidelines
 
 **Integration with Other CFRs**:
 
 - **CFR-008**: architect creates all specs → includes improvement specs
-- **CFR-010**: Continuous spec review → informed by code-searcher findings
+- **CFR-010**: Continuous spec review → informed by assistant (with code analysis skills) findings
 - **ADR-003**: Simplification-first → use metrics to prove simplification
 
-**User Story**: US-054: Architect Daily Integration of code-searcher Findings (NEW)
+**User Story**: US-054: Architect Daily Integration of assistant (with code analysis skills) Findings (NEW)
 
 ---
 
@@ -3394,7 +3394,7 @@ architect: [Finally responds 30 minutes later]
 - **code_developer**: Always more refactoring, test coverage, code quality improvements
 - **project_manager**: Always more coordination, metrics tracking, strategic planning
 - **assistant**: Always more testing, demos to create, documentation to improve
-- **code-searcher**: Always more analysis, security audits, pattern detection
+- **assistant (with code analysis skills)**: Always more analysis, security audits, pattern detection
 
 **But**: This continuous work must yield to immediate team needs.
 
@@ -5259,7 +5259,7 @@ Iteration 5: Ready for next feature
 
 **Related**:
 - CFR-008: Architect Creates ALL Specs (architect owns spec creation)
-- CFR-011: Architect Must Integrate code-searcher Findings (informs spec creation)
+- CFR-011: Architect Must Integrate assistant (with code analysis skills) Findings (informs spec creation)
 - CFR-015: Continuous Planning Loop (incremental steps enable continuous work)
 - PRIORITY 24: Technical Prerequisite Tracking (identifies foundations to build first)
 
@@ -5279,7 +5279,7 @@ Iteration 5: Ready for next feature
 - **Performance**: No wasteful Glob/Grep during execution
 - **Clarity**: Clear what agent needs to function
 - **Predictability**: Reproducible behavior
-- **Separation of Concerns**: code-searcher handles discovery
+- **Separation of Concerns**: assistant (with code analysis skills) handles discovery
 
 ### Required Files by Agent
 
@@ -5337,7 +5337,7 @@ Each agent's `.claude/agents/[agent_name].md` should include:
 - docs/architecture/decisions/ADR-*.md - Past architectural decisions (skim existing)
 - docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md - Strategic requirements to design for
 
-**May Search**: architect MAY use code-searcher for codebase analysis when designing.
+**May Search**: architect MAY use assistant (with code analysis skills) for codebase analysis when designing.
 ```
 
 **assistant**:
@@ -5349,29 +5349,29 @@ Each agent's `.claude/agents/[agent_name].md` should include:
 - .claude/CLAUDE.md - Complete project instructions
 - .claude/agents/assistant.md - Own role definition
 
-**May Search**: assistant delegates to code-searcher for deep code analysis.
+**May Search**: assistant delegates to assistant (with code analysis skills) for deep code analysis.
 **For Simple Queries**: assistant uses Grep/Read for 1-2 file lookups.
 ```
 
-**code-searcher**:
+**assistant (with code analysis skills)**:
 ```markdown
 ## Required Files (Context)
 
 **Always Read Before Work**:
-- None - code-searcher DISCOVERS files (that's the role)
+- None - assistant (with code analysis skills) DISCOVERS files (that's the role)
 
 **Primary Tool**: Glob, Grep, Read (for discovery and analysis)
 ```
 
-### When to Use code-searcher
+### When to Use assistant (with code analysis skills)
 
-**Delegate to code-searcher when**:
+**Delegate to assistant (with code analysis skills) when**:
 - "Find all files that..."
 - "Where is X implemented?"
 - "Analyze security patterns across..."
 - "Identify code reuse opportunities..."
 
-**Don't use code-searcher for**:
+**Don't use assistant (with code analysis skills) for**:
 - Reading known files (just use Read tool)
 - Reading agent's own context files
 - Reading well-documented paths in CLAUDE.md
@@ -5397,7 +5397,7 @@ roadmap = read_file("docs/roadmap/ROADMAP.md")  # ✅ Known path!
 **Only acceptable time to search**:
 - Agent is new and learning the codebase structure
 - Explicit discovery task: "Find all test files"
-- code-searcher delegated task
+- assistant (with code analysis skills) delegated task
 - architect analyzing codebase patterns for design
 
 ### Enforcement
@@ -5406,7 +5406,7 @@ roadmap = read_file("docs/roadmap/ROADMAP.md")  # ✅ Known path!
 1. Agent receives context files in prompt or configuration
 2. Agent reads specified files upfront
 3. Agent works with known context
-4. Agent delegates to code-searcher if discovery needed
+4. Agent delegates to assistant (with code analysis skills) if discovery needed
 
 **generator should**:
 - Provide context files to agents when routing
@@ -5625,7 +5625,7 @@ This means US-043 (Parallel Execution) can be implemented safely thanks to CFR e
   - Changed from "Two-Part Mandate" to "Three-Part Mandate"
   - Added enforcement mechanism: check_proactive_spec_coverage() with CFR011ViolationError
   - Added Spec Coverage Report to track which priorities have specs ready
-  - Updated workflow to prioritize proactive spec creation (Part 1) before code-searcher integration (Part 2)
+  - Updated workflow to prioritize proactive spec creation (Part 1) before assistant (with code analysis skills) integration (Part 2)
   - Why critical: Eliminates reactive spec creation, maintains development velocity, zero blocking
 - **v2.2** (2025-10-17): Added CFR-013 (All Agents Must Work on roadmap Branch Only)
   - NO agent can switch branches (git checkout forbidden)
@@ -5646,7 +5646,7 @@ This means US-043 (Parallel Execution) can be implemented safely thanks to CFR e
   - Key principle: "Team collaboration is priority - focus encouraged but teamwork takes precedence"
   - Key insight: "There is always some work left" - continuous work must yield to team needs
   - Related: US-055 (Agent Continuous Work with Interruption Handling)
-- **v2.0** (2025-10-17): Added CFR-011 (Architect Must Integrate code-searcher Findings Daily)
+- **v2.0** (2025-10-17): Added CFR-011 (Architect Must Integrate assistant (with code analysis skills) Findings Daily)
 - **v1.8** (2025-10-16): Added CFR-007 (Agent Context Budget - 30% Maximum)
   - New CFR-007: Agent core materials must fit in ≤30% of context window
   - Core materials: prompt, role, responsibilities, tools, owned critical documents
@@ -5694,10 +5694,10 @@ This means US-043 (Parallel Execution) can be implemented safely thanks to CFR e
   - Related: US-043 (Parallel Agent Execution) - HIGH PRIORITY user request
 - **v1.4** (2025-10-16): Added Agent File Access Patterns (Performance & Clarity)
   - Context-upfront principle: agents KNOW which files to read
-  - No wasteful Glob/Grep during execution (except code-searcher)
+  - No wasteful Glob/Grep during execution (except assistant (with code analysis skills))
   - Clear "Required Files (Context)" specification for each agent
   - Performance optimization: predictable, fast agent startup
-  - code-searcher handles discovery tasks (separation of concerns)
+  - assistant (with code analysis skills) handles discovery tasks (separation of concerns)
   - generator monitors unexpected file searches
   - Related: US-042 implementation
 - **v1.3** (2025-10-16): Added Ownership-Aware File Tools

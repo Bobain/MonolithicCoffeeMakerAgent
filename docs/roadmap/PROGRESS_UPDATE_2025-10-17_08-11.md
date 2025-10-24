@@ -74,11 +74,11 @@
 2. ✅ SPEC-050 Phases 2-5 - roadmap_cli modularization
 3. ✅ Fixed 15 test failures - ACE API, document updater, preview, roadmap CLI
 4. ✅ SPEC-052 implemented - Extracted user_listener.main()
-5. ✅ SPEC-055 created - architect-code-searcher integration (CFR-011)
+5. ✅ SPEC-055 created - architect-assistant (with code analysis skills) integration (CFR-011)
 6. ✅ SPEC-050 Phase 1 - Directory structure initialized
 7. ✅ Deprecated test files removed
 8. ✅ Session summaries documented
-9. ✅ code-searcher analysis README created
+9. ✅ assistant (with code analysis skills) analysis README created
 
 **Velocity**: Good commit cadence, but blocked by test failures
 
@@ -93,20 +93,20 @@
 **Estimated Effort**: 1-2 days (11-16 hours total)
 
 **What It Does**:
-- **Part 1**: Enforces architect reads code-searcher reports DAILY
+- **Part 1**: Enforces architect reads assistant (with code analysis skills) reports DAILY
 - **Part 2**: Enforces architect analyzes codebase every 7 days MAX
 - **Mechanism**: Blocks spec creation if violations detected
 - **Tracking**: `data/architect_integration_status.json`
 
 **Why Critical**:
-- Creates powerful learning loop: code-searcher → architect → better specs → better code
+- Creates powerful learning loop: assistant (with code analysis skills) → architect → better specs → better code
 - Prevents technical debt accumulation
 - Proactive quality improvement
 - CFR compliance (CFR-011)
 
 **Dependencies**:
 - ✅ US-047 (architect must be creating specs) - IN PROGRESS (PR #129)
-- ✅ code-searcher producing reports - COMPLETE
+- ✅ assistant (with code analysis skills) producing reports - COMPLETE
 
 **Blocks**:
 - US-049 (continuous spec improvement)

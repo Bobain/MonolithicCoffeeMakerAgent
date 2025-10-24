@@ -1752,7 +1752,7 @@ This framework ensures skills evolve based on **observed data**, not assumptions
 
 **Architectural Alignment**:
 
-- **ADR-009**: Skills system aligns with retirement of code-searcher agent (skills > agents for tooling)
+- **ADR-009**: Skills system aligns with retirement of assistant agent (with code analysis skills) (skills > agents for tooling)
 - **CFR-007**: Context budget optimizer directly addresses CFR-007 violation (agent core materials ≤30% context)
 - **SPEC-001**: spec-creation-automation leverages Code Index infrastructure (architectural consistency)
 - **ADR-010/011**: Skills enable architect commit review workflow (architect updates Code Index during review)

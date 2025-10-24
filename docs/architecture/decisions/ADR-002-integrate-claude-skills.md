@@ -135,7 +135,7 @@ Each agent gets:
 
 **Phase 1 (Pilot)**: 3 skills to validate approach
 - `architect/dependency-analysis`
-- `code-searcher/security-audit`
+- `assistant (with code analysis skills)/security-audit`
 - `assistant/demo-creator`
 
 **Phase 2 (Expansion)**: Add skills where beneficial (2-3 per agent)
@@ -163,7 +163,7 @@ Skills and prompts both tracked in Langfuse:
 
 - **Reliability**: Critical operations (security scans, dependency checks) use pre-tested code
   - architect dependency analysis: 100% reliable CVE lookup
-  - code-searcher security audits: Consistent vulnerability detection
+  - assistant (with code analysis skills) security audits: Consistent vulnerability detection
   - assistant demos: Reproducible Puppeteer scripts
 
 - **Composability**: Multiple skills auto-compose for complex tasks
@@ -305,7 +305,7 @@ Skills and prompts both tracked in Langfuse:
 
 **Phase 2: Pilot Skills (2 weeks)**
 1. Create `architect/dependency-analysis`
-2. Create `code-searcher/security-audit`
+2. Create `assistant (with code analysis skills)/security-audit`
 3. Create `assistant/demo-creator`
 4. Integration tests, production validation
 

@@ -1,4 +1,4 @@
-# ADR-009: Retire code-searcher Agent, Replace with Skills System
+# ADR-009: Retire assistant (with code analysis skills) Agent, Replace with Skills System
 
 **Status**: Accepted
 
@@ -14,7 +14,7 @@
 
 ## Context
 
-The MonolithicCoffeeMakerAgent system currently has **6 autonomous agents**, including **code-searcher** dedicated to deep codebase analysis and forensic examination.
+The MonolithicCoffeeMakerAgent system currently has **6 autonomous agents**, including **assistant (with code analysis skills)** dedicated to deep codebase analysis and forensic examination.
 
 **Current Architecture**:
 ```
@@ -23,11 +23,11 @@ user_listener (UI)
     ├── code_developer (implementation)
     ├── project_manager (planning)
     ├── assistant (docs + dispatcher + demos)
-    ├── code-searcher (code analysis)      ← TO BE RETIRED
+    ├── assistant (with code analysis skills) (code analysis)      ← TO BE RETIRED
     └── ux-design-expert (UI/UX)
 ```
 
-**code-searcher Current Responsibilities**:
+**assistant (with code analysis skills) Current Responsibilities**:
 - Deep codebase analysis and pattern detection
 - Security audits and vulnerability scanning
 - Dependency tracing and impact analysis
@@ -38,9 +38,9 @@ user_listener (UI)
 ```
 User: "Find all authentication code"
     ↓
-user_listener → code-searcher
+user_listener → assistant (with code analysis skills)
     ↓
-code-searcher:
+assistant (with code analysis skills):
   1. Uses Grep/Read tools to search
   2. Analyzes results with LLM reasoning
   3. Prepares findings document
@@ -53,13 +53,13 @@ project_manager writes docs/[analysis]_[date].md
 
 **Problems with Current Approach**:
 
-1. **Agent Overhead**: code-searcher is a full agent with:
+1. **Agent Overhead**: assistant (with code analysis skills) is a full agent with:
    - Singleton enforcement (only one instance can run)
    - Status tracking (agent_status.json)
    - Langfuse observability overhead
    - Complex delegation workflow (4 agents involved for simple search)
 
-2. **Limited Availability**: Only code-searcher can perform deep analysis
+2. **Limited Availability**: Only assistant (with code analysis skills) can perform deep analysis
    - architect CANNOT directly search code (must delegate)
    - assistant CANNOT perform complex searches (must delegate)
    - code_developer CANNOT use security audits during implementation (must delegate)
@@ -72,7 +72,7 @@ project_manager writes docs/[analysis]_[date].md
    - Inefficient for large codebases (55,807 LOC)
 
 4. **Delegation Complexity**: 4-agent workflow for simple tasks
-   - code-searcher → assistant → project_manager → final docs
+   - assistant (with code analysis skills) → assistant → project_manager → final docs
    - High coordination overhead
    - Slow turnaround time
    - Potential for communication errors
@@ -96,7 +96,7 @@ project_manager writes docs/[analysis]_[date].md
 - Solution must work with multi-AI provider support
 
 **User Decision (2025-10-18)**:
-> "L'agent code-searcher va disparaître, ses attributions seront remplacées par des skills et le mécanisme de mise à jour que je viens de décrire"
+> "L'agent assistant (with code analysis skills) va disparaître, ses attributions seront remplacées par des skills et le mécanisme de mise à jour que je viens de décrire"
 
 This ADR documents that architectural decision.
 
@@ -104,7 +104,7 @@ This ADR documents that architectural decision.
 
 ## Decision
 
-We will **RETIRE the code-searcher agent entirely** and **REPLACE with a Skills-based system** consisting of:
+We will **RETIRE the assistant agent (with code analysis skills) entirely** and **REPLACE with a Skills-based system** consisting of:
 
 1. **Code Index Infrastructure** (automated, no agent needed)
 2. **Skills available to ALL agents** (not just one dedicated agent)
@@ -141,13 +141,13 @@ user_listener (UI)
 
 **Key Decisions**:
 
-### 1. Retire code-searcher Agent Completely
+### 1. Retire assistant (with code analysis skills) Agent Completely
 
 **What**:
-- Remove code-searcher from agent roster (6 agents → 5 agents)
-- Delete code-searcher agent configuration
-- Remove code-searcher from singleton enforcement
-- Remove code-searcher status tracking
+- Remove assistant (with code analysis skills) from agent roster (6 agents → 5 agents)
+- Delete assistant agent (with code analysis skills) configuration
+- Remove assistant (with code analysis skills) from singleton enforcement
+- Remove assistant (with code analysis skills) status tracking
 
 **Why**:
 - Skills provide same capabilities without agent overhead
@@ -161,7 +161,7 @@ user_listener (UI)
 
 **New Responsibilities Distribution**:
 
-| Former code-searcher Capability | New Owner | New Approach |
+| Former assistant (with code analysis skills) Capability | New Owner | New Approach |
 |--------------------------------|-----------|--------------|
 | **Code Forensics** | Skill: `code-forensics` | Used by: architect, assistant, code_developer |
 | **Security Audit** | Skill: `security-audit` | Used by: architect, code_developer |
@@ -235,36 +235,36 @@ user_listener (UI)
 1. Implement Code Index infrastructure
 2. Implement 5 core skills (forensics, security, dependency, search, explain)
 3. Test thoroughly with architect, assistant, code_developer
-4. Validate capabilities match or exceed code-searcher
+4. Validate capabilities match or exceed assistant (with code analysis skills)
 
 **Phase 2: Gradual Transition**
-1. architect starts using skills instead of delegating to code-searcher
+1. architect starts using skills instead of delegating to assistant (with code analysis skills)
 2. assistant uses skills for simple searches
 3. code_developer uses security-audit during implementation
 4. Monitor usage, ensure skills work reliably
 
-**Phase 3: Retire code-searcher**
-1. Remove code-searcher from .claude/agents/
-2. Update .claude/CLAUDE.md (remove code-searcher references)
+**Phase 3: Retire assistant (with code analysis skills)**
+1. Remove assistant (with code analysis skills) from .claude/agents/
+2. Update .claude/CLAUDE.md (remove assistant (with code analysis skills) references)
 3. Update docs/roadmap/ROADMAP.md
-4. Remove code-searcher from AgentRegistry
-5. Clean up code-searcher status files
+4. Remove assistant (with code analysis skills) from AgentRegistry
+5. Clean up assistant (with code analysis skills) status files
 
 **Phase 4: Cleanup**
-1. Remove any remaining code-searcher references
+1. Remove any remaining assistant (with code analysis skills) references
 2. Update all documentation
-3. Archive code-searcher agent definition for historical reference
+3. Archive assistant agent (with code analysis skills) definition for historical reference
 
 **Timeline**: 2-3 weeks (non-disruptive, gradual)
 
 ### 5. Agent Tool Ownership Matrix Updates
 
-**BEFORE** (with code-searcher):
+**BEFORE** (with assistant (with code analysis skills)):
 ```
 | Tool/Capability | Owner | Usage |
 |----------------|-------|-------|
 | Code search (simple) | assistant | 1-2 files |
-| Code search (complex) | code-searcher | Deep analysis |
+| Code search (complex) | assistant (with code analysis skills) | Deep analysis |
 | Code analysis docs | project_manager | Creates docs |
 ```
 
@@ -315,8 +315,8 @@ user_listener (UI)
 
 - **Reduced Complexity**
   - No delegation workflow (architect uses skill directly)
-  - No agent status tracking for code-searcher
-  - No singleton enforcement for code-searcher
+  - No agent status tracking for assistant (with code analysis skills)
+  - No singleton enforcement for assistant (with code analysis skills)
   - Simpler mental model (skills as tools, not agents)
 
 - **Always Up-to-Date**
@@ -333,7 +333,7 @@ user_listener (UI)
 ### Negative Consequences
 
 - **Loss of "Agent Expertise" Mental Model**
-  - code-searcher was conceptually a "specialist" in code analysis
+  - assistant (with code analysis skills) was conceptually a "specialist" in code analysis
   - Skills are "just tools" (less anthropomorphic)
   - Mitigated by: Skills provide BETTER capabilities than agent did
 
@@ -345,26 +345,26 @@ user_listener (UI)
   - Mitigated by: Gradual rollout, incremental value
 
 - **Documentation Updates Needed**
-  - Update .claude/CLAUDE.md (remove code-searcher)
+  - Update .claude/CLAUDE.md (remove assistant (with code analysis skills))
   - Update all agent documentation
   - Update ROADMAP.md
   - Update decision framework diagrams
   - Mitigated by: Part of migration plan (Phase 3)
 
-- **Existing docs/code-searcher/ Directory**
-  - Old code analysis docs reference code-searcher agent
+- **Existing docs/assistant (with code analysis skills)/ Directory**
+  - Old code analysis docs reference assistant agent (with code analysis skills)
   - Need to clarify that analysis now done via skills
   - Mitigated by: Add README explaining transition
 
 - **Potential Confusion During Transition**
-  - Users may ask for code-searcher (force of habit)
+  - Users may ask for assistant (with code analysis skills) (force of habit)
   - user_listener must redirect to skills system
   - Mitigated by: Clear communication, gradual transition
 
 ### Neutral Consequences
 
 - **File Count Changes**
-  - Remove: .claude/agents/code-searcher.md
+  - Remove: .claude/agents/assistant (with code analysis skills).md
   - Remove: data/agent_status/code_searcher_status.json
   - Add: .claude/skills/code-forensics/, security-audit/, etc.
   - Add: data/code_index/index.json
@@ -374,7 +374,7 @@ user_listener (UI)
   - Not inherently better or worse, just simpler
 
 - **Workflow Changes**
-  - BEFORE: architect → code-searcher → assistant → project_manager
+  - BEFORE: architect → assistant (with code analysis skills) → assistant → project_manager
   - AFTER: architect → skill → (optional) project_manager for docs
   - Shorter workflow, but different pattern
 
@@ -382,9 +382,9 @@ user_listener (UI)
 
 ## Alternatives Considered
 
-### Alternative 1: Keep code-searcher Agent, Add Skills Too
+### Alternative 1: Keep assistant (with code analysis skills) Agent, Add Skills Too
 
-**Description**: Maintain code-searcher agent AND add skills system.
+**Description**: Maintain assistant agent (with code analysis skills) AND add skills system.
 
 **Pros**:
 - No disruption (backward compatible)
@@ -398,11 +398,11 @@ user_listener (UI)
 - Doesn't reduce agent count (CFR-007 pressure remains)
 - Confusion (which approach to use?)
 
-**Why Rejected**: Skills provide ALL functionality code-searcher did, but better. Keeping both adds complexity without benefit. User explicitly decided to retire code-searcher.
+**Why Rejected**: Skills provide ALL functionality assistant (with code analysis skills) did, but better. Keeping both adds complexity without benefit. User explicitly decided to retire assistant (with code analysis skills).
 
-### Alternative 2: Enhance code-searcher Agent (No Skills)
+### Alternative 2: Enhance assistant (with code analysis skills) Agent (No Skills)
 
-**Description**: Improve code-searcher with better search algorithms, but keep it as an agent.
+**Description**: Improve assistant (with code analysis skills) with better search algorithms, but keep it as an agent.
 
 **Pros**:
 - No new infrastructure (simpler)
@@ -418,9 +418,9 @@ user_listener (UI)
 
 **Why Rejected**: Doesn't address fundamental problems. Skills system is superior architecture for code search functionality.
 
-### Alternative 3: Merge code-searcher into assistant Agent
+### Alternative 3: Merge assistant (with code analysis skills) into assistant Agent
 
-**Description**: Give assistant agent the code-searcher capabilities (no separate agent).
+**Description**: Give assistant agent the assistant (with code analysis skills) capabilities (no separate agent).
 
 **Pros**:
 - Reduces agent count (6 → 5)
@@ -438,10 +438,10 @@ user_listener (UI)
 
 ### Alternative 4: Custom Code Index with Agent Wrapper
 
-**Description**: Build Code Index, but keep code-searcher agent as "index maintainer".
+**Description**: Build Code Index, but keep assistant agent (with code analysis skills) as "index maintainer".
 
 **Pros**:
-- Clear ownership (code-searcher maintains index)
+- Clear ownership (assistant (with code analysis skills) maintains index)
 - Agent can coordinate updates
 - Familiar agent-based pattern
 
@@ -481,44 +481,44 @@ Week 3: Validation & Documentation
 - Test all skills with real-world queries
 - Performance benchmarking
 - Documentation (user guides, API reference)
-- Compare capabilities vs code-searcher (ensure parity)
+- Compare capabilities vs assistant (with code analysis skills) (ensure parity)
 
 **Phase 2: Gradual Transition (1 week)**
 
-- architect adopts skills (instead of delegating to code-searcher)
+- architect adopts skills (instead of delegating to assistant (with code analysis skills))
 - assistant uses skills for complex searches
 - code_developer uses security-audit during implementation
 - Monitor usage, collect feedback
 - Fix any issues discovered
 
-**Phase 3: Retire code-searcher (1 day)**
+**Phase 3: Retire assistant (with code analysis skills) (1 day)**
 
-- Remove .claude/agents/code-searcher.md
+- Remove .claude/agents/assistant (with code analysis skills).md
 - Update .claude/CLAUDE.md (Agent Tool Ownership Matrix)
 - Update docs/roadmap/ROADMAP.md
-- Remove code-searcher from AgentRegistry
+- Remove assistant (with code analysis skills) from AgentRegistry
 - Remove data/agent_status/code_searcher_status.json
-- Git commit: "feat: Retire code-searcher agent, replace with skills system"
+- Git commit: "feat: Retire assistant agent (with code analysis skills), replace with skills system"
 
 **Phase 4: Cleanup & Documentation (2 days)**
 
-- Update all documentation references to code-searcher
-- Add README to docs/code-searcher/ explaining transition
-- Archive code-searcher agent definition
+- Update all documentation references to assistant (with code analysis skills)
+- Add README to docs/assistant (with code analysis skills)/ explaining transition
+- Archive assistant agent (with code analysis skills) definition
 - Update decision framework diagrams
 - Final validation (all tests pass)
 
 ### Code Changes Required
 
 **Files to Remove**:
-- `.claude/agents/code-searcher.md`
+- `.claude/agents/assistant (with code analysis skills).md`
 - `data/agent_status/code_searcher_status.json`
 
 **Files to Update**:
-- `.claude/CLAUDE.md` (remove code-searcher from Agent Tool Ownership Matrix)
+- `.claude/CLAUDE.md` (remove assistant (with code analysis skills) from Agent Tool Ownership Matrix)
 - `docs/roadmap/ROADMAP.md` (update agent list)
-- `coffee_maker/autonomous/agent_registry.py` (remove AgentType.CODE_SEARCHER)
-- All agent documentation (remove code-searcher delegation workflows)
+- `coffee_maker/autonomous/agent_registry.py` (remove AgentType.ASSISTANT)
+- All agent documentation (remove assistant (with code analysis skills) delegation workflows)
 
 **Files to Add**:
 - `.claude/skills/code-forensics/` (skill implementation)
@@ -539,19 +539,19 @@ Week 3: Validation & Documentation
 - [ ] Performance validated (queries <200ms)
 - [ ] Documentation complete
 
-**Migration (Retire code-searcher)**:
-- [ ] Remove .claude/agents/code-searcher.md
+**Migration (Retire assistant (with code analysis skills))**:
+- [ ] Remove .claude/agents/assistant (with code analysis skills).md
 - [ ] Update .claude/CLAUDE.md
 - [ ] Update docs/roadmap/ROADMAP.md
-- [ ] Remove code-searcher from AgentRegistry
+- [ ] Remove assistant (with code analysis skills) from AgentRegistry
 - [ ] Remove code_searcher_status.json
 - [ ] All tests pass
 
 **Post-Migration (Cleanup)**:
 - [ ] Update all documentation
-- [ ] Add README to docs/code-searcher/
-- [ ] Archive code-searcher agent definition
-- [ ] No code references to code-searcher remain
+- [ ] Add README to docs/assistant (with code analysis skills)/
+- [ ] Archive assistant agent (with code analysis skills) definition
+- [ ] No code references to assistant (with code analysis skills) remain
 - [ ] User communication (skills system live)
 
 ### Dependencies
@@ -567,21 +567,21 @@ Week 3: Validation & Documentation
 
 ## Risks and Mitigations
 
-### Risk 1: Skills Don't Match code-searcher Capabilities
+### Risk 1: Skills Don't Match assistant (with code analysis skills) Capabilities
 
-**Risk**: Skills system provides LESS functionality than code-searcher agent.
+**Risk**: Skills system provides LESS functionality than assistant agent (with code analysis skills).
 
 **Impact**: Users lose capabilities, migration fails.
 
 **Probability**: LOW (with proper validation)
 
 **Mitigation**:
-1. **Capability Matrix**: Document all code-searcher capabilities, ensure skills cover 100%
-2. **Parallel Testing**: Run code-searcher and skills in parallel during Phase 2
-3. **User Validation**: Get user approval BEFORE retiring code-searcher
-4. **Rollback Plan**: If skills insufficient, keep code-searcher temporarily
+1. **Capability Matrix**: Document all assistant (with code analysis skills) capabilities, ensure skills cover 100%
+2. **Parallel Testing**: Run assistant (with code analysis skills) and skills in parallel during Phase 2
+3. **User Validation**: Get user approval BEFORE retiring assistant (with code analysis skills)
+4. **Rollback Plan**: If skills insufficient, keep assistant (with code analysis skills) temporarily
 
-**Fallback**: Re-enable code-searcher agent if skills prove inadequate.
+**Fallback**: Re-enable assistant agent (with code analysis skills) if skills prove inadequate.
 
 ### Risk 2: Code Index Becomes Stale
 
@@ -617,7 +617,7 @@ Week 3: Validation & Documentation
 
 ### Risk 4: Confusion During Transition
 
-**Risk**: Users still ask for code-searcher agent (force of habit).
+**Risk**: Users still ask for assistant agent (with code analysis skills) (force of habit).
 
 **Impact**: user_listener must explain transition, potential frustration.
 
@@ -667,11 +667,11 @@ Week 3: Validation & Documentation
 - [ ] code_developer can run security audits
 - [ ] Search returns hierarchical results (<200ms)
 - [ ] Code explanation generates technical summaries
-- [ ] Skills match or exceed code-searcher capabilities
+- [ ] Skills match or exceed assistant (with code analysis skills) capabilities
 
-**Phase 3 Success (code-searcher Retired)**:
-- [ ] code-searcher removed from .claude/agents/
-- [ ] .claude/CLAUDE.md updated (no code-searcher references)
+**Phase 3 Success (assistant (with code analysis skills) Retired)**:
+- [ ] assistant (with code analysis skills) removed from .claude/agents/
+- [ ] .claude/CLAUDE.md updated (no assistant (with code analysis skills) references)
 - [ ] docs/roadmap/ROADMAP.md updated
 - [ ] AgentRegistry updated
 - [ ] All tests pass
@@ -682,7 +682,7 @@ Week 3: Validation & Documentation
 - [ ] architect creates 50% more detailed specs (data-driven)
 - [ ] Code search <5 minutes (vs 30+ minutes before)
 - [ ] Index stays current (freshness <5 minutes)
-- [ ] No capabilities lost vs code-searcher agent
+- [ ] No capabilities lost vs assistant agent (with code analysis skills)
 - [ ] User satisfaction (skills easier to use than delegation)
 
 ### Reevaluation Triggers
@@ -690,12 +690,12 @@ Week 3: Validation & Documentation
 Reassess this decision if:
 1. **Skills failure rate >10%**: Skills become unreliable
 2. **Index staleness >24 hours regularly**: Update mechanism fails
-3. **Performance regression**: Searches slower than code-searcher
-4. **User dissatisfaction**: Team prefers code-searcher agent
-5. **Capability gap**: Skills can't do what code-searcher could
+3. **Performance regression**: Searches slower than assistant (with code analysis skills)
+4. **User dissatisfaction**: Team prefers assistant agent (with code analysis skills)
+5. **Capability gap**: Skills can't do what assistant (with code analysis skills) could
 
 If triggered, consider:
-- Re-enabling code-searcher agent temporarily
+- Re-enabling assistant agent (with code analysis skills) temporarily
 - Improving skills system
 - Hybrid approach (agent + skills)
 
@@ -726,7 +726,7 @@ If triggered, consider:
 **Decision Rationale**:
 
 This decision is based on the user's explicit directive:
-> "L'agent code-searcher va disparaître, ses attributions seront remplacées par des skills et le mécanisme de mise à jour que je viens de décrire"
+> "L'agent assistant (with code analysis skills) va disparaître, ses attributions seront remplacées par des skills et le mécanisme de mise à jour que je viens de décrire"
 
 **Why This is the Right Decision**:
 
@@ -757,7 +757,7 @@ This decision is based on the user's explicit directive:
 **Trade-offs Accepted**:
 
 1. **Loss of "Agent Expertise" Mental Model**
-   - code-searcher was conceptually a "specialist"
+   - assistant (with code analysis skills) was conceptually a "specialist"
    - Skills are "just tools"
    - Accepted because: Skills provide BETTER functionality
 
@@ -766,15 +766,15 @@ This decision is based on the user's explicit directive:
    - Accepted because: Long-term benefits outweigh cost
 
 3. **Documentation Updates**
-   - Must update all docs referencing code-searcher
+   - Must update all docs referencing assistant (with code analysis skills)
    - Accepted because: Part of normal evolution
 
 **Open Questions**:
 
-1. Should we archive code-searcher agent definition for historical reference?
-   - **Answer**: YES - Keep in docs/architecture/archived/code-searcher-agent.md
+1. Should we archive assistant agent (with code analysis skills) definition for historical reference?
+   - **Answer**: YES - Keep in docs/architecture/archived/assistant (with code analysis skills)-agent.md
 
-2. What happens to existing docs/code-searcher/ analysis documents?
+2. What happens to existing docs/assistant (with code analysis skills)/ analysis documents?
    - **Answer**: Add README explaining transition, keep docs as historical reference
 
 3. Should we create a "migration guide" for users?
@@ -789,11 +789,11 @@ This decision is based on the user's explicit directive:
 
 ---
 
-**Conclusion**: Retiring code-searcher agent and replacing with a skills system is the right architectural decision. It simplifies the system (fewer agents), improves performance (Code Index + skills), enables broader usage (all agents can search), and reduces complexity (no delegation). This decision aligns with the user's directive and provides significant long-term benefits.
+**Conclusion**: Retiring assistant agent (with code analysis skills) and replacing with a skills system is the right architectural decision. It simplifies the system (fewer agents), improves performance (Code Index + skills), enables broader usage (all agents can search), and reduces complexity (no delegation). This decision aligns with the user's directive and provides significant long-term benefits.
 
 **Recommendation**: Accept this ADR and proceed with implementation according to the phased plan outlined above.
 
 **Next Steps**:
-1. Update SPEC-001-advanced-code-search-skills.md to reflect code-searcher retirement
-2. Create migration plan document (MIGRATION-code-searcher-to-skills.md)
+1. Update SPEC-001-advanced-code-search-skills.md to reflect assistant (with code analysis skills) retirement
+2. Create migration plan document (MIGRATION-assistant (with code analysis skills)-to-skills.md)
 3. Begin Phase 1 implementation (Code Index infrastructure)

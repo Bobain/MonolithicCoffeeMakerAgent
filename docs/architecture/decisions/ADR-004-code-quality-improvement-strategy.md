@@ -3,13 +3,13 @@
 **Status**: Accepted
 **Date**: 2025-10-17
 **Author**: architect agent
-**Related**: CODE_QUALITY_ANALYSIS_2025-10-17.md (code-searcher findings)
+**Related**: CODE_QUALITY_ANALYSIS_2025-10-17.md (assistant (with code analysis skills) findings)
 
 ---
 
 ## Context
 
-On 2025-10-17, **code-searcher agent** conducted a comprehensive codebase analysis and identified several quality improvement opportunities:
+On 2025-10-17, **assistant agent (with code analysis skills)** conducted a comprehensive codebase analysis and identified several quality improvement opportunities:
 
 ### Findings Summary
 - **Codebase**: 358 Python files, 51,240 LOC, generally well-structured
@@ -348,7 +348,7 @@ Track improvements via:
    - Automated code review (linting, complexity)
 
 2. **Continuous Improvement Culture**
-   - Regular code-searcher analysis (quarterly)
+   - Regular assistant (with code analysis skills) analysis (quarterly)
    - "Fix-It Fridays" for technical debt
    - Quality metrics dashboard
 
@@ -367,7 +367,7 @@ Track improvements via:
 ## References
 
 ### Related Documents
-- **CODE_QUALITY_ANALYSIS_2025-10-17.md** - code-searcher findings
+- **CODE_QUALITY_ANALYSIS_2025-10-17.md** - assistant (with code analysis skills) findings
 - **SPEC-050** - roadmap_cli.py modularization
 - **SPEC-051** - Centralized prompt utilities
 - **SPEC-052** - Standardized error handling

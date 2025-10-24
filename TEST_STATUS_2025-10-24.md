@@ -57,9 +57,9 @@ These tests were failing BEFORE our changes:
    - Action: Needs fixing separately
 
 4. **test_agent_registry.py::test_agent_type_enum_values**
-   - Error: Missing `code-searcher` AgentType
+   - Error: Missing `assistant (with code analysis skills)` AgentType
    - Status: Pre-existing issue (1 of 26 tests failing)
-   - Action: Add CODE_SEARCHER to AgentType enum
+   - Action: Add ASSISTANT to AgentType enum
 
 5. **test_stale_directly.py**
    - Error: `no such table: technical_specs`
@@ -115,7 +115,7 @@ These tests were failing BEFORE our changes:
 2. Create separate tasks for fixing pre-existing test issues:
    - Fix `git_commit_generator` import
    - Fix `message_queue` AgentType import
-   - Add CODE_SEARCHER to AgentType enum
+   - Add ASSISTANT to AgentType enum
    - Fix `test_team_daemon` imports
 
 ---

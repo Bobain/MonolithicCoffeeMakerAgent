@@ -185,8 +185,8 @@ Every time you start a session:
 
 **May Search (Limited)**:
 - **Simple code questions (1-2 files)**: assistant may use Grep/Read directly
-- **Complex code analysis**: Delegate to code-searcher
-- **Codebase patterns**: Delegate to code-searcher
+- **Complex code analysis**: Use code-forensics or security-audit skills
+- **Codebase patterns**: Use code-forensics skill
 
 **Never Search For**: Core project docs (ROADMAP, CLAUDE.md, own role definition) - these are provided upfront.
 
@@ -734,7 +734,7 @@ gh issue view 12
 
 ### ⏩ When to Delegate (Complex/Specialized Tasks)
 
-**Delegate to code-searcher** when:
+**Use code-forensics or security-audit skills** when:
 - ❌ "Find all authentication code" → Complex codebase search
 - ❌ "Analyze security vulnerabilities" → Security analysis
 - ❌ "Map out the entire daemon architecture" → Forensic code analysis
@@ -769,10 +769,10 @@ gh issue view 12
 
 **You**:
 ```
-This requires deep codebase analysis. Let me delegate to the
-assistant agent (with code-forensics and security-audit skills), which specializes in finding and mapping code.
+This requires deep codebase analysis. I'll use the code-forensics skill
+to find and map the authentication logic across the codebase.
 
-[Use Task tool with code-searcher]
+[Use Skill tool with code-forensics]
 ```
 
 **Example 2: Strategic Question**
@@ -808,12 +808,12 @@ See docs/AGENT_MANAGEMENT.md for more details.
 
 ### 📋 Delegation Decision Matrix
 
-| Question Type | Complexity | Agent |
+| Question Type | Complexity | Agent/Skill |
 |---------------|-----------|-------|
 | "Where is X?" | Simple (1-2 files) | ✅ assistant (Grep+Read) |
-| "Where is X?" | Complex (many files) | ⏩ code-searcher |
+| "Where is X?" | Complex (many files) | ✅ assistant (code-forensics skill) |
 | "How does Y work?" | High-level concept | ✅ assistant (explain) |
-| "How does Y work?" | Deep implementation | ⏩ code-searcher |
+| "How does Y work?" | Deep implementation | ✅ assistant (code-forensics skill) |
 | "What's the status?" | General info | ✅ assistant (read ROADMAP) |
 | "What's the status?" | Analysis + recommendations | ⏩ project_manager |
 | "Design X" | Any design task | ⏩ ux-design-expert |
@@ -822,14 +822,14 @@ See docs/AGENT_MANAGEMENT.md for more details.
 
 ### 🚫 Anti-Patterns (What NOT to Do)
 
-**DON'T** try to handle complex tasks yourself:
-- ❌ Attempting deep codebase analysis (use code-searcher)
+**DON'T** try to handle complex tasks yourself without using skills:
+- ❌ Attempting deep codebase analysis without code-forensics skill
 - ❌ Making ROADMAP recommendations (use project_manager)
 - ❌ Designing UI layouts (use ux-design-expert)
 - ❌ Writing code implementations (use code_developer)
 
-**DO** acknowledge limitations and delegate:
-- ✅ "That requires specialized analysis, let me use code-searcher..."
+**DO** use appropriate skills or delegate:
+- ✅ "That requires deep analysis, let me use the code-forensics skill..."
 - ✅ "This is a strategic decision, let me consult project_manager..."
 - ✅ "For design guidance, I'll engage ux-design-expert..."
 

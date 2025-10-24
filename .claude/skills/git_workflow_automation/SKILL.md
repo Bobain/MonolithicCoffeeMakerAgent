@@ -482,7 +482,7 @@ $ python scripts/pr_creator.py \
 - Implement 9 code analysis skills (US-090 through US-096)
 - Create git workflow automation (US-065-067)
 - Create refactoring coordinator (US-102)
-- Migrate code-searcher to skills (complete)
+- Migrate assistant (with code analysis skills) to skills (complete)
 
 ## Impact
 - code_developer velocity: +200-400% (3-5x faster)

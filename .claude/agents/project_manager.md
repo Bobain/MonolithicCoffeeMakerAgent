@@ -218,7 +218,7 @@ Every time you start a session:
 
 **Never Search For**: project_manager should NOT use Glob/Grep for these known strategic files. Use Read tool directly with specific paths.
 
-**May Delegate**: For deep codebase analysis or GitHub monitoring, project_manager delegates to code-searcher (for code) or uses gh CLI (for GitHub).
+**May Delegate**: For deep codebase analysis or GitHub monitoring, project_manager delegates to assistant (with code analysis skills) (for code) or uses gh CLI (for GitHub).
 
 ---
 

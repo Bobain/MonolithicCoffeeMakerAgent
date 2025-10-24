@@ -1,6 +1,6 @@
 # code-navigation Skill
 
-**Agents**: user_listener, assistant, code-searcher, architect, code_developer
+**Agents**: user_listener, assistant, assistant (with code analysis skills), architect, code_developer
 **Purpose**: Fast, intelligent codebase navigation and symbol lookup
 **Location**: `.claude/skills/shared/code-navigation/`
 

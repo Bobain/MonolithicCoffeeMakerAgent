@@ -119,7 +119,7 @@ Defines all valid agent types:
 - `PROJECT_MANAGER` - Monitors ROADMAP
 - `ARCHITECT` - Creates specs
 - `ASSISTANT` - Creates demos
-- `CODE_SEARCHER` - Analyzes code
+- `ASSISTANT` - Analyzes code
 - `UX_DESIGN_EXPERT` - Design guidance
 - `CODE_REVIEWER` - QA and reviews
 - And more...
