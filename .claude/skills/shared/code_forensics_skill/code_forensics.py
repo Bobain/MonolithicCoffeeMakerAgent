@@ -1,5 +1,5 @@
 """
-Code Forensics Skill for code-searcher.
+Code Forensics Skill for assistant agent.
 Trace code evolution, identify contributors, analyze patterns.
 """
 
