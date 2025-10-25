@@ -44,6 +44,7 @@ class SkillNames(str, Enum):
     GIT_WORKFLOW_AUTOMATION = "git-workflow-automation"
     CONTEXT_BUDGET_OPTIMIZER = "context-budget-optimizer"
     DATABASE_SCHEMA_GUIDE = "database-schema-guide"
+    WORKFLOW_AND_DATA_FLOW_GUIDE = "workflow-and-data-flow-guide"
 
 
 @dataclass
