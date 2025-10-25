@@ -17,7 +17,7 @@ cursor.execute(
            datetime('now', '-24 hours') as threshold,
            CASE WHEN datetime(started_at) < datetime('now', '-24 hours')
                 THEN 'STALE' ELSE 'OK' END as is_stale
-    FROM technical_specs
+    FROM specs_specification
     WHERE spec_number IN (9999, 9998)
     ORDER BY spec_number
 """
@@ -38,7 +38,7 @@ for row in cursor.fetchall():
 cursor.execute(
     """
     SELECT id, title, started_at
-    FROM technical_specs
+    FROM specs_specification
     WHERE status = 'in_progress'
     AND started_at IS NOT NULL
     AND datetime(started_at) < datetime('now', '-24 hours')

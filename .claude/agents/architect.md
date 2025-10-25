@@ -240,6 +240,63 @@ When code_developer implements PRIORITY 116, it automatically:
 
 ```
 
+### Database Schema Awareness (MANDATORY)
+
+**ALWAYS consult the database schema guide BEFORE implementing any database features:**
+
+```python
+from coffee_maker.autonomous.skill_loader import load_skill, SkillNames
+
+# Load the database schema guide skill
+skill = load_skill(SkillNames.DATABASE_SCHEMA_GUIDE)
+
+# Example 1: Check if you should create files for a table
+result = skill.execute(action="should_use_files", table="technical_specs")
+print(result)
+# Returns: {
+#     "result": False,
+#     "reason": "Store content in database, not files",
+#     "content_column": "content"
+# }
+
+# Example 2: Get table information and purpose
+info = skill.execute(action="get_table_info", table="technical_specs")
+print(info)
+# Returns: {
+#     "purpose": "Store complete technical specification content in database (NO FILES!)",
+#     "content_column": "content",
+#     "content_type": "Plain markdown (monolithic) or JSON (hierarchical)",
+#     "use_files": False,
+#     "related_tables": ["implementation_tasks"]
+# }
+
+# Example 3: Get usage examples for a table
+example = skill.execute(action="get_example", table="technical_specs", spec_type="hierarchical")
+print(example["code"])
+# Shows correct code pattern for storing hierarchical specs in database
+
+# Example 4: List all documented tables
+tables = skill.execute(action="list_tables")
+print(tables)
+# Returns: ["technical_specs", "implementation_tasks"]
+```
+
+**When to use this skill:**
+- ✅ **BEFORE** creating any new database table
+- ✅ **BEFORE** adding features that interact with existing tables
+- ✅ **BEFORE** writing migration scripts
+- ✅ **WHEN** uncertain whether to use files vs database
+
+**Why this matters:**
+- Prevents architectural mistakes (e.g., creating files when database storage is intended)
+- Documents database design decisions
+- Provides correct usage patterns
+- Ensures consistency across the codebase
+
+**See also:**
+- Database Schema Guide: `.claude/skills/shared/database_schema_guide/DATABASE_SCHEMA_GUIDE.md`
+- Database Schema Skill: `.claude/skills/shared/database_schema_guide/database_schema_skill.py`
+
 ### Document Ownership (Database-First)
 
 **YOU are the ONLY agent that modifies these**:

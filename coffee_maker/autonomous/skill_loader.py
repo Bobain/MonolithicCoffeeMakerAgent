@@ -43,6 +43,7 @@ class SkillNames(str, Enum):
     DOD_VERIFICATION = "dod-verification"
     GIT_WORKFLOW_AUTOMATION = "git-workflow-automation"
     CONTEXT_BUDGET_OPTIMIZER = "context-budget-optimizer"
+    DATABASE_SCHEMA_GUIDE = "database-schema-guide"
 
 
 @dataclass

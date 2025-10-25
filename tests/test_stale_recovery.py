@@ -157,7 +157,7 @@ def test_stale_spec_recovery():
         stale_time = (datetime.now() - timedelta(hours=48)).isoformat()
         cursor.execute(
             """
-            INSERT OR REPLACE INTO technical_specs (
+            INSERT OR REPLACE INTO specs_specification (
                 id, spec_number, title, roadmap_item_id,
                 status, spec_type, content, started_at,
                 updated_at, updated_by
@@ -181,7 +181,7 @@ def test_stale_spec_recovery():
         recent_time = (datetime.now() - timedelta(hours=1)).isoformat()
         cursor.execute(
             """
-            INSERT OR REPLACE INTO technical_specs (
+            INSERT OR REPLACE INTO specs_specification (
                 id, spec_number, title, roadmap_item_id,
                 status, spec_type, content, started_at,
                 updated_at, updated_by
@@ -205,7 +205,7 @@ def test_stale_spec_recovery():
 
         # Check initial state
         cursor.execute(
-            "SELECT id, status, started_at FROM technical_specs WHERE spec_number IN (9999, 9998) ORDER BY spec_number"
+            "SELECT id, status, started_at FROM specs_specification WHERE spec_number IN (9999, 9998) ORDER BY spec_number"
         )
         before = cursor.fetchall()
         logger.info(f"Before reset: {before}")
@@ -220,14 +220,14 @@ def test_stale_spec_recovery():
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        cursor.execute("SELECT id, status, started_at FROM technical_specs WHERE id = 'SPEC-9999'")
+        cursor.execute("SELECT id, status, started_at FROM specs_specification WHERE id = 'SPEC-9999'")
         stale_result = cursor.fetchone()
 
-        cursor.execute("SELECT id, status, started_at FROM technical_specs WHERE id = 'SPEC-9998'")
+        cursor.execute("SELECT id, status, started_at FROM specs_specification WHERE id = 'SPEC-9998'")
         recent_result = cursor.fetchone()
 
         # Clean up test data
-        cursor.execute("DELETE FROM technical_specs WHERE spec_number IN (9999, 9998)")
+        cursor.execute("DELETE FROM specs_specification WHERE spec_number IN (9999, 9998)")
         conn.commit()
         conn.close()
 

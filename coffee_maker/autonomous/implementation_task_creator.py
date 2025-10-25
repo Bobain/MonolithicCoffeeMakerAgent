@@ -1,20 +1,20 @@
-"""Implementation task creator for architect - decomposes specs into parallelizable implementation_tasks.
+"""Implementation task creator for architect - decomposes specs into parallelizable specs_task.
 
 This module enables architect to:
 1. Analyze technical specifications
 2. Identify parallelizable work units
 3. Perform file dependency analysis
-4. Create implementation_tasks with non-overlapping assigned_files
+4. Create specs_task with non-overlapping assigned_files
 5. Set task_group_id and priority_order for sequential/parallel work
 
 Key Concepts:
-- task_group_id: Groups sequential implementation_tasks (e.g., "GROUP-31" for 4 phases)
+- task_group_id: Groups sequential specs_task (e.g., "GROUP-31" for 4 phases)
 - priority_order: Enforces order within group (1, 2, 3, 4)
 - assigned_files: List of files this task can modify (must not overlap)
 
 Database Integration:
 - Uses TechnicalSpecSkill for reading specs (shared skill pattern)
-- Direct database access only for implementation_tasks table operations
+- Direct database access only for specs_task table operations
 
 Author: code_developer (implementing PRIORITY 32)
 Date: 2025-10-23
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 class FileConflictError(Exception):
-    """Raised when assigned_files overlap between implementation_tasks."""
+    """Raised when assigned_files overlap between specs_task."""
 
 
 class SpecNotFoundError(Exception):
@@ -51,10 +51,10 @@ class SpecNotFoundError(Exception):
 
 
 class ImplementationTaskCreator:
-    """Creates implementation_tasks from technical specs for parallel development.
+    """Creates specs_task from technical specs for parallel development.
 
     Analyzes spec structure, performs file dependency analysis,
-    and creates implementation_tasks with proper sequential ordering.
+    and creates specs_task with proper sequential ordering.
     """
 
     def __init__(self, db_path: str, agent_name: str = "architect"):
@@ -80,7 +80,7 @@ class ImplementationTaskCreator:
         priority_number: int,
         granularity: str = "phase",
     ) -> List[Dict[str, Any]]:
-        """Create implementation_tasks for a technical spec.
+        """Create specs_task for a technical spec.
 
         Args:
             spec_id: Technical spec ID (e.g., "SPEC-131")
@@ -88,7 +88,7 @@ class ImplementationTaskCreator:
             granularity: Decomposition level ("phase", "section", "module")
 
         Returns:
-            List of created implementation_tasks with metadata
+            List of created specs_task with metadata
 
         Raises:
             FileConflictError: If assigned_files overlap
@@ -96,10 +96,10 @@ class ImplementationTaskCreator:
 
         Example:
             >>> creator = ImplementationTaskCreator("coffee_maker.db")
-            >>> implementation_tasks = creator.create_works_for_spec("SPEC-131", 31)
+            >>> specs_task = creator.create_works_for_spec("SPEC-131", 31)
             >>> # Creates: TASK-31-1, TASK-31-2, TASK-31-3...
         """
-        logger.info(f"Creating implementation_tasks for {spec_id} (priority {priority_number})")
+        logger.info(f"Creating specs_task for {spec_id} (priority {priority_number})")
 
         # 1. Read technical spec
         spec_content, spec_type = self._read_spec(spec_id)
@@ -116,7 +116,7 @@ class ImplementationTaskCreator:
         # 4. Validate no file overlaps
         self._validate_file_independence(work_units)
 
-        # 5. Create implementation_tasks in database
+        # 5. Create specs_task in database
         task_group_id = f"GROUP-{priority_number}"
         created_works = []
 
@@ -140,7 +140,7 @@ class ImplementationTaskCreator:
 
             created_works.append(work_data)
 
-        logger.info(f"✅ Created {len(created_works)} implementation_tasks for {spec_id}")
+        logger.info(f"✅ Created {len(created_works)} specs_task for {spec_id}")
         return created_works
 
     def _read_spec(self, spec_id: str) -> Tuple[Any, str]:
@@ -170,7 +170,7 @@ class ImplementationTaskCreator:
             cursor = conn.cursor()
 
             cursor.execute(
-                "SELECT content, spec_type FROM technical_specs WHERE id = ?",
+                "SELECT content, spec_type FROM specs_specification WHERE id = ?",
                 (spec_id,),
             )
             result = cursor.fetchone()
@@ -421,7 +421,7 @@ class ImplementationTaskCreator:
             return "coffee_maker/placeholder.py"
 
     def _validate_file_independence(self, work_units: List[Dict[str, Any]]) -> None:
-        """Validate implementation_tasks have no file conflicts.
+        """Validate specs_task have no file conflicts.
 
         Args:
             work_units: List of work units with assigned_files
@@ -494,7 +494,7 @@ class ImplementationTaskCreator:
 
         cursor.execute(
             """
-            INSERT INTO implementation_tasks (
+            INSERT INTO specs_task (
                 task_id, priority_number, task_group_id, priority_order,
                 spec_id, scope_description, assigned_files, spec_sections,
                 status, created_at

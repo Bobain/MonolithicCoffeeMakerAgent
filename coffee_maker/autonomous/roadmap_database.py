@@ -4,7 +4,7 @@ This is the ONLY authorized way to access the ROADMAP.
 Direct file access to ROADMAP.md is FORBIDDEN.
 
 Architecture:
-    - roadmap_items table: Stores all priorities/user stories
+    - roadmap_priority table: Stores all priorities/user stories
     - roadmap_metadata table: Stores header/footer content
     - Write access: project_manager only
     - Read access: All agents
@@ -64,17 +64,17 @@ class RoadmapDatabase:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            # Create simplified roadmap_items table
+            # Create simplified roadmap_priority table
             # PRIMARY KEY ensures id uniqueness
             cursor.execute(
                 """
-                CREATE TABLE IF NOT EXISTS roadmap_items (
+                CREATE TABLE IF NOT EXISTS roadmap_priority (
                     id TEXT PRIMARY KEY,            -- UNIQUE by definition
                     item_type TEXT NOT NULL,        -- 'user_story' or 'priority'
                     number TEXT NOT NULL,           -- "062", "1", "1.5"
                     title TEXT NOT NULL,
                     status TEXT NOT NULL,           -- "📝 Planned", "🔄 In Progress", etc.
-                    spec_id TEXT,                   -- Foreign key to technical_specs.id
+                    spec_id TEXT,                   -- Foreign key to specs_specification.id
                     content TEXT,                   -- Full markdown content
                     estimated_hours TEXT,           -- Time estimation
                     dependencies TEXT,              -- Dependency information
@@ -82,7 +82,7 @@ class RoadmapDatabase:
                     implementation_started_at TEXT, -- When code_developer started work (for stale detection)
                     updated_at TEXT NOT NULL,       -- ISO timestamp
                     updated_by TEXT NOT NULL,       -- Agent who updated
-                    FOREIGN KEY (spec_id) REFERENCES technical_specs(id) ON DELETE SET NULL
+                    FOREIGN KEY (spec_id) REFERENCES specs_specification(id) ON DELETE SET NULL
                 )
             """
             )
@@ -117,7 +117,7 @@ class RoadmapDatabase:
             # Create update notifications table
             cursor.execute(
                 """
-                CREATE TABLE IF NOT EXISTS roadmap_update_notifications (
+                CREATE TABLE IF NOT EXISTS roadmap_notification (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     item_id TEXT NOT NULL,
                     requested_by TEXT NOT NULL,
@@ -134,18 +134,18 @@ class RoadmapDatabase:
             )
 
             # Create indexes for performance
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_type ON roadmap_items(item_type)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_status ON roadmap_items(status)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_priority_order ON roadmap_items(priority_order)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_number ON roadmap_items(number)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_type ON roadmap_priority(item_type)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_status ON roadmap_priority(status)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_priority_order ON roadmap_priority(priority_order)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_items_number ON roadmap_priority(number)")
             cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_items_spec ON roadmap_items(spec_id)"
+                "CREATE INDEX IF NOT EXISTS idx_items_spec ON roadmap_priority(spec_id)"
             )  # Index for spec lookups
-            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_id ON roadmap_items(id)")  # Enforce uniqueness
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_item ON roadmap_audit(item_id)")
             cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_notifications_status ON roadmap_update_notifications(status)"
-            )
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_items_id ON roadmap_priority(id)"
+            )  # Enforce uniqueness
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_item ON roadmap_audit(item_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_notifications_status ON roadmap_notification(status)")
 
             conn.commit()
             conn.close()
@@ -187,7 +187,7 @@ class RoadmapDatabase:
             sqlite3.IntegrityError: If id already exists
 
         Note:
-            Phase field has been moved to technical_specs table.
+            Phase field has been moved to specs_specification table.
             Each spec can have its own phase, allowing one roadmap item
             to have multiple phases across different specs.
         """
@@ -202,14 +202,14 @@ class RoadmapDatabase:
 
             # If priority_order not specified, default to max+1
             if priority_order is None:
-                cursor.execute("SELECT MAX(priority_order) FROM roadmap_items")
+                cursor.execute("SELECT MAX(priority_order) FROM roadmap_priority")
                 max_order = cursor.fetchone()[0]
                 priority_order = (max_order + 1) if max_order is not None else 1
                 logger.info(f"Auto-assigned priority_order={priority_order} for {item_id}")
 
             cursor.execute(
                 """
-                INSERT INTO roadmap_items (
+                INSERT INTO roadmap_priority (
                     id, item_type, number, title, status, content,
                     estimated_hours, dependencies, priority_order,
                     updated_at, updated_by
@@ -270,14 +270,14 @@ class RoadmapDatabase:
             if status_filter:
                 cursor.execute(
                     """
-                    SELECT * FROM roadmap_items
+                    SELECT * FROM roadmap_priority
                     WHERE status LIKE ?
                     ORDER BY priority_order ASC
                 """,
                     (f"%{status_filter}%",),
                 )
             else:
-                cursor.execute("SELECT * FROM roadmap_items ORDER BY priority_order ASC")
+                cursor.execute("SELECT * FROM roadmap_priority ORDER BY priority_order ASC")
 
             rows = cursor.fetchall()
             conn.close()
@@ -302,7 +302,7 @@ class RoadmapDatabase:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 
-            cursor.execute("SELECT * FROM roadmap_items WHERE id = ?", (item_id,))
+            cursor.execute("SELECT * FROM roadmap_priority WHERE id = ?", (item_id,))
             row = cursor.fetchone()
             conn.close()
 
@@ -334,7 +334,7 @@ class RoadmapDatabase:
             cursor = conn.cursor()
 
             # Get current status
-            cursor.execute("SELECT status FROM roadmap_items WHERE id = ?", (item_id,))
+            cursor.execute("SELECT status FROM roadmap_priority WHERE id = ?", (item_id,))
             result = cursor.fetchone()
 
             if not result:
@@ -347,7 +347,7 @@ class RoadmapDatabase:
             # Update status
             cursor.execute(
                 """
-                UPDATE roadmap_items
+                UPDATE roadmap_priority
                 SET status = ?, updated_at = ?, updated_by = ?
                 WHERE id = ?
             """,
@@ -388,7 +388,7 @@ class RoadmapDatabase:
 
             cursor.execute(
                 """
-                SELECT * FROM roadmap_items
+                SELECT * FROM roadmap_priority
                 WHERE status LIKE '%📝%' OR status LIKE '%Planned%'
                 ORDER BY priority_order ASC
                 LIMIT 1
@@ -432,7 +432,7 @@ class RoadmapDatabase:
 
             cursor.execute(
                 """
-                INSERT INTO roadmap_update_notifications (
+                INSERT INTO roadmap_notification (
                     item_id, requested_by, notification_type, requested_status,
                     message, status, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -472,7 +472,7 @@ class RoadmapDatabase:
 
             cursor.execute(
                 """
-                SELECT * FROM roadmap_update_notifications
+                SELECT * FROM roadmap_notification
                 WHERE status = 'pending'
                 ORDER BY created_at ASC
             """
@@ -511,7 +511,7 @@ class RoadmapDatabase:
             # Get notification
             cursor.execute(
                 """
-                SELECT * FROM roadmap_update_notifications
+                SELECT * FROM roadmap_notification
                 WHERE id = ? AND status = 'pending'
             """,
                 (notification_id,),
@@ -528,7 +528,7 @@ class RoadmapDatabase:
                 # Update the item status
                 cursor.execute(
                     """
-                    UPDATE roadmap_items
+                    UPDATE roadmap_priority
                     SET status = ?, updated_at = ?, updated_by = ?
                     WHERE id = ?
                 """,
@@ -543,7 +543,7 @@ class RoadmapDatabase:
             # Mark notification as approved
             cursor.execute(
                 """
-                UPDATE roadmap_update_notifications
+                UPDATE roadmap_notification
                 SET status = 'approved', processed_at = ?, processed_by = ?
                 WHERE id = ?
             """,
@@ -587,7 +587,7 @@ class RoadmapDatabase:
         header = result["value"] if result else "# ROADMAP\n\n"
 
         # Get all items
-        cursor.execute("SELECT * FROM roadmap_items ORDER BY priority_order ASC")
+        cursor.execute("SELECT * FROM roadmap_priority ORDER BY priority_order ASC")
         rows = cursor.fetchall()
         conn.close()
 
@@ -718,7 +718,7 @@ class RoadmapDatabase:
 
         cursor.execute(
             """
-            INSERT OR REPLACE INTO roadmap_items (
+            INSERT OR REPLACE INTO roadmap_priority (
                 id, item_type, number, title, status, content, priority_order,
                 updated_at, updated_by
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -747,7 +747,7 @@ class RoadmapDatabase:
             cursor = conn.cursor()
 
             # Total items
-            cursor.execute("SELECT COUNT(*) FROM roadmap_items")
+            cursor.execute("SELECT COUNT(*) FROM roadmap_priority")
             total = cursor.fetchone()[0]
 
             # By status
@@ -757,7 +757,7 @@ class RoadmapDatabase:
                     SUM(CASE WHEN status LIKE '%📝%' OR status LIKE '%Planned%' THEN 1 ELSE 0 END) as planned,
                     SUM(CASE WHEN status LIKE '%🔄%' OR status LIKE '%Progress%' THEN 1 ELSE 0 END) as in_progress,
                     SUM(CASE WHEN status LIKE '%✅%' OR status LIKE '%Complete%' THEN 1 ELSE 0 END) as complete
-                FROM roadmap_items
+                FROM roadmap_priority
             """
             )
 
@@ -802,7 +802,7 @@ class RoadmapDatabase:
 
             # Check if item exists and is not already claimed
             cursor.execute(
-                "SELECT spec_work_started_at FROM roadmap_items WHERE id = ?",
+                "SELECT spec_work_started_at FROM roadmap_priority WHERE id = ?",
                 (item_id,),
             )
             result = cursor.fetchone()
@@ -822,7 +822,7 @@ class RoadmapDatabase:
             now = datetime.now().isoformat()
             cursor.execute(
                 """
-                UPDATE roadmap_items
+                UPDATE roadmap_priority
                 SET spec_work_started_at = ?
                 WHERE id = ?
             """,
@@ -859,7 +859,7 @@ class RoadmapDatabase:
 
             # Check if item exists
             cursor.execute(
-                "SELECT spec_work_started_at FROM roadmap_items WHERE id = ?",
+                "SELECT spec_work_started_at FROM roadmap_priority WHERE id = ?",
                 (item_id,),
             )
             result = cursor.fetchone()
@@ -871,7 +871,7 @@ class RoadmapDatabase:
             # Release the item
             cursor.execute(
                 """
-                UPDATE roadmap_items
+                UPDATE roadmap_priority
                 SET spec_work_started_at = NULL
                 WHERE id = ?
             """,
@@ -913,7 +913,7 @@ class RoadmapDatabase:
             cursor.execute(
                 """
                 SELECT id, spec_work_started_at
-                FROM roadmap_items
+                FROM roadmap_priority
                 WHERE spec_work_started_at IS NOT NULL
                 AND spec_work_started_at < ?
             """,
@@ -931,7 +931,7 @@ class RoadmapDatabase:
             for item_id, started_at in stale_items:
                 cursor.execute(
                     """
-                    UPDATE roadmap_items
+                    UPDATE roadmap_priority
                     SET spec_work_started_at = NULL
                     WHERE id = ?
                 """,
@@ -973,7 +973,7 @@ class RoadmapDatabase:
 
             # Check if item exists and is not already claimed
             cursor.execute(
-                "SELECT implementation_started_at FROM roadmap_items WHERE id = ?",
+                "SELECT implementation_started_at FROM roadmap_priority WHERE id = ?",
                 (item_id,),
             )
             result = cursor.fetchone()
@@ -992,7 +992,7 @@ class RoadmapDatabase:
             now = datetime.now().isoformat()
             cursor.execute(
                 """
-                UPDATE roadmap_items
+                UPDATE roadmap_priority
                 SET implementation_started_at = ?
                 WHERE id = ?
             """,
@@ -1027,7 +1027,7 @@ class RoadmapDatabase:
 
             # Check if item exists
             cursor.execute(
-                "SELECT id FROM roadmap_items WHERE id = ?",
+                "SELECT id FROM roadmap_priority WHERE id = ?",
                 (item_id,),
             )
             result = cursor.fetchone()
@@ -1039,7 +1039,7 @@ class RoadmapDatabase:
             # Release the item
             cursor.execute(
                 """
-                UPDATE roadmap_items
+                UPDATE roadmap_priority
                 SET implementation_started_at = NULL
                 WHERE id = ?
             """,
@@ -1081,7 +1081,7 @@ class RoadmapDatabase:
             cursor.execute(
                 """
                 SELECT id, implementation_started_at
-                FROM roadmap_items
+                FROM roadmap_priority
                 WHERE implementation_started_at IS NOT NULL
                 AND implementation_started_at < ?
                 AND (status LIKE '%🔄%' OR status LIKE '%Progress%')
@@ -1100,7 +1100,7 @@ class RoadmapDatabase:
             for item_id, started_at in stale_items:
                 cursor.execute(
                     """
-                    UPDATE roadmap_items
+                    UPDATE roadmap_priority
                     SET implementation_started_at = NULL
                     WHERE id = ?
                 """,
@@ -1141,8 +1141,8 @@ class RoadmapDatabase:
                     s.status as spec_status,
                     s.spec_type,
                     s.estimated_hours as spec_hours
-                FROM roadmap_items r
-                INNER JOIN technical_specs s ON r.spec_id = s.id
+                FROM roadmap_priority r
+                INNER JOIN specs_specification s ON r.spec_id = s.id
                 ORDER BY r.priority_order ASC
             """
             )
@@ -1172,7 +1172,7 @@ class RoadmapDatabase:
             cursor.execute(
                 """
                 SELECT *
-                FROM roadmap_items
+                FROM roadmap_priority
                 WHERE spec_id IS NULL
                 AND status LIKE '%Planned%'
                 ORDER BY priority_order ASC
@@ -1228,7 +1228,7 @@ class RoadmapDatabase:
 
             cursor.execute(
                 """
-                UPDATE roadmap_items
+                UPDATE roadmap_priority
                 SET plan_and_summary = ?, updated_at = ?
                 WHERE id = ?
             """,
@@ -1371,7 +1371,7 @@ class RoadmapDatabase:
 
             cursor.execute(
                 """
-                INSERT INTO implementation_commits (
+                INSERT INTO review_commit (
                     roadmap_item_id, commit_hash, commit_message, commit_author,
                     commit_date, files_changed, insertions, deletions, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1415,7 +1415,7 @@ class RoadmapDatabase:
 
             cursor.execute(
                 """
-                SELECT * FROM implementation_commits
+                SELECT * FROM review_commit
                 WHERE roadmap_item_id = ?
                 ORDER BY commit_date ASC
             """,
@@ -1482,7 +1482,7 @@ class RoadmapDatabase:
 
             cursor.execute(
                 """
-                INSERT OR REPLACE INTO code_reviews (
+                INSERT OR REPLACE INTO review_code_review (
                     roadmap_item_id, spec_id, review_date, reviewer,
                     commits_reviewed, summary, quality_score,
                     critical_issues, warnings, suggestions,
@@ -1536,7 +1536,7 @@ class RoadmapDatabase:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            cursor.execute("DELETE FROM implementation_commits WHERE roadmap_item_id = ?", (roadmap_item_id,))
+            cursor.execute("DELETE FROM review_commit WHERE roadmap_item_id = ?", (roadmap_item_id,))
 
             count = cursor.rowcount
             conn.commit()
@@ -1549,7 +1549,7 @@ class RoadmapDatabase:
             logger.error(f"Error deleting commits: {e}")
             return 0
 
-    def get_unreviewed_code_reviews(self) -> list[Dict]:
+    def get_unreviewed_review_code_review(self) -> list[Dict]:
         """Get code reviews not yet reviewed by architect (all agents can read).
 
         Returns:
@@ -1562,7 +1562,7 @@ class RoadmapDatabase:
 
             cursor.execute(
                 """
-                SELECT * FROM code_reviews
+                SELECT * FROM review_code_review
                 WHERE architect_reviewed = FALSE
                 ORDER BY review_date DESC
             """
@@ -1604,7 +1604,7 @@ class RoadmapDatabase:
 
             cursor.execute(
                 """
-                UPDATE code_reviews
+                UPDATE review_code_review
                 SET architect_reviewed = TRUE,
                     architect_reviewed_at = ?,
                     architect_comments = ?,
@@ -1638,22 +1638,22 @@ class RoadmapDatabase:
             cursor = conn.cursor()
 
             # Get roadmap item count
-            cursor.execute("SELECT COUNT(*) FROM roadmap_items")
+            cursor.execute("SELECT COUNT(*) FROM roadmap_priority")
             total_items = cursor.fetchone()[0]
 
             # Get items with specs
-            cursor.execute("SELECT COUNT(*) FROM roadmap_items WHERE spec_id IS NOT NULL")
+            cursor.execute("SELECT COUNT(*) FROM roadmap_priority WHERE spec_id IS NOT NULL")
             items_with_specs = cursor.fetchone()[0]
 
             # Get total specs (check if table exists)
             try:
-                cursor.execute("SELECT COUNT(*) FROM technical_specs")
+                cursor.execute("SELECT COUNT(*) FROM specs_specification")
                 total_specs = cursor.fetchone()[0]
 
-                cursor.execute("SELECT COUNT(*) FROM technical_specs WHERE status = 'complete'")
+                cursor.execute("SELECT COUNT(*) FROM specs_specification WHERE status = 'complete'")
                 complete_specs = cursor.fetchone()[0]
             except sqlite3.OperationalError:
-                # technical_specs table doesn't exist
+                # specs_specification table doesn't exist
                 total_specs = 0
                 complete_specs = 0
 
@@ -1661,7 +1661,7 @@ class RoadmapDatabase:
             cursor.execute(
                 """
                 SELECT COUNT(*)
-                FROM roadmap_items r
+                FROM roadmap_priority r
                 WHERE r.spec_id IS NOT NULL
                 AND r.status LIKE '%Planned%'
             """
@@ -1671,8 +1671,8 @@ class RoadmapDatabase:
             conn.close()
 
             return {
-                "total_roadmap_items": total_items,
-                "roadmap_items_with_specs": items_with_specs,
+                "total_roadmap_priority": total_items,
+                "roadmap_priority_with_specs": items_with_specs,
                 "total_specs": total_specs,
                 "complete_specs": complete_specs,
                 "items_ready_for_implementation": ready_for_impl,
@@ -1734,7 +1734,7 @@ class RoadmapDatabase:
             cursor = conn.cursor()
 
             # Check if spec_number already exists
-            cursor.execute("SELECT id FROM technical_specs WHERE spec_number = ?", (spec_number,))
+            cursor.execute("SELECT id FROM specs_specification WHERE spec_number = ?", (spec_number,))
             if cursor.fetchone():
                 conn.close()
                 raise ValueError(f"Spec number {spec_number} already exists")
@@ -1749,7 +1749,7 @@ class RoadmapDatabase:
             # Insert spec
             cursor.execute(
                 """
-                INSERT INTO technical_specs (
+                INSERT INTO specs_specification (
                     id, spec_number, title, roadmap_item_id,
                     status, spec_type, file_path, content,
                     dependencies, estimated_hours,
@@ -1779,7 +1779,7 @@ class RoadmapDatabase:
             if roadmap_item_id:
                 cursor.execute(
                     """
-                    UPDATE roadmap_items
+                    UPDATE roadmap_priority
                     SET spec_id = ?, updated_at = ?, updated_by = ?
                     WHERE id = ?
                 """,
@@ -1869,7 +1869,7 @@ class RoadmapDatabase:
             values.append(spec_id)
 
             query = f"""
-                UPDATE technical_specs
+                UPDATE specs_specification
                 SET {', '.join(updates)}
                 WHERE id = ?
             """
@@ -1912,9 +1912,9 @@ class RoadmapDatabase:
             cursor = conn.cursor()
 
             if spec_id:
-                cursor.execute("SELECT * FROM technical_specs WHERE id = ?", (spec_id,))
+                cursor.execute("SELECT * FROM specs_specification WHERE id = ?", (spec_id,))
             else:
-                cursor.execute("SELECT * FROM technical_specs WHERE roadmap_item_id = ?", (roadmap_item_id,))
+                cursor.execute("SELECT * FROM specs_specification WHERE roadmap_item_id = ?", (roadmap_item_id,))
 
             row = cursor.fetchone()
             conn.close()
@@ -1936,7 +1936,7 @@ class RoadmapDatabase:
             logger.error(f"Error getting technical spec: {e}")
             return None
 
-    def get_all_technical_specs(self, status: Optional[str] = None, spec_type: Optional[str] = None) -> List[Dict]:
+    def get_all_specs_specification(self, status: Optional[str] = None, spec_type: Optional[str] = None) -> List[Dict]:
         """Get all technical specifications with optional filtering.
 
         Args:
@@ -1951,7 +1951,7 @@ class RoadmapDatabase:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 
-            query = "SELECT * FROM technical_specs WHERE 1=1"
+            query = "SELECT * FROM specs_specification WHERE 1=1"
             params = []
 
             if status:

@@ -42,7 +42,7 @@ def temp_db():
     # Create tasks table (NEW schema)
     cursor.execute(
         """
-        CREATE TABLE implementation_tasks (
+        CREATE TABLE specs_task (
             task_id TEXT PRIMARY KEY,
             priority_number INTEGER NOT NULL,
             task_group_id TEXT NOT NULL,
@@ -86,14 +86,33 @@ def temp_db():
     """
     )
 
-    # Create technical_specs table
+    # Create specs_specification table
     cursor.execute(
         """
-        CREATE TABLE technical_specs (
+        CREATE TABLE specs_specification (
             id TEXT PRIMARY KEY,
             content TEXT NOT NULL,
             spec_type TEXT NOT NULL,
             created_at TEXT NOT NULL
+        )
+    """
+    )
+
+    # Create specs_task_dependency table
+    cursor.execute(
+        """
+        CREATE TABLE specs_task_dependency (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_group_id TEXT NOT NULL,
+            depends_on_group_id TEXT NOT NULL,
+            dependency_type TEXT NOT NULL,
+            reason TEXT,
+            created_at TEXT NOT NULL,
+            created_by TEXT NOT NULL,
+
+            UNIQUE(task_group_id, depends_on_group_id),
+            CHECK(task_group_id != depends_on_group_id),
+            CHECK(dependency_type IN ('hard', 'soft'))
         )
     """
     )
@@ -129,7 +148,7 @@ def sample_work(temp_db):
 
     cursor.execute(
         """
-        INSERT INTO implementation_tasks
+        INSERT INTO specs_task
         (task_id, priority_number, task_group_id, priority_order,
          spec_id, scope_description, assigned_files, status, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
@@ -177,7 +196,7 @@ def sample_spec(temp_db):
 
     cursor.execute(
         """
-        INSERT INTO technical_specs
+        INSERT INTO specs_specification
         (id, content, spec_type, created_at)
         VALUES (?, ?, ?, ?)
     """,
@@ -222,7 +241,7 @@ class TestQueryNextWorkForPriority:
         for i in range(1, 4):
             cursor.execute(
                 """
-                INSERT INTO implementation_tasks
+                INSERT INTO specs_task
                 (task_id, priority_number, task_group_id, priority_order,
                  spec_id, scope_description, assigned_files, status, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -257,7 +276,7 @@ class TestQueryNextWorkForPriority:
         # Insert 3 tasks: TASK-31-1 (in_progress), TASK-31-2 (pending), TASK-31-3 (pending)
         cursor.execute(
             """
-            INSERT INTO implementation_tasks
+            INSERT INTO specs_task
             (task_id, priority_number, task_group_id, priority_order,
              spec_id, scope_description, assigned_files, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -277,7 +296,7 @@ class TestQueryNextWorkForPriority:
 
         cursor.execute(
             """
-            INSERT INTO implementation_tasks
+            INSERT INTO specs_task
             (task_id, priority_number, task_group_id, priority_order,
              spec_id, scope_description, assigned_files, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -311,7 +330,7 @@ class TestQueryNextWorkForPriority:
         # Insert 2 tasks: TASK-31-1 (completed), TASK-31-2 (pending)
         cursor.execute(
             """
-            INSERT INTO implementation_tasks
+            INSERT INTO specs_task
             (task_id, priority_number, task_group_id, priority_order,
              spec_id, scope_description, assigned_files, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -331,7 +350,7 @@ class TestQueryNextWorkForPriority:
 
         cursor.execute(
             """
-            INSERT INTO implementation_tasks
+            INSERT INTO specs_task
             (task_id, priority_number, task_group_id, priority_order,
              spec_id, scope_description, assigned_files, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -392,7 +411,7 @@ class TestClaimWork:
 
         cursor.execute(
             """
-            UPDATE implementation_tasks
+            UPDATE specs_task
             SET status = 'in_progress',
                 process_id = 99999,
                 claimed_at = ?
@@ -418,7 +437,7 @@ class TestClaimWork:
         # Insert TASK-31-1 (pending) and TASK-31-2 (pending)
         cursor.execute(
             """
-            INSERT INTO implementation_tasks
+            INSERT INTO specs_task
             (task_id, priority_number, task_group_id, priority_order,
              spec_id, scope_description, assigned_files, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -438,7 +457,7 @@ class TestClaimWork:
 
         cursor.execute(
             """
-            INSERT INTO implementation_tasks
+            INSERT INTO specs_task
             (task_id, priority_number, task_group_id, priority_order,
              spec_id, scope_description, assigned_files, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -523,7 +542,7 @@ class TestUpdateWorkStatus:
         conn = sqlite3.connect(manager.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("SELECT status, started_at FROM implementation_tasks WHERE task_id = 'TASK-31-1'")
+        cursor.execute("SELECT status, started_at FROM specs_task WHERE task_id = 'TASK-31-1'")
         status, started_at = cursor.fetchone()
 
         conn.close()
@@ -541,7 +560,7 @@ class TestUpdateWorkStatus:
         conn = sqlite3.connect(manager.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("SELECT status, completed_at FROM implementation_tasks WHERE task_id = 'TASK-31-1'")
+        cursor.execute("SELECT status, completed_at FROM specs_task WHERE task_id = 'TASK-31-1'")
         status, completed_at = cursor.fetchone()
 
         conn.close()
@@ -560,7 +579,7 @@ class TestUpdateWorkStatus:
         conn = sqlite3.connect(manager.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("SELECT status, completed_at FROM implementation_tasks WHERE task_id = 'TASK-31-1'")
+        cursor.execute("SELECT status, completed_at FROM specs_task WHERE task_id = 'TASK-31-1'")
         status, completed_at = cursor.fetchone()
 
         conn.close()
@@ -650,7 +669,7 @@ class TestReadTechnicalSpecForWork:
 
         cursor.execute(
             """
-            INSERT INTO implementation_tasks
+            INSERT INTO specs_task
             (task_id, priority_number, task_group_id, priority_order,
              spec_id, scope_description, assigned_files, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
@@ -710,7 +729,7 @@ class TestWorkManagerIntegration:
         cursor = conn.cursor()
 
         # Check task status
-        cursor.execute("SELECT status FROM implementation_tasks WHERE task_id = 'TASK-31-1'")
+        cursor.execute("SELECT status FROM specs_task WHERE task_id = 'TASK-31-1'")
         status = cursor.fetchone()[0]
 
         # Check commits count
@@ -732,10 +751,10 @@ class TestTaskGroupDependencies:
         conn = sqlite3.connect(temp_db)
         cursor = conn.cursor()
 
-        # Create task_group_dependencies table
+        # Create specs_task_dependency table (if not exists - may be created by temp_db fixture)
         cursor.execute(
             """
-            CREATE TABLE task_group_dependencies (
+            CREATE TABLE IF NOT EXISTS specs_task_dependency (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 task_group_id TEXT NOT NULL,
                 depends_on_group_id TEXT NOT NULL,
@@ -759,7 +778,7 @@ class TestTaskGroupDependencies:
         # Insert tasks for GROUP-36 (prerequisite)
         cursor.execute(
             """
-            INSERT INTO implementation_tasks
+            INSERT INTO specs_task
             (task_id, priority_number, task_group_id, priority_order,
              spec_id, scope_description, assigned_files, status, created_at)
             VALUES ('TASK-36-1', 32, 'GROUP-36', 1, 'SPEC-136',
@@ -773,7 +792,7 @@ class TestTaskGroupDependencies:
         # Insert tasks for GROUP-20 (depends on GROUP-36)
         cursor.execute(
             """
-            INSERT INTO implementation_tasks
+            INSERT INTO specs_task
             (task_id, priority_number, task_group_id, priority_order,
              spec_id, scope_description, assigned_files, status, created_at)
             VALUES ('TASK-20-1', 32, 'GROUP-20', 2, 'SPEC-120',
@@ -787,7 +806,7 @@ class TestTaskGroupDependencies:
         # Insert tasks for GROUP-35 (depends on GROUP-36)
         cursor.execute(
             """
-            INSERT INTO implementation_tasks
+            INSERT INTO specs_task
             (task_id, priority_number, task_group_id, priority_order,
              spec_id, scope_description, assigned_files, status, created_at)
             VALUES ('TASK-35-1', 32, 'GROUP-35', 3, 'SPEC-135',
@@ -801,7 +820,7 @@ class TestTaskGroupDependencies:
         # Add dependencies: GROUP-20 and GROUP-35 depend on GROUP-36
         cursor.execute(
             """
-            INSERT INTO task_group_dependencies
+            INSERT INTO specs_task_dependency
             (task_group_id, depends_on_group_id, dependency_type, reason, created_at, created_by)
             VALUES ('GROUP-20', 'GROUP-36', 'hard',
                     'Requires JSON serialization library from SPEC-136', ?, 'architect')
@@ -811,7 +830,7 @@ class TestTaskGroupDependencies:
 
         cursor.execute(
             """
-            INSERT INTO task_group_dependencies
+            INSERT INTO specs_task_dependency
             (task_group_id, depends_on_group_id, dependency_type, reason, created_at, created_by)
             VALUES ('GROUP-35', 'GROUP-36', 'hard',
                     'Requires JSON serialization library from SPEC-136', ?, 'architect')
@@ -845,7 +864,7 @@ class TestTaskGroupDependencies:
         cursor = conn.cursor()
         cursor.execute(
             """
-            UPDATE implementation_tasks
+            UPDATE specs_task
             SET status = 'completed', completed_at = ?
             WHERE task_id = 'TASK-36-1'
         """,
@@ -889,7 +908,7 @@ class TestTaskGroupDependencies:
         cursor = conn.cursor()
         cursor.execute(
             """
-            UPDATE implementation_tasks
+            UPDATE specs_task
             SET status = 'completed', completed_at = ?
             WHERE task_id = 'TASK-36-1'
         """,

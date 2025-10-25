@@ -13,6 +13,7 @@
 
 **✅ COMPLETE**: Database-only spec storage with progressive disclosure
 **✅ COMPLETE**: Prevention mechanism (Database Schema Guide skill)
+**✅ COMPLETE**: Skill integration - architect and code_developer can now load the skill
 **Remaining**: Testing and optional migration of existing file-based specs
 
 ---
@@ -399,6 +400,15 @@ print(f"Found {len(hierarchical)} hierarchical specs")
    - Updated examples with phase content
    - Documented progressive disclosure workflow
    - Removed file references
+
+### Phase 4: Skill Integration (DISCOVERABILITY)
+7. **[Current]** - feat: Integrate database schema guide skill into agents
+   - ✅ Added `DATABASE_SCHEMA_GUIDE` to `SkillNames` enum
+   - ✅ Updated `architect.md` with skill usage documentation
+   - ✅ Updated `code_developer.md` with skill usage documentation
+   - ✅ Skill now discoverable and loadable via `load_skill(SkillNames.DATABASE_SCHEMA_GUIDE)`
+
+**Why this matters**: The prevention mechanism existed but wasn't discoverable. Now both agents have clear documentation on WHEN and HOW to use the skill to prevent database architecture errors.
 
 ---
 

@@ -30,7 +30,7 @@ def dump_spec_to_markdown(spec_id: str, output_dir: Path) -> None:
     cursor.execute(
         """
         SELECT *
-        FROM technical_specs
+        FROM specs_specification
         WHERE id = ?
     """,
         (spec_id,),
@@ -122,7 +122,7 @@ def dump_all_specs(output_dir: Path) -> None:
     conn = sqlite3.connect(db.db_path)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id FROM technical_specs ORDER BY spec_number")
+    cursor.execute("SELECT id FROM specs_specification ORDER BY spec_number")
     spec_ids = [row[0] for row in cursor.fetchall()]
     conn.close()
 
@@ -142,7 +142,7 @@ def dump_recent_specs(count: int, output_dir: Path) -> None:
     cursor.execute(
         """
         SELECT id
-        FROM technical_specs
+        FROM specs_specification
         ORDER BY updated_at DESC
         LIMIT ?
     """,

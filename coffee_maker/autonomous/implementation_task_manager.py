@@ -1,16 +1,16 @@
 """Implementation task management for code_developer parallel execution.
 
-This module enables code_developer to claim implementation_tasks from the database,
+This module enables code_developer to claim specs_task from the database,
 validate file access against assigned_files, and track task lifecycle.
 
 Key Concepts:
 - task: A unit of implementation task (e.g., "Phase 1 of PRIORITY 31")
-- task_group_id: Groups sequential implementation_tasks (e.g., "GROUP-31" for 4 phases)
+- task_group_id: Groups sequential specs_task (e.g., "GROUP-31" for 4 phases)
 - priority_order: Enforces sequential execution within group (1, 2, 3, 4)
 
 Database Integration:
 - Uses TechnicalSpecSkill for reading specs (shared skill pattern)
-- Direct database access only for implementation_tasks table operations
+- Direct database access only for specs_task table operations
 
 Author: code_developer
 Date: 2025-10-23
@@ -64,7 +64,7 @@ class ImplementationTaskManager:
         """Initialize ImplementationTaskManager.
 
         Args:
-            db_path: Path to SQLite database with implementation_tasks table
+            db_path: Path to SQLite database with specs_task table
             agent_name: Agent using this manager (default: "code_developer")
         """
         self.db_path = db_path
@@ -88,13 +88,13 @@ class ImplementationTaskManager:
 
         Returns:
             Next pending task in sequence, or None if:
-            - All implementation_tasks completed
+            - All specs_task completed
             - Waiting for earlier task in sequence to complete
             - Waiting for dependency (another task_group_id) to complete
 
         Example:
             priority_number=31
-            implementation_tasks in GROUP-31: [TASK-31-1, TASK-31-2, TASK-31-3, TASK-31-4]
+            specs_task in GROUP-31: [TASK-31-1, TASK-31-2, TASK-31-3, TASK-31-4]
 
             If TASK-31-1 is completed, returns TASK-31-2
             If TASK-31-1 is in_progress, returns None (wait for it)
@@ -106,19 +106,19 @@ class ImplementationTaskManager:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        # Get all implementation_tasks for this priority, excluding groups with incomplete dependencies
+        # Get all specs_task for this priority, excluding groups with incomplete dependencies
         cursor.execute(
             """
-            SELECT * FROM implementation_tasks
+            SELECT * FROM specs_task
             WHERE priority_number = ?
               AND task_group_id NOT IN (
                   -- Exclude task groups with incomplete hard dependencies
                   SELECT tgd.task_group_id
-                  FROM task_group_dependencies tgd
+                  FROM specs_task_dependency tgd
                   WHERE tgd.dependency_type = 'hard'
                     AND EXISTS (
                         SELECT 1
-                        FROM implementation_tasks dep_tasks
+                        FROM specs_task dep_tasks
                         WHERE dep_tasks.task_group_id = tgd.depends_on_group_id
                           AND dep_tasks.status != 'completed'
                     )
@@ -128,23 +128,23 @@ class ImplementationTaskManager:
             (priority_number,),
         )
 
-        implementation_tasks = [dict(row) for row in cursor.fetchall()]
+        specs_task = [dict(row) for row in cursor.fetchall()]
 
         # Get blocked task groups (for logging)
         cursor.execute(
             """
             SELECT tgd.task_group_id, tgd.depends_on_group_id, tgd.reason
-            FROM task_group_dependencies tgd
+            FROM specs_task_dependency tgd
             WHERE tgd.dependency_type = 'hard'
               AND EXISTS (
                   SELECT 1
-                  FROM implementation_tasks t
+                  FROM specs_task t
                   WHERE t.task_group_id = tgd.task_group_id
                     AND t.priority_number = ?
               )
               AND EXISTS (
                   SELECT 1
-                  FROM implementation_tasks dep_tasks
+                  FROM specs_task dep_tasks
                   WHERE dep_tasks.task_group_id = tgd.depends_on_group_id
                     AND dep_tasks.status != 'completed'
               )
@@ -163,11 +163,11 @@ class ImplementationTaskManager:
                     f"depends on {blocked['depends_on_group_id']} (reason: {blocked['reason']})"
                 )
 
-        if not implementation_tasks:
+        if not specs_task:
             return None
 
         # Find next pending task in sequence
-        for task in implementation_tasks:
+        for task in specs_task:
             if task["status"] == "pending" and task["process_id"] is None:
                 return task
             elif task["status"] in ["pending", "in_progress"]:
@@ -179,17 +179,17 @@ class ImplementationTaskManager:
                     )
                 return None
 
-        # All implementation_tasks completed
+        # All specs_task completed
         return None
 
     def query_available_works(self, task_group_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Query available implementation_tasks from database (respecting dependencies).
+        """Query available specs_task from database (respecting dependencies).
 
         Args:
             task_group_id: Filter by task_group_id (e.g., "GROUP-31")
 
         Returns:
-            List of available implementation_tasks (status='pending', respecting sequential order and dependencies)
+            List of available specs_task (status='pending', respecting sequential order and dependencies)
 
         Note:
             Excludes tasks from groups with incomplete hard dependencies.
@@ -202,18 +202,18 @@ class ImplementationTaskManager:
         if task_group_id:
             cursor.execute(
                 """
-                SELECT * FROM implementation_tasks
+                SELECT * FROM specs_task
                 WHERE status = 'pending'
                   AND process_id IS NULL
                   AND task_group_id = ?
                   AND task_group_id NOT IN (
                       -- Exclude if this group has incomplete hard dependencies
                       SELECT tgd.task_group_id
-                      FROM task_group_dependencies tgd
+                      FROM specs_task_dependency tgd
                       WHERE tgd.dependency_type = 'hard'
                         AND EXISTS (
                             SELECT 1
-                            FROM implementation_tasks dep_tasks
+                            FROM specs_task dep_tasks
                             WHERE dep_tasks.task_group_id = tgd.depends_on_group_id
                               AND dep_tasks.status != 'completed'
                         )
@@ -225,17 +225,17 @@ class ImplementationTaskManager:
         else:
             cursor.execute(
                 """
-                SELECT * FROM implementation_tasks
+                SELECT * FROM specs_task
                 WHERE status = 'pending'
                   AND process_id IS NULL
                   AND task_group_id NOT IN (
                       -- Exclude groups with incomplete hard dependencies
                       SELECT tgd.task_group_id
-                      FROM task_group_dependencies tgd
+                      FROM specs_task_dependency tgd
                       WHERE tgd.dependency_type = 'hard'
                         AND EXISTS (
                             SELECT 1
-                            FROM implementation_tasks dep_tasks
+                            FROM specs_task dep_tasks
                             WHERE dep_tasks.task_group_id = tgd.depends_on_group_id
                               AND dep_tasks.status != 'completed'
                         )
@@ -244,10 +244,10 @@ class ImplementationTaskManager:
             """
             )
 
-        implementation_tasks = [dict(row) for row in cursor.fetchall()]
+        specs_task = [dict(row) for row in cursor.fetchall()]
         conn.close()
 
-        return implementation_tasks
+        return specs_task
 
     def claim_work(self, task_id: str) -> bool:
         """Atomically claim a task (race-safe).
@@ -268,7 +268,7 @@ class ImplementationTaskManager:
         try:
             # Check if task exists
             cursor.execute(
-                "SELECT status, process_id, priority_order, task_group_id FROM implementation_tasks WHERE task_id = ?",
+                "SELECT status, process_id, priority_order, task_group_id FROM specs_task WHERE task_id = ?",
                 (task_id,),
             )
             result = cursor.fetchone()
@@ -281,11 +281,11 @@ class ImplementationTaskManager:
             if process_id == os.getpid() and self.current_work:
                 raise TaskAlreadyClaimedError(f"task {task_id} already claimed by this instance")
 
-            # Validate sequential ordering: check if earlier implementation_tasks in group are completed
+            # Validate sequential ordering: check if earlier specs_task in group are completed
             if priority_order > 1:
                 cursor.execute(
                     """
-                    SELECT task_id, status, priority_order FROM implementation_tasks
+                    SELECT task_id, status, priority_order FROM specs_task
                     WHERE task_group_id = ?
                       AND priority_order < ?
                     ORDER BY priority_order ASC
@@ -309,7 +309,7 @@ class ImplementationTaskManager:
             current_pid = os.getpid()
             cursor.execute(
                 """
-                UPDATE implementation_tasks
+                UPDATE specs_task
                 SET status = 'in_progress',
                     process_id = ?,
                     claimed_at = ?
@@ -329,10 +329,10 @@ class ImplementationTaskManager:
                 return False
 
             # Load full task data
-            cursor.execute("SELECT * FROM implementation_tasks WHERE task_id = ?", (task_id,))
+            cursor.execute("SELECT * FROM specs_task WHERE task_id = ?", (task_id,))
             conn.row_factory = sqlite3.Row
             cursor_with_factory = conn.cursor()
-            cursor_with_factory.execute("SELECT * FROM implementation_tasks WHERE task_id = ?", (task_id,))
+            cursor_with_factory.execute("SELECT * FROM specs_task WHERE task_id = ?", (task_id,))
             self.current_work = dict(cursor_with_factory.fetchone())
 
             # Parse assigned_files
@@ -411,7 +411,7 @@ class ImplementationTaskManager:
         if status == "in_progress":
             cursor.execute(
                 """
-                UPDATE implementation_tasks
+                UPDATE specs_task
                 SET status = ?,
                     started_at = ?
                 WHERE task_id = ?
@@ -421,7 +421,7 @@ class ImplementationTaskManager:
         elif status == "completed":
             cursor.execute(
                 """
-                UPDATE implementation_tasks
+                UPDATE specs_task
                 SET status = ?,
                     completed_at = ?
                 WHERE task_id = ?
@@ -431,7 +431,7 @@ class ImplementationTaskManager:
         elif status == "failed":
             cursor.execute(
                 """
-                UPDATE implementation_tasks
+                UPDATE specs_task
                 SET status = ?,
                     completed_at = ?
                 WHERE task_id = ?
@@ -528,7 +528,7 @@ class ImplementationTaskManager:
             cursor = conn.cursor()
 
             cursor.execute(
-                "SELECT content, spec_type FROM technical_specs WHERE id = ?",
+                "SELECT content, spec_type FROM specs_specification WHERE id = ?",
                 (spec_id,),
             )
             result = cursor.fetchone()
@@ -592,7 +592,7 @@ class ImplementationTaskManager:
             cursor = conn.cursor()
 
             cursor.execute(
-                "SELECT content, spec_type FROM technical_specs WHERE id = ?",
+                "SELECT content, spec_type FROM specs_specification WHERE id = ?",
                 (spec_id,),
             )
             result = cursor.fetchone()

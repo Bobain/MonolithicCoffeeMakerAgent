@@ -29,7 +29,7 @@ from coffee_maker.autonomous.implementation_task_creator import (
 
 @pytest.fixture
 def temp_db():
-    """Create temporary database with tasks and technical_specs tables."""
+    """Create temporary database with tasks and specs_specification tables."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".db", delete=False) as f:
         db_path = f.name
 
@@ -39,7 +39,7 @@ def temp_db():
     # Create tasks table
     cursor.execute(
         """
-        CREATE TABLE implementation_tasks (
+        CREATE TABLE specs_task (
             task_id TEXT PRIMARY KEY,
             priority_number INTEGER NOT NULL,
             task_group_id TEXT NOT NULL,
@@ -65,10 +65,10 @@ def temp_db():
     """
     )
 
-    # Create technical_specs table
+    # Create specs_specification table
     cursor.execute(
         """
-        CREATE TABLE technical_specs (
+        CREATE TABLE specs_specification (
             id TEXT PRIMARY KEY,
             content TEXT NOT NULL,
             spec_type TEXT NOT NULL,
@@ -120,7 +120,7 @@ Create `tests/integration/test_full_workflow.py` for integration tests.
 
     cursor.execute(
         """
-        INSERT INTO technical_specs (id, content, spec_type, created_at)
+        INSERT INTO specs_specification (id, content, spec_type, created_at)
         VALUES (?, ?, ?, ?)
     """,
         (spec_id, json.dumps(spec_json), spec_type, datetime.now().isoformat()),
@@ -156,7 +156,7 @@ Add tests in test_core.py.
 
     cursor.execute(
         """
-        INSERT INTO technical_specs (id, content, spec_type, created_at)
+        INSERT INTO specs_specification (id, content, spec_type, created_at)
         VALUES (?, ?, ?, ?)
     """,
         (spec_id, spec_content, spec_type, datetime.now().isoformat()),
@@ -388,7 +388,7 @@ class TestInsertWork:
         conn = sqlite3.connect(creator.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM implementation_tasks WHERE task_id = ?", ("TASK-31-1",))
+        cursor.execute("SELECT * FROM specs_task WHERE task_id = ?", ("TASK-31-1",))
         result = cursor.fetchone()
 
         conn.close()
@@ -427,7 +427,7 @@ class TestCreateWorksForSpec:
         conn = sqlite3.connect(creator.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("SELECT COUNT(*) FROM implementation_tasks WHERE task_group_id = ?", ("GROUP-100",))
+        cursor.execute("SELECT COUNT(*) FROM specs_task WHERE task_group_id = ?", ("GROUP-100",))
         count = cursor.fetchone()[0]
 
         conn.close()
@@ -453,7 +453,7 @@ Modify `conflict.py` file.
 
         cursor.execute(
             """
-            INSERT INTO technical_specs (id, content, spec_type, created_at)
+            INSERT INTO specs_specification (id, content, spec_type, created_at)
             VALUES (?, ?, ?, ?)
         """,
             (
@@ -501,7 +501,7 @@ Create `coffee_maker/api.py` file.
         ]:
             cursor.execute(
                 """
-                INSERT INTO technical_specs (id, content, spec_type, created_at)
+                INSERT INTO specs_specification (id, content, spec_type, created_at)
                 VALUES (?, ?, ?, ?)
             """,
                 (
@@ -546,7 +546,7 @@ Modify `coffee_maker/shared.py` file.
         ]:
             cursor.execute(
                 """
-                INSERT INTO technical_specs (id, content, spec_type, created_at)
+                INSERT INTO specs_specification (id, content, spec_type, created_at)
                 VALUES (?, ?, ?, ?)
             """,
                 (

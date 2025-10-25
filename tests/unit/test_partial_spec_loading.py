@@ -27,17 +27,17 @@ from coffee_maker.autonomous.implementation_task_manager import (
 
 @pytest.fixture
 def temp_db():
-    """Create temporary database with implementation_tasks and technical_specs tables."""
+    """Create temporary database with specs_task and specs_specification tables."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".db", delete=False) as f:
         db_path = f.name
 
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Create implementation_tasks table
+    # Create specs_task table
     cursor.execute(
         """
-        CREATE TABLE implementation_tasks (
+        CREATE TABLE specs_task (
             task_id TEXT PRIMARY KEY,
             priority_number INTEGER NOT NULL,
             task_group_id TEXT NOT NULL,
@@ -63,10 +63,10 @@ def temp_db():
     """
     )
 
-    # Create technical_specs table
+    # Create specs_specification table
     cursor.execute(
         """
-        CREATE TABLE technical_specs (
+        CREATE TABLE specs_specification (
             id TEXT PRIMARY KEY,
             content TEXT NOT NULL,
             spec_type TEXT NOT NULL,
@@ -84,7 +84,7 @@ def temp_db():
             commit_sha TEXT NOT NULL,
             commit_message TEXT,
             committed_at TEXT NOT NULL,
-            FOREIGN KEY (task_id) REFERENCES implementation_tasks(task_id)
+            FOREIGN KEY (task_id) REFERENCES specs_task(task_id)
         )
     """
     )
@@ -119,7 +119,7 @@ def large_hierarchical_spec(temp_db):
 
     cursor.execute(
         """
-        INSERT INTO technical_specs (id, content, spec_type, created_at)
+        INSERT INTO specs_specification (id, content, spec_type, created_at)
         VALUES (?, ?, ?, ?)
     """,
         (spec_id, json.dumps(spec_json), spec_type, datetime.now().isoformat()),
@@ -157,7 +157,7 @@ class TestPartialSpecLoading:
 
         cursor.execute(
             """
-            INSERT INTO implementation_tasks (
+            INSERT INTO specs_task (
                 task_id, priority_number, task_group_id, priority_order,
                 spec_id, scope_description, assigned_files, spec_sections,
                 status, created_at
@@ -213,7 +213,7 @@ class TestPartialSpecLoading:
 
         cursor.execute(
             """
-            INSERT INTO implementation_tasks (
+            INSERT INTO specs_task (
                 task_id, priority_number, task_group_id, priority_order,
                 spec_id, scope_description, assigned_files, spec_sections,
                 status, created_at
@@ -262,7 +262,7 @@ class TestPartialSpecLoading:
 
         cursor.execute(
             """
-            INSERT INTO implementation_tasks (
+            INSERT INTO specs_task (
                 task_id, priority_number, task_group_id, priority_order,
                 spec_id, scope_description, assigned_files, spec_sections,
                 status, created_at
@@ -307,7 +307,7 @@ class TestPartialSpecLoading:
         # Task 1: Only overview
         cursor.execute(
             """
-            INSERT INTO implementation_tasks (
+            INSERT INTO specs_task (
                 task_id, priority_number, task_group_id, priority_order,
                 spec_id, scope_description, assigned_files, spec_sections,
                 status, created_at
@@ -330,7 +330,7 @@ class TestPartialSpecLoading:
         # Task 2: Only testing
         cursor.execute(
             """
-            INSERT INTO implementation_tasks (
+            INSERT INTO specs_task (
                 task_id, priority_number, task_group_id, priority_order,
                 spec_id, scope_description, assigned_files, spec_sections,
                 status, created_at
@@ -392,7 +392,7 @@ class TestScopeDescriptionUsage:
 
         cursor.execute(
             """
-            INSERT INTO implementation_tasks (
+            INSERT INTO specs_task (
                 task_id, priority_number, task_group_id, priority_order,
                 spec_id, scope_description, assigned_files, spec_sections,
                 status, created_at

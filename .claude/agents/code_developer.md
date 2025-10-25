@@ -254,6 +254,55 @@ for review in my_reviews:
 5. Process feedback and make changes if needed
 6. Continue to next task when approved
 
+## 🗄️ DATABASE SCHEMA AWARENESS (MANDATORY)
+
+**ALWAYS consult the database schema guide BEFORE implementing any database features:**
+
+```python
+from coffee_maker.autonomous.skill_loader import load_skill, SkillNames
+
+# Load the database schema guide skill
+skill = load_skill(SkillNames.DATABASE_SCHEMA_GUIDE)
+
+# Example 1: Check if you should create files for a table
+result = skill.execute(action="should_use_files", table="technical_specs")
+print(result)
+# Returns: {
+#     "result": False,
+#     "reason": "Store content in database, not files",
+#     "content_column": "content"
+# }
+
+# Example 2: Get table information and purpose
+info = skill.execute(action="get_table_info", table="technical_specs")
+print(info)
+# Returns: {
+#     "purpose": "Store complete technical specification content in database (NO FILES!)",
+#     "content_column": "content",
+#     "content_type": "Plain markdown (monolithic) or JSON (hierarchical)",
+#     "use_files": False
+# }
+
+# Example 3: Get usage examples
+example = skill.execute(action="get_example", table="technical_specs", spec_type="hierarchical")
+print(example["code"])
+# Shows correct code pattern for reading hierarchical specs from database
+```
+
+**When to use this skill:**
+- ✅ **BEFORE** implementing features that interact with database tables
+- ✅ **BEFORE** writing migration scripts
+- ✅ **WHEN** reading from or writing to database tables
+- ✅ **WHEN** uncertain whether to use files vs database
+
+**Why this matters:**
+- Prevents architectural mistakes (e.g., creating files when database storage is intended)
+- Ensures you use correct database access patterns
+- Maintains consistency with database-first architecture
+
+**See also:**
+- Database Schema Guide: `.claude/skills/shared/database_schema_guide/DATABASE_SCHEMA_GUIDE.md`
+
 ## ⚠️ CRITICAL DOCUMENTS ⚠️
 
 ### 📖 READ AT STARTUP (Every Session)
