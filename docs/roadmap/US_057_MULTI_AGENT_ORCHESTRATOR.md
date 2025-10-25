@@ -65,7 +65,7 @@ PROPOSED (Parallel):
 │  [code_developer] ───► Implementing         │
 │  [assistant] ────────► Creating demos       │
 │  [project_manager] ──► Monitoring GitHub    │
-│  [code-searcher] ────► Analyzing codebase   │
+│  [assistant (with code analysis skills)] ────► Analyzing codebase   │
 │  [ux-design-expert] ─► Reviewing UI/UX      │
 │                                             │
 │  All running simultaneously!                │
@@ -78,7 +78,7 @@ PROPOSED (Parallel):
 1. **Spec Creation Blocking**: code_developer waits for architect to create specs (CFR-011 violation)
 2. **No Continuous QA**: assistant only creates demos when manually requested
 3. **Reactive Monitoring**: project_manager only checks status when user asks
-4. **Missed Opportunities**: code-searcher insights delay architecture improvements
+4. **Missed Opportunities**: assistant (with code analysis skills) insights delay architecture improvements
 5. **Design Feedback Lag**: ux-design-expert only consulted reactively
 
 ---
@@ -102,7 +102,7 @@ while True:
             create_technical_spec(priority)
             commit_to_roadmap_branch()  # CFR-013
 
-    # Daily: Read code-searcher reports
+    # Daily: Read assistant (with code analysis skills) reports
     new_reports = get_new_code_searcher_reports()
     for report in new_reports:
         analyze_findings(report)
@@ -122,7 +122,7 @@ while True:
 
 **Key Responsibilities**:
 - Create 3-5 specs AHEAD of code_developer (CFR-011)
-- Read code-searcher reports daily, integrate findings
+- Read assistant (with code analysis skills) reports daily, integrate findings
 - Analyze codebase weekly for refactoring opportunities
 - Respond to urgent spec requests (CFR-012)
 
@@ -261,7 +261,7 @@ while True:
 - Answer quick questions when asked
 - Keep ROADMAP details in mind at all times
 
-#### 5. code-searcher (Continuous Analysis)
+#### 5. assistant (with code analysis skills) (Continuous Analysis)
 **Continuous Work Loop**:
 ```python
 while True:
@@ -355,7 +355,7 @@ class AutonomousTeamOrchestrator:
             AgentType.CODE_DEVELOPER: CodeDeveloperAgent(),
             AgentType.PROJECT_MANAGER: ProjectManagerAgent(),
             AgentType.ASSISTANT: AssistantAgent(),
-            AgentType.CODE_SEARCHER: CodeSearcherAgent(),
+            AgentType.ASSISTANT: CodeSearcherAgent(),
             AgentType.UX_DESIGN_EXPERT: UXDesignExpertAgent(),
         }
 
@@ -495,7 +495,7 @@ Each agent ONLY modifies files it owns:
 | code_developer | coffee_maker/, tests/, scripts/, .claude/ |
 | project_manager | docs/roadmap/, docs/*.md (top-level) |
 | assistant | (READ-ONLY for code/docs, ACTIVE for demos/bugs) |
-| code-searcher | (READ-ONLY everywhere) |
+| assistant (with code analysis skills) | (READ-ONLY everywhere) |
 | ux-design-expert | (Provides specs, doesn't implement) |
 
 #### 4. CFR-012 Interrupt Handling
@@ -598,7 +598,7 @@ class BaseAgent:
 #### 2.2 Create architect Agent (2 days)
 - [ ] Implement `ArchitectAgent` with CFR-011 logic
 - [ ] Morning ROADMAP check for spec coverage
-- [ ] Daily code-searcher report reading
+- [ ] Daily assistant (with code analysis skills) report reading
 - [ ] Weekly codebase analysis
 - [ ] Test in orchestrator
 
@@ -615,7 +615,7 @@ class BaseAgent:
 - [ ] Bug detection and comprehensive reporting
 - [ ] Test in orchestrator
 
-#### 2.5 Create code-searcher & ux-design-expert Agents (1 day)
+#### 2.5 Create assistant (with code analysis skills) & ux-design-expert Agents (1 day)
 - [ ] Implement `CodeSearcherAgent` (weekly analysis)
 - [ ] Implement `UXDesignExpertAgent` (reactive + review)
 - [ ] Test in orchestrator
@@ -652,7 +652,7 @@ class BaseAgent:
 - architect unblocking code_developer: Proactive
 - assistant QA coverage: 100% of features
 - project_manager visibility: Real-time
-- code-searcher insights: Weekly integration
+- assistant (with code analysis skills) insights: Weekly integration
 
 ---
 
@@ -714,7 +714,7 @@ Total: 4 hours (architect finishes first, developer starts immediately)
 **Result**: Issues caught early, no surprises.
 
 ### 5. Learning (Continuous Improvement)
-**Weekly Analysis**: code-searcher provides regular insights.
+**Weekly Analysis**: assistant (with code analysis skills) provides regular insights.
 
 **Example**:
 - Every Monday: Security audit
@@ -993,7 +993,7 @@ git branch --show-current  # Should always show "roadmap"
 - [ ] code_developer implementation time unchanged (~4 hours/priority)
 - [ ] assistant creates demo within 30 minutes of completion
 - [ ] project_manager checks GitHub every 15 minutes
-- [ ] code-searcher runs weekly analysis automatically
+- [ ] assistant (with code analysis skills) runs weekly analysis automatically
 - [ ] Overall priority completion time reduced by 50% (3-6x speedup)
 
 ### Quality Requirements
@@ -1085,7 +1085,7 @@ git branch --show-current  # Should always show "roadmap"
 
 **Week 3: Completion**
 - Day 1-2: Create assistant agent
-- Day 3: Create code-searcher & ux-design-expert agents
+- Day 3: Create assistant (with code analysis skills) & ux-design-expert agents
 - Day 4-5: Integration testing, documentation, deployment
 
 **Total**: 15 working days (3 weeks)

@@ -1,28 +1,28 @@
 """
 Integration test for roadmap-health skill with real ROADMAP.md.
 
+Updated to use Pythonic imports (PRIORITY 26).
+
 Tests the full workflow against the actual project ROADMAP.
 
 Author: code_developer (implementing US-070)
 Date: 2025-10-19
 """
 
-import importlib.util
 import sys
 import time
 from pathlib import Path
 
 import pytest
 
+# Add .claude to path for skill imports (PRIORITY 26)
+repo_root = Path(__file__).parent.parent.parent.parent
+sys.path.insert(0, str(repo_root / ".claude"))
 
-# Load roadmap_health module
-skill_path = (
-    Path(__file__).parent.parent.parent.parent / ".claude/skills/project-manager/roadmap-health/roadmap_health.py"
-)
-spec = importlib.util.spec_from_file_location("roadmap_health", skill_path)
-rh = importlib.util.module_from_spec(spec)
+# Import using proper Python imports (PRIORITY 26)
+from claude.skills.project_manager.roadmap_health import roadmap_health as rh
+
 sys.modules["roadmap_health"] = rh
-spec.loader.exec_module(rh)
 
 
 class TestRoadmapHealthIntegration:

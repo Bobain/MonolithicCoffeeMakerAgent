@@ -19,7 +19,7 @@ Phase 3: architect + project_manager Skills (US-068, US-069, US-070, US-071) - 2
 Phase 4: Orchestrator Agent (US-072 through US-077) - 30-40 hrs
 Phase 5: Reflector Agent (US-078 through US-083) - 20-25 hrs
 Phase 6: Curator Agent (US-084 through US-089) - 25-30 hrs
-Phase 7: code-searcher Migration (US-090 through US-096) - 25-30 hrs
+Phase 7: assistant (with code analysis skills) Migration (US-090 through US-096) - 25-30 hrs
 Phase 8: Advanced Skills (US-097 through US-101) - 40-50 hrs
 
 Total: 185-235 hours (8-12 weeks)
@@ -42,7 +42,7 @@ Timeline: Sequential execution, baseline velocity (1x)
 **We will implement PHASE 0 (Skills Infrastructure) BEFORE Phases 1-7 (ACE Agents).**
 
 **Phase 0 Definition**: All skills that accelerate code_developer and architect velocity
-- **Group 1**: code-searcher → 5 Skills Migration (US-090 through US-096)
+- **Group 1**: assistant (with code analysis skills) → 5 Skills Migration (US-090 through US-096)
 - **Group 2**: Agent Startup Skills (US-062, US-063, US-064)
 - **Group 3**: code_developer Acceleration Skills (US-065, US-066, US-067, US-102)
 - **Group 4**: architect Acceleration Skills (US-068, US-069, US-097, US-103)
@@ -50,7 +50,7 @@ Timeline: Sequential execution, baseline velocity (1x)
 **New Implementation Order**:
 ```
 PHASE 0 (3-4 weeks):
-├─ Group 1: code-searcher → Skills (33-42 hrs) ← Foundation
+├─ Group 1: assistant (with code analysis skills) → Skills (33-42 hrs) ← Foundation
 ├─ Group 2: Startup Skills (30-45 hrs) ← CFR-007 fix
 ├─ Group 3: code_developer Skills (23-31 hrs) ← +200-400% velocity
 └─ Group 4: architect Skills (28-38 hrs) ← +150-250% velocity
@@ -241,7 +241,7 @@ Agents must learn to use skills effectively:
 - Baseline velocity (1x) throughout implementation
 - Total time: 8-12 weeks (slower)
 - CFR-007 violations persist until Phase 1 complete
-- No velocity improvement until Phase 7 (code-searcher migration)
+- No velocity improvement until Phase 7 (assistant (with code analysis skills) migration)
 
 **Why Rejected**: Misses opportunity for 3-5x velocity improvement that makes EVERYTHING faster
 
@@ -262,7 +262,7 @@ Agents must learn to use skills effectively:
 
 ### Alternative 3: Minimal Phase 0 (Top 3 Skills Only)
 
-**Approach**: Implement ONLY highest-impact skills (code-searcher migration, test-failure-analysis, spec-creation-automation)
+**Approach**: Implement ONLY highest-impact skills (assistant (with code analysis skills) migration, test-failure-analysis, spec-creation-automation)
 
 **Pros**:
 - Faster Phase 0 (1-2 weeks vs 3-4 weeks)
@@ -284,13 +284,13 @@ Agents must learn to use skills effectively:
 **Week 1: Foundation (CRITICAL)**
 - US-091: Code Index Infrastructure (5-7 hrs)
 - US-090: Create 5 Code Analysis Skills (20-25 hrs)
-- US-092: Migrate code-searcher to architect (3-5 hrs)
-- US-093: Migrate code-searcher to code_developer (3-5 hrs)
+- US-092: Migrate assistant (with code analysis skills) to architect (3-5 hrs)
+- US-093: Migrate assistant (with code analysis skills) to code_developer (3-5 hrs)
 - US-094: Transition validation (2-3 hrs)
-- US-095: Retire code-searcher (1-2 hrs)
-- US-096: Archive code-searcher.md (1 hr)
+- US-095: Retire assistant (with code analysis skills) (1-2 hrs)
+- US-096: Archive assistant (with code analysis skills).md (1 hr)
 
-**Milestone**: Code analysis 50-150x faster, code-searcher retired
+**Milestone**: Code analysis 50-150x faster, assistant (with code analysis skills) retired
 
 **Week 2: Stability + Refactoring**
 - US-062: code-developer-startup skill (10-15 hrs)

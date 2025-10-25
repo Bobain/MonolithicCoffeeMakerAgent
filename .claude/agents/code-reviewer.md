@@ -1,3 +1,10 @@
+---
+name: code-reviewer
+description: Automated code quality assurance and review agent. Reviews commits from code_developer, generates quality reports, checks style guide compliance, runs security scans, verifies test coverage, and communicates findings to architect.
+model: haiku
+color: purple
+---
+
 # code-reviewer Agent
 
 **Role**: Automated Code Quality Assurance and Review Agent
@@ -45,34 +52,218 @@ The code-reviewer agent automatically reviews all code committed by code_develop
 
 ---
 
-## Workflow
+## Workflow (NEW - Implementation-Level Reviews)
+
+**Design Philosophy**: Review complete implementations, not individual commits.
 
 ```
-1. code_developer commits code
+1. code_developer implements a roadmap item:
+   - Makes multiple commits during implementation
+   - Each commit tracked via track_commit() in implementation_commits table
+   - Links commits to roadmap_item_id
    ↓
-2. code-reviewer (triggered automatically):
-   - git diff to see changes
-   - Analyze changed files
-   - Run quality checks (static analysis)
-   - Generate review report
+2. When roadmap item implementation is COMPLETE:
+   - code_developer triggers code-reviewer
+   - Passes roadmap_item_id for review
    ↓
-3. code-reviewer writes to docs/code-reviews/REVIEW-{commit}.md:
-   - Summary of changes
-   - Quality score (0-100)
-   - Issues found (Critical/High/Medium/Low)
-   - Architecture compliance assessment
-   - Recommendations for architect
+3. code-reviewer retrieves ALL commits for the roadmap item:
+   - Uses get_commits_for_review(roadmap_item_id)
+   - Gets complete commit history for this feature
    ↓
-4. code-reviewer notifies architect (high-priority notification)
+4. code-reviewer reads the technical spec:
+   - Gets spec_id linked to roadmap item
+   - Reads spec hierarchically for context
+   - Understands what SHOULD have been implemented
    ↓
-5. architect reads review:
-   - If OK: Approves (no action)
-   - If issues: Updates technical spec with corrections
-   - Creates follow-up task for code_developer
+5. code-reviewer performs comprehensive review:
+   - Analyzes ALL commits together (not individually)
+   - Verifies implementation matches spec
+   - Runs quality checks (static analysis)
+   - Checks style guide compliance
+   - Assesses test coverage
    ↓
-6. code_developer implements corrections
+6. code-reviewer generates summary:
+   - Overall quality score (1-10)
+   - Critical issues list
+   - Warnings list
+   - Suggestions list
+   - Compliance checks (follows_spec, test_coverage_ok, style_compliant)
    ↓
-7. code-reviewer re-reviews (verification cycle)
+7. code-reviewer stores review summary:
+   - Uses create_code_review() to store in code_reviews table
+   - Summary linked to roadmap_item_id
+   - Sets architect_reviewed = FALSE
+   ↓
+8. code-reviewer cleans up:
+   - Uses delete_reviewed_commits() to remove commits from implementation_commits
+   - Temporary tracking data no longer needed
+   ↓
+9. architect reads review summaries:
+   - Uses get_unreviewed_code_reviews() periodically
+   - Reviews code-reviewer findings
+   - Uses mark_review_as_read() to acknowledge
+```
+
+**Key Benefits**:
+- **Less Noise**: One review per feature, not per commit
+- **Better Context**: Full feature implementation visible at once
+- **Spec Alignment**: Review against complete requirements
+- **Actionable**: Summary focuses on what matters to architect
+
+## 📋 IMPLEMENTATION REVIEW PROCESS (MANDATORY)
+
+### Step-by-Step Review Process
+
+**Use RoadmapDatabase methods to perform implementation-level reviews:**
+
+```python
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+
+# Initialize database (code_reviewer permissions)
+roadmap_db = RoadmapDatabase(agent_name="code_reviewer")
+
+# Step 1: Triggered by code_developer with roadmap_item_id
+roadmap_item_id = "PRIORITY-26"  # Passed by code_developer
+
+# Step 2: Get roadmap item details
+item = roadmap_db.get_item(roadmap_item_id)
+print(f"Reviewing: {item['title']}")
+print(f"Spec: {item['spec_id']}")
+
+# Step 3: Get ALL commits for this roadmap item
+commits = roadmap_db.get_commits_for_review(roadmap_item_id)
+print(f"Reviewing {len(commits)} commits:")
+for commit in commits:
+    print(f"  {commit['commit_hash'][:7]}: {commit['commit_message']}")
+    print(f"    Files: {', '.join(commit['files_changed'])}")
+    print(f"    +{commit['insertions']} -{commit['deletions']}")
+
+# Step 4: Read technical spec for context
+from coffee_maker.autonomous.unified_spec_skill import TechnicalSpecSkill
+spec_skill = TechnicalSpecSkill(agent_name="code_reviewer")
+
+spec_id = item['spec_id']
+overview = spec_skill.get_spec_overview(spec_id)
+implementation = spec_skill.get_spec_implementation_details(spec_id)
+
+print(f"Spec overview: {overview['title']}")
+# Use overview and implementation to understand requirements
+
+# Step 5: Perform comprehensive review
+# Analyze all commits together, check against spec
+# Run quality checks (static analysis, tests, coverage)
+# Check style guide compliance
+
+# Collect findings
+critical_issues = [
+    "Missing error handling in auth.py:45",
+    "Security vulnerability in token validation"
+]
+warnings = [
+    "Test coverage only 75% (target: 80%)",
+    "Missing docstring in UserModel class"
+]
+suggestions = [
+    "Consider caching token validation results",
+    "Add integration test for password reset flow"
+]
+
+# Determine compliance
+follows_spec = len(critical_issues) == 0  # No critical spec violations
+test_coverage_ok = False  # Only 75%, need 80%
+style_compliant = True  # Black formatting passed
+
+# Calculate quality score (1-10)
+quality_score = 10
+quality_score -= len(critical_issues) * 3
+quality_score -= len(warnings) * 1
+quality_score = max(1, quality_score)  # Minimum 1
+
+# Step 6: Create review summary
+summary = f"""
+Reviewed {len(commits)} commits implementing authentication system.
+
+Overall: Implementation follows spec with minor issues.
+
+Critical Issues ({len(critical_issues)}):
+- Missing error handling needs immediate fix
+- Security vulnerability must be addressed
+
+Warnings ({len(warnings)}):
+- Test coverage below target
+- Documentation incomplete
+
+Suggestions for improvement:
+- Performance optimization opportunities
+- Additional test scenarios
+
+Quality Score: {quality_score}/10
+"""
+
+success = roadmap_db.create_code_review(
+    roadmap_item_id=roadmap_item_id,
+    spec_id=spec_id,
+    summary=summary,
+    quality_score=quality_score,
+    critical_issues=critical_issues,
+    warnings=warnings,
+    suggestions=suggestions,
+    follows_spec=follows_spec,
+    test_coverage_ok=test_coverage_ok,
+    style_compliant=style_compliant,
+    commits_reviewed=len(commits)
+)
+
+if success:
+    print(f"✅ Created code review for {roadmap_item_id}")
+else:
+    print(f"❌ Failed to create code review")
+    # Handle error appropriately
+
+# Step 7: Clean up temporary commit tracking
+deleted_count = roadmap_db.delete_reviewed_commits(roadmap_item_id)
+print(f"✅ Cleaned up {deleted_count} commit records")
+
+# Review is now stored permanently in code_reviews table
+# architect will read it via get_unreviewed_code_reviews()
+```
+
+### CRITICAL Review Rules:
+- **Review ALL commits together** - Not individually
+- **ALWAYS read the spec** - Understand what SHOULD have been implemented
+- **Generate comprehensive summary** - Focus on actionable findings
+- **Clean up after review** - Delete temporary commit records
+- **Never skip cleanup** - Even if review finds critical issues
+
+### Key Points:
+- **Implementation-level, not commit-level** - Review complete features
+- **Spec alignment** - Verify implementation matches requirements
+- **Quality score** - Provide objective quality metric (1-10)
+- **Actionable findings** - Help architect understand what needs attention
+- **Architect review** - architect will read and acknowledge summary
+
+## 📖 READING TECHNICAL SPECS (For Context)
+
+**Use the unified spec skill to read specs hierarchically:**
+
+```python
+import sys
+sys.path.insert(0, '.claude/skills/shared/technical_spec_database')
+from unified_spec_skill import TechnicalSpecSkill
+
+# Initialize spec skill (read-only for code_reviewer)
+spec_skill = TechnicalSpecSkill(agent_name="code_reviewer")
+
+# Get spec ID from review
+spec_id = "SPEC-115"  # From review_skill.get_spec_for_review()
+
+# Load spec hierarchically for efficient context
+overview = spec_skill.get_spec_overview(spec_id)  # High-level requirements
+api_section = spec_skill.get_spec_section(spec_id, 'api_design')  # If reviewing API
+impl_details = spec_skill.get_spec_implementation_details(spec_id)  # For detailed review
+
+# Review code against spec requirements
+# Ensure implementation matches what was specified
 ```
 
 ---
@@ -112,33 +303,34 @@ See `docs/code-reviews/REVIEW-{commit}.md` for examples.
 
 ---
 
-## Integration with Orchestrator
+## Integration with code_developer
 
-code-reviewer is triggered automatically after code_developer commits:
-- **Trigger**: Post-commit hook in orchestrator
-- **Timing**: Immediately after successful commit
-- **Duration**: <5 minutes for typical commit
-- **Output**: Review report in docs/code-reviews/
+code-reviewer is triggered when a roadmap item implementation is COMPLETE:
+- **Trigger**: code_developer calls after marking roadmap item as complete
+- **Input**: roadmap_item_id to review
+- **Process**: Reviews ALL commits for that roadmap item together
+- **Duration**: 5-15 minutes for typical implementation (multiple commits)
+- **Output**: Review summary in code_reviews table (permanent record)
 
 ---
 
 ## CLI Commands
 
 ```bash
-# Manual review of specific commit
-poetry run code-reviewer review <commit-sha>
+# Review a roadmap item implementation
+poetry run code-reviewer review-item <roadmap-item-id>
 
-# Review latest commit
-poetry run code-reviewer review HEAD
+# Example: Review PRIORITY-26
+poetry run code-reviewer review-item PRIORITY-26
 
-# Re-review after fixes
-poetry run code-reviewer review <commit-sha> --re-review
-
-# List all reviews
+# List all code reviews (with architect review status)
 poetry run code-reviewer list-reviews
 
-# Show review report
-poetry run code-reviewer show-review <commit-sha>
+# Show review summary
+poetry run code-reviewer show-review <roadmap-item-id>
+
+# List unreviewed by architect
+poetry run code-reviewer pending-architect-reviews
 ```
 
 ---

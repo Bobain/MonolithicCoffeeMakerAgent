@@ -214,16 +214,16 @@ The user provided a comprehensive 7-phase strategic plan for implementing the co
 
 ## Phase 6: Code-Searcher Migration 🔄 MEDIUM PRIORITY
 
-**Goal**: Retire code-searcher agent, delegate responsibilities to architect + code_developer
+**Goal**: Retire assistant agent (with code analysis skills), delegate responsibilities to architect + code_developer
 
 **User Stories**:
 - **US-090**: Create 5 code analysis skills (code-forensics, security-audit, dependency-tracer, functional-search, code-explainer)
 - **US-091**: Build code index for fast skill execution
-- **US-092**: Migrate code-searcher.md responsibilities to architect
-- **US-093**: Migrate code-searcher.md responsibilities to code_developer
+- **US-092**: Migrate assistant (with code analysis skills).md responsibilities to architect
+- **US-093**: Migrate assistant (with code analysis skills).md responsibilities to code_developer
 - **US-094**: Transition period (3-week validation)
-- **US-095**: Retire code-searcher agent
-- **US-096**: Archive code-searcher.md
+- **US-095**: Retire assistant agent (with code analysis skills)
+- **US-096**: Archive assistant (with code analysis skills).md
 
 **Deliverables**:
 - 5 new skills (50-150x faster than agent)
@@ -235,7 +235,7 @@ The user provided a comprehensive 7-phase strategic plan for implementing the co
 **Technical Spec**: SPEC-064 - Code-Searcher Responsibility Migration
 
 **Acceptance Criteria**:
-- All code-searcher capabilities preserved
+- All assistant (with code analysis skills) capabilities preserved
 - Skills execute in <200ms (vs 10-30s agent)
 - No regression in code analysis quality
 - 100% successful migration (no lost functionality)
@@ -356,7 +356,7 @@ Phase 7 (Advanced skills) ← Can start anytime after Phase 1
 **Risk 2**: Phase 4 (Orchestrator) complexity causes delays
 - **Mitigation**: Phased rollout (message bus → performance monitor → optimizer)
 
-**Risk 3**: Phase 6 (code-searcher) migration breaks functionality
+**Risk 3**: Phase 6 (assistant (with code analysis skills)) migration breaks functionality
 - **Mitigation**: 3-week transition period, rollback plan, 100% test coverage
 
 **Risk 4**: CFR-007 violations persist despite startup skills

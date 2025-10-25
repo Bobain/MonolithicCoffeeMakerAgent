@@ -20,7 +20,7 @@ Instead of sequentially implementing the 7-phase ACE framework, we implement **S
 - **Total ROI**: 3-4x speedup in month 1, 12-19x in year 1
 
 **Phase 0 Delivers**:
-1. **code-searcher → 5 Skills Migration** (SPEC-064) - 50-150x faster code analysis
+1. **assistant (with code analysis skills) → 5 Skills Migration** (SPEC-064) - 50-150x faster code analysis
 2. **Agent Startup Skills** (SPEC-063) - Fix CFR-007, faster initialization
 3. **code_developer Acceleration Skills** - Test analysis, DoD verification, git automation
 4. **architect Acceleration Skills** - Spec automation, dependency resolver, commit review
@@ -89,9 +89,9 @@ Instead of sequentially implementing the 7-phase ACE framework, we implement **S
 
 ## Phase 0 Components (Implementation Order)
 
-### 1. code-searcher Migration to 5 Skills (HIGHEST PRIORITY)
+### 1. assistant (with code analysis skills) Migration to 5 Skills (HIGHEST PRIORITY)
 
-**Specification**: SPEC-064-code-searcher-responsibility-migration.md
+**Specification**: SPEC-064-assistant (with code analysis skills)-responsibility-migration.md
 
 **Why First**: Unblocks ALL other work (architect needs code analysis for specs, code_developer needs for implementation)
 
@@ -104,7 +104,7 @@ Instead of sequentially implementing the 7-phase ACE framework, we implement **S
 
 **Impact**:
 - Code search: 10-30s → <200ms (**50-150x faster**)
-- Available to: ALL agents (not just code-searcher)
+- Available to: ALL agents (not just assistant (with code analysis skills))
 - Simpler architecture: 6 agents → 5 agents (17% reduction)
 
 **Effort**: 2-3 weeks (80-120 hours)
@@ -124,7 +124,7 @@ Instead of sequentially implementing the 7-phase ACE framework, we implement **S
 - Git hooks for index updates (post-commit, post-merge)
 
 **Success Criteria**:
-- [ ] All 5 skills faster than code-searcher baseline
+- [ ] All 5 skills faster than assistant (with code analysis skills) baseline
 - [ ] Code Index generated for full codebase (<60s rebuild)
 - [ ] architect can find all auth code in <5s (vs 30-60s before)
 - [ ] code_developer can run security audit in <10s
@@ -372,7 +372,7 @@ Input: Refactor "daemon.py" → split into mixins
 
 Skill Execution:
 1. Analyze dependencies:
-   - daemon.py imported by: run_daemon.py, tests/test_daemon.py
+   - daemon.py imported by: run_code_developer.py, tests/test_daemon.py
    - Creates: daemon_git_ops.py, daemon_spec_manager.py, daemon_implementation.py
    - Impacts: 8 files total
 
@@ -419,7 +419,7 @@ Skill Execution:
 
 | Component | Effort | Timeline |
 |-----------|--------|----------|
-| code-searcher → 5 Skills | 80-120 hrs | 2-3 weeks |
+| assistant (with code analysis skills) → 5 Skills | 80-120 hrs | 2-3 weeks |
 | Agent Startup Skills | 40-50 hrs | 1 week |
 | code_developer Acceleration | 60-75 hrs | 1.5 weeks |
 | architect Acceleration | 80-100 hrs | 2 weeks |
@@ -432,7 +432,7 @@ Skill Execution:
 
 | Benefit | Monthly Savings | Yearly Savings |
 |---------|-----------------|----------------|
-| code-searcher → Skills | 14-18 hrs | 168-216 hrs |
+| assistant (with code analysis skills) → Skills | 14-18 hrs | 168-216 hrs |
 | Agent Startup (CFR-007 fix) | 5-8 hrs | 60-96 hrs |
 | code_developer Acceleration | 20-30 hrs | 240-360 hrs |
 | architect Acceleration | 34-51 hrs | 408-612 hrs |
@@ -467,7 +467,7 @@ Skill Execution:
 ## Implementation Order (Critical Path)
 
 ### Week 1: Foundation (CRITICAL)
-**Priority**: code-searcher → 5 Skills (SPEC-064)
+**Priority**: assistant (with code analysis skills) → 5 Skills (SPEC-064)
 - **Why First**: Unblocks ALL other work
 - **Effort**: 80-120 hrs (full week with focused execution)
 - **Blockers Removed**: architect can create specs faster, code_developer can analyze code faster
@@ -620,7 +620,7 @@ Savings: 47-190 min/month (8-12 hrs/month)
 **Probability**: LOW (conservative estimates, skills proven in other contexts)
 **Mitigation**:
 - Build skills incrementally (validate performance at each step)
-- Benchmark against agent baseline (before retiring code-searcher)
+- Benchmark against agent baseline (before retiring assistant (with code analysis skills))
 - Optimize hotspots (caching, indexing, parallelization)
 - Fallback: Keep agent approach if skills underperform
 
@@ -678,11 +678,11 @@ Savings: 47-190 min/month (8-12 hrs/month)
 
 ### If Approved: Implementation Plan
 
-**Week 1**: code-searcher → 5 Skills (SPEC-064)
+**Week 1**: assistant (with code analysis skills) → 5 Skills (SPEC-064)
 - [ ] code_developer implements Code Index infrastructure
 - [ ] code_developer implements 5 skills (code-forensics, security-audit, dependency-tracer, functional-search, code-explainer)
 - [ ] architect reviews implementation (SPEC-064 Phase 3)
-- [ ] Retire code-searcher agent (SPEC-064 Phase 4)
+- [ ] Retire assistant agent (with code analysis skills) (SPEC-064 Phase 4)
 
 **Week 2**: Agent Startup + Refactoring Coordinator
 - [ ] code_developer implements SkillLoader (SPEC-063)
@@ -733,7 +733,7 @@ By investing 3-4 weeks upfront in skills infrastructure, we:
 
 **Total ROI**: 2.4-4.5x direct, 5-10x effective (considering compound benefits)
 
-**Critical Path**: code-searcher → skills (Week 1) UNBLOCKS everything else
+**Critical Path**: assistant (with code analysis skills) → skills (Week 1) UNBLOCKS everything else
 
 **Critical Skill for code_developer**: test-failure-analysis (8-12 hrs/month savings)
 
@@ -748,7 +748,7 @@ By investing 3-4 weeks upfront in skills infrastructure, we:
 - SPEC-067: Architect Code Review Process
 - SPEC-068: Refactoring Coordinator Skill (to be created)
 - SPEC-069: Commit Review Automation Skill (to be created)
-- ADR-009: Retire code-searcher Agent
+- ADR-009: Retire assistant (with code analysis skills) Agent
 - ADR-010: Reflector & Curator as Agents (not skills)
 - ADR-012: Phase 0 Acceleration Strategy (to be created)
 
@@ -756,4 +756,4 @@ By investing 3-4 weeks upfront in skills infrastructure, we:
 1. User reviews Phase 0 plan
 2. User approves or requests modifications
 3. If approved: architect creates SPEC-068, SPEC-069, ADR-012
-4. code_developer begins Week 1 implementation (code-searcher → skills)
+4. code_developer begins Week 1 implementation (assistant (with code analysis skills) → skills)

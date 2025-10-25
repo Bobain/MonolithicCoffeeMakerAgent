@@ -123,9 +123,9 @@ tests:
 
   - name: "SSH to instance and check daemon"
     type: "command"
-    command: "gcloud compute ssh coffee-maker-daemon --zone us-central1-a --command 'ps aux | grep run_daemon.py'"
+    command: "gcloud compute ssh coffee-maker-daemon --zone us-central1-a --command 'ps aux | grep run_code_developer.py'"
     expected_exit_code: 0
-    expected_output_contains: "python run_daemon.py"
+    expected_output_contains: "python run_code_developer.py"
 
   - name: "Check logs are accessible"
     type: "command"

@@ -275,7 +275,7 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
         """Create technical specification for a priority using Claude.
 
         MANDATORY STEPS (in order):
-        1. Enforce CFR-011 (architect must read code-searcher reports + analyze codebase)
+        1. Read unreviewed code review summaries if available
         2. Run architecture reuse check BEFORE creating spec
 
         Args:

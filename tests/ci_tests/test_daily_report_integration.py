@@ -5,6 +5,7 @@ Integration tests for the daily report CLI functionality.
 """
 
 import json
+import sqlite3
 import subprocess
 import tempfile
 from datetime import datetime, timedelta
@@ -85,11 +86,12 @@ class TestDailyReportIntegration:
         assert "PRIORITY 9" in report or "Other" in report
 
     def test_daily_report_with_interaction_tracking(self, temp_repo_dir):
-        """Test that interaction timestamps are properly tracked."""
+        """Test that interaction timestamps are properly tracked in database."""
         gen = DailyReportGenerator()
         gen.repo_root = temp_repo_dir
-        gen.interaction_file = temp_repo_dir / "last_interaction.json"
+        gen.notifications_db = temp_repo_dir / "notifications.db"
         gen.status_file = temp_repo_dir / "developer_status.json"
+        gen._init_system_state_table()
 
         # First check: should show report
         assert gen.should_show_report() is True
@@ -100,13 +102,21 @@ class TestDailyReportIntegration:
         # Second check same day: should not show report
         assert gen.should_show_report() is False
 
-        # Verify file contents
-        data = json.loads(gen.interaction_file.read_text())
-        assert "last_check_in" in data
-        assert "last_report_shown" in data
+        # Verify database contents
+        conn = sqlite3.connect(gen.notifications_db)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT value FROM system_state WHERE key = ?", ("last_check_in",))
+        assert cursor.fetchone() is not None
+
+        cursor.execute("SELECT value FROM system_state WHERE key = ?", ("last_report_shown",))
+        result = cursor.fetchone()
+        assert result is not None
+
+        conn.close()
 
         today = datetime.now().date().isoformat()
-        assert data["last_report_shown"] == today
+        assert result[0] == today
 
     def test_report_with_developer_status(self, temp_repo_dir):
         """Test report generation with developer status data."""
@@ -183,47 +193,50 @@ class TestDailyReportCLIIntegration:
 
 
 class TestInteractionTracking:
-    """Test interaction tracking functionality."""
+    """Test interaction tracking functionality in database."""
 
-    def test_interaction_file_creation(self):
-        """Test that interaction file is created properly."""
+    def test_interaction_database_table_creation(self):
+        """Test that system_state table is created properly."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            interaction_file = Path(tmpdir) / "last_interaction.json"
+            notifications_db = Path(tmpdir) / "notifications.db"
 
             gen = DailyReportGenerator()
-            gen.interaction_file = interaction_file
+            gen.notifications_db = notifications_db
+            gen._init_system_state_table()
 
-            # File should not exist initially
-            assert not interaction_file.exists()
+            # Database should exist
+            assert notifications_db.exists()
 
-            # Update timestamp
-            gen.update_interaction_timestamp()
+            # Check table exists
+            conn = sqlite3.connect(notifications_db)
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='system_state'")
+            result = cursor.fetchone()
+            conn.close()
 
-            # File should now exist
-            assert interaction_file.exists()
+            assert result is not None
 
-            # Parse and verify contents
-            data = json.loads(interaction_file.read_text())
-            assert isinstance(data, dict)
-            assert "last_check_in" in data
-            assert "last_report_shown" in data
-
-    def test_interaction_file_persistence(self):
-        """Test that interaction file persists correctly."""
+    def test_interaction_tracking_persistence(self):
+        """Test that interaction tracking persists correctly in database."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            interaction_file = Path(tmpdir) / "last_interaction.json"
+            notifications_db = Path(tmpdir) / "notifications.db"
 
             gen = DailyReportGenerator()
-            gen.interaction_file = interaction_file
+            gen.notifications_db = notifications_db
+            gen._init_system_state_table()
 
-            # Create interaction file
+            # Create interaction record
             gen.update_interaction_timestamp()
-            json.loads(interaction_file.read_text())["last_check_in"]
 
             # Read back should show same date (but possibly different check_in time)
             gen2 = DailyReportGenerator()
-            gen2.interaction_file = interaction_file
+            gen2.notifications_db = notifications_db
+
+            conn = sqlite3.connect(notifications_db)
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM system_state WHERE key = ?", ("last_report_shown",))
+            result = cursor.fetchone()
+            conn.close()
 
             today = datetime.now().date().isoformat()
-            data = json.loads(interaction_file.read_text())
-            assert data["last_report_shown"] == today
+            assert result[0] == today

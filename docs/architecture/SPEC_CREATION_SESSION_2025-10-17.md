@@ -77,18 +77,18 @@ Implement CFR-007: Enforce that each agent's core materials (prompt + owned crit
 
 ---
 
-### 2. SPEC-055: Architect Daily Integration of code-searcher Findings (CFR-011)
+### 2. SPEC-055: Architect Daily Integration of assistant (with code analysis skills) Findings (CFR-011)
 
-**File**: `docs/architecture/specs/SPEC-055-architect-code-searcher-integration.md`
+**File**: `docs/architecture/specs/SPEC-055-architect-assistant (with code analysis skills)-integration.md`
 **Priority**: US-054 (CFR-011)
 **Status**: Approved
 **Estimated Duration**: 1-2 days
 
 **Summary**:
-Implement CFR-011: architect MUST read code-searcher reports daily and analyze codebase weekly before creating new specs. Enforces continuous integration of code quality findings into architectural decisions.
+Implement CFR-011: architect MUST read assistant (with code analysis skills) reports daily and analyze codebase weekly before creating new specs. Enforces continuous integration of code quality findings into architectural decisions.
 
 **Key Features**:
-- Daily check for unread code-searcher reports
+- Daily check for unread assistant (with code analysis skills) reports
 - Weekly codebase analysis requirement (max 7 days between analyses)
 - Block spec creation if integration overdue
 - Simple JSON tracking file
@@ -97,7 +97,7 @@ Implement CFR-011: architect MUST read code-searcher reports daily and analyze c
 **Components**:
 1. `coffee_maker/autonomous/architect_integration.py` (~150 lines)
    - ArchitectIntegrationTracker class
-   - check_unread_reports() → Find unread code-searcher reports
+   - check_unread_reports() → Find unread assistant (with code analysis skills) reports
    - days_since_last_analysis() → Calculate days since last analysis
    - enforce_cfr_011() → Block spec creation if overdue
    - mark_reports_read() → Update tracking
@@ -132,7 +132,7 @@ Architect Creates Spec
     ↓
 Pre-Check: enforce_cfr_011()
     ↓
-Check 1: Any unread code-searcher reports?
+Check 1: Any unread assistant (with code analysis skills) reports?
     - YES: BLOCK with error
     - NO: Continue
     ↓
@@ -194,7 +194,7 @@ The following priorities didn't need specs because they were already implemented
 ### Priorities That Needed Specs (Created Today)
 
 1. **US-050 (CFR-007)**: Context Budget Enforcement → SPEC-054 ✅
-2. **US-054 (CFR-011)**: Architect-code-searcher Integration → SPEC-055 ✅
+2. **US-054 (CFR-011)**: Architect-assistant (with code analysis skills) Integration → SPEC-055 ✅
 
 ---
 
@@ -212,7 +212,7 @@ The following priorities didn't need specs because they were already implemented
 | Spec | Priority | Status | Est. Duration | Notes |
 |------|----------|--------|---------------|-------|
 | SPEC-054 | US-050 (CFR-007) | Approved | 2-3 days | Context budget enforcement |
-| SPEC-055 | US-054 (CFR-011) | Approved | 1-2 days | Architect-code-searcher integration |
+| SPEC-055 | US-054 (CFR-011) | Approved | 1-2 days | Architect-assistant (with code analysis skills) integration |
 
 **Total Implementation Time**: 3-5 days for new specs
 
@@ -271,16 +271,16 @@ Both specs use phased rollout:
 - CFR-006: Lessons learned applied (sharpening strategies)
 - US-035: Startup validation (check budget before agent starts)
 
-### CFR-011: Architect-code-searcher Integration (SPEC-055)
+### CFR-011: Architect-assistant (with code analysis skills) Integration (SPEC-055)
 
 **Enforces**:
-- Daily: Read code-searcher reports
+- Daily: Read assistant (with code analysis skills) reports
 - Weekly: Analyze codebase personally (max 7 days)
 - Block spec creation if overdue
 
 **Integrates With**:
 - CFR-008: Architect creates all specs (enforced before creation)
-- CFR-010: Continuous spec improvement (fed by code-searcher findings)
+- CFR-010: Continuous spec improvement (fed by assistant (with code analysis skills) findings)
 - US-044: Regular refactoring workflow (refactoring specs created based on findings)
 
 ---
@@ -336,7 +336,7 @@ Both specs provide clear guidance for code_developer:
 - CFR-008: Architect-only specs (SPEC-047)
 - CFR-009: Silent background agents (SPEC-048)
 - CFR-010: Continuous improvement (SPEC-049)
-- CFR-011: code-searcher integration (SPEC-055)
+- CFR-011: assistant (with code analysis skills) integration (SPEC-055)
 
 **Result**: Complete CFR enforcement infrastructure specified.
 
@@ -372,7 +372,7 @@ Both specs provide clear guidance for code_developer:
    - Duration: 2-3 days
    - Start: Immediately after SPEC-055
 
-2. **Implement SPEC-055** (Architect-code-searcher Integration):
+2. **Implement SPEC-055** (Architect-assistant (with code analysis skills) Integration):
    - Priority: CRITICAL (CFR-011)
    - Duration: 1-2 days
    - Start: After current priority (US-045) complete
@@ -391,7 +391,7 @@ Both specs provide clear guidance for code_developer:
 ### For architect
 
 1. **Follow CFR-011** (SPEC-055):
-   - Read code-searcher reports daily
+   - Read assistant (with code analysis skills) reports daily
    - Analyze codebase weekly (max 7 days)
    - Cannot create new specs until enforcement implemented
 

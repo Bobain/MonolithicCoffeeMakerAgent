@@ -8,13 +8,37 @@
 
 **Date Created**: 2025-10-20
 
-**Last Updated**: 2025-10-20
+**Last Updated**: 2025-10-23
 
 **Status**: Active
 
 **Related ADRs**: None
 
-**Related Specs**: [SPEC-108: Parallel Agent Execution](../specs/SPEC-108-parallel-agent-execution.md)
+**Related Specs**: [SPEC-108: Parallel Agent Execution](../specs/SPEC-108-parallel-agent-execution.md), [CFR-000: Parallel Development](../../CFR-000-PARALLEL-DEVELOPMENT.md)
+
+---
+
+## Branch Naming Convention (Updated 2025-10-23)
+
+**IMPORTANT**: As of 2025-10-23, the branch naming convention for parallel development has changed:
+
+- **Old Convention**: `feature/us-{number}` (e.g., `feature/us-065`)
+- **New Convention**: `roadmap-work-{work_id}` (e.g., `roadmap-work-42`)
+
+**Worktree Path Convention**:
+- **Old**: `MonolithicCoffeeMakerAgent-wt{N}` (e.g., `MonolithicCoffeeMakerAgent-wt65`)
+- **New**: `MonolithicCoffeeMakerAgent-work-{N}` (e.g., `MonolithicCoffeeMakerAgent-work-42`)
+
+This change aligns with CFR-000 parallel development model where `work_id` corresponds to entries in the `work_sessions` database table. Examples in this document use the old convention but the principles remain the same - simply replace branch/worktree names with the new format.
+
+**Migration Example**:
+```bash
+# Old style (deprecated)
+git worktree add ../MonolithicCoffeeMakerAgent-wt65 -b feature/us-065 roadmap
+
+# New style (current)
+git worktree add ../MonolithicCoffeeMakerAgent-work-42 -b roadmap-work-42 roadmap
+```
 
 ---
 

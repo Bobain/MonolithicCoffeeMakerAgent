@@ -210,6 +210,73 @@ class OrchestratorDashboard:
 
         return table
 
+    def _make_failures_panel(self) -> Panel:
+        """Create recent failures panel showing failed agents.
+
+        Returns:
+            Rich Panel with recent failures
+        """
+        try:
+            import sqlite3
+
+            db_path = Path("data/orchestrator.db")
+            if not db_path.exists():
+                return Panel("No database", title="Recent Failures", border_style="red")
+
+            conn = sqlite3.connect(str(db_path))
+            cursor = conn.cursor()
+
+            # Get failed agents (completed with NULL or non-zero exit code)
+            cursor.execute(
+                """
+                SELECT agent_type, task_id, exit_code, spawned_at, completed_at
+                FROM agent_lifecycle
+                WHERE status = 'completed'
+                  AND (exit_code IS NULL OR exit_code != 0)
+                  AND completed_at > datetime('now', '-10 minutes')
+                ORDER BY completed_at DESC
+                LIMIT 10
+                """
+            )
+            rows = cursor.fetchall()
+            conn.close()
+
+            if not rows:
+                return Panel(
+                    Text("No recent failures ✅", style="green"), title="Recent Failures", border_style="green"
+                )
+
+            failures_text = Text()
+            for agent_type, task_id, exit_code, spawned_at, completed_at in rows:
+                exit_display = "NO EXIT CODE" if exit_code is None else f"Exit {exit_code}"
+                failures_text.append(f"❌ {agent_type} ", style="red bold")
+                failures_text.append(f"({task_id}): {exit_display}\n", style="red")
+
+            # Check architect cooldowns
+            import json
+
+            conn = sqlite3.connect(str(db_path))
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM orchestrator_state WHERE key = 'architect_failures'")
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                failures_dict = json.loads(row[0])
+                if failures_dict:
+                    failures_text.append("\n⏱️  Architect Cooldowns (5min):\n", style="yellow bold")
+                    for us_number, failure_time in failures_dict.items():
+                        time_since = time.time() - failure_time
+                        remaining = max(0, 300 - time_since)  # 5 minutes = 300 seconds
+                        if remaining > 0:
+                            failures_text.append(f"   US-{us_number}: {int(remaining)}s remaining\n", style="yellow")
+
+            return Panel(failures_text, title="Recent Failures", border_style="red")
+
+        except Exception as e:
+            logger.error(f"Error creating failures panel: {e}")
+            return Panel(f"Error: {str(e)}", title="Recent Failures", border_style="red")
+
     def _make_work_queue(self) -> Panel:
         """Create work queue panel showing pending priorities.
 
@@ -317,9 +384,10 @@ class OrchestratorDashboard:
             Layout(self._make_metrics_panel(), name="metrics"),
         )
 
-        # Split body into agents table and work queue
+        # Split body into agents table, failures, and work queue
         layout["body"].split(
             Layout(self._make_agents_table(), name="agents", ratio=2),
+            Layout(self._make_failures_panel(), name="failures", ratio=1),
             Layout(self._make_work_queue(), name="queue", ratio=1),
         )
 

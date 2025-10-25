@@ -282,7 +282,7 @@ class TestAgentRegistry:
             "code_developer",
             "project_manager",
             "assistant",
-            "code-searcher",
+            "assistant",
             "ux-design-expert",
             "architect",
             "user_listener",

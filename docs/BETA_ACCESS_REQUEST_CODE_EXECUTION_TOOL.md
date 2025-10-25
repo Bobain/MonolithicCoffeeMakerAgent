@@ -12,7 +12,7 @@
 **MonolithicCoffeeMakerAgent** is an autonomous multi-agent software development system where 7 specialized AI agents collaborate to implement features, manage projects, and provide assistance.
 
 **Key Metrics**:
-- 7 autonomous agents (architect, code_developer, project_manager, assistant, code-searcher, ux-design-expert, orchestrator)
+- 7 autonomous agents (architect, code_developer, project_manager, assistant, assistant (with code analysis skills), ux-design-expert, orchestrator)
 - 156+ tests passing
 - 27,000+ lines of code
 - Active development since 2025-07

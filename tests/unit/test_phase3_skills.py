@@ -2,7 +2,7 @@
 Unit tests for Phase 3 Claude Skills (US-057).
 
 Tests all 3 Phase 3 skills:
-- code-forensics (code-searcher)
+- code-forensics (assistant (with code analysis skills))
 - design-system (ux-design-expert)
 - visual-regression (ux-design-expert)
 
@@ -56,11 +56,11 @@ def parse_skill_output(stdout: str) -> dict:
 
 
 class TestCodeForensicsSkill:
-    """Tests for code-forensics skill (code-searcher)."""
+    """Tests for code-forensics skill (assistant (with code analysis skills))."""
 
     def test_code_forensics_execution(self):
         """Test that code-forensics skill executes successfully."""
-        skill_path = Path(".claude/skills/code-searcher/code-forensics/code_forensics.py")
+        skill_path = Path(".claude/skills/assistant (with code analysis skills)/code-forensics/code_forensics.py")
         assert skill_path.exists(), "code_forensics.py not found"
 
         # Execute skill with test context
@@ -92,7 +92,7 @@ class TestCodeForensicsSkill:
 
     def test_code_forensics_generates_report(self):
         """Test that code-forensics generates a report file."""
-        skill_path = Path(".claude/skills/code-searcher/code-forensics/code_forensics.py")
+        skill_path = Path(".claude/skills/assistant (with code analysis skills)/code-forensics/code_forensics.py")
 
         context = {"scope": "."}
         result = subprocess.run(
@@ -119,7 +119,7 @@ class TestCodeForensicsSkill:
 
     def test_code_forensics_with_specific_scope(self):
         """Test code-forensics with specific file/directory scope."""
-        skill_path = Path(".claude/skills/code-searcher/code-forensics/code_forensics.py")
+        skill_path = Path(".claude/skills/assistant (with code analysis skills)/code-forensics/code_forensics.py")
 
         # Test with specific directory
         context = {"scope": "coffee_maker/"}
@@ -288,7 +288,7 @@ class TestPhase3Integration:
     def test_all_phase3_skills_exist(self):
         """Test that all Phase 3 skill files exist."""
         skills = [
-            ".claude/skills/code-searcher/code-forensics/code_forensics.py",
+            ".claude/skills/assistant (with code analysis skills)/code-forensics/code_forensics.py",
             ".claude/skills/ux-design-expert/design-system/design_system.py",
             ".claude/skills/ux-design-expert/visual-regression/visual_regression.py",
         ]
@@ -299,7 +299,7 @@ class TestPhase3Integration:
     def test_all_phase3_skill_metadata_exist(self):
         """Test that all Phase 3 SKILL.md files exist."""
         metadata_files = [
-            ".claude/skills/code-searcher/code-forensics/SKILL.md",
+            ".claude/skills/assistant (with code analysis skills)/code-forensics/SKILL.md",
             ".claude/skills/ux-design-expert/design-system/SKILL.md",
             ".claude/skills/ux-design-expert/visual-regression/SKILL.md",
         ]
@@ -327,7 +327,7 @@ class TestPhase3Integration:
         import time
 
         skills_timing = {
-            ".claude/skills/code-searcher/code-forensics/code_forensics.py": {
+            ".claude/skills/assistant (with code analysis skills)/code-forensics/code_forensics.py": {
                 "context": {"scope": "coffee_maker/", "time_range": "last 3 months"},
                 "max_time": 900,  # 15 minutes
             },
@@ -362,7 +362,7 @@ class TestPhase3SkillQuality:
     def test_skill_code_quality(self):
         """Test that skill code follows best practices."""
         skills = [
-            ".claude/skills/code-searcher/code-forensics/code_forensics.py",
+            ".claude/skills/assistant (with code analysis skills)/code-forensics/code_forensics.py",
             ".claude/skills/ux-design-expert/design-system/design_system.py",
             ".claude/skills/ux-design-expert/visual-regression/visual_regression.py",
         ]
@@ -386,7 +386,7 @@ class TestPhase3SkillQuality:
     def test_skill_metadata_quality(self):
         """Test that skill metadata follows standards."""
         metadata_files = [
-            ".claude/skills/code-searcher/code-forensics/SKILL.md",
+            ".claude/skills/assistant (with code analysis skills)/code-forensics/SKILL.md",
             ".claude/skills/ux-design-expert/design-system/SKILL.md",
             ".claude/skills/ux-design-expert/visual-regression/SKILL.md",
         ]

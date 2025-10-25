@@ -123,7 +123,7 @@ That's it! You're using the agent team.
 › Analyze the security
 ```
 
-**Routes to**: code-searcher
+**Routes to**: assistant (with code analysis skills)
 
 **You get**: Deep code analysis, patterns, dependencies, security review
 
@@ -155,7 +155,7 @@ The system looks for keywords in your message:
 - **"roadmap"** → project_manager
 - **"implement"** → code_developer
 - **"demo"** → assistant
-- **"where is"** → code-searcher
+- **"where is"** → assistant (with code analysis skills)
 - **"ui"** → ux-design-expert
 
 **Confidence**: 90% (very likely correct)
@@ -199,7 +199,7 @@ All route to architect because they contain "design" or similar keywords.
 - Want demos? Ask assistant
 - Want implementation? Ask code_developer
 - Want architecture? Ask architect
-- Want to understand code? Ask code-searcher
+- Want to understand code? Ask assistant (with code analysis skills)
 - Want project info? Ask project_manager
 - Want UI improvement? Ask ux-design-expert
 
@@ -235,7 +235,7 @@ Each request is understood in context.
 
 Don't worry! If the user-listener routes your request to the wrong agent:
 
-1. **The agent still tries to help** - Even if you get code_developer instead of code-searcher, the developer might still understand your question
+1. **The agent still tries to help** - Even if you get code_developer instead of assistant (with code analysis skills), the developer might still understand your question
 2. **Ask more specifically** - Be more explicit about what you want:
    - Instead of: "Where is authentication"
    - Try: "Find where authentication is implemented in the code"

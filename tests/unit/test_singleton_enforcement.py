@@ -38,7 +38,7 @@ class TestSingletonEnforcementAcrossAgents:
             AgentType.PROJECT_MANAGER,
             AgentType.ARCHITECT,
             AgentType.ASSISTANT,
-            AgentType.CODE_SEARCHER,
+            AgentType.ASSISTANT,
             AgentType.UX_DESIGN_EXPERT,
             AgentType.USER_LISTENER,
         ]
@@ -92,15 +92,15 @@ class TestSingletonEnforcementAcrossAgents:
         assert "assistant" in str(exc_info.value).lower()
 
     def test_code_searcher_singleton_enforcement(self):
-        """Test code-searcher cannot run in parallel."""
+        """Test assistant (with code analysis skills) cannot run in parallel."""
         registry = AgentRegistry()
 
-        registry.register_agent(AgentType.CODE_SEARCHER)
+        registry.register_agent(AgentType.ASSISTANT)
 
         with pytest.raises(AgentAlreadyRunningError) as exc_info:
-            registry.register_agent(AgentType.CODE_SEARCHER)
+            registry.register_agent(AgentType.ASSISTANT)
 
-        assert "code-searcher" in str(exc_info.value).lower()
+        assert "assistant" in str(exc_info.value).lower()
 
     def test_ux_design_expert_singleton_enforcement(self):
         """Test ux-design-expert cannot run in parallel."""
@@ -165,7 +165,7 @@ class TestSingletonEnforcementAcrossAgents:
             AgentType.PROJECT_MANAGER,
             AgentType.ARCHITECT,
             AgentType.ASSISTANT,
-            AgentType.CODE_SEARCHER,
+            AgentType.ASSISTANT,
             AgentType.UX_DESIGN_EXPERT,
             AgentType.USER_LISTENER,
         ]

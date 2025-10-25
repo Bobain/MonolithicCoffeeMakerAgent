@@ -98,7 +98,7 @@ with AgentRegistry.register(AgentType.CODE_DEVELOPER):
 **Assessment**:
 - Thread-safe singleton implementation
 - Context manager for automatic cleanup
-- **Supports 6 agent types**: CODE_DEVELOPER, ARCHITECT, PROJECT_MANAGER, ASSISTANT, CODE_SEARCHER, UX_DESIGN_EXPERT
+- **Supports 6 agent types**: CODE_DEVELOPER, ARCHITECT, PROJECT_MANAGER, ASSISTANT, ASSISTANT, UX_DESIGN_EXPERT
 - **Critical for US-057**: Prevents duplicate agent instances
 
 ### 1.4 Adherence to ADRs
@@ -326,11 +326,11 @@ class CodeDeveloperAgent(GitOpsMixin, ImplementationMixin, StatusMixin, BaseAgen
 - ✅ **Singleton pattern**: Only ONE registry instance
 - ✅ **Thread-safe**: Uses threading.Lock
 - ✅ **Context manager**: Automatic cleanup
-- ✅ **Support for 9 agent types**: CODE_DEVELOPER, ARCHITECT, PROJECT_MANAGER, ASSISTANT, CODE_SEARCHER, UX_DESIGN_EXPERT, USER_LISTENER, GENERATOR, REFLECTOR, CURATOR
+- ✅ **Support for 9 agent types**: CODE_DEVELOPER, ARCHITECT, PROJECT_MANAGER, ASSISTANT, ASSISTANT, UX_DESIGN_EXPERT, USER_LISTENER, GENERATOR, REFLECTOR, CURATOR
 - ✅ **Clear error messages**: AgentAlreadyRunningError with PID and timestamp
 
 **US-057 Requirements**:
-- Launch 6 agents simultaneously (architect, code_developer, project_manager, assistant, code-searcher, ux-design-expert)
+- Launch 6 agents simultaneously (architect, code_developer, project_manager, assistant, assistant (with code analysis skills), ux-design-expert)
 - Ensure NO duplicate instances
 - Automatic cleanup on crash
 

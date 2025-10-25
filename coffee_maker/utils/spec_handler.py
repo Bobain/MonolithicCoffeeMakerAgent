@@ -456,6 +456,270 @@ class SpecHandler:
 
         return f"SPEC-{us_number.zfill(3)}-{kebab_title}.md"
 
+    def create_hierarchical_spec(
+        self,
+        us_number: str,
+        title: str,
+        phases: list,
+        problem_statement: str = "",
+        architecture: str = "",
+        technology_stack: str = "",
+    ) -> Path:
+        """Create hierarchical specification directory structure.
+
+        Args:
+            us_number: User story number (e.g., "104")
+            title: Spec title
+            phases: List of phase dicts with keys:
+                - name: Phase name (e.g., "database-schema")
+                - hours: Estimated hours
+                - description: Optional phase description
+            problem_statement: What problem does this solve?
+            architecture: High-level architecture description
+            technology_stack: Technologies used
+
+        Returns:
+            Path: Path to created spec directory
+
+        Example:
+            >>> handler = SpecHandler()
+            >>> spec_dir = handler.create_hierarchical_spec(
+            ...     us_number="104",
+            ...     title="Authentication System",
+            ...     phases=[
+            ...         {"name": "database", "hours": 1, "description": "Create tables"},
+            ...         {"name": "auth-logic", "hours": 2, "description": "Login/logout"}
+            ...     ]
+            ... )
+        """
+        # Create directory
+        kebab_title = self._slugify(title)
+        spec_dir = self.specs_dir / f"SPEC-{us_number.zfill(3)}-{kebab_title}"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+
+        # Calculate total hours
+        total_hours = sum(phase.get("hours", 0) for phase in phases)
+
+        # Create README.md
+        readme_content = self._create_hierarchical_readme(
+            us_number,
+            title,
+            phases,
+            total_hours,
+            problem_statement,
+            architecture,
+            technology_stack,
+        )
+
+        readme_path = spec_dir / "README.md"
+        readme_path.write_text(readme_content)
+
+        # Create phase files
+        for i, phase in enumerate(phases, start=1):
+            phase_content = self._create_phase_file(
+                us_number,
+                i,
+                phase["name"],
+                phase.get("hours", 1),
+                phase.get("description", ""),
+                len(phases),
+            )
+
+            phase_file = spec_dir / f"phase{i}-{phase['name']}.md"
+            phase_file.write_text(phase_content)
+
+        logger.info(f"Created hierarchical spec: {spec_dir}")
+        return spec_dir
+
+    def _create_hierarchical_readme(
+        self,
+        us_number: str,
+        title: str,
+        phases: list,
+        total_hours: float,
+        problem_statement: str,
+        architecture: str,
+        technology_stack: str,
+    ) -> str:
+        """Create README.md for hierarchical spec."""
+        date_str = datetime.now().strftime("%Y-%m-%d")
+
+        problem_content = problem_statement or "TODO: What problem does this solve?"
+        arch_content = architecture or "TODO: Add architecture description"
+        tech_content = (
+            technology_stack
+            or """- **Language**: Python 3.11+
+- **Framework**: TBD
+- **Database**: SQLite"""
+        )
+
+        # Build phase summary
+        phase_summary = ""
+        for i, phase in enumerate(phases, start=1):
+            phase_name = phase["name"].replace("-", " ").title()
+            phase_hours = phase.get("hours", 1)
+            phase_desc = phase.get("description", "TODO: Add description")
+            phase_summary += f"""### Phase {i}: {phase_name} ({phase_hours} hours)
+{phase_desc}
+
+**[Details →](phase{i}-{phase['name']}.md)**
+
+"""
+
+        return f"""# SPEC-{us_number.zfill(3)}: {title}
+
+**Status**: Draft
+**Created**: {date_str}
+**Estimated Effort**: {total_hours} hours
+**Type**: Hierarchical (Progressive Disclosure)
+
+---
+
+## Problem Statement
+
+{problem_content}
+
+---
+
+## High-Level Architecture
+
+{arch_content}
+
+---
+
+## Technology Stack
+
+{tech_content}
+
+---
+
+## Implementation Phases (Summary)
+
+{phase_summary}
+
+---
+
+## Success Criteria
+
+- [ ] All phases complete
+- [ ] All tests passing
+- [ ] Documentation updated
+- [ ] Code review approved
+
+---
+
+## Version History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0.0 | {date_str} | architect | Initial hierarchical specification |
+"""
+
+    def _create_phase_file(
+        self,
+        us_number: str,
+        phase_number: int,
+        phase_name: str,
+        estimated_hours: float,
+        description: str,
+        total_phases: int,
+    ) -> str:
+        """Create individual phase file."""
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        phase_title = phase_name.replace("-", " ").title()
+        next_phase = phase_number + 1 if phase_number < total_phases else None
+
+        prerequisites = f"- [ ] Phase {phase_number - 1} complete" if phase_number > 1 else "- [ ] None (first phase)"
+
+        next_phase_link = (
+            f"\n\n**[Next Phase →](phase{next_phase}-*.md)**"
+            if next_phase
+            else "\n\n**Final phase - Ready for deployment!**"
+        )
+
+        return f"""# SPEC-{us_number.zfill(3)} - Phase {phase_number}: {phase_title}
+
+**Estimated Time**: {estimated_hours} hours
+**Dependencies**: Phase {phase_number - 1} complete (or None)
+**Created**: {date_str}
+
+---
+
+## Goal
+
+{description or f"TODO: What does Phase {phase_number} accomplish?"}
+
+---
+
+## Prerequisites
+
+{prerequisites}
+
+---
+
+## Detailed Steps
+
+### Step 1: TODO
+
+**What**: Describe the task
+
+**How**:
+1. Action 1
+2. Action 2
+
+**Code Example**:
+```python
+# TODO: Add example implementation
+```
+
+**Files to Create/Modify**:
+- `path/to/file.py` (new file)
+
+---
+
+### Step 2: TODO
+
+**What**: Describe the task
+
+**How**:
+1. Action 1
+2. Action 2
+
+---
+
+## Acceptance Criteria
+
+- [ ] Specific criterion 1
+- [ ] Specific criterion 2
+- [ ] Specific criterion 3
+
+---
+
+## Testing This Phase
+
+```bash
+# TODO: Add test commands
+pytest tests/test_phase_{phase_number}.py -v
+```
+
+---
+
+## References
+
+- [GUIDELINE-XXX](../../guidelines/GUIDELINE-XXX.md)
+- [ADR-XXX](../../decisions/ADR-XXX.md)
+{next_phase_link}
+"""
+
+    def _slugify(self, text: str) -> str:
+        """Convert text to kebab-case slug."""
+        text = text.lower()
+        text = re.sub(r"[^a-z0-9\s-]", "", text)
+        text = re.sub(r"\s+", "-", text)
+        text = re.sub(r"-+", "-", text)
+        text = text.strip("-")
+        return text
+
     # ==================== UPDATING SPECIFICATIONS ====================
 
     def update_spec(self, spec_path: Path, changes: Dict[str, Any]) -> str:
@@ -683,6 +947,352 @@ class SpecHandler:
             return self._extract_executive_summary(content)
         else:  # quick_reference
             return self._generate_quick_reference(content)
+
+    # ==================== HIERARCHICAL SPEC SUPPORT ====================
+
+    def read_hierarchical(self, priority_id: str, phase: Optional[int] = None) -> Dict[str, Any]:
+        """Read hierarchical spec with progressive disclosure (database-only).
+
+        Loads spec from database content column. For hierarchical specs, uses
+        progressive disclosure (overview + current phase only).
+
+        Args:
+            priority_id: Priority identifier (e.g., "PRIORITY 25", "US-104")
+            phase: Specific phase to load (None = auto-detect from database)
+
+        Returns:
+            Dict with keys:
+                - success: bool
+                - spec_type: "hierarchical" | "monolithic" | "not_found"
+                - current_phase: int (for hierarchical)
+                - total_phases: int (for hierarchical)
+                - full_context: str (overview + current phase for hierarchical, full content for monolithic)
+                - context_size: int (character count)
+                - references: list (guideline references if present)
+                - reason: str (error message if success=False)
+        """
+        # Query database for spec
+        try:
+            from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+            import json
+
+            db = RoadmapDatabase(agent_name="code_developer")
+            spec_data = db.get_technical_spec(roadmap_item_id=priority_id)
+
+            if not spec_data:
+                return {
+                    "success": False,
+                    "spec_type": "not_found",
+                    "reason": f"No spec found in database for {priority_id}",
+                    "full_context": "",
+                    "context_size": 0,
+                }
+
+            spec_type = spec_data.get("spec_type", "monolithic")
+            content = spec_data.get("content", "")
+
+            if spec_type == "hierarchical":
+                # Parse JSON content
+                content_data = json.loads(content) if content else {}
+
+                # Determine which phase to load
+                if phase is None:
+                    phase = int(spec_data.get("phase", 1))
+
+                phases = content_data.get("phases", [])
+                if phase < 1 or phase > len(phases):
+                    phase = 1
+
+                current_phase_data = phases[phase - 1] if phases else {}
+
+                # Build context with progressive disclosure
+                overview = content_data.get("overview", "")
+                architecture = content_data.get("architecture", "")
+                phase_content = current_phase_data.get("content", "")
+
+                full_context = f"""# Overview
+
+{overview}
+
+# Architecture
+
+{architecture}
+
+# Phase {phase}/{len(phases)}: {current_phase_data.get('name', '')}
+
+{phase_content}
+"""
+
+                return {
+                    "success": True,
+                    "spec_type": "hierarchical",
+                    "current_phase": phase,
+                    "total_phases": len(phases),
+                    "full_context": full_context,
+                    "context_size": len(full_context),
+                    "references": [],
+                }
+
+            else:
+                # Monolithic spec
+                return {
+                    "success": True,
+                    "spec_type": "monolithic",
+                    "full_context": content,
+                    "context_size": len(content),
+                    "references": [],
+                }
+
+        except Exception as e:
+            logger.error(f"Error reading spec from database: {e}")
+            return {
+                "success": False,
+                "spec_type": "not_found",
+                "reason": f"Database error: {e}",
+                "full_context": "",
+                "context_size": 0,
+            }
+
+    def _find_spec_by_priority_id(self, priority_id: str) -> Optional[Path]:
+        """Find spec by priority ID (e.g., "PRIORITY 25", "US-104").
+
+        This method queries the database first, then falls back to file system search.
+
+        Args:
+            priority_id: Priority identifier
+
+        Returns:
+            Path to spec (directory for hierarchical, file for monolithic) or None
+        """
+        # Try database first
+        try:
+            from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+
+            db = RoadmapDatabase(agent_name="code_developer")
+            spec_data = db.get_technical_spec(roadmap_item_id=priority_id)
+
+            if spec_data and spec_data.get("file_path"):
+                file_path = Path(spec_data["file_path"])
+                if file_path.exists():
+                    logger.debug(f"Found spec in database: {file_path}")
+                    return file_path
+                else:
+                    logger.warning(f"Database has spec entry but file not found: {file_path}")
+        except Exception as e:
+            logger.debug(f"Database query failed (falling back to file system): {e}")
+
+        # Fallback: file system search
+        spec_dir = Path("docs/architecture/specs")
+        if not spec_dir.exists():
+            return None
+
+        # Extract number from various formats
+        match = re.search(r"(\d+)", priority_id)
+        if not match:
+            return None
+
+        priority_num = match.group(1)
+
+        # Try patterns (hierarchical first, then monolithic)
+        patterns = [
+            f"SPEC-{priority_num}-*",
+            f"SPEC-{priority_num.zfill(3)}-*",
+        ]
+
+        for pattern in patterns:
+            # Check for hierarchical (directory)
+            matches = [p for p in spec_dir.glob(pattern) if p.is_dir()]
+            if matches:
+                return matches[0]
+
+            # Check for monolithic (file)
+            matches = [p for p in spec_dir.glob(f"{pattern}.md") if p.is_file()]
+            if matches:
+                return matches[0]
+
+        return None
+
+    def _read_hierarchical_spec(self, spec_dir: Path, phase: Optional[int] = None) -> Dict[str, Any]:
+        """Read hierarchical spec directory.
+
+        Args:
+            spec_dir: Path to spec directory (SPEC-XXX-slug/)
+            phase: Specific phase to load (None = auto-detect)
+
+        Returns:
+            Dict with hierarchical spec data
+        """
+        # Check if README.md exists
+        readme_path = spec_dir / "README.md"
+        if not readme_path.exists():
+            return {
+                "success": False,
+                "spec_type": "hierarchical",
+                "reason": f"README.md not found in {spec_dir}",
+                "full_context": "",
+                "context_size": 0,
+            }
+
+        readme_content = readme_path.read_text(encoding="utf-8")
+
+        # Detect current phase if not specified
+        if phase is None:
+            phase = self._detect_current_phase(spec_dir)
+
+        # Count total phases
+        total_phases = self._count_phases(spec_dir)
+
+        # Load current phase document
+        spec_dir / f"phase{phase}-*.md"
+        phase_matches = list(spec_dir.glob(f"phase{phase}-*.md"))
+
+        if not phase_matches:
+            # Phase file missing, return README only
+            logger.warning(f"Phase {phase} file not found in {spec_dir}")
+            return {
+                "success": True,
+                "spec_type": "hierarchical",
+                "current_phase": phase,
+                "total_phases": total_phases,
+                "full_context": readme_content,
+                "context_size": len(readme_content),
+                "references": self._extract_references(readme_content),
+                "missing_phase_file": True,
+            }
+
+        # Read phase file
+        phase_path = phase_matches[0]
+        phase_content = phase_path.read_text(encoding="utf-8")
+
+        # Combine README + phase content
+        combined_content = f"{readme_content}\n\n---\n\n{phase_content}"
+
+        return {
+            "success": True,
+            "spec_type": "hierarchical",
+            "current_phase": phase,
+            "total_phases": total_phases,
+            "full_context": combined_content,
+            "context_size": len(combined_content),
+            "phase_file": str(phase_path),
+            "references": self._extract_references(combined_content),
+            "next_phase": (
+                {
+                    "phase_number": phase + 1,
+                    "available": phase < total_phases,
+                }
+                if phase < total_phases
+                else None
+            ),
+        }
+
+    def _detect_current_phase(self, spec_dir: Path) -> int:
+        """Detect which phase to work on next using multiple strategies.
+
+        Strategies (in order of preference):
+        1. ROADMAP phase tracking (checkboxes)
+        2. Git commit history
+        3. File existence
+        4. Default to Phase 1
+
+        Args:
+            spec_dir: Path to spec directory
+
+        Returns:
+            int: Phase number to work on (1, 2, 3, ...)
+        """
+        # Extract priority name from spec directory (e.g., SPEC-025-hierarchical-spec)
+        spec_name = spec_dir.name
+        priority_match = re.search(r"SPEC-(\d+)", spec_name)
+        priority_num = priority_match.group(1) if priority_match else None
+
+        # Strategy 1: Check ROADMAP for phase completion
+        try:
+            roadmap_path = Path("docs/roadmap/ROADMAP.md")
+            if roadmap_path.exists():
+                roadmap_content = roadmap_path.read_text(encoding="utf-8")
+
+                # Look for PRIORITY XXX section
+                if priority_num:
+                    priority_pattern = f"PRIORITY {priority_num}:|US-{priority_num} "
+                    if re.search(priority_pattern, roadmap_content):
+                        # Find completed phases
+                        # Look for pattern like "- [x] Phase N complete"
+                        completed_phases = re.findall(r"- \[x\] Phase (\d+)", roadmap_content)
+                        if completed_phases:
+                            max_completed = max(int(p) for p in completed_phases)
+                            next_phase = max_completed + 1
+                            logger.info(
+                                f"Phase detection (ROADMAP): Completed up to Phase {max_completed}, "
+                                f"next = Phase {next_phase}"
+                            )
+                            return next_phase
+        except Exception as e:
+            logger.debug(f"Failed to detect phase from ROADMAP: {e}")
+
+        # Strategy 2: Check git commit history
+        try:
+            import subprocess
+
+            result = subprocess.run(
+                ["git", "log", "--oneline", "-30"],
+                capture_output=True,
+                text=True,
+                cwd=str(Path(__file__).parent.parent.parent),
+            )
+
+            if result.returncode == 0:
+                commits = result.stdout
+                # Look for "Phase N" mentions
+                phase_nums = re.findall(r"Phase (\d+)", commits)
+                if phase_nums:
+                    max_phase = max(int(p) for p in phase_nums)
+                    next_phase = max_phase + 1
+                    logger.info(
+                        f"Phase detection (git): Found Phase {max_phase} in commits, " f"next = Phase {next_phase}"
+                    )
+                    return next_phase
+        except Exception as e:
+            logger.debug(f"Failed to detect phase from git: {e}")
+
+        # Strategy 3: Check file existence
+        try:
+            phase_files = sorted(spec_dir.glob("phase*.md"))
+            if phase_files:
+                # All phases exist, check for deliverables
+                # This is a placeholder - could be enhanced
+                logger.debug(f"Phase detection (files): Found {len(phase_files)} phase files")
+        except Exception as e:
+            logger.debug(f"Failed to detect phase from files: {e}")
+
+        # Strategy 4: Default to Phase 1
+        logger.info("Phase detection: Defaulting to Phase 1 (no detection strategy succeeded)")
+        return 1
+
+    def _count_phases(self, spec_dir: Path) -> int:
+        """Count total phases in hierarchical spec.
+
+        Args:
+            spec_dir: Path to spec directory
+
+        Returns:
+            int: Number of phase files found
+        """
+        phase_files = list(spec_dir.glob("phase*.md"))
+        return len(phase_files)
+
+    def _extract_references(self, content: str) -> list:
+        """Extract guideline references from spec content.
+
+        Args:
+            content: Spec content
+
+        Returns:
+            list: List of guideline references found
+        """
+        # Look for patterns like "[GUIDELINE-007](..)"
+        matches = re.findall(r"\[GUIDELINE-(\d+)[^\]]*\]", content)
+        return [f"GUIDELINE-{m}" for m in matches]
 
     def _extract_tldr(self, content: str) -> str:
         """Extract TL;DR from spec."""

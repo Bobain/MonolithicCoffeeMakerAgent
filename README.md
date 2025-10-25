@@ -21,7 +21,7 @@ The Coffee Maker Agent is a **self-implementing AI system** that:
 poetry install
 
 # 2. Run the autonomous daemon
-python run_daemon.py
+python run_code_developer.py
 
 # 3. Monitor progress (in another terminal)
 project-manager notifications
@@ -54,14 +54,14 @@ This file is the **SINGLE SOURCE OF TRUTH** for:
 
 ## 🎯 Core Components
 
-### 1. Autonomous Development Daemon (`run_daemon.py`)
+### 1. Autonomous Development Daemon (`run_code_developer.py`)
 Continuously reads ROADMAP.md and implements features autonomously using Claude AI.
 
 **Usage**:
 ```bash
-python run_daemon.py              # Interactive mode (asks for approval)
-python run_daemon.py --auto-approve   # Autonomous mode (full automation)
-python run_daemon.py --help        # Show all options
+python run_code_developer.py              # Interactive mode (asks for approval)
+python run_code_developer.py --auto-approve   # Autonomous mode (full automation)
+python run_code_developer.py --help        # Show all options
 ```
 
 ### 2. Project Manager CLI (`project-manager`)

@@ -220,9 +220,9 @@ class Generator:
                 ".claude/agents/assistant.md",
                 ".claude/commands/PROMPTS_INDEX.md",
             ],
-            AgentType.CODE_SEARCHER: [
+            AgentType.ASSISTANT: [
                 ".claude/CLAUDE.md",
-                ".claude/agents/code-searcher.md",
+                ".claude/agents/assistant.md",
                 "docs/roadmap/ROADMAP.md",
             ],
             AgentType.UX_DESIGN_EXPERT: [
@@ -308,7 +308,7 @@ class Generator:
         This method tracks when agents use Glob/Grep, which may indicate:
         - Insufficient context provided upfront
         - Agent should have known the file path
-        - Legitimate search (for code-searcher)
+        - Legitimate search for code analysis
 
         Args:
             agent_type: Agent that performed search
@@ -325,9 +325,9 @@ class Generator:
             ...     context_provided=True
             ... )
         """
-        # code-searcher is EXPECTED to search - don't log as unexpected
-        if agent_type == AgentType.CODE_SEARCHER:
-            logger.debug(f"code-searcher performed expected {operation}: {file_pattern}")
+        # assistant using code analysis skills is EXPECTED to search - don't log as unexpected
+        if agent_type == AgentType.ASSISTANT:
+            logger.debug(f"assistant performed expected {operation}: {file_pattern}")
             return
 
         # architect MAY search for codebase analysis - log but not as warning

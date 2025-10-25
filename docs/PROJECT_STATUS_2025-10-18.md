@@ -47,11 +47,11 @@
 - US-091: Built code-index infrastructure (3-level hierarchical index)
   - Sub-second queries across entire codebase
   - Incremental updates for efficiency
-- US-092: Migrated code-searcher responsibilities to architect ✅
-- US-093: Migrated code-searcher responsibilities to code_developer ✅
+- US-092: Migrated assistant (with code analysis skills) responsibilities to architect ✅
+- US-093: Migrated assistant (with code analysis skills) responsibilities to code_developer ✅
 - US-094: Transition validation complete (skills working perfectly) ✅
-- US-095: Retired code-searcher agent ✅
-- US-096: Archived code-searcher.md ✅
+- US-095: Retired assistant agent (with code analysis skills) ✅
+- US-096: Archived assistant (with code analysis skills).md ✅
 
 #### Group 2: Startup Skills (3 stories) ✅
 - US-062: code_developer-startup skill created (SKILL.md format)
@@ -331,8 +331,8 @@
    - Solution: Startup skills (US-062, US-063, US-064) implemented
    - Status: CFR-007 violations 40-60/month → 0/month
 
-2. **code-searcher Agent Overlap**: RESOLVED
-   - Issue: code-searcher responsibilities overlapping with other agents
+2. **assistant (with code analysis skills) Agent Overlap**: RESOLVED
+   - Issue: assistant (with code analysis skills) responsibilities overlapping with other agents
    - Solution: Migrated to skills (US-092, US-093), agent retired (US-095, US-096)
    - Status: Agent count reduced 6 → 5, 50-150x faster code analysis
 
@@ -360,9 +360,9 @@
 
 ### Blocker Resolution Stats (Last 7 Days)
 
-- Total Blockers Resolved: 4 (CFR-007, code-searcher overlap, slow specs, manual DoD)
+- Total Blockers Resolved: 4 (CFR-007, assistant (with code analysis skills) overlap, slow specs, manual DoD)
 - Average Resolution Time: 1-2 days
-- Critical Blockers Resolved: 2 (CFR-007, code-searcher overlap)
+- Critical Blockers Resolved: 2 (CFR-007, assistant (with code analysis skills) overlap)
 - **Target Met**: <4 hours for urgent blockers, <2 days for strategic blockers
 
 ---

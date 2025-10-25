@@ -1,17 +1,26 @@
 Implement $PRIORITY_NAME: $PRIORITY_TITLE.
 
-## CRITICAL: Read Technical Spec FIRST!
+## Technical Specification
 
-**BEFORE implementing, you MUST**:
-1. **Check for technical spec** in `docs/architecture/specs/SPEC-*.md`
-2. **Read the FULL spec** if it exists (contains architecture, design, implementation plan)
-3. **Follow the spec exactly** - it was designed by architect for optimal implementation
-4. **If spec missing**: This violates CFR-008 - STOP and notify user
+$SPEC_CONTENT
 
-**How to find spec**:
-- Look for `docs/architecture/specs/SPEC-{number}-*.md` where {number} matches your priority
-- Example: PRIORITY 9 → Look for `docs/architecture/specs/SPEC-009-*.md`
-- Use Glob tool to find: `docs/architecture/specs/SPEC-*.md`
+---
+
+## CRITICAL: Follow the Technical Spec Above!
+
+**The technical spec above was created by the architect** and contains:
+- Complete architecture and design decisions
+- Detailed implementation steps
+- Testing strategy
+- Definition of Done criteria
+- Integration points with existing code
+
+**You MUST**:
+1. **Read the FULL spec above** carefully
+2. **Follow the spec exactly** - it was designed by architect for optimal implementation
+3. **Use the implementation steps** provided in the spec
+4. **Verify all DoD criteria** before marking complete
+5. **If spec is missing or wrong**: STOP and create notification for architect
 
 **Why specs matter**:
 - architect has reviewed FULL ROADMAP and designed for reuse
@@ -21,14 +30,13 @@ Implement $PRIORITY_NAME: $PRIORITY_TITLE.
 
 ## Implementation Steps
 
-1. **Read Technical Spec**: Find and read `docs/architecture/specs/SPEC-*.md` FIRST
-2. **Update Status**: Mark priority as "🔄 In Progress" in ROADMAP.md
-3. **Implement**: Follow spec's implementation plan exactly
-4. **Test**: Add tests as specified in spec's testing strategy
-5. **Document**: Update docs as specified in spec
-6. **Verify DoD**: Use Puppeteer to verify Definition of Done (if web-based)
-7. **Commit**: Commit with clear messages
-8. **Complete**: Update ROADMAP.md to "✅ Complete"
+1. **Update Status**: Mark priority as "🔄 In Progress" in ROADMAP.md
+2. **Implement**: Follow spec's implementation plan exactly (see Technical Specification above)
+3. **Test**: Add tests as specified in spec's testing strategy
+4. **Document**: Update docs as specified in spec
+5. **Verify DoD**: Use Puppeteer to verify Definition of Done (if web-based)
+6. **Commit**: Commit with clear messages
+7. **Complete**: Update ROADMAP.md to "✅ Complete"
 
 ## Important Guidelines
 

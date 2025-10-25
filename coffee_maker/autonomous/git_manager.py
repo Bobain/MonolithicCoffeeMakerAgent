@@ -189,7 +189,7 @@ class GitManager:
             return False
 
     def commit(self, message: str, add_all: bool = True) -> bool:
-        """Commit changes.
+        """Commit changes (legacy method, use commit_with_retry for robustness).
 
         Args:
             message: Commit message
@@ -213,6 +213,85 @@ class GitManager:
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to commit: {e.stderr}")
             return False
+
+    def commit_with_retry(self, message: str, add_all: bool = True, max_retries: int = 10) -> bool:
+        """Commit changes with automatic retry for pre-commit hook modifications.
+
+        This method handles the common case where pre-commit hooks (like black, isort,
+        trailing-whitespace, end-of-file-fixer) modify files during commit. It will
+        automatically stage the modified files and retry the commit up to max_retries times.
+
+        Args:
+            message: Commit message
+            add_all: Whether to add all changes (git add -A) before first attempt
+            max_retries: Maximum number of retry attempts (default: 10)
+
+        Returns:
+            True if commit succeeded, False if failed after all retries
+
+        Example:
+            >>> git = GitManager()
+            >>> # Will retry automatically if pre-commit hooks modify files
+            >>> success = git.commit_with_retry("feat: Add new feature")
+            >>> if not success:
+            ...     print("Failed to commit after 10 retries")
+        """
+        attempt = 0
+
+        while attempt < max_retries:
+            attempt += 1
+
+            try:
+                # Add files on first attempt or after hooks modified them
+                if add_all or attempt > 1:
+                    self.add_all()
+                    logger.debug(f"Added all changes (attempt {attempt}/{max_retries})")
+
+                # Try to commit
+                self._run_git("commit", "-m", message)
+                logger.info(f"✅ Successfully committed: {message[:50]}...")
+                return True
+
+            except subprocess.CalledProcessError as e:
+                error_msg = str(e.stderr)
+
+                # Check if pre-commit hooks modified files
+                if any(
+                    phrase in error_msg
+                    for phrase in [
+                        "files were modified by this hook",
+                        "File was modified by this hook",
+                        "reformatted",
+                        "fixed by hooks",
+                        "would reformat",
+                        "Fixing",
+                    ]
+                ):
+                    logger.info(f"Pre-commit hooks modified files, retrying ({attempt}/{max_retries})...")
+                    # Continue to next iteration - files will be added at start of next loop
+                    continue
+
+                # Check if there's nothing to commit (already committed)
+                elif "nothing to commit" in error_msg or "working tree clean" in error_msg:
+                    logger.info("Nothing to commit - working tree clean")
+                    return True
+
+                # Check if we're in the middle of a merge/rebase
+                elif any(phrase in error_msg for phrase in ["cherry-pick", "merge", "rebase"]):
+                    logger.error(f"Cannot commit - repository in special state: {error_msg}")
+                    return False
+
+                # For other errors, try a few more times in case it's transient
+                elif attempt < 3:
+                    logger.warning(f"Commit failed, retrying ({attempt}/{max_retries}): {error_msg}")
+                    continue
+                else:
+                    # Unrecoverable error
+                    logger.error(f"Failed to commit after {attempt} attempts: {error_msg}")
+                    return False
+
+        logger.error(f"Failed to commit after {max_retries} attempts - pre-commit hooks may be in infinite loop")
+        return False
 
     def push(self, branch: Optional[str] = None, set_upstream: bool = True) -> bool:
         """Push commits to remote.

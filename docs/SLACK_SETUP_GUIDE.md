@@ -38,7 +38,7 @@ Before setting up Slack integration:
 ```
 ┌─────────────────┐
 │ Daemon          │
-│  run_daemon.py  │
+│  run_code_developer.py  │
 └────────┬────────┘
          │
          │ Creates notifications
@@ -277,7 +277,7 @@ Check logs for details:
 
 Actions:
   • View logs: project-manager logs
-  • Restart: python run_daemon.py --auto-approve
+  • Restart: python run_code_developer.py --auto-approve
 ```
 
 ### ⚠️ High Priority Notifications

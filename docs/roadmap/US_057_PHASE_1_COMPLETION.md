@@ -33,7 +33,7 @@ Phase 1 of US-057 (Transform Daemon into Multi-Agent Orchestrator) is complete. 
 1. ARCHITECT (priority 1) - Highest: Creates specs ahead of code_developer
 2. CODE_DEVELOPER (priority 2) - High: Implementation execution
 3. PROJECT_MANAGER & ASSISTANT (priority 3) - Normal: Coordination & QA
-4. CODE_SEARCHER & UX_DESIGN_EXPERT (priority 4) - Low: Analysis & reviews
+4. ASSISTANT & UX_DESIGN_EXPERT (priority 4) - Low: Analysis & reviews
 
 **Crash Recovery**:
 - Exponential backoff: 60s, 120s, 240s between restarts

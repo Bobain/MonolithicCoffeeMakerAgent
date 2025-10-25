@@ -12,7 +12,7 @@
 |-------|--------------|----------|
 | **assistant** | First-line support & triage | Quick questions, simple debugging, concept explanations |
 | **project_manager** | ROADMAP & strategic planning | Project status, priorities, DoD verification, GitHub status |
-| **code-searcher** | Deep codebase analysis | Find code, analyze patterns, security audits, forensics |
+| **assistant (with code analysis skills)** | Deep codebase analysis | Find code, analyze patterns, security audits, forensics |
 | **code_developer** | Autonomous implementation | Implement features, create specs, autonomous development |
 | **ux-design-expert** | UI/UX design guidance | Design systems, layouts, data viz, Tailwind CSS |
 | **memory-bank-synchronizer** | Documentation sync | Update CLAUDE.md files to match code reality |
@@ -28,7 +28,7 @@ Is it a QUICK question? (< 2 min answer)
     ├─ YES → assistant (handle directly)
     └─ NO  → Is it specialized?
         ↓
-        ├─ Code analysis? → code-searcher
+        ├─ Code analysis? → assistant (with code analysis skills)
         ├─ Project/ROADMAP? → project_manager
         ├─ Design/UX? → ux-design-expert
         ├─ Implementation? → code_developer
@@ -49,7 +49,7 @@ Is it a QUICK question? (< 2 min answer)
 - ✅ Tool usage help
 
 **When to Delegate**:
-- ⏩ Complex code analysis → **code-searcher**
+- ⏩ Complex code analysis → **assistant (with code analysis skills)**
 - ⏩ ROADMAP/strategy questions → **project_manager**
 - ⏩ Design questions → **ux-design-expert**
 - ⏩ Implementation requests → **code_developer**
@@ -62,7 +62,7 @@ Is it a QUICK question? (< 2 min answer)
 → Direct answer with commands
 
 ❌ DELEGATE: "Find all authentication code"
-→ Use code-searcher (complex search)
+→ Use assistant (with code analysis skills) (complex search)
 
 ✅ HANDLE: "What's in the ROADMAP?"
 → Read ROADMAP.md and summarize
@@ -84,7 +84,7 @@ Is it a QUICK question? (< 2 min answer)
 - ✅ Warning users about blockers
 
 **When to Delegate**:
-- ⏩ Deep code analysis → **code-searcher**
+- ⏩ Deep code analysis → **assistant (with code analysis skills)**
 - ⏩ Design decisions → **ux-design-expert**
 - ⏩ Implementation work → **code_developer**
 
@@ -98,7 +98,7 @@ Is it a QUICK question? (< 2 min answer)
 → Check ROADMAP status, verify with Puppeteer
 
 ⏩ DELEGATE: "How is feature X implemented?"
-→ Use code-searcher (find implementation details)
+→ Use assistant (with code analysis skills) (find implementation details)
 
 ⏩ DELEGATE: "Implement feature Y"
 → Use code_developer (autonomous implementation)
@@ -116,7 +116,7 @@ service.warn_user(
 
 ---
 
-### 3. code-searcher (Codebase Analysis)
+### 3. assistant (with code analysis skills) (Codebase Analysis)
 
 **When to Use**:
 - ✅ Find specific functions/classes/code
@@ -159,7 +159,7 @@ service.warn_user(
 - ✅ Verify DoD with Puppeteer
 
 **When to Delegate**:
-- ⏩ Understand existing code → **code-searcher**
+- ⏩ Understand existing code → **assistant (with code analysis skills)**
 - ⏩ Design guidance → **ux-design-expert**
 - ⏩ Strategic decisions → **project_manager**
 
@@ -170,7 +170,7 @@ service.warn_user(
 → Read spec, implement, test, commit, create PR
 
 ⏩ DELEGATE: "How is X currently implemented?"
-→ Use code-searcher (find before implementing)
+→ Use assistant (with code analysis skills) (find before implementing)
 
 ⏩ DELEGATE: "Should this be a button or link?"
 → Use ux-design-expert (design decision)
@@ -193,7 +193,7 @@ service.warn_user(
 
 **When to Delegate**:
 - ⏩ Code implementation → **code_developer**
-- ⏩ Existing design analysis → **code-searcher**
+- ⏩ Existing design analysis → **assistant (with code analysis skills)**
 - ⏩ Strategic priority → **project_manager**
 
 **Examples**:
@@ -209,7 +209,7 @@ service.warn_user(
 → Provide design, let code_developer implement
 
 ⏩ DELEGATE: "Find existing design patterns"
-→ Use code-searcher (analyze current code)
+→ Use assistant (with code analysis skills) (analyze current code)
 ```
 
 ---
@@ -223,7 +223,7 @@ service.warn_user(
 - ✅ Maintain consistency between docs and code
 
 **When to Delegate**:
-- ⏩ Find actual patterns → **code-searcher**
+- ⏩ Find actual patterns → **assistant (with code analysis skills)**
 - ⏩ Strategic decisions → **project_manager**
 
 **Examples**:
@@ -233,7 +233,7 @@ service.warn_user(
 → Compare docs with code, update patterns
 
 ⏩ DELEGATE: "Find all error handling patterns"
-→ Use code-searcher (analyze codebase first)
+→ Use assistant (with code analysis skills) (analyze codebase first)
 
 ❌ DON'T: Make strategic decisions
 → Document reality, let project_manager decide changes
@@ -248,18 +248,18 @@ service.warn_user(
 **Using Task Tool**:
 
 ```python
-# assistant delegating to code-searcher
+# assistant delegating to assistant (with code analysis skills)
 Task(
-    subagent_type="code-searcher",
+    subagent_type="assistant (with code analysis skills)",
     description="Find authentication code",
     prompt="Locate all authentication-related code. "
            "Find login, JWT validation, session management. "
            "Provide file paths with line numbers."
 )
 
-# project_manager delegating to code-searcher
+# project_manager delegating to assistant (with code analysis skills)
 Task(
-    subagent_type="code-searcher",
+    subagent_type="assistant (with code analysis skills)",
     description="Analyze PRIORITY 5 implementation",
     prompt="Find all code related to PRIORITY 5 implementation. "
            "Check what's been done, what remains."
@@ -272,7 +272,7 @@ Task(
 ```
 project_manager
   ↓ delegates
-code-searcher (find issue)
+assistant (with code analysis skills) (find issue)
   ↓ returns findings
 project_manager
   ↓ uses findings
@@ -290,7 +290,7 @@ user → code_developer (implement design)
 ```
 user → assistant (question)
   ↓ delegates if complex
-code-searcher (find code)
+assistant (with code analysis skills) (find code)
   ↓ returns details
 assistant (explain to user)
 ```
@@ -305,7 +305,7 @@ assistant (explain to user)
 - assistant → Use Grep/Read directly
 
 **Complex (many files, patterns)**:
-- assistant → Delegate to code-searcher
+- assistant → Delegate to assistant (with code analysis skills)
 
 ### Scenario 2: User asks "What should we work on next?"
 
@@ -318,7 +318,7 @@ assistant (explain to user)
 **Flow**:
 1. project_manager → Check if in ROADMAP, strategic fit
 2. code_developer → Create spec if needed
-3. code-searcher → Understand existing code
+3. assistant (with code analysis skills) → Understand existing code
 4. ux-design-expert → Design if UI involved
 5. code_developer → Implement
 
@@ -346,11 +346,11 @@ assistant (explain to user)
 - ❌ Formal DoD verification
 
 **project_manager**:
-- ❌ Deep code analysis (use code-searcher)
+- ❌ Deep code analysis (use assistant (with code analysis skills))
 - ❌ Design decisions (use ux-design-expert)
 - ❌ Code implementation (use code_developer)
 
-**code-searcher**:
+**assistant (with code analysis skills)**:
 - ❌ Strategic recommendations
 - ❌ Design suggestions
 - ❌ Code implementation
@@ -367,7 +367,7 @@ assistant (explain to user)
 
 **memory-bank-synchronizer**:
 - ❌ Strategic decisions
-- ❌ Code analysis (get from code-searcher)
+- ❌ Code analysis (get from assistant (with code analysis skills))
 - ❌ New feature design
 
 ---
@@ -379,12 +379,12 @@ assistant (explain to user)
 1. **Recognize limitations**: Know when a task is outside your scope
 2. **Delegate explicitly**: Tell user "I'm delegating to X because..."
 3. **Chain results**: Use findings from specialized agents
-4. **Acknowledge expertise**: "code-searcher specializes in..."
+4. **Acknowledge expertise**: "assistant (with code analysis skills) specializes in..."
 
 ### For Users
 
 1. **Start with assistant**: For general questions
-2. **Be specific**: "Use code-searcher to..." for explicit agent selection
+2. **Be specific**: "Use assistant (with code analysis skills) to..." for explicit agent selection
 3. **Trust delegation**: Agents know when to delegate
 4. **Use /agent-X**: Explicit agent invocation when needed
 
@@ -430,7 +430,7 @@ assistant (explain to user)
 1. assistant → Initial triage
    └─ "This needs code analysis"
 
-2. code-searcher → Find auth code
+2. assistant (with code analysis skills) → Find auth code
    - Locate all auth functions
    - Map call chains
    - Identify bottlenecks
@@ -451,7 +451,7 @@ assistant (explain to user)
 - NO → Delegate to specialist
 
 **"Does this require code analysis?"**
-- YES → code-searcher
+- YES → assistant (with code analysis skills)
 
 **"Does this require strategic decision?"**
 - YES → project_manager

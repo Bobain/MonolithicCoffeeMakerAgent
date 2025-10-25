@@ -450,7 +450,7 @@ AGENT_ROLES = {
         "can_write": False,  # DELEGATION-ONLY
         "owns": [],
     },
-    "code-searcher": {
+    "assistant (with code analysis skills)": {
         "role": "CODE_ANALYSIS",
         "can_write": False,  # READ-ONLY
         "owns": [],
@@ -681,7 +681,7 @@ def check_cfr_compliance_before_work(self, planned_actions: List[dict]) -> List[
 15. `test_extract_intent_no_file_path()` - "Make assistant write" → Parsed (no path)
 16. `test_extract_intent_no_match()` - "Please help me" → None
 17. `test_extract_intent_complex_path()` - Path with spaces → Parsed correctly
-18. `test_extract_intent_agent_with_dash()` - "code-searcher" → Normalized
+18. `test_extract_intent_agent_with_dash()` - "assistant (with code analysis skills)" → Normalized
 19. `test_extract_intent_case_insensitive()` - "MAKE ASSISTANT WRITE" → Parsed
 20. `test_extract_intent_punctuation()` - Request with punctuation → Parsed
 
@@ -1106,7 +1106,7 @@ Override? [y/N]
 # All agents can READ any file
 test_requests = [
     "Have assistant read docs/ROADMAP.md",
-    "Make code-searcher analyze coffee_maker/",
+    "Make assistant (with code analysis skills) analyze coffee_maker/",
     "Ask architect to review pyproject.toml",
 ]
 

@@ -131,6 +131,6 @@ git:
 #   daemon.crash_recovery.max_crashes -> DAEMON_CRASH_RECOVERY_MAX_CRASHES
 #
 # CLI Arguments Override Everything:
-#   python run_daemon.py --auto-approve --max-crashes 5
+#   python run_code_developer.py --auto-approve --max-crashes 5
 #
 # ============================================================================

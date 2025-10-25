@@ -17,7 +17,6 @@
 | **code_developer** | Autonomous implementation from ROADMAP | Backend only |
 | **project_manager** | Project coordination, GitHub monitoring, notifications | Backend only |
 | **assistant** | Documentation expert, intelligent dispatcher, demo creator | Mixed |
-| **code-searcher** | Deep codebase analysis and forensic examination | Backend only |
 | **ux-design-expert** | UI/UX design guidance and Tailwind CSS | Through user_listener |
 | **code-reviewer** | Automated QA, reviews commits, notifies architect | Backend only |
 
@@ -71,12 +70,22 @@ MonolithicCoffeeMakerAgent/
 **CFR-009 - Sound Notifications**: ONLY `user_listener` uses `sound=True`. All background agents MUST use `sound=False`
 
 **CFR-013 - Git Workflow**: ALL agents work on `roadmap` branch ONLY. NO feature branches.
-- **Exception**: orchestrator may create temporary `roadmap-*` worktree branches for parallel execution
-- architect merges `roadmap-*` → `roadmap`, then orchestrator cleans up
+- **Exception**: orchestrator may create temporary `roadmap-implementation_task-*` worktree branches for parallel execution
+- **Branch naming**: `roadmap-implementation_task-{task_id}` (e.g., `roadmap-implementation_task-TASK-31-1`)
+- **One worktree per task**: Each implementation task gets its own isolated worktree and branch
+- architect merges `roadmap-implementation_task-*` → `roadmap` after EACH task completes, then orchestrator cleans up
+- **Sequential within group**: TASK-31-1 → merge → TASK-31-2 → merge (each in own worktree)
+- **Parallel across groups**: TASK-31-1 and TASK-32-1 can run simultaneously (different worktrees)
 - See [GUIDELINE-004](../docs/architecture/guidelines/GUIDELINE-004-git-tagging-workflow.md) for tagging
 - See CFR-013 "Git Worktree Workflow" section for complete lifecycle
 
 **CFR-014 - Database Tracing**: ALL orchestrator activities in SQLite database. JSON files FORBIDDEN.
+
+**CFR-015 - Centralized Database Storage**: ALL database files MUST be stored in `data/` directory ONLY.
+- **Implementation**: All .db, .sqlite, .sqlite3 files in `data/` directory
+- **Prohibited**: Database files in root, `.claude/`, or any other location
+- **Reason**: Organization, backup, security, and deployment simplicity
+- **Docs**: See [docs/CFR-015-CENTRALIZED-DATABASE-STORAGE.md](../docs/CFR-015-CENTRALIZED-DATABASE-STORAGE.md)
 
 ### Prompts
 - **Location**: `.claude/commands/` (centralized, MANDATORY)
@@ -172,7 +181,6 @@ UI needed? → user_listener
 Architectural design? → architect
 Quick question? → assistant
 Demo creation? → assistant
-Code internals? → code-searcher
 Project status? → project_manager
 Design? → ux-design-expert
 Implementation? → code_developer

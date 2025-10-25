@@ -100,7 +100,7 @@ Defines all valid agent types in the system.
 3. `CODE_DEVELOPER` - Implements priorities from ROADMAP
 4. `PROJECT_MANAGER` - Monitors GitHub, verifies DoD
 5. `ASSISTANT` - Creates demos, reports bugs
-6. `CODE_SEARCHER` - Deep code analysis
+6. `ASSISTANT` - Deep code analysis
 7. `UX_DESIGN_EXPERT` - Design guidance
 8. `CODE_REVIEWER` - Quality assurance and code review
 
@@ -151,7 +151,7 @@ These agents are READ-ONLY or delegation-only and can have multiple instances:
 |-------|--------------------------|
 | `assistant` | READ-ONLY, only reads and delegates |
 | `user_listener` | Delegation-only, no writes |
-| `code-searcher` | READ-ONLY, only analyzes code |
+| `assistant (with code analysis skills)` | READ-ONLY, only analyzes code |
 | `ux-design-expert` | Provides specs, doesn't write files |
 
 **Note**: While multiple instances are technically safe for these agents, the current implementation enforces singleton for ALL agents for consistency and simplicity.

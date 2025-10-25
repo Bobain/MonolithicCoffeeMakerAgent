@@ -53,10 +53,10 @@ class TaskMetricsDB:
 
         Args:
             db_path: Optional custom database path.
-                    Defaults to ~/.coffee_maker/task_metrics.db
+                    Defaults to data/task_metrics.db
         """
         if db_path is None:
-            db_path = Path.home() / ".coffee_maker" / "task_metrics.db"
+            db_path = Path("data/task_metrics.db")
 
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)

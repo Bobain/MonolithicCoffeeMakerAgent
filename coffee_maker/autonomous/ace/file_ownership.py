@@ -31,7 +31,6 @@ Integration:
 """
 
 import logging
-from fnmatch import fnmatch
 
 from coffee_maker.autonomous.agent_registry import AgentType
 
@@ -121,7 +120,6 @@ class FileOwnership:
         "docs/roadmap/**": AgentType.PROJECT_MANAGER,
         "docs/templates/**": AgentType.PROJECT_MANAGER,
         "docs/tutorials/**": AgentType.PROJECT_MANAGER,
-        "docs/code-searcher/**": AgentType.PROJECT_MANAGER,
         "docs/user_interpret/**": AgentType.PROJECT_MANAGER,
         "docs/code_developer/**": AgentType.PROJECT_MANAGER,
         "docs/PRIORITY_*_STRATEGIC_SPEC.md": AgentType.PROJECT_MANAGER,

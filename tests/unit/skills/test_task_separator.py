@@ -1,29 +1,23 @@
-"""Tests for task-separator skill."""
+"""Tests for task-separator skill.
+
+Updated to use Pythonic imports (PRIORITY 26).
+"""
 
 import sys
 from pathlib import Path
 
 # Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+repo_root = Path(__file__).parent.parent.parent.parent
+sys.path.insert(0, str(repo_root))
+sys.path.insert(0, str(repo_root / ".claude"))
 
-# Import from the skill module
-from importlib.util import module_from_spec, spec_from_file_location
+# Import using proper Python imports (PRIORITY 26)
+from claude.skills.architect.task_separator import task_separator as task_separator_module
 
 
 def load_task_separator():
-    """Dynamically load the task-separator module."""
-    skill_path = (
-        Path(__file__).parent.parent.parent.parent
-        / ".claude"
-        / "skills"
-        / "architect"
-        / "task-separator"
-        / "task_separator.py"
-    )
-    spec = spec_from_file_location("task_separator", skill_path)
-    module = module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    """Load the task-separator module using proper imports."""
+    return task_separator_module
 
 
 class TestExtractFilePatterns:

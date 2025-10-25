@@ -169,7 +169,7 @@ This is enforced by embedding trace-execution in startup skills:
 
 **Recommendation**: Deprecate legacy-code-analysis skill
 **Reason**: Low adoption, negative time savings, better alternatives exist
-**Migration**: Use code-searcher agent directly instead
+**Migration**: Use assistant agent (with code analysis skills) directly instead
 **Priority**: LOW (cleanup)
 ```
 
@@ -342,14 +342,14 @@ timeout detection logic. Low effort (2 hours), high impact on user trust.
 **Priority**: LOW
 **Usage**: 2 times in 3 months (expected: 10-15 times)
 **Issue**: Slower than manual (12 min vs 8 min), output not actionable
-**Recommendation**: Remove skill, use code-searcher agent instead
-**Migration Path**: code-searcher provides better analysis in less time
+**Recommendation**: Remove skill, use assistant agent (with code analysis skills) instead
+**Migration Path**: assistant (with code analysis skills) provides better analysis in less time
 **Confidence**: HIGH (clear usage pattern: agents avoid this skill)
 **Delta Items**: #11, #17 (pattern: "prefer manual analysis over skill")
 
 **Curator's Rationale**:
 Skill created 6 months ago, never adopted. Agents consistently choose
-manual analysis or code-searcher over this skill. Performance data shows
+manual analysis or assistant (with code analysis skills) over this skill. Performance data shows
 skill is actually slower than alternatives. Recommendation: Deprecate,
 free up maintenance effort, direct users to better alternatives.
 

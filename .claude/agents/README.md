@@ -72,21 +72,7 @@ This directory contains agent definitions for the MonolithicCoffeeMakerAgent pro
 
 ---
 
-### 6. code-searcher
-**Purpose**: Deep codebase analysis and forensic examination
-
-**Use When**:
-- Finding code patterns across the codebase
-- Security audits
-- Dependency tracing
-- Architectural analysis of existing code
-- Identifying refactoring opportunities
-
-**Invoke**: `> Use the code-searcher subagent to find all authentication code`
-
----
-
-### 7. ux-design-expert
+### 6. ux-design-expert
 **Purpose**: UI/UX design guidance and Tailwind CSS expertise
 
 **Use When**:
@@ -97,6 +83,25 @@ This directory contains agent definitions for the MonolithicCoffeeMakerAgent pro
 - Creating design systems
 
 **Invoke**: `> Use the ux-design-expert subagent to design a dashboard layout`
+
+---
+
+### 8. code-reviewer
+**Purpose**: Automated code quality assurance and review agent
+
+**Use When**:
+- Reviewing commits from code_developer
+- Generating quality reports
+- Checking style guide compliance
+- Running security scans
+- Verifying test coverage
+- Communicating findings to architect
+
+**Invoke**: `> Use the code-reviewer subagent to review commit abc1234`
+
+**CLI**: `poetry run code-reviewer review [commit-sha]`
+
+**Status**: Active (Background agent - silent notifications)
 
 ---
 
@@ -216,17 +221,6 @@ Each agent has been configured to read specific critical documents at startup. T
 - `docs/architecture/guidelines/GUIDELINE-*.md` - Existing implementation guidelines
 - `pyproject.toml` - Current dependencies (when evaluating new dependencies)
 
-#### code-searcher - Startup Documents
-
-**READ AT STARTUP (MANDATORY)**:
-1. 🔴 `.claude/CLAUDE.md` - Project overview (read FIRST)
-2. 🔴 `.claude/agents/code-searcher.md` - Own role definition (read SECOND)
-
-**READ AS NEEDED**:
-- All codebase files (comprehensive access for analysis)
-- `docs/roadmap/ROADMAP.md` - Context for analysis requests
-- Specific files/directories requested by user
-
 #### ux-design-expert - Startup Documents
 
 **READ AT STARTUP (MANDATORY)**:
@@ -238,6 +232,20 @@ Each agent has been configured to read specific critical documents at startup. T
 - Tailwind configuration files
 - Existing UI components
 - `docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md` - Feature requirements
+
+#### code-reviewer - Startup Documents
+
+**READ AT STARTUP (MANDATORY)**:
+1. 🔴 `.gemini/styleguide.md` - Style guide compliance rules (read FIRST)
+2. 🔴 `.claude/CLAUDE.md` - Project standards (read SECOND)
+3. 🔴 `.claude/agents/code-reviewer.md` - Own role definition (read THIRD)
+
+**READ AS NEEDED**:
+- `docs/architecture/specs/SPEC-*.md` - Technical specs for compliance checking
+- `docs/architecture/decisions/ADR-*.md` - Architectural decisions
+- `docs/architecture/guidelines/GUIDELINE-*.md` - Implementation guidelines
+- `docs/code-reviews/INDEX.md` - Review history
+- Changed files from git diff (for review analysis)
 
 ---
 
@@ -268,14 +276,21 @@ Agent system prompt and instructions go here...
 
 ## Version
 
-**Version**: 2.1 (US-072 - Orchestrator Agent Added)
-**Last Updated**: 2025-10-19
+**Version**: 2.2 (code-reviewer Agent Added)
+**Last Updated**: 2025-10-21
 
 All agents equipped with:
 - Puppeteer MCP for browser automation
 - GitHub CLI for issue/PR management
 - DoD verification capabilities
 - Comprehensive context files
+
+**New in v2.2**:
+- ✅ code-reviewer agent configuration added
+- ✅ Automated code quality assurance
+- ✅ Style guide and architecture compliance checking
+- ✅ Security scanning and test coverage verification
+- ✅ Automated feedback loop with architect
 
 **New in v2.1**:
 - ✅ Orchestrator agent configuration added

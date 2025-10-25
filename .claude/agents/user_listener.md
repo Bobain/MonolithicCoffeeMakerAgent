@@ -1,3 +1,10 @@
+---
+name: user-listener
+description: PRIMARY USER INTERFACE agent. Interprets user intent and delegates to appropriate specialized agents. Lightweight orchestration with Haiku 4.5 for cost-efficient UI management.
+model: haiku
+color: cyan
+---
+
 # User Listener Agent Configuration
 
 **Status**: Active (US-046)
@@ -29,7 +36,7 @@ user-listener (CLI)
         ├─ project_manager (strategic, ROADMAP, GitHub)
         ├─ code_developer (implementation, PRs)
         ├─ assistant (docs, demos, bugs)
-        ├─ code-searcher (code analysis)
+        ├─ assistant (with code analysis skills) (code analysis)
         └─ ux-design-expert (UI/UX design)
 ```
 
@@ -97,7 +104,7 @@ patterns = {
     "project_manager": ["roadmap", "priority", "github", "status"],
     "code_developer": ["implement", "code", "pr", "fix bug"],
     "assistant": ["documentation", "demo", "explain", "help"],
-    "code-searcher": ["find in code", "search", "analyze code"],
+    "assistant (with code analysis skills)": ["find in code", "search", "analyze code"],
     "ux-design-expert": ["ui", "ux", "tailwind", "dashboard"]
 }
 ```
@@ -146,7 +153,7 @@ poetry run user-listener
 [routes to assistant]
 
 › Find where authentication is implemented
-[routes to code-searcher]
+[routes to assistant (with code analysis skills)]
 
 › Make the dashboard look better
 [routes to ux-design-expert]

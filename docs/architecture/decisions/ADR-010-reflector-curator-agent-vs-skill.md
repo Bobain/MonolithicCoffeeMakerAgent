@@ -4,7 +4,7 @@
 **Date**: 2025-10-18
 **Approved**: 2025-10-18 (User approval obtained)
 **Author**: architect agent
-**Related**: ADR-009 (code-searcher retirement), trace-execution skill
+**Related**: ADR-009 (assistant (with code analysis skills) retirement), trace-execution skill
 
 ---
 
@@ -42,8 +42,8 @@ This decision is **CRITICAL** because:
 
 ### Current Agent Count
 
-**With code-searcher retirement (ADR-009)**:
-- 6 agents → 5 agents after code-searcher removed
+**With assistant (with code analysis skills) retirement (ADR-009)**:
+- 6 agents → 5 agents after assistant (with code analysis skills) removed
 
 **If Reflector and Curator remain agents**:
 - Total: 5 agents (user_listener, architect, code_developer, project_manager, assistant) + Reflector + Curator = **7 agents**
@@ -501,9 +501,9 @@ ACE Agent:
 ### Neutral Consequences
 
 1. **Agent Count Change**
-   - code-searcher retired (ADR-009) → -1 agent
+   - assistant (with code analysis skills) retired (ADR-009) → -1 agent
    - Reflector + Curator remain → +2 agents (but they always existed)
-   - Net: Still fewer agents than before if code-searcher removed
+   - Net: Still fewer agents than before if assistant (with code analysis skills) removed
 
 2. **Invocation Pattern**
    - trace-execution: Embedded (every agent execution)
@@ -734,7 +734,7 @@ Reassess this decision if:
 
 ## References
 
-- [ADR-009: Retire code-searcher, Replace with Skills](./ADR-009-retire-code-searcher-replace-with-skills.md)
+- [ADR-009: Retire assistant (with code analysis skills), Replace with Skills](./ADR-009-retire-assistant (with code analysis skills)-replace-with-skills.md)
 - [trace-execution Skill](./../../../.claude/skills/trace-execution.md)
 - [SPEC-001: Advanced Code Search Skills Architecture](../specs/SPEC-001-advanced-code-search-skills.md)
 - [.claude/CLAUDE.md: Agent Tool Ownership Matrix](../../.claude/CLAUDE.md)

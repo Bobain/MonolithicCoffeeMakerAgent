@@ -10,12 +10,6 @@ US-047 UPDATE: Enforces CFR-008 - ARCHITECT-ONLY SPEC CREATION
 - architect must create specs proactively in docs/architecture/specs/
 - No delegation - just blocking with clear notification
 
-US-054 UPDATE: Enforces CFR-011 - ARCHITECT DAILY INTEGRATION
-- architect MUST read code-searcher reports before creating specs
-- architect MUST analyze codebase weekly (max 7 days between analyses)
-- Spec creation BLOCKED if CFR-011 violations detected
-- Ensures continuous integration of code quality findings
-
 Classes:
     SpecManagerMixin: Mixin providing _ensure_technical_spec() and spec checking
 
@@ -33,10 +27,6 @@ Architecture:
 """
 
 import logging
-from coffee_maker.autonomous.architect_daily_routine import (
-    ArchitectDailyRoutine,
-    CFR011ViolationError,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -77,11 +67,6 @@ class SpecManagerMixin:
         3. If spec missing: BLOCK and notify user/architect
         4. Do NOT create specs (code_developer cannot create specs per CFR-008)
 
-        US-054: ENFORCE CFR-011 - Architect Daily Integration
-        BEFORE allowing spec check, ensure architect has:
-        - Read all code-searcher reports
-        - Performed weekly codebase analysis (<7 days ago)
-
         BUG-002 FIX: Validate priority fields before accessing them.
 
         Args:
@@ -94,23 +79,6 @@ class SpecManagerMixin:
         if not priority.get("name"):
             logger.error("❌ Priority missing 'name' field - cannot check for technical spec")
             return False
-
-        # US-054: ENFORCE CFR-011 BEFORE checking for spec
-        # This ensures architect has read all findings before ANY spec-related work
-        # SKIP in parallel execution mode (specific_priority set) - worktrees are isolated
-        if not hasattr(self, "specific_priority") or self.specific_priority is None:
-            routine = ArchitectDailyRoutine()
-            try:
-                routine.enforce_cfr_011()
-                logger.info("✅ CFR-011 compliant - architect has integrated code-searcher findings")
-            except CFR011ViolationError as e:
-                logger.error(f"❌ CFR-011 violation detected: {e}")
-                # Notify user about CFR-011 violation
-                self._notify_cfr_011_violation(priority, str(e))
-                # BLOCK spec checking until architect complies
-                return False
-        else:
-            logger.info("⏭️  Skipping CFR-011 enforcement (parallel execution mode)")
 
         priority_name = priority["name"]
         priority_title = priority.get("title", "")
@@ -128,7 +96,7 @@ class SpecManagerMixin:
             else:
                 # Fallback to priority number
                 priority_num = priority_name.replace("PRIORITY", "").strip()
-                spec_prefix = f"SPEC-{priority_num.zfill(3)}"
+                spec_prefix = f"SPEC-{priority_num}"
         elif priority_name.startswith("US-"):
             spec_number = priority_name.split("-")[1]
             spec_prefix = f"SPEC-{spec_number}"
@@ -136,9 +104,9 @@ class SpecManagerMixin:
             priority_num = priority_name.replace("PRIORITY", "").strip()
             if "." in priority_num:
                 major, minor = priority_num.split(".")
-                spec_prefix = f"SPEC-{major.zfill(3)}-{minor}"
+                spec_prefix = f"SPEC-{major}-{minor}"
             else:
-                spec_prefix = f"SPEC-{priority_num.zfill(3)}"
+                spec_prefix = f"SPEC-{priority_num}"
         else:
             spec_prefix = f"SPEC-{priority_name.replace(' ', '-')}"
 
@@ -150,13 +118,44 @@ class SpecManagerMixin:
 
         # Step 1: Check if spec already exists
         if architect_spec_dir.exists():
-            spec_pattern = f"{spec_prefix}-*.md"
-            matching_specs = list(architect_spec_dir.glob(spec_pattern))
-            logger.info(f"   Pattern: {spec_pattern}, Found {len(matching_specs)} matches")
+            # Try multiple patterns to handle inconsistent naming (with/without zero-padding)
+            patterns_to_try = []
 
-            for spec_file in matching_specs:
-                logger.info(f"✅ Technical spec found: {spec_file.name}")
-                return True
+            # Extract the number from spec_prefix (e.g., "SPEC-24" -> "24")
+            import re
+
+            match = re.search(r"SPEC-(\d+)", spec_prefix)
+            if match:
+                num = match.group(1)
+                # Try both with and without zero-padding
+                patterns_to_try.append(f"SPEC-{num}-*.md")  # Without padding
+                patterns_to_try.append(f"SPEC-{num.zfill(3)}-*.md")  # With padding (3 digits)
+                patterns_to_try.append(f"SPEC-{num.zfill(2)}-*.md")  # With padding (2 digits)
+
+                # Also check for directories (like SPEC-025-hierarchical-modular-spec-architecture)
+                patterns_to_try.append(f"SPEC-{num}-*")  # Directory without .md
+                patterns_to_try.append(f"SPEC-{num.zfill(3)}-*")  # Directory with padding
+            else:
+                patterns_to_try.append(f"{spec_prefix}-*.md")
+                patterns_to_try.append(f"{spec_prefix}-*")
+
+            for spec_pattern in patterns_to_try:
+                matching_specs = list(architect_spec_dir.glob(spec_pattern))
+                if matching_specs:
+                    logger.info(f"   Pattern: {spec_pattern}, Found {len(matching_specs)} matches")
+                    for spec_file in matching_specs:
+                        # Check if it's a directory with phase files or a regular .md file
+                        if spec_file.is_dir():
+                            # Check if directory contains phase files (indicates hierarchical spec)
+                            phase_files = list(spec_file.glob("phase*.md")) + list(spec_file.glob("README.md"))
+                            if phase_files:
+                                logger.info(
+                                    f"✅ Technical spec directory found: {spec_file.name} (contains {len(phase_files)} phase files)"
+                                )
+                                return True
+                        elif spec_file.suffix == ".md":
+                            logger.info(f"✅ Technical spec found: {spec_file.name}")
+                            return True
         else:
             logger.error(f"   Spec directory doesn't exist: {architect_spec_dir}")
 
@@ -240,75 +239,6 @@ class SpecManagerMixin:
 
         except Exception as e:
             logger.error(f"Failed to create notification: {e}", exc_info=True)
-            # Don't fail - notification is nice-to-have but not critical
-
-    def _notify_cfr_011_violation(self, priority: dict, violation_details: str) -> None:
-        """Notify user about CFR-011 violation.
-
-        CFR-011: ARCHITECT DAILY INTEGRATION
-        architect MUST read code-searcher reports and analyze codebase weekly
-        before creating specs.
-
-        Creates a notification alerting the user that architect has violated
-        CFR-011 and must complete daily integration before spec creation can proceed.
-
-        Args:
-            priority: Priority dictionary
-            violation_details: Details about the violation from CFR011ViolationError
-
-        Example:
-            >>> priority = {"name": "US-054", "title": "CFR-011 Enforcement"}
-            >>> violation = "Unread code-searcher reports: ANALYSIS.md"
-            >>> self._notify_cfr_011_violation(priority, violation)
-        """
-        priority_name = priority.get("name", "Unknown Priority")
-        priority_title = priority.get("title", "Unknown Title")
-
-        # Create notification message with actionable guidance
-        title = f"CFR-011: architect Must Review Code Findings"
-        message = (
-            f"CFR-011 violation detected for '{priority_title}'.\n\n"
-            f"Priority: {priority_name}\n"
-            f"Title: {priority_title}\n\n"
-            f"VIOLATION DETAILS:\n{violation_details}\n\n"
-            f"CFR-011 REQUIREMENT:\n"
-            f"architect MUST read all code-searcher reports AND analyze codebase weekly\n"
-            f"BEFORE creating or checking technical specifications.\n\n"
-            f"ACTIONS REQUIRED:\n"
-            f"1. Run: architect daily-integration (read code-searcher reports)\n"
-            f"2. Run: architect analyze-codebase (if >7 days since last analysis)\n"
-            f"3. Check compliance: architect cfr-011-status\n\n"
-            f"Implementation is BLOCKED until CFR-011 compliance achieved."
-        )
-
-        context = {
-            "priority_name": priority_name,
-            "priority_title": priority_title,
-            "enforcement": "CFR-011",
-            "violation_details": violation_details,
-            "action_required": "architect must complete daily integration and weekly analysis",
-            "commands": [
-                "architect daily-integration",
-                "architect analyze-codebase",
-                "architect cfr-011-status",
-            ],
-        }
-
-        try:
-            self.notifications.create_notification(
-                type="error",
-                title=title,
-                message=message,
-                priority="critical",
-                context=context,
-                sound=False,  # CFR-009: code_developer must use sound=False
-                agent_id="code_developer",  # CFR-009: identify calling agent
-            )
-
-            logger.info(f"✅ Created CFR-011 violation notification for {priority_name}")
-
-        except Exception as e:
-            logger.error(f"Failed to create CFR-011 notification: {e}", exc_info=True)
             # Don't fail - notification is nice-to-have but not critical
 
     def _delegate_spec_creation_to_architect(self, priority: dict, spec_prefix: str) -> None:

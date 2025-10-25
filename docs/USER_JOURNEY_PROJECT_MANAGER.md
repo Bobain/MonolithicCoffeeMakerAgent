@@ -98,7 +98,7 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 export ANTHROPIC_API_KEY='sk-ant-...'
 
 # Verify (daemon only)
-python run_daemon.py --help  # Should not error about missing key
+python run_code_developer.py --help  # Should not error about missing key
 ```
 
 **Optional: Slack Integration**
@@ -314,7 +314,7 @@ Error: database is locked
 
 Solution:
 # Stop any running daemon processes
-pkill -f run_daemon.py
+pkill -f run_code_developer.py
 
 # Database will auto-recover
 ```
@@ -384,16 +384,16 @@ Run daemon with custom settings:
 
 ```bash
 # Custom model
-python run_daemon.py --model claude-opus-4
+python run_code_developer.py --model claude-opus-4
 
 # Custom sleep interval
-python run_daemon.py --sleep 60 --auto-approve
+python run_code_developer.py --sleep 60 --auto-approve
 
 # No PRs (commit only)
-python run_daemon.py --no-pr --auto-approve
+python run_code_developer.py --no-pr --auto-approve
 
 # Verbose logging
-python run_daemon.py -v --auto-approve
+python run_code_developer.py -v --auto-approve
 ```
 
 ### Customization Options

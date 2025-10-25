@@ -46,7 +46,7 @@ Need both data + interpretation? ────────────── YES 
 
 **✅ GOOD Skill Candidates**:
 - architect: Dependency security scanning (CVE lookup, license checks)
-- code-searcher: Code vulnerability detection (regex patterns, AST analysis)
+- assistant (with code analysis skills): Code vulnerability detection (regex patterns, AST analysis)
 - assistant: Puppeteer demo creation (reproducible browser automation)
 - project_manager: GitHub PR status checking (API calls)
 - code_developer: Test scaffolding (boilerplate generation)
@@ -59,7 +59,7 @@ Need both data + interpretation? ────────────── YES 
 
 **✅ HYBRID Candidates**:
 - architect: Dependency evaluation (skill scans data → prompt recommends)
-- code-searcher: Security audit (skill finds vulnerabilities → prompt explains)
+- assistant (with code analysis skills): Security audit (skill finds vulnerabilities → prompt explains)
 - assistant: Bug analysis (skill detects bug → prompt analyzes root cause)
 
 ---
@@ -720,7 +720,7 @@ if __name__ == "__main__":
 ### Example 2: Complex Skill (Security Audit)
 
 ```python
-# .claude/skills/code-searcher/security-audit/scan_vulnerabilities.py
+# .claude/skills/assistant (with code analysis skills)/security-audit/scan_vulnerabilities.py
 
 import json
 import argparse

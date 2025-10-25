@@ -45,7 +45,7 @@ Example:
     >>> from sqlalchemy import create_engine
     >>> from coffee_maker.langfuse_observe.analytics.models import Base
     >>>
-    >>> engine = create_engine("sqlite:///llm_metrics.db")
+    >>> engine = create_engine("sqlite:///data/metrics.db")
     >>> Base.metadata.create_all(engine)
 
     Query recent generations:

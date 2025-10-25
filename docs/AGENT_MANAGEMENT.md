@@ -155,7 +155,6 @@ Agents can call other agents:
 ```
 project_manager
   ↓ (uses Task tool)
-code-searcher
   ↓ (finds code)
 project_manager
   ↓ (warns user with findings)
@@ -164,7 +163,7 @@ project_manager
 Example:
 ```python
 # project_manager detects issue
-# → Delegates to code-searcher
+# → Delegates to assistant (with code analysis skills)
 # → Warns user with evidence
 
 service.warn_user(

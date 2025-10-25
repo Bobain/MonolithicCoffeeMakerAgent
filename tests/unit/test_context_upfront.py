@@ -68,13 +68,13 @@ class TestContextLoading:
         assert ".claude/commands/PROMPTS_INDEX.md" in context
 
     def test_load_context_code_searcher(self):
-        """Test context loading for code-searcher agent."""
+        """Test context loading for assistant agent (with code-forensics and security-audit skills)."""
         generator = Generator()
-        context = generator.load_agent_context(AgentType.CODE_SEARCHER)
+        context = generator.load_agent_context(AgentType.ASSISTANT)
 
-        # code-searcher gets minimal context (project overview)
+        # assistant (with code analysis skills) gets minimal context (project overview)
         assert ".claude/CLAUDE.md" in context
-        assert ".claude/agents/code-searcher.md" in context
+        assert ".claude/agents/assistant (with code analysis skills).md" in context
         assert "docs/roadmap/ROADMAP.md" in context
 
         # Should NOT load codebase files (discovery is the role)
@@ -175,11 +175,11 @@ class TestSearchMonitoring:
         assert "code_developer" in stats["searches_by_agent"]
 
     def test_monitor_search_code_searcher(self):
-        """Test monitoring expected search from code-searcher."""
+        """Test monitoring expected search from assistant (with code analysis skills)."""
         generator = Generator()
 
-        # code-searcher searching is EXPECTED (that's its role)
-        generator.monitor_file_search(AgentType.CODE_SEARCHER, "glob", "**/*.py", context_provided=True)
+        # assistant (with code analysis skills) searching is EXPECTED (that's its role)
+        generator.monitor_file_search(AgentType.ASSISTANT, "glob", "**/*.py", context_provided=True)
 
         # Should NOT log as unexpected
         stats = generator.get_search_stats()
@@ -234,7 +234,7 @@ class TestSearchStatistics:
         stats = generator.get_search_stats()
 
         assert stats["total_searches"] == 3
-        assert stats["unexpected_searches"] == 3  # All unexpected (not code-searcher)
+        assert stats["unexpected_searches"] == 3  # All unexpected (not assistant (with code analysis skills))
         assert "code_developer" in stats["searches_by_agent"]
         assert "assistant" in stats["searches_by_agent"]
         assert len(stats["most_common_patterns"]) > 0
