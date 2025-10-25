@@ -951,14 +951,14 @@ pytest tests/test_phase_{phase_number}.py -v
     # ==================== HIERARCHICAL SPEC SUPPORT ====================
 
     def read_hierarchical(self, priority_id: str, phase: Optional[int] = None) -> Dict[str, Any]:
-        """Read hierarchical spec with progressive disclosure.
+        """Read hierarchical spec with progressive disclosure (database-only).
 
-        Detects current phase and loads only README + current phase document.
-        Falls back to monolithic spec if hierarchical not found.
+        Loads spec from database content column. For hierarchical specs, uses
+        progressive disclosure (overview + current phase only).
 
         Args:
             priority_id: Priority identifier (e.g., "PRIORITY 25", "US-104")
-            phase: Specific phase to load (None = auto-detect)
+            phase: Specific phase to load (None = auto-detect from database)
 
         Returns:
             Dict with keys:
@@ -966,41 +966,89 @@ pytest tests/test_phase_{phase_number}.py -v
                 - spec_type: "hierarchical" | "monolithic" | "not_found"
                 - current_phase: int (for hierarchical)
                 - total_phases: int (for hierarchical)
-                - full_context: str (README + current phase for hierarchical, full content for monolithic)
+                - full_context: str (overview + current phase for hierarchical, full content for monolithic)
                 - context_size: int (character count)
                 - references: list (guideline references if present)
                 - reason: str (error message if success=False)
         """
-        # Try to find spec (hierarchical directory or monolithic file)
-        spec_path = self._find_spec_by_priority_id(priority_id)
+        # Query database for spec
+        try:
+            from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+            import json
 
-        if not spec_path:
+            db = RoadmapDatabase(agent_name="code_developer")
+            spec_data = db.get_technical_spec(roadmap_item_id=priority_id)
+
+            if not spec_data:
+                return {
+                    "success": False,
+                    "spec_type": "not_found",
+                    "reason": f"No spec found in database for {priority_id}",
+                    "full_context": "",
+                    "context_size": 0,
+                }
+
+            spec_type = spec_data.get("spec_type", "monolithic")
+            content = spec_data.get("content", "")
+
+            if spec_type == "hierarchical":
+                # Parse JSON content
+                content_data = json.loads(content) if content else {}
+
+                # Determine which phase to load
+                if phase is None:
+                    phase = int(spec_data.get("phase", 1))
+
+                phases = content_data.get("phases", [])
+                if phase < 1 or phase > len(phases):
+                    phase = 1
+
+                current_phase_data = phases[phase - 1] if phases else {}
+
+                # Build context with progressive disclosure
+                overview = content_data.get("overview", "")
+                architecture = content_data.get("architecture", "")
+                phase_content = current_phase_data.get("content", "")
+
+                full_context = f"""# Overview
+
+{overview}
+
+# Architecture
+
+{architecture}
+
+# Phase {phase}/{len(phases)}: {current_phase_data.get('name', '')}
+
+{phase_content}
+"""
+
+                return {
+                    "success": True,
+                    "spec_type": "hierarchical",
+                    "current_phase": phase,
+                    "total_phases": len(phases),
+                    "full_context": full_context,
+                    "context_size": len(full_context),
+                    "references": [],
+                }
+
+            else:
+                # Monolithic spec
+                return {
+                    "success": True,
+                    "spec_type": "monolithic",
+                    "full_context": content,
+                    "context_size": len(content),
+                    "references": [],
+                }
+
+        except Exception as e:
+            logger.error(f"Error reading spec from database: {e}")
             return {
                 "success": False,
                 "spec_type": "not_found",
-                "reason": f"No spec found for {priority_id}",
-                "full_context": "",
-                "context_size": 0,
-            }
-
-        # Check if hierarchical (directory) or monolithic (file)
-        if spec_path.is_dir():
-            return self._read_hierarchical_spec(spec_path, phase)
-        elif spec_path.is_file():
-            # Monolithic spec
-            content = spec_path.read_text(encoding="utf-8")
-            return {
-                "success": True,
-                "spec_type": "monolithic",
-                "full_context": content,
-                "context_size": len(content),
-                "references": [],
-            }
-        else:
-            return {
-                "success": False,
-                "spec_type": "not_found",
-                "reason": f"Spec exists but is neither file nor directory: {spec_path}",
+                "reason": f"Database error: {e}",
                 "full_context": "",
                 "context_size": 0,
             }

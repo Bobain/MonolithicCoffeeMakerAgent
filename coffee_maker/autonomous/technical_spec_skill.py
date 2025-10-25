@@ -1,55 +1,66 @@
-"""Technical Specification Skill - Unified interface for architect.
+"""Technical Specification Skill - Database-only spec storage.
 
-This module provides a Python interface to the technical-specification-handling
-skill, integrating both file system operations and database persistence.
+This module provides a unified interface for architect to create and manage
+technical specifications stored entirely in the database (NO FILES).
 
 The architect uses this class to:
-1. Create hierarchical or monolithic specs
-2. Write specs to both database AND file system
-3. Maintain synchronization between database and files
+1. Create hierarchical or monolithic specs in database
+2. Store content as JSON (hierarchical) or markdown (monolithic)
+3. Create implementation_tasks for parallel execution
 
 Usage:
     from coffee_maker.autonomous.technical_spec_skill import TechnicalSpecSkill
 
     skill = TechnicalSpecSkill(agent_name="architect")
 
-    # Create hierarchical spec
+    # Create hierarchical spec (stored as JSON in database)
     spec_id = skill.create_hierarchical_spec(
         us_number=104,
         title="User Authentication System",
         roadmap_item_id="US-104",
         phases=[
-            {"name": "database-schema", "hours": 1},
-            {"name": "authentication-logic", "hours": 1.5}
-        ]
+            {
+                "name": "database-schema",
+                "hours": 2.0,
+                "description": "Create User and Session models",
+                "content": "## Phase 1: Database Schema\\n\\n### Models\\n..."
+            },
+            {
+                "name": "authentication-logic",
+                "hours": 1.5,
+                "description": "Implement login/logout logic",
+                "content": "## Phase 2: Auth Logic\\n\\n### Login\\n..."
+            }
+        ],
+        problem_statement="Need secure user authentication",
+        architecture="JWT-based authentication with refresh tokens"
     )
 
 Author: architect
-Date: 2025-10-24
-Related: PRIORITY 25 Phase 4
+Date: 2025-10-24 (Refactored to database-only)
+Related: PRIORITY 25 Phase 4, Database Schema Guide
 """
 
+import json
 import logging
-from pathlib import Path
 from typing import Dict, List, Optional
 
 from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
-from coffee_maker.utils.spec_handler import SpecHandler
 
 logger = logging.getLogger(__name__)
 
 
 class TechnicalSpecSkill:
-    """Unified interface for creating and managing technical specifications.
+    """Database-only technical specification manager.
 
-    This class wraps the technical-specification-handling skill and integrates
-    it with RoadmapDatabase for full database persistence.
+    This class provides a unified interface for architect to create and manage
+    technical specifications stored entirely in the database.
 
     Key Features:
-    - Creates hierarchical spec directories via skill
-    - Persists spec metadata to database
-    - Maintains sync between file system and database
-    - Supports both hierarchical and monolithic specs
+    - Stores hierarchical specs as JSON in database
+    - Stores monolithic specs as markdown in database
+    - No file system operations (database-first architecture)
+    - Supports progressive disclosure via phase-based content
     """
 
     def __init__(self, agent_name: str = "architect"):
@@ -60,7 +71,6 @@ class TechnicalSpecSkill:
         """
         self.agent_name = agent_name
         self.db = RoadmapDatabase(agent_name=agent_name)
-        self.handler = SpecHandler()
 
     def create_hierarchical_spec(
         self,
@@ -106,47 +116,45 @@ class TechnicalSpecSkill:
             >>> print(spec_id)
             SPEC-104
         """
-        logger.info(f"Creating hierarchical spec for US-{us_number}: {title}")
+        logger.info(f"Creating hierarchical spec (database-only) for US-{us_number}: {title}")
 
-        # Step 1: Create directory structure via SpecHandler
-        spec_dir = self.handler.create_hierarchical_spec(
-            us_number=str(us_number),
-            title=title,
-            phases=phases,
-            problem_statement=problem_statement or "",
-            architecture=architecture or "",
-        )
-
-        if not spec_dir or not spec_dir.exists():
-            raise RuntimeError(f"Failed to create spec directory: {spec_dir}")
-
-        logger.info(f"✅ Created spec directory: {spec_dir}")
-
-        # Step 2: Calculate metadata
+        # Step 1: Build JSON content structure
         total_hours = sum(phase.get("hours", 0) for phase in phases)
-        phase_files = [f"phase{i+1}-{phase['name']}.md" for i, phase in enumerate(phases)]
 
-        # Step 3: Read README.md content for database
-        readme_path = Path(spec_dir) / "README.md"
-        readme_content = readme_path.read_text() if readme_path.exists() else None
+        # Add phase numbers
+        for i, phase in enumerate(phases, start=1):
+            phase["number"] = i
 
-        # Step 4: Write to database
+        content_json = {
+            "overview": problem_statement or f"Technical specification for {title}",
+            "architecture": architecture or "To be determined",
+            "phases": phases,
+            "total_hours": total_hours,
+        }
+
+        content = json.dumps(content_json, indent=2)
+
+        # Step 2: Extract phase names for metadata
+        phase_names = [phase["name"] for phase in phases]
+
+        # Step 3: Write to database (NO FILES)
         spec_id = self.db.create_technical_spec(
             spec_number=us_number,
             title=title,
             roadmap_item_id=roadmap_item_id,
             spec_type="hierarchical",
-            file_path=str(spec_dir),
-            content=readme_content,
+            content=content,  # ✅ JSON stored in database
+            file_path=None,  # ❌ No files
             estimated_hours=total_hours,
             total_phases=len(phases),
-            phase_files=phase_files,
+            phase_files=json.dumps(phase_names),  # Metadata only
         )
 
-        logger.info(f"✅ Created database entry: {spec_id}")
-        logger.info(f"   Type: hierarchical")
+        logger.info(f"✅ Created hierarchical spec in database: {spec_id}")
+        logger.info(f"   Type: hierarchical (JSON in database)")
         logger.info(f"   Phases: {len(phases)}")
         logger.info(f"   Est. Hours: {total_hours}")
+        logger.info(f"   Content Size: {len(content)} chars")
 
         return spec_id
 
@@ -180,23 +188,16 @@ class TechnicalSpecSkill:
             ...     estimated_hours=4.0
             ... )
         """
-        logger.info(f"Creating monolithic spec for US-{us_number}: {title}")
+        logger.info(f"Creating monolithic spec (database-only) for US-{us_number}: {title}")
 
-        # Create file
-        spec_file = Path(f"docs/architecture/specs/SPEC-{us_number:03d}-{self.handler._slugify(title)}.md")
-        spec_file.parent.mkdir(parents=True, exist_ok=True)
-        spec_file.write_text(content)
-
-        logger.info(f"✅ Created spec file: {spec_file}")
-
-        # Write to database
+        # Write to database (NO FILES)
         spec_id = self.db.create_technical_spec(
             spec_number=us_number,
             title=title,
             roadmap_item_id=roadmap_item_id,
             spec_type="monolithic",
-            file_path=str(spec_file),
-            content=content,
+            content=content,  # ✅ Markdown stored in database
+            file_path=None,  # ❌ No files
             estimated_hours=estimated_hours,
         )
 
@@ -214,6 +215,46 @@ class TechnicalSpecSkill:
             Dict with spec information, or None if not found
         """
         return self.db.get_technical_spec(roadmap_item_id=roadmap_item_id)
+
+    def get_phase_content(self, roadmap_item_id: str, phase_number: Optional[int] = None) -> Optional[Dict]:
+        """Get content for a specific phase (progressive disclosure).
+
+        Args:
+            roadmap_item_id: Roadmap item ID (e.g., "US-104")
+            phase_number: Phase to load (None = current phase)
+
+        Returns:
+            Dict with:
+                - phase: Phase dict with content
+                - overview: Spec overview
+                - total_phases: Total number of phases
+                Or None if not found
+        """
+        spec = self.db.get_technical_spec(roadmap_item_id=roadmap_item_id)
+
+        if not spec or spec.get("spec_type") != "hierarchical":
+            return None
+
+        content_data = json.loads(spec["content"])
+
+        # Determine which phase to load
+        if phase_number is None:
+            phase_number = int(spec.get("phase", 1))
+
+        # Get the requested phase
+        phases = content_data.get("phases", [])
+        if phase_number < 1 or phase_number > len(phases):
+            return None
+
+        phase = phases[phase_number - 1]
+
+        return {
+            "phase": phase,
+            "overview": content_data.get("overview"),
+            "architecture": content_data.get("architecture"),
+            "total_phases": len(phases),
+            "current_phase": phase_number,
+        }
 
     def update_spec_phase(self, spec_id: str, current_phase: int, phase_status: str = "in_progress") -> bool:
         """Update current phase for a hierarchical spec.
