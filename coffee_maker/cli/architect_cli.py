@@ -161,7 +161,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>
         )
 
         click.echo(f"✅ Spec created in database: {spec_id}")
-        click.echo(f"   File backup: docs/architecture/specs/SPEC-{us_number:03d}-{spec_title_slug}.md\n")
+        click.echo(f"   Type: monolithic")
+        click.echo(f"   Content: {len(spec_content)} characters")
+        click.echo(f"   Estimated hours: {total_hours}\n")
 
         return 0
 

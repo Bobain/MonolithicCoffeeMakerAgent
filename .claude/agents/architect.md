@@ -151,36 +151,67 @@ from coffee_maker.autonomous.technical_spec_skill import TechnicalSpecSkill
 spec_skill = TechnicalSpecSkill(agent_name="architect")
 
 # Create hierarchical spec (REQUIRED approach for new features)
+# Stored as JSON in database content column (NO FILES!)
 spec_id = spec_skill.create_hierarchical_spec(
     us_number=116,
-    title="Feature Implementation",
+    title="User Authentication System",
     roadmap_item_id="US-116",
     phases=[
         {
             "name": "database-layer",
             "hours": 2.0,
-            "description": "Create database models and migrations"
+            "description": "Create User and Session models, migrations",
+            "content": """## Phase 1: Database Layer
+
+### Models
+
+1. **User Model**
+   - Fields: username, email, password_hash, created_at
+   - Indexes: unique(email), unique(username)
+
+2. **Session Model**
+   - Fields: user_id, token, expires_at, created_at
+   - Indexes: index(token), index(user_id)
+
+### Migrations
+- `001_create_users.py` - User table
+- `002_create_sessions.py` - Session table
+
+### Testing
+- Unit tests for model validation
+- Test password hashing
+"""
         },
         {
             "name": "api-layer",
             "hours": 3.0,
-            "description": "Implement REST API endpoints"
-        },
-        {
-            "name": "business-logic",
-            "hours": 2.0,
-            "description": "Core business logic implementation"
-        },
-        {
-            "name": "tests-docs",
-            "hours": 1.0,
-            "description": "Tests and documentation"
+            "description": "Implement login/logout REST API endpoints",
+            "content": """## Phase 2: API Layer
+
+### Endpoints
+
+**POST /api/auth/login**
+- Input: {username, password}
+- Output: {token, expires_at}
+- Validation: Check credentials, create session
+
+**POST /api/auth/logout**
+- Input: {token}
+- Output: {success}
+- Action: Invalidate session
+
+### Testing
+- Integration tests for each endpoint
+- Test invalid credentials
+- Test session expiration
+"""
         }
     ],
-    problem_statement="Problem this feature solves",
-    architecture="High-level architecture approach"
+    problem_statement="Need secure user authentication with session management",
+    architecture="JWT-based tokens with database-backed sessions for revocation"
 )
 # Returns: "SPEC-116"
+# Content stored as JSON in technical_specs.content column
 
 # For simple features, use monolithic spec
 spec_id = spec_skill.create_monolithic_spec(
@@ -194,6 +225,19 @@ spec_id = spec_skill.create_monolithic_spec(
 # FORBIDDEN: Never write specs to files directly!
 # ❌ with open("docs/architecture/specs/SPEC-116.md", "w") as f:  # WRONG!
 # ✅ spec_skill.create_hierarchical_spec(...)  # CORRECT
+```
+
+**How code_developer reads specs (progressive disclosure)**:
+
+When code_developer implements PRIORITY 116, it automatically:
+1. Queries database: `db.get_technical_spec(roadmap_item_id="US-116")`
+2. Parses JSON from `content` column
+3. Loads **only current phase** (71% context reduction!)
+4. Gets: overview + architecture + phase 1 content
+5. Implements phase 1, then moves to phase 2
+
+**No files needed** - everything from database!
+
 ```
 
 ### Document Ownership (Database-First)
