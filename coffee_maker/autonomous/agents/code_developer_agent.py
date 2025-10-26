@@ -247,9 +247,9 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
             "progress": 0.0,
         }
 
-        # Check spec exists (CFR-008: architect creates specs)
-        spec_file = self._find_spec(next_priority)
-        if not spec_file:
+        # Check spec exists in DATABASE (CFR-008: architect creates specs)
+        spec_data = self._load_spec_from_database(next_priority)
+        if not spec_data:
             logger.warning(f"⚠️  Spec missing for {priority_name}")
             logger.info("📨 Sending urgent spec request to architect...")
 
@@ -259,7 +259,7 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
                 message_type="spec_request",
                 content={
                     "priority": next_priority,
-                    "reason": "Implementation blocked - spec missing",
+                    "reason": "Implementation blocked - spec missing from database",
                     "requester": "code_developer",
                 },
                 priority="urgent",
@@ -268,7 +268,7 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
             logger.info("⏳ Waiting for architect to create spec... (will retry next iteration)")
             return  # Return and check again next iteration
 
-        logger.info(f"✅ Spec found: {spec_file}")
+        logger.info(f"✅ Spec loaded from DATABASE: {spec_data.get('spec_id', 'unknown')}")
 
         # Check retry limit
         attempt_count = self.attempted_priorities.get(priority_name, 0)
@@ -283,7 +283,7 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         )
 
         # Implement priority
-        success = self._implement_priority(next_priority, spec_file)
+        success = self._implement_priority(next_priority, spec_data)
 
         if success:
             # Notify assistant to create demo
@@ -298,7 +298,7 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         else:
             logger.error(f"❌ Implementation failed for {priority_name}")
 
-    def _implement_priority(self, priority: Dict, spec_file: Path) -> bool:
+    def _implement_priority(self, priority: Dict, spec_data: Dict) -> bool:
         """Implement a priority by delegating to Claude Code's code-developer sub-agent.
 
         This method spawns Claude Code's code-developer agent which has:
@@ -308,7 +308,7 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
 
         Args:
             priority: Priority dictionary from ROADMAP
-            spec_file: Path to technical specification
+            spec_data: Specification data dict from database (contains 'content', 'spec_id', etc.)
 
         Returns:
             True if successful, False otherwise
@@ -320,8 +320,8 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         self.current_task["progress"] = 0.2
         self.current_task["step"] = "Loading spec and building prompt"
 
-        # Read spec content
-        spec_content = spec_file.read_text()
+        # Get spec content from database data (already loaded from database)
+        spec_content = spec_data.get("content", "")
 
         # Build prompt for Claude Code's code-developer sub-agent
         prompt = f"""
@@ -437,76 +437,75 @@ Follow the implementation steps in the spec. Work methodically and test as you g
 
         return True
 
-    def _find_spec(self, priority: Dict) -> Optional[Path]:
-        """Find technical specification for a priority.
+    def _load_spec_from_database(self, priority: Dict) -> Optional[Dict]:
+        """Load technical specification from DATABASE (specs_specification table).
 
-        Looks in:
-        - docs/architecture/specs/SPEC-{us_number}-*.md (priority: US-104)
-        - docs/architecture/specs/SPEC-{priority_number}-*.md (fallback)
-        - docs/roadmap/PRIORITY_{priority_number}_TECHNICAL_SPEC.md
+        This method reads specs from the database, not from files.
+        Extracts US number from priority title and uses it to find spec in database.
 
         Args:
-            priority: Priority dictionary
+            priority: Priority dictionary from RoadmapDatabase (has 'title', 'id', 'number')
 
         Returns:
-            Path to spec file if found, None otherwise
+            Dict with spec data from database: {'spec_id', 'content', 'spec_type', ...}
+            or None if spec not found in database
         """
         import re
 
-        priority_number = priority.get("number", "")
+        priority.get("number", "")
         priority_title = priority.get("title", "")
+        priority_id = priority.get("id", "")
 
-        if not priority_number:
-            return None
+        logger.info(f"📂 Loading spec from DATABASE for {priority_id}")
 
         # Extract US number from title (e.g., "US-104" from "US-104 - Orchestrator...")
         us_match = re.search(r"US-(\d+)", priority_title)
-        us_number = us_match.group(1) if us_match else None
+        if not us_match:
+            logger.warning(f"⚠️  No US number found in priority title: {priority_title}")
+            return None
 
-        # Try architect's specs directory first (CFR-008)
-        specs_dir = Path("docs/architecture/specs")
-        if specs_dir.exists():
-            patterns = []
+        us_number = us_match.group(1)
+        us_id = f"US-{us_number}"
 
-            # PRIMARY: Try US number first (e.g., SPEC-104-*.md for US-104)
-            if us_number:
-                patterns.extend(
-                    [
-                        f"SPEC-{us_number}-*.md",  # SPEC-104-*.md
-                        f"SPEC-{us_number.zfill(3)}-*.md",  # SPEC-104-*.md (padded)
-                    ]
-                )
+        # Load spec from DATABASE using direct database query
+        try:
+            import sqlite3
 
-            # FALLBACK: Try priority number (e.g., SPEC-20-*.md for PRIORITY 20)
-            patterns.extend(
-                [
-                    f"SPEC-{priority_number}-*.md",  # SPEC-20-*.md
-                    f"SPEC-{priority_number.replace('.', '-')}-*.md",  # SPEC-2-6-*.md
-                    f"SPEC-{priority_number.zfill(5).replace('.', '-')}-*.md",  # SPEC-002-6-*.md (padded)
-                ]
+            # Get database path from roadmap (which has it)
+            db_path = self.roadmap.db_path
+
+            # Query specs_specification table directly
+            logger.debug(f"🔧 Querying database for spec: {us_id}")
+
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # Build spec_id from US number (e.g., "SPEC-104" for "US-104")
+            spec_num = us_number
+            spec_id = f"SPEC-{spec_num:03d}"
+
+            cursor.execute(
+                """
+                SELECT * FROM specs_specification WHERE id = ?
+                """,
+                (spec_id,),
             )
 
-            # Also try without dots/dashes for edge cases
-            if "." in priority_number:
-                major, minor = priority_number.split(".", 1)
-                patterns.extend(
-                    [
-                        f"SPEC-{major.zfill(3)}-{minor}-*.md",  # SPEC-002-6-*.md
-                        f"SPEC-{major}-{minor}-*.md",  # SPEC-2-6-*.md
-                    ]
-                )
+            row = cursor.fetchone()
+            conn.close()
 
-            for pattern in patterns:
-                for spec_file in specs_dir.glob(pattern):
-                    logger.info(f"Found spec: {spec_file}")
-                    return spec_file
+            if row:
+                spec = dict(row)
+                logger.info(f"✅ Loaded spec from DATABASE: {spec.get('id', 'unknown')}")
+                return spec
+            else:
+                logger.warning(f"❌ Spec not found in database: {spec_id}")
+                return None
 
-        # Fallback: Check old strategic spec location
-        roadmap_spec = Path(f"docs/roadmap/PRIORITY_{priority_number}_TECHNICAL_SPEC.md")
-        if roadmap_spec.exists():
-            return roadmap_spec
-
-        return None
+        except Exception as e:
+            logger.error(f"❌ Error loading spec from database: {e}", exc_info=True)
+            return None
 
     def _run_tests(self) -> bool:
         """Run pytest test suite.
