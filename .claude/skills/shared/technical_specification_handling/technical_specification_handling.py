@@ -2,7 +2,7 @@
 
 This skill provides a single source of truth for all technical specification operations,
 enforcing database-first storage where ALL specs are written to and read from the
-specs_specification database table. Files are optional backup/export only.
+specs_specification database table. NO file operations are performed.
 
 Usage:
     from coffee_maker.autonomous.skill_loader import load_skill
@@ -13,6 +13,7 @@ Usage:
 
 import sys
 import json
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -21,36 +22,28 @@ from typing import Dict, Any, List, Optional
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from coffee_maker.database.domain_wrapper import DomainWrapper, AgentType, PermissionError
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 from coffee_maker.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 
-class TechnicalSpecificationHandlingSkill:
-    """Technical specification handling skill - database-first architecture.
+class TechnicalSpecificationHandler:
+    """Technical specification handling - database-only architecture.
 
-    CRITICAL: This skill ALWAYS writes specs to the specs_specification database table.
-    Files are NEVER the primary storage - they are optional exports only.
+    CRITICAL: This skill ONLY uses database storage (specs_specification table).
+    NO file operations are performed. All specs are stored in the database.
     """
 
-    def __init__(self, agent_type: AgentType = AgentType.ARCHITECT):
-        """Initialize the skill.
+    def __init__(self, agent_name: str = "architect"):
+        """Initialize the handler.
 
         Args:
-            agent_type: The agent type using this skill (defaults to ARCHITECT)
+            agent_name: Name of the agent using this handler (defaults to "architect")
         """
-        self.agent_type = agent_type
-        self.db = DomainWrapper(agent_type, db_path="data/roadmap.db")
-        self.db_path = Path("data/roadmap.db")
-
-    def _validate_database_first(self) -> None:
-        """Validate that database-first architecture is being enforced.
-
-        Raises:
-            ValueError: If database-first architecture is being violated
-        """
-        pass  # Validation passed
+        self.agent_name = agent_name
+        self.db = RoadmapDatabase(agent_name=agent_name)
+        self.db_path = self.db.db_path
 
     def _find_spec_number_from_us_id(self, us_id: str) -> Optional[int]:
         """Extract spec number from US ID.
@@ -81,11 +74,24 @@ class TechnicalSpecificationHandlingSkill:
             The specification dict or None if not found
         """
         try:
-            results = self.db.read("specs_specification", {"id": spec_id})
-            return results[0] if results else None
-        except PermissionError as e:
-            logger.warning(f"Permission error reading spec: {e}")
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                SELECT * FROM specs_specification WHERE id = ?
+                """,
+                (spec_id,),
+            )
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                return dict(row)
             return None
+
         except Exception as e:
             logger.error(f"Error reading spec {spec_id}: {e}")
             return None
@@ -97,17 +103,23 @@ class TechnicalSpecificationHandlingSkill:
             List of specification dicts
         """
         try:
-            results = self.db.read("specs_specification")
-            return results if results else []
-        except PermissionError as e:
-            logger.warning(f"Permission error reading specs: {e}")
-            return []
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT * FROM specs_specification")
+
+            rows = cursor.fetchall()
+            conn.close()
+
+            return [dict(row) for row in rows] if rows else []
+
         except Exception as e:
             logger.error(f"Error reading specs: {e}")
             return []
 
     def _write_spec_to_database(self, spec_data: Dict[str, Any]) -> bool:
-        """Write specification to database.
+        """Write specification to database (INSERT or REPLACE).
 
         Args:
             spec_data: The specification data to write
@@ -116,41 +128,44 @@ class TechnicalSpecificationHandlingSkill:
             True if successful, False otherwise
         """
         try:
-            self.db.write("specs_specification", spec_data)
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Use REPLACE to handle both inserts and updates
+            cursor.execute(
+                """
+                REPLACE INTO specs_specification (
+                    id, spec_number, title, content, spec_type,
+                    status, estimated_hours, updated_at, updated_by,
+                    roadmap_item_id, total_phases, phase_files, dependencies
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    spec_data.get("id"),
+                    spec_data.get("spec_number"),
+                    spec_data.get("title"),
+                    spec_data.get("content"),
+                    spec_data.get("spec_type", "monolithic"),
+                    spec_data.get("status", "draft"),
+                    spec_data.get("estimated_hours"),
+                    spec_data.get("updated_at", datetime.now().isoformat()),
+                    spec_data.get("updated_by", self.agent_name),
+                    spec_data.get("roadmap_item_id"),
+                    spec_data.get("total_phases"),
+                    spec_data.get("phase_files"),
+                    spec_data.get("dependencies"),
+                ),
+            )
+
+            conn.commit()
+            conn.close()
+
             logger.info(f"Spec {spec_data.get('id')} written to database")
             return True
-        except PermissionError as e:
-            logger.error(f"Permission denied writing spec: {e}")
-            return False
+
         except Exception as e:
             logger.error(f"Error writing spec to database: {e}")
             return False
-
-    def _export_spec_to_file(self, spec_id: str, content: str, file_path: Optional[str] = None) -> Optional[str]:
-        """Export specification content to file (optional backup only).
-
-        Args:
-            spec_id: The spec ID for naming
-            content: The content to export
-            file_path: Optional custom file path
-
-        Returns:
-            The file path where exported, or None if not exported
-        """
-        if not file_path:
-            # Default to docs/architecture/specs/
-            spec_num = spec_id.split("-")[1]
-            file_path = f"docs/architecture/specs/SPEC-{spec_num}-spec.md"
-
-        try:
-            path = Path(file_path)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content)
-            logger.info(f"Spec {spec_id} exported to {file_path}")
-            return str(path)
-        except Exception as e:
-            logger.warning(f"Failed to export spec to file: {e}")
-            return None
 
     def execute(self, action: str, **kwargs) -> Dict[str, Any]:
         """Execute a specification operation using database.
@@ -162,8 +177,6 @@ class TechnicalSpecificationHandlingSkill:
         Returns:
             dict: {"result": <result>, "error": <error_message>}
         """
-        self._validate_database_first()
-
         try:
             # Finding specifications
             if action in ["find", "find_spec", "find_by_us_id"]:
@@ -308,17 +321,11 @@ class TechnicalSpecificationHandlingSkill:
                     "dependencies": json.dumps(kwargs.get("dependencies", [])),
                     "estimated_hours": kwargs.get("estimated_hours"),
                     "updated_at": datetime.now().isoformat(),
-                    "updated_by": self.agent_type.value,
+                    "updated_by": self.agent_name,
                 }
 
                 # Write to DATABASE (PRIMARY STORAGE)
                 if self._write_spec_to_database(spec_data):
-                    # Optional: Export to file as backup
-                    if kwargs.get("export_file", False):
-                        overview_content = f"# {spec_id}: {title}\n\n"
-                        overview_content += f"Type: Hierarchical ({len(phases)} phases)\n\n"
-                        self._export_spec_to_file(spec_id, overview_content)
-
                     return {
                         "result": {
                             "spec_id": spec_id,
@@ -327,7 +334,7 @@ class TechnicalSpecificationHandlingSkill:
                             "total_phases": len(phases),
                         },
                         "error": None,
-                        "source": "database",  # PRIMARY STORAGE
+                        "source": "database",
                     }
                 else:
                     return {
@@ -465,15 +472,26 @@ class TechnicalSpecificationHandlingSkill:
 
                 # Update spec in database
                 try:
-                    self.db.update(
-                        "specs_specification",
-                        {
-                            "content": content,
-                            "updated_at": datetime.now().isoformat(),
-                            "updated_by": self.agent_type.value,
-                        },
-                        {"id": spec_id},
+                    conn = sqlite3.connect(self.db_path)
+                    cursor = conn.cursor()
+
+                    cursor.execute(
+                        """
+                        UPDATE specs_specification
+                        SET content = ?, updated_at = ?, updated_by = ?
+                        WHERE id = ?
+                        """,
+                        (
+                            content,
+                            datetime.now().isoformat(),
+                            self.agent_name,
+                            spec_id,
+                        ),
                     )
+
+                    conn.commit()
+                    conn.close()
+
                     return {
                         "result": True,
                         "error": None,
@@ -494,25 +512,20 @@ class TechnicalSpecificationHandlingSkill:
 
 
 # Skill entry point
-def run(action: str, agent_type: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+def run(action: str, agent_name: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """Skill entry point.
 
     Args:
         action: Action to perform
-        agent_type: Optional agent type (defaults to ARCHITECT)
+        agent_name: Name of agent using this skill (defaults to "architect")
         **kwargs: Action-specific parameters
 
     Returns:
         dict: {"result": <result>, "error": <error_message>}
     """
-    # Determine agent type
-    if agent_type:
-        try:
-            agent_enum = AgentType[agent_type.upper()]
-        except KeyError:
-            agent_enum = AgentType.ARCHITECT
-    else:
-        agent_enum = AgentType.ARCHITECT
+    # Determine agent name
+    if not agent_name:
+        agent_name = "architect"
 
-    skill = TechnicalSpecificationHandlingSkill(agent_type=agent_enum)
-    return skill.execute(action, **kwargs)
+    handler = TechnicalSpecificationHandler(agent_name=agent_name)
+    return handler.execute(action, **kwargs)
