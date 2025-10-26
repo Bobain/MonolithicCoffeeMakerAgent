@@ -394,20 +394,22 @@ The technical spec should reference this POC and explain what it proves.
         # Update progress
         self.current_task["progress"] = 0.4
 
-        # Execute with Claude
-        from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+        # Delegate to Claude Code's architect sub-agent
+        from coffee_maker.claude_agent_invoker import get_invoker
 
-        claude = ClaudeCLIInterface()
-        logger.info("🤖 Executing Claude API for spec creation...")
+        invoker = get_invoker()
+        logger.info("🚀 Spawning Claude Code's architect sub-agent for spec creation...")
 
         try:
-            result = claude.execute_prompt(prompt, timeout=3600)
-            if not result or not getattr(result, "success", False):
-                logger.error(f"Claude API failed: {getattr(result, 'error', 'Unknown error')}")
+            result = invoker.invoke_agent(
+                agent_type="architect", prompt=prompt, working_dir=str(Path.cwd()), timeout=3600
+            )
+            if not result.success:
+                logger.error(f"Architect sub-agent failed: {result.error}")
                 return
-            logger.info("✅ Claude API complete")
+            logger.info(f"✅ Architect sub-agent complete (${result.cost_usd:.4f}, {result.duration_ms}ms)")
         except Exception as e:
-            logger.error(f"❌ Error executing Claude API: {e}")
+            logger.error(f"❌ Error executing architect sub-agent: {e}")
             return
 
         # Update progress

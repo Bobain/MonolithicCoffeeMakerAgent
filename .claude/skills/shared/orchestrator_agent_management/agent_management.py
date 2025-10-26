@@ -1,14 +1,20 @@
 """Orchestrator Agent Management Skill.
 
-Enables orchestrator to spawn, monitor, and manage architect and code_developer instances.
+Enables orchestrator to spawn, monitor, and manage architect and code_developer instances
+AS CLAUDE CODE SESSIONS (not Python processes).
+
+Architecture:
+    All agents are spawned as Claude Code sessions using ClaudeAgentInvoker.
+    They are NOT Python processes - they ARE Claude sessions with full tool access.
 
 CFR-014 Compliant: Uses SQLite database instead of JSON files.
 
 Author: architect + code_developer
-Date: 2025-10-20
-Related: Parallel execution, autonomous orchestration, CFR-014 compliance
+Date: 2025-10-26 (Updated to use Claude Code sessions)
+Related: Parallel execution, autonomous orchestration, CFR-014 compliance, Claude-as-agents architecture
 """
 
+import json
 import logging
 import os
 import sqlite3
@@ -16,9 +22,19 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
+from threading import Thread
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
+
+# Import Claude agent invoker for spawning Claude Code sessions
+try:
+    from coffee_maker.claude_agent_invoker import get_invoker
+
+    INVOKER_AVAILABLE = True
+except ImportError:
+    logger.warning("ClaudeAgentInvoker not available - falling back to legacy Python agents")
+    INVOKER_AVAILABLE = False
 
 
 class OrchestratorAgentManagementSkill:
@@ -137,7 +153,7 @@ class OrchestratorAgentManagementSkill:
         **kwargs,
     ) -> Dict[str, Any]:
         """
-        Spawn architect instance for spec creation.
+        Spawn architect instance AS A CLAUDE CODE SESSION (not a Python process).
 
         Args:
             priority_number: Priority number to work on (optional for some task types)
@@ -146,35 +162,50 @@ class OrchestratorAgentManagementSkill:
             auto_approve: Auto-approve architect decisions
 
         Returns:
-            Spawn result with PID and task info
+            Spawn result with invocation_id and task info
         """
-        # Build command
-        cmd = ["poetry", "run", "architect"]
+        if not INVOKER_AVAILABLE:
+            raise RuntimeError("ClaudeAgentInvoker not available - cannot spawn architect")
 
+        # Build prompt for Claude Code session
         if task_type == "create_spec":
             if priority_number is None:
                 raise ValueError("priority_number required for create_spec task type")
-            cmd.extend(["create-spec", f"--priority={priority_number}"])
+
+            prompt = f"""Create technical specification for priority {priority_number}.
+
+## Task
+
+1. Use Read tool to read docs/roadmap/ROADMAP.md and find priority {priority_number}
+2. Use Read tool to understand existing architecture (docs/architecture/)
+3. Design the solution
+4. Use Write tool to create: docs/architecture/specs/SPEC-XXX-{priority_number}.md
+5. Include: problem statement, solution, implementation steps, testing, DoD
+6. Report "COMPLETE: Spec created for priority {priority_number}"
+
+Start now. When done, exit."""
+
         elif task_type == "refactoring_analysis":
-            cmd.extend(["analyze-codebase", "--force"])
+            prompt = """Analyze codebase for refactoring opportunities.
 
-        # Add auto-approve flag if requested
-        if auto_approve:
-            cmd.append("--auto-approve")
+## Task
 
-        # Spawn process
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            cwd=Path.cwd(),
-        )
+1. Use Read/Grep tools to analyze code quality
+2. Identify technical debt and improvement opportunities
+3. Use Write tool to create refactoring analysis report
+4. Report "COMPLETE: Refactoring analysis complete"
 
-        # Store process handle for later polling
-        self._process_handles[process.pid] = process
+Start now. When done, exit."""
 
-        # Track agent in database
+        else:
+            prompt = f"""Execute {task_type} task as architect.
+
+Use Read, Write, Edit, Bash tools as needed.
+Report "COMPLETE: {task_type} complete" when done.
+
+Start now. When done, exit."""
+
+        # Generate task_id
         if priority_number:
             task_id = f"spec-{priority_number}"
         else:
@@ -182,7 +213,81 @@ class OrchestratorAgentManagementSkill:
 
         spawned_at = datetime.now().isoformat()
 
-        # Insert into agent_lifecycle table
+        # Spawn Claude Code session in background thread
+        invoker = get_invoker()
+
+        def run_session():
+            """Run Claude session with streaming and track in database."""
+            try:
+                # Invoke agent with streaming (allows real-time monitoring)
+                success = False
+                error_msg = None
+
+                for msg in invoker.invoke_agent_streaming("architect", prompt, timeout=1800):
+                    # Log streaming messages for observability
+                    if msg.message_type == "message":
+                        logger.debug(f"[architect/{task_id}] 💬 {msg.content[:100]}")
+                    elif msg.message_type == "tool_use":
+                        tool_name = msg.metadata.get("name", "unknown")
+                        logger.info(f"[architect/{task_id}] 🔧 Using tool: {tool_name}")
+                    elif msg.message_type == "result":
+                        # Final result received
+                        success = msg.metadata.get("stop_reason") != "error"
+                        if not success:
+                            error_msg = msg.metadata.get("error", "Unknown error")
+                        logger.info(f"[architect/{task_id}] 🏁 Session complete (success={success})")
+
+                # Update database with result
+                conn = self._get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        UPDATE agent_lifecycle
+                        SET status = ?, completed_at = ?, exit_code = ?
+                        WHERE task_id = ?
+                        """,
+                        (
+                            "completed" if success else "failed",
+                            datetime.now().isoformat(),
+                            0 if success else 1,
+                            task_id,
+                        ),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+
+                if success:
+                    logger.info(f"✅ Architect session completed for {task_id}")
+                else:
+                    logger.error(f"❌ Architect session failed for {task_id}: {error_msg}")
+
+            except Exception as e:
+                logger.error(f"❌ Architect session crashed for {task_id}: {e}", exc_info=True)
+                # Mark as failed in database
+                conn = self._get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        UPDATE agent_lifecycle
+                        SET status = 'failed', completed_at = ?, exit_code = 1
+                        WHERE task_id = ?
+                        """,
+                        (datetime.now().isoformat(), task_id),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+
+        # Start session in background thread
+        thread = Thread(target=run_session, daemon=True)
+        thread.start()
+
+        # Track in database immediately (use thread.ident as pseudo-PID)
+        pseudo_pid = thread.ident or 0
+
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
@@ -194,15 +299,15 @@ class OrchestratorAgentManagementSkill:
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    process.pid,
+                    pseudo_pid,
                     "architect",
                     task_id,
                     task_type,
                     priority_number,
                     spawned_at,
-                    spawned_at,  # started_at = spawned_at initially
-                    "spawned",
-                    " ".join(cmd),
+                    spawned_at,
+                    "running",
+                    f"claude --agent architect (session)",
                 ),
             )
             conn.commit()
@@ -210,22 +315,22 @@ class OrchestratorAgentManagementSkill:
             conn.close()
 
         agent_info = {
-            "pid": process.pid,
+            "pid": pseudo_pid,  # Thread ID as pseudo-PID
             "agent_type": "architect",
             "task_id": task_id,
             "task_type": task_type,
             "priority_number": priority_number,
-            "command": " ".join(cmd),
+            "command": f"claude --agent architect",
             "started_at": spawned_at,
-            "status": "spawned",
+            "status": "running",
         }
 
         if priority_name:
-            logger.info(f"Spawned architect (PID {process.pid}) for {priority_name}")
+            logger.info(f"🚀 Spawned architect Claude session for {priority_name}")
         elif priority_number:
-            logger.info(f"Spawned architect (PID {process.pid}) for PRIORITY {priority_number}")
+            logger.info(f"🚀 Spawned architect Claude session for PRIORITY {priority_number}")
         else:
-            logger.info(f"Spawned architect (PID {process.pid}) for {task_type}")
+            logger.info(f"🚀 Spawned architect Claude session for {task_type}")
 
         return {"error": None, "result": agent_info}
 
@@ -237,7 +342,7 @@ class OrchestratorAgentManagementSkill:
         **kwargs,
     ) -> Dict[str, Any]:
         """
-        Spawn code_developer instance for implementation.
+        Spawn code_developer instance AS A CLAUDE CODE SESSION (not a Python process).
 
         Args:
             priority_number: Priority number to implement
@@ -245,55 +350,117 @@ class OrchestratorAgentManagementSkill:
             auto_approve: Auto-approve code_developer decisions
 
         Returns:
-            Spawn result with PID and task info
+            Spawn result with invocation_id and task info
         """
-        # Determine working directory
-        cwd = Path(worktree_path) if worktree_path else Path.cwd()
+        if not INVOKER_AVAILABLE:
+            raise RuntimeError("ClaudeAgentInvoker not available - cannot spawn code_developer")
 
-        # Build command: If spawning in worktree, use direct Python path
-        # (worktrees don't have separate poetry config)
-        if worktree_path:
-            # Get poetry virtualenv path from main repo
-            main_repo = Path.cwd()
-            try:
-                venv_result = subprocess.run(
-                    ["poetry", "env", "info", "--path"],
-                    cwd=main_repo,
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-                venv_path = venv_result.stdout.strip()
-                python_bin = f"{venv_path}/bin/python"
+        # Build prompt for Claude Code session
+        prompt = f"""Implement priority {priority_number}.
 
-                # Use direct Python invocation with module
-                cmd = [python_bin, "-m", "coffee_maker.autonomous.daemon_cli", f"--priority={priority_number}"]
+## Task
 
-                if auto_approve:
-                    cmd.append("--auto-approve")
+1. Use Read tool to read docs/roadmap/ROADMAP.md and find priority {priority_number}
+2. Use Read tool to find and read the technical spec (docs/architecture/specs/SPEC-*-{priority_number}.md)
+3. Use Read tool to understand existing code
+4. Use Write/Edit tools to implement the feature following the spec
+5. Use Bash tool to run: pytest
+6. If tests pass: Use Bash to commit: git add . && git commit -m "feat: Implement priority {priority_number}"
+7. Report "COMPLETE: Priority {priority_number} implemented"
 
-                logger.info(f"Using virtualenv Python for worktree: {python_bin}")
-            except subprocess.CalledProcessError as e:
-                logger.error(f"Failed to get poetry virtualenv path: {e}")
-                raise RuntimeError(f"Cannot spawn in worktree without virtualenv path: {e}")
-        else:
-            # Main repo: use poetry run
-            cmd = ["poetry", "run", "code-developer", f"--priority={priority_number}"]
+Start now. When done, exit."""
 
-            if auto_approve:
-                cmd.append("--auto-approve")
-
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            cwd=cwd,
-        )
-
-        # Track agent in database
+        # Generate task_id
         task_id = f"impl-{priority_number}"
         spawned_at = datetime.now().isoformat()
+
+        # Spawn Claude Code session in background thread
+        invoker = get_invoker()
+
+        # Determine working directory
+        Path(worktree_path) if worktree_path else Path.cwd()
+
+        def run_session():
+            """Run Claude session with streaming and track in database."""
+            try:
+                # Change to worktree directory if needed
+                original_cwd = os.getcwd()
+                if worktree_path:
+                    os.chdir(worktree_path)
+
+                try:
+                    # Invoke agent with streaming (allows real-time monitoring)
+                    success = False
+                    error_msg = None
+
+                    for msg in invoker.invoke_agent_streaming("code-developer", prompt, timeout=3600):
+                        # Log streaming messages for observability
+                        if msg.message_type == "message":
+                            logger.debug(f"[code-developer/{task_id}] 💬 {msg.content[:100]}")
+                        elif msg.message_type == "tool_use":
+                            tool_name = msg.metadata.get("name", "unknown")
+                            logger.info(f"[code-developer/{task_id}] 🔧 Using tool: {tool_name}")
+                        elif msg.message_type == "result":
+                            # Final result received
+                            success = msg.metadata.get("stop_reason") != "error"
+                            if not success:
+                                error_msg = msg.metadata.get("error", "Unknown error")
+                            logger.info(f"[code-developer/{task_id}] 🏁 Session complete (success={success})")
+
+                    # Update database with result
+                    conn = self._get_connection()
+                    try:
+                        cursor = conn.cursor()
+                        cursor.execute(
+                            """
+                            UPDATE agent_lifecycle
+                            SET status = ?, completed_at = ?, exit_code = ?
+                            WHERE task_id = ?
+                            """,
+                            (
+                                "completed" if success else "failed",
+                                datetime.now().isoformat(),
+                                0 if success else 1,
+                                task_id,
+                            ),
+                        )
+                        conn.commit()
+                    finally:
+                        conn.close()
+
+                    if success:
+                        logger.info(f"✅ Code developer session completed for {task_id}")
+                    else:
+                        logger.error(f"❌ Code developer session failed for {task_id}: {error_msg}")
+
+                finally:
+                    # Restore original directory
+                    os.chdir(original_cwd)
+
+            except Exception as e:
+                logger.error(f"❌ Code developer session crashed for {task_id}: {e}", exc_info=True)
+                # Mark as failed in database
+                conn = self._get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        UPDATE agent_lifecycle
+                        SET status = 'failed', completed_at = ?, exit_code = 1
+                        WHERE task_id = ?
+                        """,
+                        (datetime.now().isoformat(), task_id),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+
+        # Start session in background thread
+        thread = Thread(target=run_session, daemon=True)
+        thread.start()
+
+        # Track in database immediately (use thread.ident as pseudo-PID)
+        pseudo_pid = thread.ident or 0
 
         conn = self._get_connection()
         try:
@@ -306,15 +473,15 @@ class OrchestratorAgentManagementSkill:
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    process.pid,
+                    pseudo_pid,
                     "code_developer",
                     task_id,
                     "implementation",
                     priority_number,
                     spawned_at,
                     spawned_at,
-                    "spawned",
-                    " ".join(cmd),
+                    "running",
+                    f"claude --agent code-developer (session)",
                     str(worktree_path) if worktree_path else None,
                 ),
             )
@@ -323,17 +490,17 @@ class OrchestratorAgentManagementSkill:
             conn.close()
 
         agent_info = {
-            "pid": process.pid,
+            "pid": pseudo_pid,  # Thread ID as pseudo-PID
             "agent_type": "code_developer",
             "task_id": task_id,
             "priority_number": priority_number,
             "worktree_path": str(worktree_path) if worktree_path else None,
-            "command": " ".join(cmd),
+            "command": f"claude --agent code-developer",
             "started_at": spawned_at,
-            "status": "spawned",
+            "status": "running",
         }
 
-        logger.info(f"Spawned code_developer (PID {process.pid}) for PRIORITY {priority_number}")
+        logger.info(f"🚀 Spawned code_developer Claude session for PRIORITY {priority_number}")
 
         return {"error": None, "result": agent_info}
 
@@ -428,37 +595,120 @@ class OrchestratorAgentManagementSkill:
         self, task_type: str = "auto_planning", auto_approve: bool = True, **kwargs
     ) -> Dict[str, Any]:
         """
-        Spawn project_manager instance for planning/analysis.
+        Spawn project_manager instance AS A CLAUDE CODE SESSION (not a Python process).
 
         Args:
             task_type: Type of task (auto_planning, roadmap_health, etc.)
             auto_approve: Auto-approve project_manager decisions
 
         Returns:
-            Spawn result with PID and task info
+            Spawn result with invocation_id and task info
         """
-        # Build command
-        cmd = ["poetry", "run", "project-manager"]
+        if not INVOKER_AVAILABLE:
+            raise RuntimeError("ClaudeAgentInvoker not available - cannot spawn project_manager")
 
+        # Build prompt for Claude Code session
         if task_type == "auto_planning":
-            cmd.extend(["auto-plan"])
-            if auto_approve:
-                cmd.append("--auto-approve")
+            prompt = """Analyze roadmap and create strategic plan.
+
+## Task
+
+1. Use Read tool to read docs/roadmap/ROADMAP.md
+2. Analyze current priorities and progress
+3. Use Bash tool with gh to check GitHub status (PRs, issues)
+4. Create planning recommendations
+5. Use Edit tool to update roadmap if needed
+6. Report "COMPLETE: Planning complete"
+
+Start now. When done, exit."""
+
         elif task_type == "roadmap_health":
-            cmd.extend(["status"])
+            prompt = """Check roadmap health and report status.
 
-        # Spawn process
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            cwd=Path.cwd(),
-        )
+## Task
 
-        # Track agent in database
+1. Use Read tool to read docs/roadmap/ROADMAP.md
+2. Analyze priorities (planned, in-progress, completed)
+3. Identify blockers or issues
+4. Report health metrics and recommendations
+5. Report "COMPLETE: Health check complete"
+
+Start now. When done, exit."""
+
+        else:
+            prompt = f"""Execute {task_type} task as project_manager.
+
+Use Read, Write, Edit, Bash tools as needed.
+Report "COMPLETE: {task_type} complete" when done.
+
+Start now. When done, exit."""
+
+        # Generate task_id
         task_id = f"planning-{int(time.time())}"
         spawned_at = datetime.now().isoformat()
+
+        # Spawn Claude Code session in background thread
+        invoker = get_invoker()
+
+        def run_session():
+            """Run Claude session and track in database."""
+            try:
+                # Invoke agent (blocking call)
+                result = invoker.invoke_agent("project-manager", prompt, timeout=1800)
+
+                # Get invocation_id from result
+                result.metadata.get("invocation_id")
+
+                # Update database with result
+                conn = self._get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        UPDATE agent_lifecycle
+                        SET status = ?, completed_at = ?, exit_code = ?
+                        WHERE task_id = ?
+                        """,
+                        (
+                            "completed" if result.success else "failed",
+                            datetime.now().isoformat(),
+                            0 if result.success else 1,
+                            task_id,
+                        ),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+
+                if result.success:
+                    logger.info(f"✅ Project manager session completed for {task_id}")
+                else:
+                    logger.error(f"❌ Project manager session failed for {task_id}: {result.error}")
+
+            except Exception as e:
+                logger.error(f"❌ Project manager session crashed for {task_id}: {e}", exc_info=True)
+                # Mark as failed in database
+                conn = self._get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        UPDATE agent_lifecycle
+                        SET status = 'failed', completed_at = ?, exit_code = 1
+                        WHERE task_id = ?
+                        """,
+                        (datetime.now().isoformat(), task_id),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+
+        # Start session in background thread
+        thread = Thread(target=run_session, daemon=True)
+        thread.start()
+
+        # Track in database immediately (use thread.ident as pseudo-PID)
+        pseudo_pid = thread.ident or 0
 
         conn = self._get_connection()
         try:
@@ -471,14 +721,14 @@ class OrchestratorAgentManagementSkill:
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    process.pid,
+                    pseudo_pid,
                     "project_manager",
                     task_id,
                     task_type,
                     spawned_at,
                     spawned_at,
-                    "spawned",
-                    " ".join(cmd),
+                    "running",
+                    f"claude --agent project-manager (session)",
                 ),
             )
             conn.commit()
@@ -486,57 +736,123 @@ class OrchestratorAgentManagementSkill:
             conn.close()
 
         agent_info = {
-            "pid": process.pid,
+            "pid": pseudo_pid,  # Thread ID as pseudo-PID
             "agent_type": "project_manager",
             "task_id": task_id,
             "task_type": task_type,
-            "command": " ".join(cmd),
+            "command": f"claude --agent project-manager",
             "started_at": spawned_at,
-            "status": "spawned",
+            "status": "running",
         }
 
-        logger.info(f"Spawned project_manager (PID {process.pid}) for {task_type}")
+        logger.info(f"🚀 Spawned project_manager Claude session for {task_type}")
 
         return {"error": None, "result": agent_info}
 
     def _spawn_code_reviewer(self, commit_sha: str = "HEAD", auto_approve: bool = True, **kwargs) -> Dict[str, Any]:
         """
-        Spawn code_reviewer instance for commit review.
+        Spawn code_reviewer instance AS A CLAUDE CODE SESSION (not a Python process).
 
         Args:
             commit_sha: Commit SHA to review (default: HEAD)
             auto_approve: Auto-approve code_reviewer decisions
 
         Returns:
-            Spawn result with PID and task info
+            Spawn result with invocation_id and task info
         """
-        # Build command
-        cmd = ["poetry", "run", "code-reviewer", "review", commit_sha]
+        if not INVOKER_AVAILABLE:
+            raise RuntimeError("ClaudeAgentInvoker not available - cannot spawn code_reviewer")
 
-        # Spawn process
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            cwd=Path.cwd(),
-        )
+        # Build prompt for Claude Code session
+        prompt = f"""Review commit {commit_sha}.
 
-        # Store process handle for later polling
-        self._process_handles[process.pid] = process
+## Task
 
-        # Track agent in database
+1. Use Bash tool to get commit details: git show {commit_sha}
+2. Analyze code changes for:
+   - Code quality issues
+   - Style guide compliance
+   - Potential bugs
+   - Security concerns
+   - Test coverage
+3. Use Write tool to create review report (if needed)
+4. Report "COMPLETE: Review complete for {commit_sha}"
+
+Start now. When done, exit."""
+
+        # Generate task_id
         task_id = f"review-{commit_sha[:8]}"
         spawned_at = datetime.now().isoformat()
+
+        # Spawn Claude Code session in background thread
+        invoker = get_invoker()
+
+        def run_session():
+            """Run Claude session and track in database."""
+            try:
+                # Invoke agent (blocking call)
+                result = invoker.invoke_agent("code-reviewer", prompt, timeout=900)
+
+                # Get invocation_id from result
+                result.metadata.get("invocation_id")
+
+                # Update database with result
+                conn = self._get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        UPDATE agent_lifecycle
+                        SET status = ?, completed_at = ?, exit_code = ?
+                        WHERE task_id = ?
+                        """,
+                        (
+                            "completed" if result.success else "failed",
+                            datetime.now().isoformat(),
+                            0 if result.success else 1,
+                            task_id,
+                        ),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+
+                if result.success:
+                    logger.info(f"✅ Code reviewer session completed for {task_id}")
+                else:
+                    logger.error(f"❌ Code reviewer session failed for {task_id}: {result.error}")
+
+            except Exception as e:
+                logger.error(f"❌ Code reviewer session crashed for {task_id}: {e}", exc_info=True)
+                # Mark as failed in database
+                conn = self._get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        UPDATE agent_lifecycle
+                        SET status = 'failed', completed_at = ?, exit_code = 1
+                        WHERE task_id = ?
+                        """,
+                        (datetime.now().isoformat(), task_id),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+
+        # Start session in background thread
+        thread = Thread(target=run_session, daemon=True)
+        thread.start()
+
+        # Track in database immediately (use thread.ident as pseudo-PID)
+        pseudo_pid = thread.ident or 0
+
+        # Store commit info in metadata JSON
+        metadata = json.dumps({"commit_sha": commit_sha})
 
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
-            # Store commit info in metadata JSON
-            import json
-
-            metadata = json.dumps({"commit_sha": commit_sha})
-
             cursor.execute(
                 """
                 INSERT INTO agent_lifecycle (
@@ -545,14 +861,14 @@ class OrchestratorAgentManagementSkill:
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    process.pid,
+                    pseudo_pid,
                     "code_reviewer",
                     task_id,
                     "code_review",
                     spawned_at,
                     spawned_at,
-                    "spawned",
-                    " ".join(cmd),
+                    "running",
+                    f"claude --agent code-reviewer (session)",
                     metadata,
                 ),
             )
@@ -561,17 +877,17 @@ class OrchestratorAgentManagementSkill:
             conn.close()
 
         agent_info = {
-            "pid": process.pid,
+            "pid": pseudo_pid,  # Thread ID as pseudo-PID
             "agent_type": "code_reviewer",
             "task_id": task_id,
             "task_type": "code_review",
             "commit_sha": commit_sha,
-            "command": " ".join(cmd),
+            "command": f"claude --agent code-reviewer",
             "started_at": spawned_at,
-            "status": "spawned",
+            "status": "running",
         }
 
-        logger.info(f"Spawned code_reviewer (PID {process.pid}) for commit {commit_sha[:8]}")
+        logger.info(f"🚀 Spawned code_reviewer Claude session for commit {commit_sha[:8]}")
 
         return {"error": None, "result": agent_info}
 

@@ -51,7 +51,6 @@ class SkillRegistry:
         "shared.orchestrator_agent_management": "claude.skills.shared.orchestrator_agent_management.agent_management",
         "shared.orchestrator_health_monitor": "claude.skills.shared.orchestrator_health_monitor.orchestrator_health_monitor",
         "shared.roadmap_auto_management": "claude.skills.shared.roadmap_auto_management.roadmap_auto_management",
-        "shared.roadmap_management": "claude.skills.shared.roadmap_management.roadmap_management",
         "shared.technical_specification_handling": "claude.skills.shared.technical_specification_handling.technical_specification_handling",
         # Project manager skills
         "project_manager.pr_monitoring": "claude.skills.project_manager.pr_monitoring.pr_monitoring",

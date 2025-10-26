@@ -31,7 +31,7 @@ skills_path = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shar
 if str(skills_path) not in sys.path:
     sys.path.insert(0, str(skills_path))
 
-from technical_spec_database.unified_spec_skill import TechnicalSpecSkill
+from coffee_maker.autonomous.technical_spec_skill import TechnicalSpecSkill
 
 logger = logging.getLogger(__name__)
 

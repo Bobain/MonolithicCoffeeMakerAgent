@@ -52,9 +52,9 @@ from claude.skills.shared.orchestrator_agent_management.agent_management import 
     OrchestratorAgentManagementSkill,
 )
 from claude.skills.shared.bug_tracking.bug_tracking import BugTrackingSkill
-from claude.skills.shared.roadmap_management.roadmap_management import (
-    RoadmapManagementSkill,
-)
+
+# Use RoadmapDatabase instead of RoadmapManagementSkill for proper database access
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
 
 @dataclass
@@ -115,8 +115,8 @@ class ContinuousWorkLoop:
         # Initialize agent management skill
         self.agent_mgmt = OrchestratorAgentManagementSkill()
 
-        # Initialize roadmap management skill (SINGLE SOURCE OF TRUTH)
-        self.roadmap_skill = RoadmapManagementSkill()
+        # Initialize roadmap database (SINGLE SOURCE OF TRUTH - database-backed)
+        self.roadmap_db = RoadmapDatabase(agent_name="orchestrator")
 
         # Initialize bug tracking skill (database-backed bug tracking)
         self.bug_skill = BugTrackingSkill()
@@ -264,14 +264,18 @@ class ContinuousWorkLoop:
         3. Spawn architect instances for first N missing specs (parallel execution)
         4. Target: Always have 2-3 specs ahead of code_developer
         """
-        # Load all priorities from ROADMAP using skill (SINGLE SOURCE OF TRUTH)
-        result = self.roadmap_skill.execute(operation="get_all_priorities")
+        # Load all priorities from database (SINGLE SOURCE OF TRUTH)
+        priorities = self.roadmap_db.get_all_items()
 
-        if result.get("error"):
-            logger.error(f"Failed to get priorities: {result['error']}")
+        if priorities is None:
+            logger.error("Failed to get priorities from database")
             return
 
-        priorities = result.get("result", [])
+        # Add compatibility mapping: database uses 'id' field for US-XXX values
+        # but existing orchestrator code expects 'us_id' field
+        for p in priorities:
+            if p.get("id", "").startswith("US-"):
+                p["us_id"] = p["id"]  # Map id to us_id for user stories
 
         if not priorities:
             logger.debug("No priorities found in ROADMAP")
@@ -535,14 +539,18 @@ class ContinuousWorkLoop:
         3. If independent: spawn parallel code_developers in worktrees
         4. If not independent: fall back to sequential execution
         """
-        # Use roadmap-management skill (SINGLE SOURCE OF TRUTH)
-        result = self.roadmap_skill.execute(operation="get_all_priorities")
+        # Use roadmap database (SINGLE SOURCE OF TRUTH)
+        priorities = self.roadmap_db.get_all_items()
 
-        if result.get("error"):
-            logger.error(f"Failed to get priorities: {result['error']}")
+        if priorities is None:
+            logger.error("Failed to get priorities from database")
             return
 
-        priorities = result.get("result", [])
+        # Add compatibility mapping: database uses 'id' field for US-XXX values
+        # but existing orchestrator code expects 'us_id' field
+        for p in priorities:
+            if p.get("id", "").startswith("US-"):
+                p["us_id"] = p["id"]  # Map id to us_id for user stories
 
         if not priorities:
             return
@@ -558,7 +566,7 @@ class ContinuousWorkLoop:
 
             # Check if spec exists
             # Use US number for spec lookup (e.g., "US-104" -> "SPEC-104-*.md")
-            # Skill returns: number="20" (PRIORITY number), us_id="US-104"
+            # Compatibility: us_id field is mapped from database 'id' field
             # Specs are named with US number, not PRIORITY number
             us_id = p.get("us_id")
             spec_number = None

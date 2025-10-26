@@ -176,7 +176,7 @@ from typing import Optional
 
 # from coffee_maker.autonomous.activity_logger import ActivityLogger  # TODO: Re-enable when activity_logger is implemented
 from coffee_maker.autonomous.agent_registry import AgentRegistry, AgentType
-from coffee_maker.autonomous.claude_api_interface import ClaudeAPI
+from coffee_maker.claude_agent_invoker import get_invoker
 from coffee_maker.autonomous.daemon_git_ops import GitOpsMixin
 from coffee_maker.autonomous.startup_skill_executor import (
     StartupSkillExecutor,
@@ -295,21 +295,10 @@ class DevDaemon(GitOpsMixin, SpecManagerMixin, ImplementationMixin, StatusMixin)
         self.parser = RoadmapParser(str(self.roadmap_path))
         self.git = GitManager()
 
-        # Choose between CLI and API based on flag
-        if use_claude_cli:
-            from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
-
-            try:
-                self.claude = ClaudeCLIInterface(claude_path=claude_cli_path, model=model)
-                logger.info("✅ Using Claude CLI mode (subscription)")
-            except RuntimeError as e:
-                logger.warning(f"Claude CLI initialization failed: {e}")
-                logger.info("Falling back to Claude API mode")
-                self.claude = ClaudeAPI(model=model)
-                self.use_claude_cli = False
-        else:
-            self.claude = ClaudeAPI(model=model)
-            logger.info("✅ Using Claude API mode (requires credits)")
+        # Use Claude Code sub-agent invoker (replaces both CLI and API modes)
+        self.invoker = get_invoker()
+        self.use_claude_cli = use_claude_cli  # Keep flag for compatibility
+        logger.info("✅ Using Claude Code sub-agent invoker (unified interface)")
 
         self.notifications = NotificationDB()
 

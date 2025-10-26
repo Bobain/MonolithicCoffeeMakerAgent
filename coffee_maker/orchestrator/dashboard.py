@@ -25,18 +25,14 @@ from rich.table import Table
 from rich.text import Text
 
 # Import agent management skill
-skill_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "orchestrator-agent-management"
+skill_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "orchestrator_agent_management"
 sys.path.insert(0, str(skill_dir))
 from agent_management import OrchestratorAgentManagementSkill
 
 sys.path.pop(0)
 
-# Import roadmap management skill
-roadmap_skill_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "roadmap-management"
-sys.path.insert(0, str(roadmap_skill_dir))
-from roadmap_management import RoadmapManagementSkill
-
-sys.path.pop(0)
+# Use RoadmapDatabase instead of RoadmapManagementSkill for proper database access
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +44,7 @@ class OrchestratorDashboard:
         """Initialize dashboard."""
         self.console = Console()
         self.agent_mgmt = OrchestratorAgentManagementSkill()
-        self.roadmap_mgmt = RoadmapManagementSkill()
+        self.roadmap_db = RoadmapDatabase(agent_name="orchestrator_dashboard")
 
         # Get orchestrator start time from database
         self.start_time = None
@@ -116,10 +112,10 @@ class OrchestratorDashboard:
             Dict with total, completed, in_progress, planned counts and health
         """
         try:
-            # Load priorities from roadmap-management skill
-            result = self.roadmap_mgmt.execute(operation="get_all_priorities")
-            if result.get("error"):
-                logger.error(f"Failed to load ROADMAP: {result['error']}")
+            # Load priorities from database
+            priorities = self.roadmap_db.get_all_items()
+            if priorities is None:
+                logger.error("Failed to load ROADMAP from database")
                 return {
                     "total": 0,
                     "completed": 0,
@@ -129,7 +125,20 @@ class OrchestratorDashboard:
                     "health_style": "red",
                 }
 
-            priorities = result.get("result", [])
+            priorities = priorities or []
+
+            # Extract emoji from status field (database stores "📝 Planned", "🔄 In Progress", etc)
+            for p in priorities:
+                status = p.get("status", "")
+                if "✅" in status or "Complete" in status:
+                    p["status_emoji"] = "✅"
+                elif "🔄" in status or "In Progress" in status:
+                    p["status_emoji"] = "🔄"
+                elif "📝" in status or "Planned" in status:
+                    p["status_emoji"] = "📝"
+                else:
+                    p["status_emoji"] = "❓"
+
             total = len(priorities)
             completed = len([p for p in priorities if p["status_emoji"] == "✅"])
             in_progress = len([p for p in priorities if p["status_emoji"] == "🔄"])
@@ -288,12 +297,25 @@ class OrchestratorDashboard:
             Rich Panel with both work queues
         """
         try:
-            # Load priorities from roadmap-management skill
-            result = self.roadmap_mgmt.execute(operation="get_all_priorities")
-            if result.get("error"):
-                return Panel(f"Error loading ROADMAP: {result['error']}", title="Work Queue", border_style="red")
+            # Load priorities from database
+            priorities = self.roadmap_db.get_all_items()
+            if priorities is None:
+                return Panel("Error loading ROADMAP from database", title="Work Queue", border_style="red")
 
-            priorities = result.get("result", [])
+            priorities = priorities or []
+
+            # Extract emoji from status field (database stores "📝 Planned", "🔄 In Progress", etc)
+            for p in priorities:
+                status = p.get("status", "")
+                if "✅" in status or "Complete" in status:
+                    p["status_emoji"] = "✅"
+                elif "🔄" in status or "In Progress" in status:
+                    p["status_emoji"] = "🔄"
+                elif "📝" in status or "Planned" in status:
+                    p["status_emoji"] = "📝"
+                else:
+                    p["status_emoji"] = "❓"
+
             planned = [p for p in priorities if p["status_emoji"] == "📝"]  # All planned
 
             # Separate into two queues based on spec availability

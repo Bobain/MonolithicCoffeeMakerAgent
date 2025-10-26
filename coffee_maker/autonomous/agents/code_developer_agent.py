@@ -48,9 +48,8 @@ from typing import Dict, List, Optional
 from coffee_maker.autonomous.agent_registry import AgentType
 from coffee_maker.autonomous.agents.base_agent import BaseAgent
 from coffee_maker.autonomous.agents.code_developer_commit_review_mixin import CodeDeveloperCommitReviewMixin
-from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
-from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
-from coffee_maker.autonomous.roadmap_parser import RoadmapParser
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+from coffee_maker.claude_agent_invoker import get_invoker
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +87,6 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         status_dir: Path,
         message_dir: Path,
         check_interval: int = 300,  # 5 minutes
-        roadmap_file: str = "docs/roadmap/ROADMAP.md",
         auto_approve: bool = True,
     ):
         """Initialize CodeDeveloperAgent.
@@ -97,7 +95,6 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
             status_dir: Directory for agent status files
             message_dir: Directory for inter-agent messages
             check_interval: Seconds between priority checks (default: 5 minutes)
-            roadmap_file: Path to ROADMAP.md file
             auto_approve: Auto-approve implementation (default: True for daemon)
         """
         super().__init__(
@@ -107,8 +104,9 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
             check_interval=check_interval,
         )
 
-        self.roadmap = RoadmapParser(roadmap_file)
-        self.claude = ClaudeCLIInterface()
+        # Use RoadmapDatabase instead of RoadmapParser for proper database access
+        self.roadmap = RoadmapDatabase(agent_name="code_developer")
+        self.invoker = get_invoker()  # Use Claude Code sub-agent invoker
         self.auto_approve = auto_approve
         self.attempted_priorities: Dict[str, int] = {}
         self.max_retries = 3
@@ -223,17 +221,18 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         # Sync with roadmap branch
         logger.info("🔄 Syncing with roadmap branch...")
         self.git.pull("roadmap")
-        self.roadmap.reload()
+        # No need to reload - RoadmapDatabase reads directly from DB
 
         # Get next priority
-        next_priority = self.roadmap.get_next_planned_priority()
+        next_priority = self.roadmap.get_next_planned()
 
         if not next_priority:
             logger.info("✅ No more planned priorities - all done!")
             self.current_task = None
             return
 
-        priority_name = next_priority["name"]
+        # RoadmapDatabase returns 'id' and 'title' instead of 'name'
+        priority_name = next_priority["id"]  # e.g., "US-062" or "PRIORITY-1"
         logger.info(f"📋 Next priority: {priority_name}")
 
         # Track current priority for commit reviews
@@ -300,7 +299,12 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
             logger.error(f"❌ Implementation failed for {priority_name}")
 
     def _implement_priority(self, priority: Dict, spec_file: Path) -> bool:
-        """Implement a priority using Claude API.
+        """Implement a priority by delegating to Claude Code's code-developer sub-agent.
+
+        This method spawns Claude Code's code-developer agent which has:
+        - Full tool access (Read, Write, Edit, Bash, etc.)
+        - Complete system prompt from .claude/agents/code_developer.md
+        - Real-time streaming progress
 
         Args:
             priority: Priority dictionary from ROADMAP
@@ -309,38 +313,91 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         Returns:
             True if successful, False otherwise
         """
-        priority_name = priority["name"]
-        logger.info(f"⚙️  Implementing {priority_name}...")
+        priority_name = priority["id"]  # RoadmapDatabase uses 'id' instead of 'name'
+        logger.info(f"⚙️  Implementing {priority_name} via Claude Code sub-agent...")
 
         # Update task progress
         self.current_task["progress"] = 0.2
-        self.current_task["step"] = "Loading prompt"
+        self.current_task["step"] = "Loading spec and building prompt"
 
-        # Load implementation prompt
-        prompt = load_prompt(
-            PromptNames.IMPLEMENT_FEATURE,
-            {
-                "PRIORITY_NAME": priority_name,
-                "PRIORITY_TITLE": priority.get("title", ""),
-                "SPEC_FILE": str(spec_file),
-                "PRIORITY_CONTENT": priority.get("content", "")[:1000],
-            },
-        )
+        # Read spec content
+        spec_content = spec_file.read_text()
+
+        # Build prompt for Claude Code's code-developer sub-agent
+        prompt = f"""
+Implement {priority_name}: {priority.get('title', '')}
+
+## Technical Specification
+
+{spec_content}
+
+## Instructions
+
+1. Read the spec above carefully
+2. Implement the feature following the spec exactly
+3. Add tests as specified in the spec
+4. Run tests to verify (pytest)
+5. Commit with message: "feat: Implement {priority_name} - {priority.get('title', '')}"
+
+IMPORTANT: You are Claude Code's code-developer agent. You have full access to:
+- Read tool: Read any file
+- Write tool: Create new files
+- Edit tool: Modify existing files
+- Bash tool: Run commands (pytest, git, etc.)
+
+Follow the implementation steps in the spec. Work methodically and test as you go.
+"""
 
         # Update task progress
         self.current_task["progress"] = 0.3
-        self.current_task["step"] = "Executing Claude API"
+        self.current_task["step"] = "Spawning code-developer sub-agent (streaming)"
 
-        # Execute with Claude
-        logger.info("🤖 Executing Claude API...")
+        # Delegate to Claude Code's code-developer sub-agent with streaming
+        logger.info("🚀 Spawning Claude Code's code-developer sub-agent...")
         try:
-            result = self.claude.execute_prompt(prompt, timeout=3600)
-            if not result or not getattr(result, "success", False):
-                logger.error(f"Claude API failed: {getattr(result, 'error', 'Unknown error')}")
-                return False
-            logger.info(f"✅ Claude API complete")
+            message_count = 0
+            last_tool = None
+
+            for msg in self.invoker.invoke_agent_streaming(
+                agent_type="code-developer",
+                prompt=prompt,
+                working_dir=str(Path.cwd()),
+                timeout=3600,  # 1 hour for implementation
+            ):
+                message_count += 1
+
+                # Track progress based on message types
+                if msg.message_type == "init":
+                    logger.info(f"🎬 Sub-agent initialized: {msg.metadata.get('session_id', 'N/A')}")
+                    self.current_task["progress"] = 0.4
+
+                elif msg.message_type == "message":
+                    # Log agent's messages
+                    logger.info(f"💬 Sub-agent: {msg.content[:100]}...")
+                    # Update progress incrementally
+                    self.current_task["progress"] = min(0.4 + (message_count * 0.01), 0.8)
+
+                elif msg.message_type == "tool_use":
+                    tool_name = msg.metadata.get("name", "unknown")
+                    last_tool = tool_name
+                    logger.info(f"🔧 Sub-agent using tool: {tool_name}")
+                    self.current_task["step"] = f"Tool: {tool_name}"
+
+                elif msg.message_type == "tool_result":
+                    logger.debug(f"✅ Tool result for {last_tool}")
+
+                elif msg.message_type == "result":
+                    # Final result
+                    logger.info(f"🏁 Sub-agent completed!")
+                    logger.info(f"   Input tokens: {msg.metadata.get('input_tokens', 0)}")
+                    logger.info(f"   Output tokens: {msg.metadata.get('output_tokens', 0)}")
+                    logger.info(f"   Cost: ${msg.metadata.get('total_cost_usd', 0):.4f}")
+                    self.current_task["progress"] = 0.9
+
+            logger.info(f"✅ Sub-agent execution complete ({message_count} messages)")
+
         except Exception as e:
-            logger.error(f"❌ Error executing Claude API: {e}")
+            logger.error(f"❌ Error executing Claude Code sub-agent: {e}")
             return False
 
         # Update task progress
@@ -600,15 +657,15 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
             to_agent=AgentType.ASSISTANT,
             message_type="demo_request",
             content={
-                "feature": priority["name"],
+                "feature": priority["id"],  # RoadmapDatabase uses 'id' instead of 'name'
                 "title": priority.get("title", ""),
-                "acceptance_criteria": priority.get("acceptance_criteria", []),
+                "acceptance_criteria": priority.get("content", ""),
                 "description": priority.get("content", "")[:500],
             },
             priority="normal",
         )
 
-        logger.info(f"📨 Notified assistant: demo needed for {priority['name']}")
+        logger.info(f"📨 Notified assistant: demo needed for {priority['id']}")
 
     def _handle_message(self, message: Dict):
         """Handle inter-agent messages.

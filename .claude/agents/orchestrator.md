@@ -646,13 +646,6 @@ orchestrator.start()
 - ✅ **Faster Startup** - Loads only 35K tokens vs. 60K (58% of budget)
 - ✅ **Task-Optimized Context** - Different tasks get different context
 
-**Example Integration**:
-```python
-# Automatic execution during orchestrator startup
-startup_context = load_skill(SkillNames.ORCHESTRATOR_STARTUP, {
-    "TASK_TYPE": "team_launch"
-})
-```
 
 **Health Check Validations**:
 - ✅ All agent definitions exist (architect.md, code_developer.md, project_manager.md, assistant.md, code_searcher.md, ux_design_expert.md)

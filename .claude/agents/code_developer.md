@@ -262,7 +262,7 @@ for review in my_reviews:
 from coffee_maker.autonomous.skill_loader import load_skill, SkillNames
 
 # Load the database schema guide skill
-skill = load_skill(SkillNames.DATABASE_SCHEMA_GUIDE)
+skill = load_skill(SkillNames.INTROSPECTION_DATABASE)
 
 # Example 1: Check if you should create files for a table
 result = skill.execute(action="should_use_files", table="technical_specs")
@@ -301,7 +301,50 @@ print(example["code"])
 - Maintains consistency with database-first architecture
 
 **See also:**
-- Database Schema Guide: `.claude/skills/shared/database_schema_guide/DATABASE_SCHEMA_GUIDE.md`
+- Database Introspection: `.claude/skills/shared/introspection_database/SKILL.md`
+
+## 📋 TECHNICAL SPECIFICATION HANDLING (CRITICAL)
+
+**ALWAYS use this skill to find and read technical specifications from architect:**
+
+```python
+from coffee_maker.autonomous.skill_loader import load_skill, SkillNames
+
+# Load the spec handling skill
+spec_skill = load_skill(SkillNames.TECHNICAL_SPECIFICATION_HANDLING)
+
+# Find spec for the user story you're implementing
+spec = spec_skill.execute(action="find_spec", us_id="US-104")
+# Also supports: priority_num=20 or title_pattern="orchestrator"
+
+# For hierarchical specs - read only the phase you need (saves context!)
+phase_content = spec_skill.execute(
+    action="read_hierarchical_spec",
+    us_id="US-104",
+    phase="implementation"  # or "database", "api", "testing", etc.
+)
+
+# Detect current phase automatically
+current_phase = spec_skill.execute(
+    action="detect_phase",
+    us_id="US-104"
+)
+```
+
+**When to use this skill:**
+- ✅ **ALWAYS** when starting to implement a user story
+- ✅ **WHEN** you need to find technical specifications
+- ✅ **FOR** reading hierarchical specs phase-by-phase (71% context savings!)
+- ✅ **IF** you can't find a spec manually - this skill has unified finding logic
+
+**Why this matters:**
+- Prevents "spec not found" bugs (which caused 2+ hour blocks)
+- Reduces context usage with hierarchical specs
+- Ensures you're reading the latest spec version
+- Unified logic with architect (both use same skill)
+
+**See also:**
+- Spec Handling Skill: `.claude/skills/shared/technical_specification_handling/`
 
 ## ⚠️ CRITICAL DOCUMENTS ⚠️
 
@@ -603,14 +646,6 @@ You communicate through:
 - ✅ **Faster Startup** - Loads only 27K tokens vs. 60K (45% of budget)
 - ✅ **Task-Optimized Context** - Different tasks get different context
 
-**Example Integration**:
-```python
-# Automatic execution during code_developer startup
-startup_context = load_skill(SkillNames.CODE_DEVELOPER_STARTUP, {
-    "TASK_TYPE": "implement_priority",
-    "PRIORITY_NAME": "PRIORITY 10"
-})
-```
 
 **Health Check Validations**:
 - ✅ ANTHROPIC_API_KEY set in environment
@@ -775,47 +810,39 @@ Priority complete
 **Scenario**: code_developer implements feature with TDD workflow
 
 ```python
-# Step 1: Startup (automatic)
-startup_result = load_skill(SkillNames.CODE_DEVELOPER_STARTUP, {
-    "TASK_TYPE": "implement_priority",
-    "PRIORITY_NAME": "PRIORITY 10"
-})
-
-# Step 2: Implement feature (manual coding)
+# Step 1: Implement feature (manual coding)
 write_implementation()
 write_tests()
 
-# Step 3: Run tests and analyze failures
+# Step 3: Run tests and debug failures
 test_results = run_pytest()
 
 if test_results.failures > 0:
-    # Use test-failure-analysis skill (saves 20-50 min!)
-    analysis = load_skill(SkillNames.TEST_FAILURE_ANALYSIS, {
-        "PYTEST_OUTPUT": test_results.output,
-        "FAILING_TESTS": test_results.failures
-    })
+    # Analyze test failures manually
+    print(f"Test failures detected: {test_results.failures}")
+    print(test_results.output)
 
-    # Apply suggested fixes
-    for fix in analysis["fixes"]:
-        apply_fix(fix)
+    # Debug and fix issues
+    debug_test_failures(test_results)
 
     # Rerun tests
     test_results = run_pytest()
 
-# Step 4: Verify DoD before commit
-dod_result = load_skill(SkillNames.DOD_VERIFICATION, {
-    "PRIORITY_NAME": "PRIORITY 10",
-    "ACCEPTANCE_CRITERIA": load_acceptance_criteria(),
-    "TEST_RESULTS": test_results
-})
-
-if dod_result["passed"]:
-    # Step 5: Automate git workflow
-    git_result = load_skill(SkillNames.GIT_WORKFLOW_AUTOMATION, {
-        "COMMIT_MESSAGE": "feat: Implement PRIORITY 10",
-        "TAG_PREFIX": "wip",
-        "PUSH": True
-    })
+# Step 4: Verify implementation before commit
+# Check acceptance criteria manually
+if verify_acceptance_criteria():
+    # Step 5: Automate git workflow (if skill available)
+    try:
+        git_result = load_skill(SkillNames.GIT_WORKFLOW_AUTOMATION, {
+            "COMMIT_MESSAGE": "feat: Implement PRIORITY 10",
+            "TAG_PREFIX": "wip",
+            "PUSH": True
+        })
+    except:
+        # Manual git workflow
+        run_command("git add -A")
+        run_command("git commit -m 'feat: Implement PRIORITY 10'")
+        run_command("git push")
 
 # Step 6: trace-execution logs throughout (automatic)
 # Trace includes: startup, implementation, test failures, DoD, git commit
@@ -827,92 +854,84 @@ if dod_result["passed"]:
 
 ### Pattern 1: When to Use Each Skill
 
-**test-failure-analysis**:
+**technical-specification-handling**:
 ```python
-# Use when: pytest shows failures
-# Saves: 20-50 minutes per test failure debugging session
+# Use when: Need to access or create technical specifications
+# Direct database access for specs
 
-test_output = run_command("pytest")
+from coffee_maker.autonomous.technical_spec_skill import TechnicalSpecSkill
 
-if "FAILED" in test_output:
-    analysis = load_skill(SkillNames.TEST_FAILURE_ANALYSIS, {
-        "PYTEST_OUTPUT": test_output
-    })
+spec_skill = TechnicalSpecSkill()
 
-    print(f"Root cause: {analysis['root_cause']}")
-    print(f"Fixes: {analysis['suggested_fixes']}")
+# Get spec for a priority
+spec = spec_skill.get_spec_for_priority("PRIORITY 10")
+
+# Get implementation tasks
+tasks = spec_skill.get_tasks_for_spec(spec["id"])
+
+print(f"Spec: {spec['title']}")
+print(f"Tasks: {len(tasks)}")
 ```
 
-**dod-verification**:
-```python
-# Use when: Implementation complete, before commit
-# Saves: 15-35 minutes of manual verification
-
-dod = load_skill(SkillNames.DOD_VERIFICATION, {
-    "PRIORITY_NAME": "PRIORITY 10",
-    "ACCEPTANCE_CRITERIA": criteria,
-    "TEST_RESULTS": test_results,
-    "IMPLEMENTATION_FILES": ["feature.py", "tests/test_feature.py"]
-})
-
-if dod["passed"]:
-    commit()
-else:
-    print(f"DoD not met: {dod['unmet_criteria']}")
-```
-
-**git-workflow-automation**:
+**git-workflow-automation** (if available):
 ```python
 # Use when: Ready to commit and push
 # Saves: 7-12 minutes per commit
 
-git = load_skill(SkillNames.GIT_WORKFLOW_AUTOMATION, {
-    "COMMIT_MESSAGE": "feat: Add user authentication",
-    "TAG_PREFIX": "wip",
-    "PUSH": True,
-    "CREATE_PR": False  # PR creation later
-})
+try:
+    git = load_skill(SkillNames.GIT_WORKFLOW_AUTOMATION, {
+        "COMMIT_MESSAGE": "feat: Add user authentication",
+        "TAG_PREFIX": "wip",
+        "PUSH": True,
+        "CREATE_PR": False  # PR creation later
+    })
 
-print(f"Committed: {git['commit_hash']}")
-print(f"Tagged: {git['tag']}")
+    print(f"Committed: {git['commit_hash']}")
+    print(f"Tagged: {git['tag']}")
+except:
+    # Manual git workflow
+    subprocess.run(["git", "add", "-A"])
+    subprocess.run(["git", "commit", "-m", "feat: Add user authentication"])
+    subprocess.run(["git", "push"])
 ```
 
-### Pattern 2: Skill Chaining for Complete Workflow
+### Pattern 2: Complete Implementation Workflow
 
 ```python
-def implement_priority_with_skills(priority_name: str):
-    """Complete implementation workflow using skills."""
+def implement_priority_with_database(priority_name: str):
+    """Complete implementation workflow using database systems."""
 
-    # 1. Startup (automatic - already ran)
+    # 1. Get spec from database
+    from coffee_maker.autonomous.technical_spec_skill import TechnicalSpecSkill
+    spec_skill = TechnicalSpecSkill()
+    spec = spec_skill.get_spec_for_priority(priority_name)
 
-    # 2. Implement
-    write_code()
+    # 2. Get implementation tasks
+    tasks = spec_skill.get_tasks_for_spec(spec["id"])
 
-    # 3. Test and debug
+    # 3. Implement each task
+    for task in tasks:
+        write_code_for_task(task)
+        write_tests_for_task(task)
+
+    # 4. Test and debug
     while True:
         test_result = run_pytest()
 
         if test_result.failures == 0:
             break  # All tests passing
 
-        # Use test-failure-analysis
-        analysis = load_skill(SkillNames.TEST_FAILURE_ANALYSIS, {
-            "PYTEST_OUTPUT": test_result.output
-        })
+        # Debug failures manually
+        debug_test_failures(test_result)
 
-        apply_fixes(analysis["suggested_fixes"])
+    # 5. Verify acceptance criteria
+    if not verify_acceptance_criteria():
+        raise Exception("Acceptance criteria not met")
 
-    # 4. Verify DoD
-    dod = load_skill(SkillNames.DOD_VERIFICATION, {
-        "PRIORITY_NAME": priority_name
-    })
-
-    if not dod["passed"]:
-        raise Exception(f"DoD not met: {dod['unmet_criteria']}")
-
-    # 5. Commit and tag
-    git = load_skill(SkillNames.GIT_WORKFLOW_AUTOMATION, {
-        "COMMIT_MESSAGE": f"feat: Implement {priority_name}",
+    # 6. Commit and tag (using skill if available)
+    try:
+        git = load_skill(SkillNames.GIT_WORKFLOW_AUTOMATION, {
+            "COMMIT_MESSAGE": f"feat: Implement {priority_name}",
         "TAG_PREFIX": "wip"
     })
 
@@ -924,26 +943,25 @@ def implement_priority_with_skills(priority_name: str):
 
 ```python
 try:
-    # Try using skill
-    analysis = load_skill(SkillNames.TEST_FAILURE_ANALYSIS, {
-        "PYTEST_OUTPUT": test_output
+    # Try using available skills (e.g., git workflow)
+    result = load_skill(SkillNames.GIT_WORKFLOW_AUTOMATION, {
+        "COMMIT_MESSAGE": commit_msg,
+        "TAG_PREFIX": "wip"
     })
-    fixes = analysis["suggested_fixes"]
+    print(f"Used skill: {result}")
 
 except SkillNotFoundError:
     # Skill file missing - fallback to manual
-    print("⚠️ test-failure-analysis skill not found")
-    print("Falling back to manual test debugging")
-    fixes = manual_debug_tests(test_output)
+    print("⚠️ Skill not found, using manual approach")
+    subprocess.run(["git", "add", "-A"])
+    subprocess.run(["git", "commit", "-m", commit_msg])
+    subprocess.run(["git", "push"])
 
 except Exception as e:
     # Skill execution failed - fallback
     print(f"⚠️ Skill failed: {e}")
-    fixes = manual_debug_tests(test_output)
-
-# Apply fixes regardless of source
-for fix in fixes:
-    apply_fix(fix)
+    # Manual fallback
+    manual_git_workflow(commit_msg)
 ```
 
 ---

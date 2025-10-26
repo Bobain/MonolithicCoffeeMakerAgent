@@ -1,16 +1,17 @@
-"""Technical Specification Handling Skill - Unified spec operations.
+"""Technical Specification Handling Skill - Database-based spec operations.
 
 This skill provides a single source of truth for all technical specification operations,
-ensuring consistency across architect and code_developer agents.
+using the database-first architecture for storing and retrieving specifications.
 
 Usage:
     from coffee_maker.autonomous.skill_loader import load_skill
 
     skill = load_skill("technical-specification-handling")
-    result = skill.execute(action="find", priority=priority)
+    result = skill.execute(action="get_spec", us_id="US-104")
 """
 
 import sys
+import json
 from pathlib import Path
 from typing import Dict, Any
 
@@ -18,159 +19,186 @@ from typing import Dict, Any
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from coffee_maker.utils.spec_handler import SpecHandler
+from coffee_maker.autonomous.technical_spec_skill import TechnicalSpecSkill
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
 
 class TechnicalSpecificationHandlingSkill:
-    """Technical specification handling skill."""
+    """Technical specification handling skill - database-based."""
 
     def __init__(self):
         """Initialize the skill."""
-        self.handler = SpecHandler()
+        self.spec_skill = TechnicalSpecSkill(agent_name="shared")
+        self.db = RoadmapDatabase(agent_name="shared")
 
     def execute(self, action: str, **kwargs) -> Dict[str, Any]:
-        """Execute a specification operation.
+        """Execute a specification operation using database.
 
         Args:
-            action: Operation to perform ("find", "create", "update", "clean", "summarize")
+            action: Operation to perform
             **kwargs: Action-specific parameters
 
         Returns:
             dict: {"result": <result>, "error": <error_message>}
         """
         try:
-            if action == "find":
-                priority = kwargs.get("priority")
-                if not priority:
-                    return {"result": None, "error": "Missing 'priority' parameter"}
+            # Finding specifications
+            if action in ["find", "find_spec", "find_by_us_id"]:
+                us_id = kwargs.get("us_id")
+                priority_num = kwargs.get("priority_num")
+                title_pattern = kwargs.get("title_pattern")
 
-                spec_path = self.handler.find_spec(priority)
-                return {"result": str(spec_path) if spec_path else None, "error": None}
+                if us_id:
+                    # Normalize US ID format
+                    if not us_id.startswith("US-"):
+                        us_id = f"US-{us_id}"
+                    spec = self.db.get_technical_spec(us_id)
+                    if spec:
+                        return {"result": spec, "error": None}
+                    return {"result": None, "error": f"No spec found for {us_id}"}
 
-            elif action == "find_by_us_id":
+                elif priority_num:
+                    # Find by priority number
+                    priorities = self.db.get_all_priorities()
+                    for p in priorities:
+                        if str(p.get("number")) == str(priority_num):
+                            us_id = p.get("id", "")
+                            if us_id:
+                                spec = self.db.get_technical_spec(us_id)
+                                if spec:
+                                    return {"result": spec, "error": None}
+                    return {"result": None, "error": f"No spec found for priority {priority_num}"}
+
+                elif title_pattern:
+                    # Find by title pattern
+                    specs = self.db.get_all_technical_specs()
+                    matching = [s for s in specs if title_pattern.lower() in s.get("title", "").lower()]
+                    return {"result": matching, "error": None}
+
+                else:
+                    return {"result": None, "error": "Must provide us_id, priority_num, or title_pattern"}
+
+            # Get full spec content
+            elif action == "get_spec":
                 us_id = kwargs.get("us_id")
                 if not us_id:
                     return {"result": None, "error": "Missing 'us_id' parameter"}
 
-                spec_path = self.handler.find_spec_by_us_id(us_id)
-                return {"result": str(spec_path) if spec_path else None, "error": None}
+                if not us_id.startswith("US-"):
+                    us_id = f"US-{us_id}"
 
-            elif action == "spec_exists":
-                priority = kwargs.get("priority")
-                if not priority:
-                    return {"result": None, "error": "Missing 'priority' parameter"}
+                spec = self.db.get_technical_spec(us_id)
+                return {"result": spec, "error": None}
 
-                exists = self.handler.spec_exists(priority)
-                return {"result": exists, "error": None}
-
-            elif action == "create":
-                # Extract required parameters
-                us_number = kwargs.get("us_number")
+            # Create hierarchical specification
+            elif action in ["create_hierarchical_spec", "create_hierarchical"]:
+                us_number = kwargs.get("us_number") or kwargs.get("us_id")
                 title = kwargs.get("title")
-                priority_number = kwargs.get("priority_number")
-
-                if not all([us_number, title, priority_number]):
-                    return {"result": None, "error": "Missing required parameters: us_number, title, priority_number"}
-
-                # Create spec content
-                spec_content = self.handler.create_spec(
-                    us_number=us_number,
-                    title=title,
-                    priority_number=priority_number,
-                    problem_statement=kwargs.get("problem_statement", ""),
-                    user_story=kwargs.get("user_story", ""),
-                    architecture=kwargs.get("architecture", ""),
-                    implementation_plan=kwargs.get("implementation_plan", ""),
-                    testing_strategy=kwargs.get("testing_strategy", ""),
-                    estimated_effort=kwargs.get("estimated_effort", "TBD"),
-                    template_type=kwargs.get("template_type", "full"),
-                )
-
-                return {"result": spec_content, "error": None}
-
-            elif action == "generate_filename":
-                us_number = kwargs.get("us_number")
-                title = kwargs.get("title")
+                phases = kwargs.get("phases", [])
+                roadmap_item_id = kwargs.get("roadmap_item_id")
 
                 if not all([us_number, title]):
-                    return {"result": None, "error": "Missing required parameters: us_number, title"}
+                    return {"result": None, "error": "Missing required: us_number, title"}
 
-                filename = self.handler.generate_spec_filename(us_number, title)
-                return {"result": filename, "error": None}
+                # Ensure roadmap_item_id is set
+                if not roadmap_item_id:
+                    roadmap_item_id = f"US-{us_number}" if not str(us_number).startswith("US-") else us_number
 
-            elif action == "create_hierarchical":
-                # Create hierarchical spec structure
-                us_number = kwargs.get("us_number")
-                title = kwargs.get("title")
-                phases = kwargs.get("phases")
-
-                if not all([us_number, title, phases]):
-                    return {"result": None, "error": "Missing required parameters: us_number, title, phases"}
-
-                spec_dir = self.handler.create_hierarchical_spec(
-                    us_number=us_number,
+                spec_id = self.spec_skill.create_hierarchical_spec(
+                    us_number=int(us_number) if isinstance(us_number, str) and us_number.isdigit() else us_number,
                     title=title,
+                    roadmap_item_id=roadmap_item_id,
                     phases=phases,
-                    problem_statement=kwargs.get("problem_statement", ""),
-                    architecture=kwargs.get("architecture", ""),
-                    technology_stack=kwargs.get("technology_stack", ""),
+                    problem_statement=kwargs.get("problem_statement"),
+                    architecture=kwargs.get("architecture"),
                 )
 
-                return {"result": str(spec_dir), "error": None}
+                return {"result": {"spec_id": spec_id, "roadmap_item_id": roadmap_item_id}, "error": None}
 
-            elif action == "update":
-                spec_path = kwargs.get("spec_path")
-                changes = kwargs.get("changes")
+            # Read hierarchical spec phase
+            elif action in ["read_hierarchical_spec", "read_phase"]:
+                us_id = kwargs.get("us_id")
+                phase = kwargs.get("phase")
 
-                if not spec_path:
-                    return {"result": None, "error": "Missing 'spec_path' parameter"}
-                if not changes:
-                    return {"result": None, "error": "Missing 'changes' parameter"}
+                if not us_id:
+                    return {"result": None, "error": "Missing 'us_id' parameter"}
 
-                spec_path = Path(spec_path)
-                updated_content = self.handler.update_spec(spec_path, changes)
-                return {"result": updated_content, "error": None}
+                if not us_id.startswith("US-"):
+                    us_id = f"US-{us_id}"
 
-            elif action == "clean":
-                spec_path = kwargs.get("spec_path")
-                rules = kwargs.get("rules", {})
+                spec = self.db.get_technical_spec(us_id)
+                if not spec:
+                    return {"result": None, "error": f"No spec found for {us_id}"}
 
-                if not spec_path:
-                    return {"result": None, "error": "Missing 'spec_path' parameter"}
+                # Check if it's hierarchical
+                if spec.get("is_hierarchical"):
+                    content = spec.get("content", "{}")
+                    if isinstance(content, str):
+                        content = json.loads(content)
 
-                spec_path = Path(spec_path)
-                cleaned_content = self.handler.clean_spec(spec_path, rules)
-                return {"result": cleaned_content, "error": None}
+                    phases = content.get("phases", {})
 
-            elif action == "summarize":
-                spec_path = kwargs.get("spec_path")
-                summary_type = kwargs.get("summary_type", "executive")
-                max_length = kwargs.get("max_length", 500)
+                    if phase and phase in phases:
+                        # Return specific phase
+                        phase_content = phases[phase]
+                        return {
+                            "result": {
+                                "phase": phase,
+                                "content": phase_content.get("content", ""),
+                                "description": phase_content.get("description", ""),
+                                "hours": phase_content.get("hours", 0),
+                            },
+                            "error": None,
+                        }
+                    else:
+                        # Return available phases
+                        return {"result": {"available_phases": list(phases.keys()), "phases": phases}, "error": None}
+                else:
+                    # Return monolithic spec
+                    return {"result": {"content": spec.get("content", "")}, "error": None}
 
-                if not spec_path:
-                    return {"result": None, "error": "Missing 'spec_path' parameter"}
+            # Detect current phase
+            elif action in ["detect_phase", "get_current_phase"]:
+                us_id = kwargs.get("us_id")
 
-                spec_path = Path(spec_path)
-                summary = self.handler.summarize_spec(spec_path, summary_type, max_length)
-                return {"result": summary, "error": None}
+                if not us_id:
+                    return {"result": None, "error": "Missing 'us_id' parameter"}
 
-            elif action == "extract_version":
+                if not us_id.startswith("US-"):
+                    us_id = f"US-{us_id}"
+
+                # Get implementation tasks to determine phase
+                tasks = self.db.get_implementation_tasks(us_id)
+                if tasks:
+                    # Find the first incomplete task
+                    for task in tasks:
+                        if task.get("status") != "completed":
+                            return {"result": {"current_phase": task.get("phase", "unknown")}, "error": None}
+
+                    # All tasks completed
+                    return {"result": {"current_phase": "completed"}, "error": None}
+
+                return {"result": {"current_phase": "not_started"}, "error": None}
+
+            # List all specs
+            elif action in ["list", "list_specs", "get_all_specs"]:
+                specs = self.db.get_all_technical_specs()
+                return {"result": specs, "error": None}
+
+            # Update spec
+            elif action in ["update", "update_spec"]:
+                us_id = kwargs.get("us_id")
                 content = kwargs.get("content")
-                if not content:
-                    return {"result": None, "error": "Missing 'content' parameter"}
 
-                version = self.handler.extract_version(content)
-                return {"result": version, "error": None}
+                if not us_id:
+                    return {"result": None, "error": "Missing 'us_id' parameter"}
 
-            elif action == "bump_version":
-                version = kwargs.get("version")
-                bump_type = kwargs.get("bump_type", "minor")
+                if not us_id.startswith("US-"):
+                    us_id = f"US-{us_id}"
 
-                if not version:
-                    return {"result": None, "error": "Missing 'version' parameter"}
-
-                new_version = self.handler.bump_version(version, bump_type)
-                return {"result": new_version, "error": None}
+                # Update spec in database
+                success = self.db.update_technical_spec(us_id, content=content)
+                return {"result": success, "error": None if success else "Failed to update spec"}
 
             else:
                 return {"result": None, "error": f"Unknown action: {action}"}

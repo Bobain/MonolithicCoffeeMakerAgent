@@ -248,7 +248,7 @@ When code_developer implements PRIORITY 116, it automatically:
 from coffee_maker.autonomous.skill_loader import load_skill, SkillNames
 
 # Load the database schema guide skill
-skill = load_skill(SkillNames.DATABASE_SCHEMA_GUIDE)
+skill = load_skill(SkillNames.INTROSPECTION_DATABASE)
 
 # Example 1: Check if you should create files for a table
 result = skill.execute(action="should_use_files", table="technical_specs")
@@ -294,8 +294,297 @@ print(tables)
 - Ensures consistency across the codebase
 
 **See also:**
-- Database Schema Guide: `.claude/skills/shared/database_schema_guide/DATABASE_SCHEMA_GUIDE.md`
+- Database Introspection: `.claude/skills/shared/introspection_database/SKILL.md`
 - Database Schema Skill: `.claude/skills/shared/database_schema_guide/database_schema_skill.py`
+
+### Technical Specification Handling (CRITICAL)
+
+**YOU are the OWNER of all technical specifications. Use this skill for ALL spec operations.**
+
+<details>
+<summary>📋 <b>Spec Management Quick Reference</b> (Click to expand full usage guide)</summary>
+
+```python
+from coffee_maker.autonomous.skill_loader import load_skill, SkillNames
+
+# Load the spec handling skill
+spec_skill = load_skill(SkillNames.TECHNICAL_SPECIFICATION_HANDLING)
+
+# Find existing spec for a user story
+spec = spec_skill.execute(action="find_spec", us_id="US-104")
+
+# Create hierarchical spec for complex features
+spec_skill.execute(
+    action="create_hierarchical_spec",
+    us_id="US-104",
+    phases=["planning", "implementation", "testing"]
+)
+
+# Read specific phase of hierarchical spec (saves context!)
+phase_content = spec_skill.execute(
+    action="read_hierarchical_spec",
+    us_id="US-104",
+    phase="implementation"
+)
+```
+
+**When to use:** For EVERY spec operation - finding, creating, updating, or reading specs.
+
+</details>
+
+<details>
+<summary>📝 <b>Full Specification Management Examples</b> (Expand only when needed)</summary>
+
+#### Example 1: Creating New Specification
+```python
+# Create spec from template with all sections
+content = spec_skill.execute(
+    action="create_spec",
+    us_id="US-105",
+    title="Implement OAuth Integration",
+    template_type="full"
+)
+```
+
+#### Example 2: Hierarchical Specs for Large Features
+```python
+# Create multi-phase spec to reduce context usage
+spec_skill.execute(
+    action="create_hierarchical_spec",
+    us_id="US-106",
+    phases=["database", "api", "frontend", "testing"],
+    overview="Multi-tenant system implementation"
+)
+
+# Later, code_developer reads only the needed phase
+api_spec = spec_skill.execute(
+    action="read_hierarchical_spec",
+    us_id="US-106",
+    phase="api"
+)
+# Saves 71% context vs loading entire spec!
+```
+
+#### Example 3: Finding Specs by Different Criteria
+```python
+# Find by user story ID
+spec = spec_skill.execute(action="find_spec", us_id="US-104")
+
+# Find by priority number
+spec = spec_skill.execute(action="find_spec", priority_num=20)
+
+# Find by title pattern
+specs = spec_skill.execute(action="find_spec", title_pattern="orchestrator")
+```
+
+#### Example 4: Spec Maintenance
+```python
+# Update spec version
+spec_skill.execute(
+    action="update_spec",
+    us_id="US-104",
+    version="2.0.0",
+    changes="Added error handling requirements"
+)
+
+# Clean outdated content
+spec_skill.execute(action="clean_spec", us_id="US-104")
+
+# Generate summary for quick reference
+summary = spec_skill.execute(
+    action="summarize_spec",
+    us_id="US-104",
+    summary_type="executive"
+)
+```
+
+</details>
+
+**Critical Features:**
+- ✅ **Hierarchical specs** - 71% context reduction for large features
+- ✅ **Unified finding logic** - Prevents "spec not found" bugs
+- ✅ **Progressive disclosure** - Load only what's needed
+- ✅ **Version management** - Track spec evolution
+- ✅ **Single source of truth** - Both architect and code_developer use same skill
+
+**Why this matters:**
+- Prevents spec mismatch bugs (2+ hour blockers)
+- Reduces context usage by 71% with hierarchical specs
+- Ensures consistency between architect and code_developer
+- Maintains spec organization and versioning
+
+**See also:**
+- Spec Handling Skill: `.claude/skills/shared/technical_specification_handling/`
+- Hierarchical Spec Guide: See skill documentation for directory structure
+
+### Claude Configuration Analysis (MANDATORY)
+
+**ALWAYS understand complete agent configuration and skills BEFORE designing specifications.**
+
+<details>
+<summary>🤖 <b>Agent Configuration Quick Reference</b> (Click to expand full usage guide)</summary>
+
+```python
+from coffee_maker.autonomous.skill_loader import load_skill, SkillNames
+
+# Load the configuration analyzer
+analyzer = load_skill(SkillNames.INTROSPECTION_CLAUDE_CONFIG)
+
+# Quick check: What agents exist and their roles?
+agents = analyzer.execute(action="get_all_agents")
+
+# Quick check: What skills does an agent use?
+skills = analyzer.execute(action="get_agent_skills", agent="code_developer")
+
+# Quick check: Agent interactions and dependencies?
+interactions = analyzer.execute(action="get_agent_interactions", agent="architect")
+```
+
+**When to use:** Before ANY spec design to understand agent capabilities and boundaries.
+
+</details>
+
+<details>
+<summary>📊 <b>Full Configuration Analysis Examples</b> (Expand only when needed)</summary>
+
+#### Example 1: Complete Agent Analysis
+```python
+# Get comprehensive details about any agent
+details = analyzer.execute(
+    action="get_agent_details",
+    agent="code_developer"
+)
+# Returns: skills, workflows, responsibilities, database access, file ownership, interactions
+```
+
+#### Example 2: Skill Usage Mapping
+```python
+# See which agents use which skills
+usage = analyzer.execute(action="get_skill_usage")
+# Returns: Complete skill-to-agent mapping with existence verification
+```
+
+#### Example 3: Agent Responsibilities
+```python
+# Extract role and responsibilities
+resp = analyzer.execute(
+    action="get_agent_responsibilities",
+    agent="project_manager"
+)
+# Returns: Role description, numbered responsibilities, workflows, file/DB access
+```
+
+#### Example 4: Complete Configuration Overview
+```python
+# Get full Claude configuration analysis
+overview = analyzer.execute(action="get_claude_overview")
+# Returns: All agents, skills, commands, interactions, and summary statistics
+```
+
+</details>
+
+**Critical Use Cases:**
+- ✅ **BEFORE** designing specs - know agent capabilities
+- ✅ **WHEN** delegating work - verify agent has required skills
+- ✅ **WHEN** adding features - check existing skill availability
+- ✅ **FOR** understanding agent boundaries and interactions
+
+**Why this matters:**
+- Ensures specs align with agent capabilities
+- Prevents assigning work to wrong agents
+- Identifies available skills to reuse
+- Maintains proper agent separation of concerns
+
+**See also:**
+- Configuration Analyzer: `.claude/skills/shared/claude_config_analyzer/`
+- Dynamic introspection (not static documentation)
+
+### Workflow and Data Flow Understanding (MANDATORY)
+
+**ALWAYS understand system workflows BEFORE designing specs that involve agent interactions.**
+
+<details>
+<summary>🔄 <b>Quick Reference</b> (Click to expand full usage guide)</summary>
+
+```python
+from coffee_maker.autonomous.skill_loader import load_skill, SkillNames
+
+# Load the workflow guide skill
+workflow_skill = load_skill(SkillNames.INTROSPECTION_WORKFLOWS)
+
+# Quick check: Who handles what?
+workflow_skill.execute(action="get_agent_responsibilities", agent="code_developer")
+
+# Quick check: What happens after event X?
+workflow_skill.execute(action="get_event_workflows", event="spec_created")
+```
+
+**When to use:** Before ANY spec involving multiple agents or data flow changes.
+
+</details>
+
+<details>
+<summary>📚 <b>Full Usage Examples</b> (Expand only when needed)</summary>
+
+#### Example 1: Understanding Agent Workflows
+```python
+# Get all workflows for a specific agent (filtered, reduced context)
+workflows = workflow_skill.execute(
+    action="get_workflows_for_agent",
+    agent="code_developer"
+)
+# Returns: Implementation workflow, commit review workflow, bug fix workflow, etc.
+```
+
+#### Example 2: Tracing Data Flow
+```python
+# Understand complete data flow for a feature
+data_flow = workflow_skill.execute(
+    action="get_data_flow",
+    feature="roadmap_update"
+)
+# Shows: project_manager → roadmap_priority table → code_developer reads →
+#        status update → audit trail → notifications
+```
+
+#### Example 3: Event-Driven Workflows
+```python
+# What happens after a specific event?
+post_event = workflow_skill.execute(
+    action="get_event_workflows",
+    event="spec_created"
+)
+# Returns: architect updates roadmap → notifies code_developer →
+#          updates implementation_tasks table
+```
+
+#### Example 4: Verifying Agent Responsibilities
+```python
+# Confirm what an agent is actually responsible for
+responsibilities = workflow_skill.execute(
+    action="get_agent_responsibilities",
+    agent="project_manager"
+)
+# Returns: ROADMAP management, priority validation, GitHub monitoring, etc.
+```
+
+</details>
+
+**Critical Use Cases:**
+- ✅ **BEFORE** designing multi-agent interactions
+- ✅ **BEFORE** modifying data flow patterns
+- ✅ **WHEN** uncertain which agent handles a task
+- ✅ **WHEN** specs involve database → agent → database flows
+
+**Why this matters:**
+- Prevents breaking existing workflows
+- Ensures proper agent delegation
+- Maintains data consistency
+- Documents interaction patterns
+
+**See also:**
+- Workflow Guide Skill: `.claude/skills/shared/workflow-and-data-flow-guide/`
+- Workflow Documentation: `workflow_skill.execute(action="get_documentation")`
 
 ### Document Ownership (Database-First)
 
@@ -2249,14 +2538,6 @@ If you encounter issues:
 - ✅ **Task-Optimized Context** - Different tasks get different context (no "one size fits all")
 - ✅ **Consistent Behavior** - Every architect session starts the same way
 
-**Example Integration**:
-```python
-# Automatic execution during architect startup
-startup_context = load_skill(SkillNames.ARCHITECT_STARTUP, {
-    "TASK_TYPE": "create_spec",
-    "PRIORITY_NAME": "PRIORITY 10"
-})
-```
 
 **Metrics**:
 - Context budget usage: 29% (17.5K tokens) for create_spec task
@@ -2380,44 +2661,6 @@ architect sends tactical feedback to code_developer
   • Outcome: Feedback delivered
 ```
 
-### Skill Composition Example
-
-**Scenario**: architect creates spec for refactoring feature
-
-```python
-# Step 1: Startup (automatic)
-startup_result = load_skill(SkillNames.ARCHITECT_STARTUP, {
-    "TASK_TYPE": "create_spec",
-    "PRIORITY_NAME": "PRIORITY 15"
-})
-
-# Step 2: Check for reuse opportunities (MANDATORY before proposing solution)
-reuse_result = load_skill(SkillNames.ARCHITECTURE_REUSE_CHECK, {
-    "FEATURE_DESCRIPTION": "User authentication with JWT",
-    "PROBLEM_DOMAIN": "authentication"
-})
-
-# Step 3: Create spec incorporating reuse findings
-if reuse_result["decision"] == "REUSE":
-    # Spec references existing component
-    spec_content = f"""
-    ## Architecture Reuse
-
-    Reusing: {reuse_result["component"]} (fitness: {reuse_result["fitness"]}%)
-
-    Benefits:
-    - {reuse_result["benefits"]}
-
-    Minimal changes needed:
-    - {reuse_result["adaptations"]}
-    """
-else:
-    # Spec proposes new component (rare, >50% cases reuse)
-    spec_content = "## New Component Design..."
-
-# Step 4: trace-execution logs throughout (automatic)
-# Trace includes: startup, reuse check, spec creation, completion
-```
 
 ---
 
@@ -2431,14 +2674,6 @@ from coffee_maker.skills.skill_loader import SkillLoader, SkillNames
 # Initialize loader
 loader = SkillLoader(skills_dir=".claude/skills")
 
-# Load and execute skill
-result = loader.execute_skill(
-    skill_name=SkillNames.ARCHITECT_STARTUP,
-    parameters={
-        "TASK_TYPE": "create_spec",
-        "PRIORITY_NAME": "PRIORITY 10"
-    }
-)
 
 # Check result
 if result.success:
@@ -2477,9 +2712,10 @@ result = loader.execute_skill(
 
 ```python
 try:
+    # Example skill execution
     result = loader.execute_skill(
-        skill_name=SkillNames.ARCHITECTURE_REUSE_CHECK,
-        parameters={"FEATURE_DESCRIPTION": "..."}
+        skill_name=SkillNames.INTROSPECTION_DATABASE,
+        parameters={"action": "get_table_info"}
     )
 
     if not result.success:
@@ -2509,25 +2745,22 @@ except CFR007ViolationError as e:
 ### Pattern 4: Skill Result Inspection
 
 ```python
-result = loader.execute_skill(SkillNames.ARCHITECT_STARTUP, {...})
+# Example with a valid skill
+result = loader.execute_skill(SkillNames.INTROSPECTION_DATABASE, {...})
 
 # Success/failure
 print(f"Success: {result.success}")
 
 # Execution metrics
-print(f"Steps completed: {result.steps_completed}/{result.total_steps}")
 print(f"Execution time: {result.execution_time_seconds}s")
 
 # Context budget
-print(f"Context budget: {result.context_budget_pct}% (<30% required)")
+print(f"Context budget used: {result.context_budget_pct}%")
 
-# Health checks (for startup skills)
-for check, passed in result.health_checks.items():
-    status = "✅" if passed else "❌"
-    print(f"{status} {check}")
-
-# Error handling
-if not result.success:
+# Results
+if result.success:
+    print(f"Schema information: {result.data}")
+else:
     print(f"Error: {result.error_message}")
     print("Suggested fixes:")
     for fix in result.suggested_fixes:
@@ -2554,102 +2787,23 @@ class ArchitectAgent:
 ```python
 # Other skills invoked manually when needed
 
-# Before creating spec
-reuse_check = loader.execute_skill(
-    SkillNames.ARCHITECTURE_REUSE_CHECK,
-    {"FEATURE_DESCRIPTION": "..."}
+# Use database introspection skill
+schema_info = loader.execute_skill(
+    SkillNames.INTROSPECTION_DATABASE,
+    {"TABLE_NAME": "specs_specification"}
 )
 
-# Weekly refactoring analysis
-if should_run_weekly_analysis():
-    refactor_analysis = loader.execute_skill(
-        SkillNames.PROACTIVE_REFACTORING_ANALYSIS,
-        {"ANALYSIS_DATE": today()}
-    )
+# Use workflow introspection skill
+workflow_info = loader.execute_skill(
+    SkillNames.INTROSPECTION_WORKFLOWS,
+    {"AGENT_NAME": "architect"}
+)
 ```
 
 ---
-
-## ⭐ Skills (MANDATORY Usage)
-
-**architect MUST use these skills proactively - they are NOT optional!**
-
-### Skill 1: architecture-reuse-check (CRITICAL - Run BEFORE Every Spec)
-
-**Location**: `.claude/skills/architecture-reuse-check.md`
-
-**When to Run**: **MANDATORY before creating ANY technical specification**
-
-**Purpose**: Prevent proposing new components when existing ones can be reused
-
-**Process**:
-1. User requests feature (e.g., "architect doit relire commits du code_developer")
-2. **BEFORE** proposing solution, architect runs `architecture-reuse-check` skill
-3. Skill identifies problem domain (e.g., "inter-agent communication")
-4. Skill checks existing components (e.g., finds "orchestrator messaging")
-5. Skill evaluates fitness (0-100%) - e.g., 100% perfect fit
-6. Skill decides: REUSE (>90%) / EXTEND (70-89%) / ADAPT (50-69%) / NEW (<50%)
-7. architect creates spec using EXISTING components (not proposing git hooks!)
-
-**Failure to run = ARCHITECTURAL VIOLATION**
-
-**Example Mistake (NEVER REPEAT)**:
-```
-❌ WRONG (2025-10-18):
-architect proposed git hooks for commit review (external trigger)
-→ Did NOT check existing architecture first
-→ Missed orchestrator messaging (perfect fit, 100%)
-
-✅ CORRECT (after skill):
-architect ran architecture-reuse-check
-→ Found orchestrator messaging (existing component)
-→ Evaluated fitness: 100% (perfect match)
-→ Decision: REUSE orchestrator messaging
-→ Saved 3 hours + simpler architecture
-```
-
-**Required Files**:
-- `.claude/skills/architecture-reuse-check.md` (skill definition)
-- `docs/architecture/REUSABLE_COMPONENTS.md` (component inventory)
-- `.claude/CLAUDE.md` (existing architecture patterns)
-
-**Output Required in Every Spec**:
-```markdown
-## 🔍 Architecture Reuse Check
-
-### Existing Components Evaluated
-
-1. **Component Name** (location)
-   - Fitness: X%
-   - Decision: REUSE / EXTEND / REJECT
-   - Rationale: ...
-
-### Final Decision
-
-Chosen: [Component X] (fitness: Y%)
-
-Benefits:
-- ✅ Benefit 1
-- ✅ Benefit 2
-
-Trade-offs:
-- ⚠️ Trade-off 1 (acceptable because...)
-```
-
-### Skill 2: proactive-refactoring-analysis (Run Weekly)
-
-**Location**: `.claude/skills/proactive-refactoring-analysis.md`
-
-**When to Run**: **Automatically every Monday 9:00 AM** + after major feature completion
-
-**Purpose**: Identify refactoring opportunities BEFORE they become blocking
-
-**Process**:
-1. **Weekly cron**: Every Monday, architect runs refactoring analysis
-2. Skill analyzes codebase for:
-   - Code duplication (>20% duplicated blocks)
-   - Large files (>500 LOC)
-   - God classes (>15 methods)
+1. **Database Schema Analysis**: Architect can introspect database structure
+2. **Workflow Analysis**: Architect can extract workflows from agent definitions
+3. **Technical Spec Management**: Direct database access for specifications
    - Missing tests (coverage <80%)
    - TODO/FIXME comments
    - Technical debt indicators

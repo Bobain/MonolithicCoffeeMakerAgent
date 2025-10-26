@@ -242,7 +242,7 @@ The daemon has updated ROADMAP.md and will skip this priority in future iteratio
         logger.info("Executing Claude API with implementation prompt...")
 
         # Execute Claude API
-        result = self.claude.execute_prompt(prompt, timeout=3600)  # 1 hour timeout
+        result = self.invoker.invoke_agent("code-developer", prompt, timeout=3600)  # 1 hour timeout
 
         if not result.success:
             logger.error(f"Claude API failed: {result.error}")
@@ -483,37 +483,59 @@ Status: Requires human decision
             Prompt string for feature implementation from
             .claude/commands/implement-feature.md
         """
-        from coffee_maker.utils.spec_handler import SpecHandler
+        from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+        import re
+        import json
+
+        db = RoadmapDatabase(agent_name="code_developer")
 
         priority_content = priority.get("content", "")[:1000]
         if len(priority.get("content", "")) > 1000:
             priority_content += "..."
 
-        # Load spec content with hierarchical support
+        # Load spec content from database
         spec_content = ""
-        spec_handler = SpecHandler()
         priority_id = priority.get("name", f"PRIORITY {priority.get('number')}")
 
-        # Try hierarchical spec reading first
-        result = spec_handler.read_hierarchical(priority_id, phase=None)
+        # Extract US ID from priority
+        us_match = re.search(r"US-(\d+)", priority.get("title", "") or priority_id)
+        if us_match:
+            us_id = f"US-{us_match.group(1)}"
+            spec = db.get_technical_spec(us_id)
 
-        if result.get("success"):
-            spec_content = result["full_context"]
-            spec_type = result["spec_type"]
-            context_size = result["context_size"]
+            if spec:
+                if spec.get("is_hierarchical"):
+                    # For hierarchical specs, get the current phase content
+                    content = spec.get("content", "{}")
+                    if isinstance(content, str):
+                        content = json.loads(content)
 
-            if spec_type == "hierarchical":
-                current_phase = result.get("current_phase", 1)
-                total_phases = result.get("total_phases", 1)
-                logger.info(
-                    f"📖 Loaded hierarchical spec: Phase {current_phase}/{total_phases} "
-                    f"({context_size} chars, 71% reduction)"
-                )
+                    # Get implementation tasks to determine current phase
+                    tasks = db.get_implementation_tasks(us_id)
+                    current_phase_name = None
+                    for task in tasks:
+                        if task.get("status") != "completed":
+                            current_phase_name = task.get("phase")
+                            break
+
+                    if current_phase_name and current_phase_name in content.get("phases", {}):
+                        phase_data = content["phases"][current_phase_name]
+                        spec_content = phase_data.get("content", "")
+                        logger.info(f"📖 Loaded hierarchical spec phase '{current_phase_name}' from database")
+                    else:
+                        # Load overview if no specific phase
+                        spec_content = content.get("overview", "") + "\n\n" + content.get("architecture", "")
+                        logger.info(f"📖 Loaded hierarchical spec overview from database")
+                else:
+                    # Monolithic spec
+                    spec_content = spec.get("content", "")
+                    logger.info(f"📖 Loaded monolithic spec from database")
             else:
-                logger.info(f"📖 Loaded monolithic spec ({context_size} chars)")
+                logger.warning(f"No spec found in database for {us_id}")
+                spec_content = f"[NO SPEC FOUND IN DATABASE FOR {us_id}]"
         else:
-            logger.warning(f"No spec found for {priority_id}: {result.get('reason', 'unknown error')}")
-            spec_content = f"[NO SPEC FOUND: {result.get('reason', 'Unknown error')}]"
+            logger.warning(f"Could not extract US ID from priority: {priority_id}")
+            spec_content = f"[COULD NOT EXTRACT US ID FROM: {priority_id}]"
 
         return load_prompt(
             PromptNames.IMPLEMENT_FEATURE,
@@ -788,11 +810,7 @@ This PR was autonomously implemented by the DevDaemon following the ROADMAP.md s
     def _detect_current_phase(self, priority: dict) -> int:
         """Detect which phase to work on next for hierarchical specs.
 
-        Uses SpecHandler's detection logic which checks:
-        1. ROADMAP phase completion checkboxes
-        2. Git commit history
-        3. File existence
-        4. Defaults to Phase 1
+        Uses database to check implementation tasks status.
 
         Args:
             priority: Priority dictionary
@@ -800,21 +818,33 @@ This PR was autonomously implemented by the DevDaemon following the ROADMAP.md s
         Returns:
             int: Phase number to work on (1, 2, 3, ...)
         """
-        from coffee_maker.utils.spec_handler import SpecHandler
+        from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+        import re
 
-        spec_handler = SpecHandler()
+        db = RoadmapDatabase(agent_name="code_developer")
         priority_id = priority.get("name", f"PRIORITY {priority.get('number')}")
 
-        # Use skill's detection logic
-        spec_result = spec_handler.read_hierarchical(priority_id, phase=None)
+        # Extract US ID from priority
+        us_match = re.search(r"US-(\d+)", priority.get("title", "") or priority_id)
+        if us_match:
+            us_id = f"US-{us_match.group(1)}"
 
-        if spec_result.get("success") and spec_result.get("spec_type") == "hierarchical":
-            current_phase = spec_result.get("current_phase", 1)
-            total_phases = spec_result.get("total_phases", 1)
+            # Get implementation tasks from database
+            tasks = db.get_implementation_tasks(us_id)
+            if tasks:
+                # Find first incomplete task
+                for idx, task in enumerate(tasks):
+                    if task.get("status") != "completed":
+                        current_phase = idx + 1
+                        total_phases = len(tasks)
+                        logger.info(
+                            f"📍 Phase detection: Working on Phase {current_phase}/{total_phases} for {priority_id}"
+                        )
+                        return current_phase
 
-            logger.info(f"📍 Phase detection: Working on Phase {current_phase}/{total_phases} " f"for {priority_id}")
-
-            return current_phase
+                # All phases complete
+                logger.info(f"✅ All phases complete for {priority_id}")
+                return len(tasks) + 1
 
         # Fallback: Phase 1
         logger.info(f"⚠️ Could not detect phase for {priority_id}, defaulting to Phase 1")

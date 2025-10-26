@@ -66,10 +66,10 @@ class CodeReviewerAgent:
         self.reviews_dir.mkdir(parents=True, exist_ok=True)
         self.notifications = NotificationDB()
 
-        # Import SpecHandler for hierarchical spec reading
-        from coffee_maker.utils.spec_handler import SpecHandler
+        # Import database for spec reading
+        from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
-        self.spec_handler = SpecHandler()
+        self.db = RoadmapDatabase(agent_name="code_reviewer")
 
     def review_commit(self, commit_sha: str = "HEAD") -> ReviewReport:
         """Review a specific commit.
@@ -89,23 +89,43 @@ class CodeReviewerAgent:
         # Extract priority ID from commit message
         priority_id = self._extract_priority_from_commit(commit_info)
 
-        # Load technical spec using hierarchical spec reader (if priority found)
+        # Load technical spec from database (if priority found)
         spec_result = None
         if priority_id:
             logger.info(f"📖 Loading spec for {priority_id} to verify implementation")
-            spec_result = self.spec_handler.read_hierarchical(priority_id, phase=None)
 
-            if spec_result.get("success"):
-                spec_type = spec_result.get("spec_type", "unknown")
-                context_size = spec_result.get("context_size", 0)
-                if spec_type == "hierarchical":
-                    phase = spec_result.get("current_phase", 1)
-                    total = spec_result.get("total_phases", 1)
-                    logger.info(
-                        f"✅ Loaded hierarchical spec Phase {phase}/{total} " f"({context_size} chars) for review"
-                    )
+            # Extract US ID from priority_id (e.g., "US-104" from "US-104 - Title")
+            import re
+
+            us_match = re.search(r"US-(\d+)", priority_id)
+            if us_match:
+                us_id = f"US-{us_match.group(1)}"
+                spec = self.db.get_technical_spec(us_id)
+
+                if spec:
+                    spec_result = {
+                        "success": True,
+                        "spec": spec,
+                        "spec_type": "hierarchical" if spec.get("is_hierarchical") else "monolithic",
+                        "content": spec.get("content", ""),
+                    }
+
+                    if spec.get("is_hierarchical"):
+                        # Get implementation tasks to determine current phase
+                        tasks = self.db.get_implementation_tasks(us_id)
+                        current_phase = 1
+                        for idx, task in enumerate(tasks):
+                            if task.get("status") != "completed":
+                                current_phase = idx + 1
+                                break
+                        spec_result["current_phase"] = current_phase
+                        spec_result["total_phases"] = len(tasks)
+
+                        current_phase = spec_result["current_phase"]
+                        total_phases = spec_result["total_phases"]
+                        logger.info(f"✅ Loaded hierarchical spec Phase {current_phase}/{total_phases} for review")
                 else:
-                    logger.info(f"✅ Loaded monolithic spec ({context_size} chars) for review")
+                    logger.info(f"✅ Loaded spec from database for review")
             else:
                 logger.warning(f"⚠️ No spec found for {priority_id}: {spec_result.get('reason')}")
 
