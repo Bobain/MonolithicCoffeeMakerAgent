@@ -322,25 +322,32 @@ class TestProjectManagerWorkflow:
 
     def test_manage_roadmap_action(self, workflow):
         """Test roadmap management."""
-        workflow.commands.roadmap = Mock(return_value={"status": "updated"})
+        workflow.commands.roadmap = Mock(return_value={"priorities": []})
+        workflow.commands.notifications = Mock(return_value={"sent": 0})
 
         result = workflow.manage(action="roadmap")
 
-        assert result["status"] == "updated"
-        workflow.commands.roadmap.assert_called_once()
+        assert result.status == "success"
+        assert result.action == "roadmap"
+        assert isinstance(result.data, dict)
+        assert workflow.commands.roadmap.called
 
     def test_manage_track_action(self, workflow):
         """Test progress tracking."""
-        workflow.commands.tasks = Mock(return_value={"tracked": True})
+        workflow.commands.tasks = Mock(return_value={"tasks": [], "total": 0})
 
         result = workflow.manage(action="track")
 
-        assert result["tracked"] is True
+        assert result.status == "success"
+        assert result.action == "track"
+        assert isinstance(result.data, dict)
 
     def test_manage_invalid_action(self, workflow):
         """Test error handling for invalid action."""
-        with pytest.raises(ValueError, match="Unknown action"):
-            workflow.manage(action="invalid")
+        result = workflow.manage(action="invalid")
+
+        assert result.status == "failed"
+        assert "Invalid action" in result.data
 
 
 class TestCodeReviewerWorkflow:
