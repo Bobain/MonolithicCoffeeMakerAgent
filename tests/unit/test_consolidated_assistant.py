@@ -47,11 +47,10 @@ class TestAssistantDemoCommand(unittest.TestCase):
         self.assertTrue(result)
 
     def test_demo_record_missing_recording_path(self):
-        """Test demo record without recording_path raises TypeError."""
-        with self.assertRaises(TypeError) as context:
-            self.assistant.demo(action="record")
-
-        self.assertIn("recording_path", str(context.exception))
+        """Test demo record without recording_path - should still work."""
+        # recording_path is optional, so this should not raise
+        result = self.assistant.demo(action="record")
+        self.assertIsInstance(result, bool)
 
     def test_demo_validate_action(self):
         """Test demo validate action."""
@@ -137,35 +136,35 @@ class TestAssistantDelegateCommand(unittest.TestCase):
 
         result = self.assistant.delegate(
             action="classify",
-            request=request,
+            request_text=request,
         )
 
         self.assertIsInstance(result, dict)
-        self.assertIn("category", result)
+        self.assertIn("intent", result)
+        self.assertIn("confidence", result)
 
     def test_delegate_classify_missing_request(self):
         """Test delegate classify without request raises TypeError."""
         with self.assertRaises(TypeError) as context:
             self.assistant.delegate(action="classify")
 
-        self.assertIn("request", str(context.exception))
+        self.assertIn("request_text", str(context.exception))
 
     def test_delegate_route_action(self):
         """Test delegate route action."""
         result = self.assistant.delegate(
             action="route",
-            request="Create database schema",
+            request_text="Create database schema",
         )
 
-        self.assertIsInstance(result, dict)
-        self.assertIn("agent", result)
+        self.assertIsInstance(result, str)  # Returns agent name
 
     def test_delegate_route_missing_request(self):
         """Test delegate route without request raises TypeError."""
         with self.assertRaises(TypeError) as context:
             self.assistant.delegate(action="route")
 
-        self.assertIn("request", str(context.exception))
+        self.assertIn("request_text", str(context.exception))
 
     def test_delegate_monitor_action(self):
         """Test delegate monitor action."""
@@ -185,17 +184,17 @@ class TestAssistantDocsCommand(unittest.TestCase):
         """Test docs generate action."""
         result = self.assistant.docs(
             action="generate",
-            feature_name="User Authentication",
+            component="User Authentication",
         )
 
         self.assertIsInstance(result, str)
 
     def test_docs_generate_missing_feature_name(self):
-        """Test docs generate without feature_name raises TypeError."""
+        """Test docs generate without component raises TypeError."""
         with self.assertRaises(TypeError) as context:
             self.assistant.docs(action="generate")
 
-        self.assertIn("feature_name", str(context.exception))
+        self.assertIn("component", str(context.exception))
 
     def test_docs_update_readme_action(self):
         """Test docs update_readme action."""

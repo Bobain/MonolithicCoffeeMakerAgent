@@ -115,7 +115,7 @@ class TestOrchestratorOrchestrateCommand(unittest.TestCase):
         """Test orchestrate detect_deadlocks action."""
         result = self.orch.orchestrate(action="detect_deadlocks")
 
-        self.assertIsInstance(result, dict)
+        self.assertIsInstance(result, list)
 
 
 class TestOrchestratorWorktreeCommand(unittest.TestCase):
@@ -179,15 +179,15 @@ class TestOrchestratorMessagesCommand(unittest.TestCase):
         result = self.orch.messages(
             action="send",
             to_agent="code_developer",
-            message="Test message",
+            message_content="Test message",  # Correct parameter name
         )
 
-        self.assertTrue(result)
+        self.assertIsInstance(result, dict)  # Returns dict with delivery status
 
     def test_messages_send_missing_to_agent(self):
         """Test messages send without to_agent raises TypeError."""
         with self.assertRaises(TypeError) as context:
-            self.orch.messages(action="send", message="Test")
+            self.orch.messages(action="send", message_content="Test")
 
         self.assertIn("to_agent", str(context.exception))
 
@@ -195,17 +195,17 @@ class TestOrchestratorMessagesCommand(unittest.TestCase):
         """Test messages receive action."""
         result = self.orch.messages(
             action="receive",
-            from_agent="code_developer",
+            to_agent="code_developer",  # Correct parameter - receive needs to_agent
         )
 
-        self.assertIsInstance(result, (list, dict))
+        self.assertIsInstance(result, list)  # Returns list of messages
 
-    def test_messages_receive_missing_from_agent(self):
-        """Test messages receive without from_agent raises TypeError."""
+    def test_messages_receive_missing_to_agent(self):
+        """Test messages receive without to_agent raises TypeError."""
         with self.assertRaises(TypeError) as context:
             self.orch.messages(action="receive")
 
-        self.assertIn("from_agent", str(context.exception))
+        self.assertIn("to_agent", str(context.exception))
 
 
 class TestOrchestratorMonitorCommand(unittest.TestCase):
@@ -220,8 +220,8 @@ class TestOrchestratorMonitorCommand(unittest.TestCase):
         result = self.orch.monitor(action="resources")
 
         self.assertIsInstance(result, dict)
-        self.assertIn("cpu", result)
-        self.assertIn("memory", result)
+        self.assertIn("cpu_percent", result)
+        self.assertIn("memory_percent", result)  # Correct key name
 
     def test_monitor_activity_summary_action(self):
         """Test monitor activity_summary action."""

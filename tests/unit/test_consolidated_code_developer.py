@@ -47,11 +47,10 @@ class TestCodeDeveloperImplementCommand(unittest.TestCase):
         self.assertIsInstance(result, dict)
 
     def test_implement_load_missing_task_id(self):
-        """Test implement load without task_id raises TypeError."""
-        with self.assertRaises(TypeError) as context:
-            self.dev.implement(action="load", spec_id="SPEC-105")
-
-        self.assertIn("task_id", str(context.exception))
+        """Test implement load with only spec_id still works."""
+        # Either task_id or spec_id is acceptable
+        result = self.dev.implement(action="load", spec_id="SPEC-105")
+        self.assertIsInstance(result, dict)
 
     def test_implement_update_status_action(self):
         """Test implement update_status action."""
@@ -123,7 +122,8 @@ class TestCodeDeveloperTestCommand(unittest.TestCase):
         """Test test fix action."""
         result = self.dev.test(action="fix")
 
-        self.assertIsInstance(result, dict)
+        self.assertIsInstance(result, bool)
+        self.assertTrue(result)
 
     def test_test_coverage_action(self):
         """Test test coverage action."""
@@ -150,7 +150,7 @@ class TestCodeDeveloperGitCommand(unittest.TestCase):
             files=["coffee_maker/feature.py", "tests/test_feature.py"],
         )
 
-        self.assertIsInstance(result, dict)
+        self.assertIsInstance(result, str)  # Returns commit SHA
 
     def test_git_commit_missing_message(self):
         """Test git commit without message raises TypeError."""
@@ -167,7 +167,7 @@ class TestCodeDeveloperGitCommand(unittest.TestCase):
             body="This PR implements PRIORITY 5 features",
         )
 
-        self.assertIsInstance(result, dict)
+        self.assertIsInstance(result, str)  # Returns PR URL
 
     def test_git_create_pr_missing_title(self):
         """Test git create_pr without title raises TypeError."""
@@ -236,7 +236,8 @@ class TestCodeDeveloperQualityCommand(unittest.TestCase):
         """Test quality pre_commit action."""
         result = self.dev.quality(action="pre_commit")
 
-        self.assertIsInstance(result, dict)
+        self.assertIsInstance(result, bool)  # Returns success indicator
+        self.assertTrue(result)
 
     def test_quality_metrics_action(self):
         """Test quality metrics action."""

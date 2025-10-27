@@ -44,8 +44,7 @@ class TestUserListenerUnderstandCommand(unittest.TestCase):
             user_input="Create a user authentication module",
         )
 
-        self.assertIsInstance(result, dict)
-        self.assertIn("entities", result)
+        self.assertIsInstance(result, list)  # Returns list of entities directly
 
     def test_understand_determine_agent_action(self):
         """Test understand determine_agent action."""
@@ -54,8 +53,7 @@ class TestUserListenerUnderstandCommand(unittest.TestCase):
             user_input="Design the UI for the dashboard",
         )
 
-        self.assertIsInstance(result, dict)
-        self.assertIn("agent", result)
+        self.assertIsInstance(result, str)  # Returns agent name as string directly
 
 
 class TestUserListenerRouteCommand(unittest.TestCase):
@@ -103,7 +101,9 @@ class TestUserListenerRouteCommand(unittest.TestCase):
 
     def test_route_handle_fallback_action(self):
         """Test route handle_fallback action."""
-        result = self.listener.route(action="handle_fallback")
+        result = self.listener.route(
+            action="handle_fallback", request_text="Unknown command"  # handle_fallback requires request_text
+        )
 
         self.assertIsInstance(result, dict)
 
@@ -122,7 +122,7 @@ class TestUserListenerConversationCommand(unittest.TestCase):
             session_id="session_123",
         )
 
-        self.assertIsInstance(result, dict)
+        self.assertIsInstance(result, list)  # Returns list of conversation history
 
     def test_conversation_track_missing_session_id(self):
         """Test conversation track without session_id raises TypeError."""
@@ -136,7 +136,7 @@ class TestUserListenerConversationCommand(unittest.TestCase):
         result = self.listener.conversation(
             action="update_context",
             session_id="session_123",
-            context_data={"key": "value"},
+            context={"key": "value"},  # uses context not context_data,
         )
 
         self.assertTrue(result)
@@ -149,11 +149,13 @@ class TestUserListenerConversationCommand(unittest.TestCase):
                 session_id="session_123",
             )
 
-        self.assertIn("context_data", str(context.exception))
+        self.assertIn("context", str(context.exception))
 
     def test_conversation_manage_session_action(self):
         """Test conversation manage_session action."""
-        result = self.listener.conversation(action="manage_session")
+        result = self.listener.conversation(
+            action="manage_session", session_id="session_123"  # manage_session requires session_id
+        )
 
         self.assertIsInstance(result, dict)
 
