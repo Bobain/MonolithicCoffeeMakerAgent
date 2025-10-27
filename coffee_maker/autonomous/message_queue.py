@@ -13,13 +13,69 @@ Schema:
 
 import json
 import sqlite3
+from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from coffee_maker.config.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+
+class MessageType(Enum):
+    """Types of messages that can be sent between agents."""
+
+    USER_REQUEST = "user_request"
+    TASK_REQUEST = "task_request"
+    USER_RESPONSE = "user_response"
+    TASK_RESPONSE = "task_response"
+    STATUS_UPDATE = "status_update"
+    SPEC_REQUEST = "spec_request"
+    SPEC_RESPONSE = "spec_response"
+
+
+# Import AgentType from agent_registry for backward compatibility
+# This allows old code importing from message_queue to still work
+try:
+    from coffee_maker.autonomous.agent_registry import AgentType
+except ImportError:
+    # Fallback if agent_registry not available
+    class AgentType(Enum):  # type: ignore
+        """Fallback AgentType enum."""
+
+        USER_LISTENER = "user_listener"
+        ARCHITECT = "architect"
+        CODE_DEVELOPER = "code_developer"
+        PROJECT_MANAGER = "project_manager"
+        CODE_REVIEWER = "code_reviewer"
+        ASSISTANT = "assistant"
+        ORCHESTRATOR = "orchestrator"
+        UX_DESIGN_EXPERT = "ux_design_expert"
+
+
+@dataclass
+class Message:
+    """Message for inter-agent communication.
+
+    Attributes:
+        sender: Agent that sent the message
+        recipient: Target agent for the message
+        type: Type of message (from MessageType enum)
+        payload: Message content/data
+        priority: Message priority (1=highest, 10=lowest)
+        message_id: Unique message ID (auto-generated)
+        timestamp: When message was created (auto-generated)
+    """
+
+    sender: str
+    recipient: str
+    type: str
+    payload: Dict[str, Any]
+    priority: int = 5
+    message_id: Optional[str] = None
+    timestamp: Optional[str] = field(default_factory=lambda: datetime.now().isoformat())
 
 
 class MessageQueue:

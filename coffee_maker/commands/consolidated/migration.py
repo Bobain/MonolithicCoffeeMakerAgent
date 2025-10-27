@@ -33,7 +33,11 @@ import os
 import re
 from typing import Dict, List, Optional, Tuple
 
-from .compatibility import DeprecationRegistry
+if __name__ != "__main__":
+    from .compatibility import DeprecationRegistry
+else:
+    # When run as script, use absolute import
+    from coffee_maker.commands.consolidated.compatibility import DeprecationRegistry
 
 
 class CodeMigrator:
