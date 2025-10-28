@@ -2,35 +2,41 @@
 
 **Status**: Active ✅
 **Created**: 2025-10-28
+**Updated**: 2025-10-28 (Token-based measurements)
 **Owner**: Architect
-**Related**: CFR-007 (Context Budget), CFR-016 (Incremental Implementation)
+**Related**: CFR-007 (Context Budget), CFR-016 (Incremental Implementation), CFR-018 (Command Context)
 
 ---
 
 ## Requirement
 
-**All technical specifications MUST be ≤320 lines (20% of context budget).**
+**All technical specifications MUST be ≤40,000 tokens (20% of context budget).**
 
 This is a hard limit enforced during spec creation and task assignment.
+
+**Line estimate**: ~40,000 tokens ≈ 1,600-2,000 lines (at ~20-25 tokens/line)
+
+**Previous limit**: 320 lines (~6,400-8,000 tokens) - **much more room now!**
 
 ---
 
 ## Rationale
 
-### 1. Context Budget Mathematics
+### 1. Context Budget Mathematics (Token-Based)
 
-**Total context window**: 32,000 tokens ≈ 1,600 lines (at 20 tokens/line)
+**Total context window**: 200,000 tokens
 
 **Agent execution context breakdown**:
 ```
-Commands (3 loaded):     360 lines (23% budget)
-Task spec (this limit):  320 lines (20% budget)
-Code context:            240 lines (15% budget)
-───────────────────────────────────────────────
-Total execution:         920 lines (58% budget) ✅
+Commands:                4,500-5,500 tokens (2-3% budget)
+Task spec (this limit):  40,000 tokens (20% budget)
+Code context:            10,000-15,000 tokens (5-8% budget)
+System prompts:          8,000-10,000 tokens (4-5% budget)
+───────────────────────────────────────────────────────────
+Total execution:         ~70,000 tokens (35% budget) ✅
 ```
 
-**Why 58% matters**: See Anthropic's <60% recommendation below.
+**Why <60% matters**: See Anthropic's <60% recommendation below.
 
 ### 2. Anthropic's <60% Context Recommendation
 
@@ -99,63 +105,75 @@ Quality
 
 ---
 
-## Specification Structure (320 Lines)
+## Specification Structure (40,000 Tokens / ~1,600-2,000 Lines)
 
 ### Recommended Template
 
 ```markdown
 # SPEC-XXX: {Title}
 
-## Overview (30 lines)
+## Overview (~600-800 tokens / ~30-40 lines)
 **Purpose**: What problem does this solve?
 **Goals**: Measurable success criteria
 **Scope**: What's included/excluded
+**Context**: Why now? What's the business value?
 
-## Architecture (60 lines)
+## Architecture (~3,000-4,000 tokens / ~150-200 lines)
 **System Design**: Component diagram (ASCII or description)
 **Interactions**: How components communicate
 **Data Models**: Key entities and relationships
 **Patterns**: Design patterns used
+**Integration Points**: External systems/APIs
+**Security Considerations**: Authentication, authorization, data protection
 
-## Implementation Tasks (120 lines)
-**Breakdown**: 5-8 implementation tasks
+## Implementation Tasks (~16,000-20,000 tokens / ~800-1,000 lines)
+**Breakdown**: 5-10 implementation tasks with detailed specifications
 
-### TASK-XXX-1: {Task Title} (15-20 lines each)
-- **Description**: What to implement
-- **Files**: Files to create/modify
-- **Database**: Tables/columns needed
-- **Tests**: Test requirements
+### TASK-XXX-1: {Task Title} (~2,000 tokens / ~100 lines each)
+- **Description**: Detailed implementation requirements
+- **Files**: Files to create/modify with specific changes
+- **Database**: Tables/columns with types and constraints
+- **Tests**: Comprehensive test scenarios
 - **Estimate**: Hours (1-8h per task)
 - **Dependencies**: Blocking tasks (if any)
+- **Success Criteria**: How to verify completion
+- **Edge Cases**: Error handling and boundary conditions
 
 [Repeat for each task]
 
-## Database Schema (40 lines)
-**Tables**: New tables with columns
-**Indexes**: Performance indexes
-**Migrations**: Migration steps
-**Sample Queries**: Common operations
+## Database Schema (~4,000-6,000 tokens / ~200-300 lines)
+**Tables**: Detailed table definitions with all columns
+**Indexes**: Performance indexes with rationale
+**Migrations**: Step-by-step migration instructions
+**Sample Queries**: Common operations with examples
+**Data Validation**: Constraints and business rules
 
-## Testing Strategy (30 lines)
-**Unit Tests**: Coverage targets (>90%)
-**Integration Tests**: Key scenarios
-**Edge Cases**: Error conditions
-**Performance**: Benchmarks (if applicable)
+## Testing Strategy (~2,000-3,000 tokens / ~100-150 lines)
+**Unit Tests**: Detailed coverage targets (>90%)
+**Integration Tests**: Key scenarios with setup/teardown
+**Edge Cases**: Comprehensive error conditions
+**Performance**: Benchmarks and load testing
+**Security**: Vulnerability testing
 
-## Acceptance Criteria (20 lines)
+## Acceptance Criteria (~1,000-1,500 tokens / ~50-75 lines)
 **Definition of Done (DoD)**:
-- [ ] All tests pass
+- [ ] All tests pass with >90% coverage
 - [ ] Code review complete
 - [ ] Documentation updated
 - [ ] Performance validated
+- [ ] Security review passed
+- [ ] User acceptance testing complete
 
-## Dependencies (20 lines)
-**External Packages**: New dependencies (with approval status)
+## Dependencies (~800-1,000 tokens / ~40-50 lines)
+**External Packages**: New dependencies (with approval status per SPEC-070)
 **Internal Modules**: Existing code dependencies
-**Breaking Changes**: Impact on existing features
+**Breaking Changes**: Impact analysis on existing features
+**Migration Path**: How to handle existing data/users
 ```
 
-**Total**: ≤320 lines
+**Total**: ≤40,000 tokens (~1,600-2,000 lines)
+**Previous limit**: 320 lines (~6,400-8,000 tokens)
+**Benefit**: **5x more detail possible!**
 
 ---
 
@@ -166,28 +184,38 @@ Quality
 **Architect agent MUST validate before saving spec**:
 
 ```python
+from coffee_maker.utils.token_counter import estimate_tokens_from_text
+
 def validate_spec_size(spec_content: str, spec_id: str) -> None:
     """Validate spec fits in 20% context budget (CFR-017)."""
-    lines = spec_content.split('\n')
-    line_count = len([l for l in lines if l.strip()])  # Non-empty lines
+    # Count tokens using character-based estimation
+    token_count = estimate_tokens_from_text(spec_content)
 
-    MAX_LINES = 320
+    MAX_TOKENS = 40_000  # 20% of 200K context
 
-    if line_count > MAX_LINES:
+    if token_count > MAX_TOKENS:
         raise SpecSizeViolationError(
-            f"CFR-017 VIOLATION: {spec_id} has {line_count} lines "
-            f"(max: {MAX_LINES}). Spec is too large.\n\n"
+            f"CFR-017 VIOLATION: {spec_id} has {token_count:,} tokens "
+            f"(max: {MAX_TOKENS:,}). Spec is too large.\n\n"
             f"Options:\n"
             f"1. Compress content (remove verbosity)\n"
             f"2. Split into multiple specs\n"
-            f"3. Move details to ADR/POC documentation"
+            f"3. Move details to ADR/POC documentation\n\n"
+            f"Current: {token_count:,} tokens (~{token_count//20:,} lines)\n"
+            f"Allowed: {MAX_TOKENS:,} tokens (~{MAX_TOKENS//20:,} lines)\n"
+            f"Over by: {token_count - MAX_TOKENS:,} tokens"
         )
 
-    if line_count > 280:  # Warning at 88% of limit
+    if token_count > 35_000:  # Warning at 88% of limit
         logger.warning(
-            f"CFR-017 WARNING: {spec_id} has {line_count} lines "
-            f"({line_count/MAX_LINES:.0%} of limit). Consider compression."
+            f"CFR-017 WARNING: {spec_id} has {token_count:,} tokens "
+            f"({token_count/MAX_TOKENS:.0%} of limit). Consider compression."
         )
+
+    logger.info(
+        f"✅ {spec_id}: {token_count:,} tokens "
+        f"({token_count/MAX_TOKENS:.1%} of 40K limit)"
+    )
 ```
 
 ### 2. Validation Before Task Assignment
