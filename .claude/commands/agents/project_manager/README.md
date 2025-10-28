@@ -147,6 +147,144 @@ for milestone in milestones:
 
 ---
 
+## Practical Examples
+
+### Example: Progress Tracking with Milestones
+```python
+# Track priority progress and send milestone notifications
+def track_priority(priority_id, new_progress):
+    """Track progress and notify on milestones."""
+
+    # Load current priority
+    cursor.execute("""
+        SELECT priority_id, progress, assigned_agent
+        FROM roadmap_priority
+        WHERE priority_id = ?
+    """, (priority_id,))
+    priority = cursor.fetchone()
+
+    old_progress = priority['progress']
+    milestones = [25, 50, 75, 100]
+
+    # Check for milestone crossings
+    crossed = [
+        m for m in milestones
+        if old_progress < m <= new_progress
+    ]
+
+    # Update progress
+    cursor.execute("""
+        UPDATE roadmap_priority
+        SET progress = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE priority_id = ?
+    """, (new_progress, priority_id))
+
+    # Send notifications for each milestone
+    for milestone in crossed:
+        send_notification(
+            agent=priority['assigned_agent'],
+            type="milestone_reached",
+            message=f"{priority_id} reached {milestone}%",
+            priority="normal"
+        )
+```
+
+### Example: Creating Priority with Tasks
+```python
+# Create new priority with task breakdown
+def create_priority(title, description, task_count=5):
+    """Create priority and generate task breakdown."""
+
+    # Generate priority ID
+    priority_id = f"PRIORITY-{get_next_id()}"
+
+    # Insert priority
+    cursor.execute("""
+        INSERT INTO roadmap_priority (
+            priority_id, title, description, status, progress
+        ) VALUES (?, ?, ?, 'planned', 0.0)
+    """, (priority_id, title, description))
+
+    # Generate tasks
+    task_ids = []
+    for i in range(1, task_count + 1):
+        task_id = f"TASK-{get_next_id()}-{i}"
+        cursor.execute("""
+            INSERT INTO specs_task (
+                task_id, priority_id, title, status, sequence
+            ) VALUES (?, ?, ?, 'todo', ?)
+        """, (task_id, priority_id, f"Task {i} for {title}", i))
+        task_ids.append(task_id)
+
+    # Notify architect to create spec
+    send_message(
+        to_agent="architect",
+        type="spec_needed",
+        content={"priority_id": priority_id, "task_ids": task_ids}
+    )
+
+    return priority_id, task_ids
+```
+
+### Example: Status Report Generation
+```python
+# Generate comprehensive status report
+def generate_status_report(scope="active"):
+    """Generate status report with metrics."""
+
+    # Query priorities
+    query = """
+        SELECT
+            priority_id,
+            title,
+            status,
+            progress,
+            assigned_agent,
+            created_at,
+            updated_at
+        FROM roadmap_priority
+        WHERE status IN ('in_progress', 'planned')
+        ORDER BY priority_id
+    """
+
+    priorities = cursor.execute(query).fetchall()
+
+    # Calculate metrics
+    total = len(priorities)
+    avg_progress = sum(p['progress'] for p in priorities) / total if total else 0
+
+    # Identify blockers
+    blockers = [
+        p for p in priorities
+        if p['status'] == 'blocked'
+    ]
+
+    # Generate report
+    report = f"""
+# ROADMAP Status Report
+Generated: {datetime.now().isoformat()}
+
+## Summary
+- Total Priorities: {total}
+- Average Progress: {avg_progress:.1f}%
+- Blockers: {len(blockers)}
+
+## Active Priorities
+{format_priority_table(priorities)}
+
+## Blockers
+{format_blocker_details(blockers)}
+"""
+
+    # Save report
+    report_path = f"reports/roadmap-{date.today()}.md"
+    Path(report_path).write_text(report)
+
+    return report_path
+```
+
+---
+
 ## GitHub Integration
 
 ### Using `gh` CLI
@@ -230,7 +368,6 @@ Total execution: 886 lines (55%) ✅ Under 80%
 
 ---
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Last Updated**: 2025-10-28
-**Lines**: 180
-**Budget**: 11% (180/1,600 lines)
+**Tokens**: ~1,900 (estimated with enhancements)

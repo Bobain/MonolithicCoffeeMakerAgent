@@ -164,16 +164,165 @@ Total execution: 1,120 lines (70%) ✅ Under 80%
 
 ---
 
+## Practical Examples
+
+### Example: Loading Task with Spec
+```python
+# How to load task from database
+import sqlite3
+
+conn = sqlite3.connect("data/development.db")
+cursor = conn.cursor()
+
+cursor.execute("""
+    SELECT
+        st.task_id,
+        st.title,
+        st.estimated_hours,
+        ts.content as spec_content,
+        ts.spec_id
+    FROM specs_task st
+    JOIN technical_spec ts ON st.spec_id = ts.spec_id
+    WHERE st.task_id = ? AND st.status = 'todo'
+""", (task_id,))
+
+task = cursor.fetchone()
+if not task:
+    raise TaskNotFoundError(f"Task {task_id} not found or not in 'todo' status")
+
+# Validate CFR-017: spec must be ≤40,000 tokens
+from coffee_maker.utils.token_counter import estimate_tokens_from_text
+spec_tokens = estimate_tokens_from_text(task['spec_content'])
+if spec_tokens > 40_000:
+    raise SpecTooLargeError(f"Spec has {spec_tokens:,} tokens (max: 40,000)")
+```
+
+### Example: Implementation Pattern (Keep-Alive)
+```python
+# code_developer now uses keep-alive optimization
+def _do_background_work(self):
+    """Process multiple priorities in one session if context < 50%."""
+
+    # Track tokens across tasks
+    cumulative_input_tokens = 0
+    tasks_in_session = 0
+
+    while True:
+        # Get next task
+        task = get_next_task()
+        if not task:
+            break
+
+        # Implement task
+        success, input_tokens, output_tokens = implement_task(task)
+
+        # Track usage
+        cumulative_input_tokens += input_tokens
+        tasks_in_session += 1
+
+        # Check if we should continue
+        if cumulative_input_tokens >= 100_000:  # 50% of 200K
+            logger.info(f"Context limit reached - ending session after {tasks_in_session} tasks")
+            break
+
+        logger.info(f"♻️ Keep-alive: Continuing to next task (saves ~4K tokens)")
+```
+
+### Example: Test Execution with Coverage
+```python
+# Run tests with coverage tracking
+import subprocess
+
+result = subprocess.run(
+    ["pytest", "tests/unit/", "--cov=coffee_maker", "--cov-report=term"],
+    capture_output=True,
+    text=True,
+    timeout=300
+)
+
+# Parse coverage from output
+import re
+coverage_match = re.search(r"TOTAL\s+\d+\s+\d+\s+(\d+)%", result.stdout)
+if coverage_match:
+    coverage_pct = int(coverage_match.group(1))
+
+    if coverage_pct < 90:
+        logger.warning(f"⚠️ Coverage {coverage_pct}% < 90% target")
+    else:
+        logger.info(f"✅ Coverage {coverage_pct}% ≥ 90% target")
+```
+
+### Example: Conventional Commit Format
+```bash
+# Format that code_developer uses for commits
+git commit -m "$(cat <<'EOF'
+feat: Implement agent keep-alive optimization
+
+Agents now process multiple tasks in one session if context < 50%.
+Saves ~4,000 tokens per task by not respawning.
+
+- Added cumulative token tracking
+- Modified background work loop
+- Added session summary logging
+
+Fixes: #123
+Implements: TASK-104-2
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
+## Integration Points
+
+### With architect
+- Loads specs via `specs_task.spec_id` join to `technical_spec`
+- Validates CFR-017: spec ≤40,000 tokens before implementation
+- Notifies architect if spec too large
+
+### With project_manager
+- Updates task status: `todo` → `in_progress` → `completed`
+- Reports metrics: files changed, lines added/deleted, coverage %
+- Sends `task_complete` message when done
+
+### With database
+```sql
+-- Update task status during implementation
+UPDATE specs_task
+SET status = 'in_progress',
+    started_at = CURRENT_TIMESTAMP,
+    assigned_agent = 'code_developer'
+WHERE task_id = ?;
+
+-- Record implementation metrics
+INSERT INTO implementation_log (
+    task_id, files_changed, lines_added, lines_deleted,
+    commit_sha, coverage_pct, duration_seconds
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- Mark task complete
+UPDATE specs_task
+SET status = 'completed',
+    completed_at = CURRENT_TIMESTAMP
+WHERE task_id = ?;
+```
+
+---
+
 ## Related Documents
 
 - **Specs**: See `docs/architecture/specs/` for technical specifications
 - **Workflows**: See `docs/WORKFLOWS.md` for detailed implementation workflows
 - **CFRs**: See `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md`
 - **Agent Ownership**: See `docs/AGENT_OWNERSHIP.md`
+- **CFR-017**: Token-based spec size limits
 
 ---
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Last Updated**: 2025-10-28
-**Lines**: 180
-**Budget**: 11% (180/1600 lines)
+**Tokens**: ~1,700 (estimated with enhancements)

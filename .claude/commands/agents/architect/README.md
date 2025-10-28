@@ -225,6 +225,95 @@ All commands: `README (180) + command (177-195) = 357-375 lines (22-23%)` ✅
 
 ---
 
+## Practical Examples
+
+### Example: Spec Creation Pattern
+```python
+# How specs are stored in database
+spec = {
+    "spec_id": "SPEC-104",
+    "title": "Agent Keep-Alive Optimization",
+    "content": full_spec_markdown,  # ≤40,000 tokens (CFR-017)
+    "complexity_score": 7,
+    "estimated_hours": 16,
+    "dependencies": ["token_counter", "token_tracker"],
+    "requires_poc": False
+}
+
+# Insert with validation
+conn.execute("""
+    INSERT INTO technical_spec (spec_id, title, content, complexity_score, dependencies)
+    VALUES (?, ?, ?, ?, ?)
+""", (spec["spec_id"], spec["title"], spec["content"],
+      spec["complexity_score"], json.dumps(spec["dependencies"])))
+```
+
+### Example: Task Breakdown Pattern
+```markdown
+## Implementation Tasks
+
+### TASK-104-1: Add Token Tracking Infrastructure (4h)
+Files: coffee_maker/utils/token_counter.py, token_tracker.py
+Tests: tests/unit/test_token_counter.py
+Dependencies: None
+Success: Token estimation working with word-based counting
+
+### TASK-104-2: Update Agent Loop with Keep-Alive (8h)
+Files: coffee_maker/autonomous/agents/code_developer_agent.py
+Tests: tests/unit/test_code_developer_agent.py
+Dependencies: TASK-104-1
+Success: Agents process multiple tasks per session when <50% context
+
+### TASK-104-3: Database Schema for Token Tracking (2h)
+Files: data/migrations/003_token_tracking.sql
+Tests: Integration test for schema
+Dependencies: TASK-104-1
+Success: Schema created, migration applied
+```
+
+### Example: Dependency Validation
+```bash
+# Before adding to spec, validate dependency
+$ poetry run project-manager check-dependency anthropic
+✅ anthropic: PRE-APPROVED (AI provider, core dependency)
+
+$ poetry run project-manager check-dependency some-new-lib
+⚠️  some-new-lib: NEEDS_REVIEW (not in approval matrix)
+
+$ poetry run project-manager check-dependency gpl-library
+❌ gpl-library: PROHIBITED (GPL license incompatible)
+```
+
+---
+
+## Integration Points
+
+### With code_developer
+- architect creates specs → code_developer loads via `specs_task.spec_id`
+- Specs MUST be ≤40,000 tokens (validated before storage)
+- Task breakdown defines implementation order
+
+### With project_manager
+- Notified when spec created: `spec_ready` message
+- Reports spec coverage: how many priorities have specs
+- Tracks spec→task→completion metrics
+
+### With database
+```sql
+-- Common query: Load spec with tasks
+SELECT
+    ts.spec_id,
+    ts.content,
+    COUNT(st.task_id) as task_count,
+    AVG(st.estimated_hours) as avg_hours
+FROM technical_spec ts
+LEFT JOIN specs_task st ON ts.spec_id = st.spec_id
+WHERE ts.spec_id = ?
+GROUP BY ts.spec_id
+```
+
+---
+
 ## Related Documents
 
 - **Specs**: See `docs/architecture/specs/` for all technical specifications
@@ -232,10 +321,10 @@ All commands: `README (180) + command (177-195) = 357-375 lines (22-23%)` ✅
 - **ADRs**: See `docs/architecture/adrs/` for architectural decisions
 - **SPEC-070**: Dependency pre-approval matrix
 - **POC Guide**: `docs/architecture/POC_CREATION_GUIDE.md`
+- **CFR-017**: Token-based spec size limit documentation
 
 ---
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Last Updated**: 2025-10-28
-**Lines**: 180
-**Budget**: 11% (180/1,600 lines)
+**Tokens**: ~1,900 (estimated with enhancements)
