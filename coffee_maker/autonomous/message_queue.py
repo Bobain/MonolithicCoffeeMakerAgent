@@ -312,8 +312,7 @@ class MessageQueue:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            cutoff_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            cutoff_date = cutoff_date.replace(day=cutoff_date.day - days)
+            cutoff_date = datetime.now() - timedelta(days=days)
 
             cursor.execute(
                 """
