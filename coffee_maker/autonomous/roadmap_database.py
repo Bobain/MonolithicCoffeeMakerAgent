@@ -389,7 +389,7 @@ class RoadmapDatabase:
             cursor.execute(
                 """
                 SELECT * FROM roadmap_priority
-                WHERE status LIKE '%📝%' OR status LIKE '%Planned%'
+                WHERE status LIKE '📝%' OR status LIKE 'Planned%'
                 ORDER BY priority_order ASC
                 LIMIT 1
             """
