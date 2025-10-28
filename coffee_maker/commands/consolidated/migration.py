@@ -33,11 +33,8 @@ import os
 import re
 from typing import Dict, List, Optional, Tuple
 
-if __name__ not in ("__main__", "__coffee_maker_test__"):
-    from .compatibility import DeprecationRegistry
-else:
-    # When run as script or in tests, use absolute import
-    from coffee_maker.commands.consolidated.compatibility import DeprecationRegistry
+# Always use absolute import (no relative imports for runnable scripts)
+from coffee_maker.commands.consolidated.compatibility import DeprecationRegistry
 
 
 class CodeMigrator:
