@@ -15,5 +15,3 @@ try:
     )
 except ImportError:
     logger.warning("langchain_google_genai not installed. will not use google")
-
-# class ClassicLlm
