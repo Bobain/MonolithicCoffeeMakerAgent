@@ -1,3 +1,9 @@
+<!-- DEPRECATED -->
+<!-- This file is no longer used and will be removed in a future version. -->
+<!-- Date deprecated: 2025-10-28 -->
+
+<!-- Reason: Old demo output from specific date -->
+
 # test-feature Feature Demo
 
 **Date**: 2025-10-19 12:41

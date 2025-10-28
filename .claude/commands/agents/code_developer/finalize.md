@@ -1,3 +1,9 @@
+<!-- DEPRECATED -->
+<!-- This file is no longer used and will be removed in a future version. -->
+<!-- Date deprecated: 2025-10-28 -->
+
+<!-- Reason: Replaced by workflow.work() command in coffee_maker/commands/workflow/code_developer_workflow.py -->
+
 # finalize
 
 ## Purpose
