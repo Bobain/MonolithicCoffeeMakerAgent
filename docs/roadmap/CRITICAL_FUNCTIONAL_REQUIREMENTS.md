@@ -39,6 +39,7 @@ These are CRITICAL system rules that MUST be enforced at ALL times. Violations M
 | CFR-014 | Database Tracing | ALL orchestrator activities in SQLite database |
 | CFR-015 | Continuous Planning Loop | System must always have work available |
 | CFR-016 | Incremental Implementation | Break specs into small implementation steps |
+| CFR-017 | Spec Size Limit | Technical specs MUST be ≤320 lines (20% context budget) |
 
 ---
 
@@ -346,7 +347,44 @@ These are CRITICAL system rules that MUST be enforced at ALL times. Violations M
 
 **Example**: Auth system: Phase 1 (DB schema) → Phase 2 (Auth logic) → Phase 3 (API endpoints) → Phase 4 (Tests)
 
-**Related**: CFR-008, CFR-010
+**Related**: CFR-008, CFR-010, CFR-017
+
+---
+
+### CFR-017: Technical Specification Size Limit
+
+**Rule**: All technical specifications MUST be ≤320 lines (20% of context budget).
+
+**Why**:
+- Enforces <60% total context usage during task execution (Anthropic recommendation)
+- Prevents "lost in the middle" effect where LLM performance degrades
+- Forces clarity and focus in specifications
+- Enables better LLM attention and reasoning
+
+**Context Breakdown During Task Execution**:
+```
+Commands (3 loaded):     360 lines (23%)
+Task spec (this limit):  320 lines (20%)
+Code context:            240 lines (15%)
+────────────────────────────────────────
+Total:                   920 lines (58%) ✅
+```
+
+**Anthropic's <60% Recommendation**:
+- Research shows LLM quality degrades significantly past 60% context utilization
+- Information in "middle" of long context is poorly attended
+- Optimal performance: 40-60% context usage
+
+**Handling Large Features**:
+1. **Decompose**: Split into multiple specs (CFR-016)
+2. **Extract to POC**: Move detailed analysis to POC documents
+3. **Extract to ADR**: Move rationale to architectural decisions
+
+**Enforcement**: Validation during spec creation and before task assignment
+
+**Full Details**: See `docs/CFR-017-SPEC-SIZE-LIMIT.md`
+
+**Related**: CFR-007, CFR-016
 
 ---
 
