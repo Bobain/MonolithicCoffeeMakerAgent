@@ -157,3 +157,4 @@ data/agent_messages/
 # User configuration files (use config.yaml.example as template)
 config.yaml
 coverage.json
+*.test_migration*
