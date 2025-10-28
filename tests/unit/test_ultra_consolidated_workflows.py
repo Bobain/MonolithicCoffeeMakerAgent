@@ -295,20 +295,63 @@ class TestArchitectWorkflow:
 
     def test_spec_full_workflow(self, workflow):
         """Test full architectural design workflow."""
-        workflow.commands.design = Mock(return_value="SPEC-200")
+        workflow.commands.design = Mock(return_value={"complexity": "medium"})
+        workflow.commands.specs = Mock(return_value={"spec_id": "SPEC-5"})
+        workflow.commands.adr = Mock(return_value={"adr_id": "ADR-5"})
 
         result = workflow.spec(priority_id="PRIORITY-5")
 
-        assert result == "SPEC-200"
-        workflow.commands.design.assert_called_once_with(action="create", priority_id="PRIORITY-5")
+        assert result.status == "success"
+        assert result.spec_id == "SPEC-5"
+        assert result.priority_id == "PRIORITY-5"
+        assert len(result.steps_completed) >= 4
+        assert result.adr_created is True
 
     def test_spec_quick_mode(self, workflow):
         """Test quick design workflow."""
-        workflow.commands.design = Mock(return_value="SPEC-201")
+        workflow.commands.design = Mock(return_value={"design": "created"})
+        workflow.commands.specs = Mock(return_value={"spec_id": "SPEC-6"})
 
         result = workflow.spec(priority_id="PRIORITY-6", depth="quick")
 
-        assert result == "SPEC-201"
+        assert result.status == "success"
+        assert result.spec_id == "SPEC-6"
+        assert result.adr_created is False  # Quick mode skips ADR
+        assert result.poc_created is False  # Quick mode skips POC
+
+    def test_spec_with_dependencies(self, workflow):
+        """Test spec with dependency checking."""
+        workflow.commands.design = Mock(return_value={"complexity": "low"})
+        workflow.commands.specs = Mock(return_value={"spec_id": "SPEC-7"})
+        workflow.commands.dependency = Mock(return_value={"approved": True})
+        workflow.commands.adr = Mock(return_value={"adr_id": "ADR-7"})
+
+        result = workflow.spec(priority_id="PRIORITY-7", dependencies=["fastapi", "pydantic"])
+
+        assert result.status == "success"
+        assert len(result.dependencies_checked) == 2
+        assert "fastapi" in result.dependencies_checked
+        assert "pydantic" in result.dependencies_checked
+
+    def test_spec_with_poc_required(self, workflow):
+        """Test spec with POC creation."""
+        workflow.commands.design = Mock(return_value={"complexity": "high"})
+        workflow.commands.specs = Mock(return_value={"spec_id": "SPEC-8"})
+        workflow.commands.poc = Mock(return_value={"poc_created": True})
+        workflow.commands.adr = Mock(return_value={"adr_id": "ADR-8"})
+
+        result = workflow.spec(priority_id="PRIORITY-8", poc_required=True)
+
+        assert result.status == "success"
+        assert result.poc_created is True
+        workflow.commands.poc.assert_called_once()
+
+    def test_spec_invalid_depth(self, workflow):
+        """Test error handling for invalid depth."""
+        result = workflow.spec(priority_id="PRIORITY-9", depth="invalid")
+
+        assert result.status == "failed"
+        assert "Invalid depth" in result.error_message
 
 
 class TestProjectManagerWorkflow:
