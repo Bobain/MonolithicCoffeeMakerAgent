@@ -112,6 +112,12 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         self.max_retries = 3
         self._current_priority_name = None  # Track current priority for commit reviews
 
+        # Token tracking for keep-alive optimization
+        self.cumulative_input_tokens = 0  # Track tokens across task chain
+        self.cumulative_output_tokens = 0
+        self.max_context_tokens = 100_000  # 50% of 200K context window
+        self.tasks_in_session = 0  # Count tasks in current session
+
         logger.info(f"✅ CodeDeveloperAgent initialized (auto_approve={auto_approve})")
 
     def commit_changes(self, message: str, files: Optional[List[str]] = None):
@@ -198,9 +204,14 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
             # Don't fail the commit if review request fails
 
     def _do_background_work(self):
-        """Implement next planned priority from ROADMAP.
+        """Implement planned priorities from ROADMAP with keep-alive optimization.
 
-        Workflow:
+        Keep-Alive Optimization:
+        - Continues processing priorities in same session if context < 50% (100K tokens)
+        - Saves ~3,000-4,500 tokens per task by not reloading commands/README
+        - Exits when context >= 50% OR no more work available
+
+        Workflow per priority:
         1. Sync with roadmap branch (pull latest)
         2. Parse ROADMAP for next planned priority
         3. Check if spec exists
@@ -211,94 +222,141 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         6. Commit changes
         7. Push to roadmap
         8. Send message to assistant for demo
-        9. Update metrics
+        9. Check context usage and continue if < 50%
 
         Returns early if:
         - No more planned priorities
+        - Context >= 50% (100K tokens)
         - Spec missing (wait for architect)
         - Implementation failed
         """
-        # Sync with roadmap branch
-        logger.info("🔄 Syncing with roadmap branch...")
-        self.git.pull("roadmap")
-        # No need to reload - RoadmapDatabase reads directly from DB
+        # Reset session counters at start of background work cycle
+        if self.tasks_in_session == 0:
+            logger.info(f"🚀 Starting new work session (context budget: {self.max_context_tokens:,} tokens)")
 
-        # Get next priority
-        next_priority = self.roadmap.get_next_planned()
+        # Keep-alive loop: continue until context limit or no more work
+        while True:
+            # Sync with roadmap branch
+            logger.info("🔄 Syncing with roadmap branch...")
+            self.git.pull("roadmap")
+            # No need to reload - RoadmapDatabase reads directly from DB
 
-        if not next_priority:
-            logger.info("✅ No more planned priorities - all done!")
-            self.current_task = None
-            return
+            # Get next priority
+            next_priority = self.roadmap.get_next_planned()
 
-        # RoadmapDatabase returns 'id' and 'title' instead of 'name'
-        priority_name = next_priority["id"]  # e.g., "US-062" or "PRIORITY-1"
-        logger.info(f"📋 Next priority: {priority_name}")
+            if not next_priority:
+                logger.info("✅ No more planned priorities - all done!")
+                self._log_session_summary()
+                self.current_task = None
+                return
 
-        # Track current priority for commit reviews
-        self._current_priority_name = priority_name
+            # RoadmapDatabase returns 'id' and 'title' instead of 'name'
+            priority_name = next_priority["id"]  # e.g., "US-062" or "PRIORITY-1"
+            logger.info(f"📋 Next priority: {priority_name} (task {self.tasks_in_session + 1} in session)")
 
-        # Update current task for status tracking
-        self.current_task = {
-            "type": "implementation",
-            "priority": priority_name,
-            "title": next_priority.get("title", ""),
-            "started_at": datetime.now().isoformat(),
-            "progress": 0.0,
-        }
+            # Track current priority for commit reviews
+            self._current_priority_name = priority_name
 
-        # Check spec exists in DATABASE (CFR-008: architect creates specs)
-        spec_data = self._load_spec_from_database(next_priority)
-        if not spec_data:
-            logger.warning(f"⚠️  Spec missing for {priority_name}")
-            logger.info("📨 Sending urgent spec request to architect...")
+            # Update current task for status tracking
+            self.current_task = {
+                "type": "implementation",
+                "priority": priority_name,
+                "title": next_priority.get("title", ""),
+                "started_at": datetime.now().isoformat(),
+                "progress": 0.0,
+            }
 
-            # Send urgent message to architect
-            self.send_message_to_agent(
-                to_agent=AgentType.ARCHITECT,
-                message_type="spec_request",
-                content={
-                    "priority": next_priority,
-                    "reason": "Implementation blocked - spec missing from database",
-                    "requester": "code_developer",
-                },
-                priority="urgent",
+            # Check spec exists in DATABASE (CFR-008: architect creates specs)
+            spec_data = self._load_spec_from_database(next_priority)
+            if not spec_data:
+                logger.warning(f"⚠️  Spec missing for {priority_name}")
+                logger.info("📨 Sending urgent spec request to architect...")
+
+                # Send urgent message to architect
+                self.send_message_to_agent(
+                    to_agent=AgentType.ARCHITECT,
+                    message_type="spec_request",
+                    content={
+                        "priority": next_priority,
+                        "reason": "Implementation blocked - spec missing from database",
+                        "requester": "code_developer",
+                    },
+                    priority="urgent",
+                )
+
+                logger.info("⏳ Waiting for architect to create spec... (will retry next iteration)")
+                self._log_session_summary()
+                return  # Return and check again next iteration
+
+            logger.info(f"✅ Spec loaded from DATABASE: {spec_data.get('spec_id', 'unknown')}")
+
+            # Check retry limit
+            attempt_count = self.attempted_priorities.get(priority_name, 0)
+            if attempt_count >= self.max_retries:
+                logger.warning(f"⏭️  Skipping {priority_name} - already attempted {attempt_count} times")
+                continue  # Skip to next priority instead of returning
+
+            # Increment attempt counter
+            self.attempted_priorities[priority_name] = attempt_count + 1
+            logger.info(
+                f"🚀 Starting implementation (attempt {self.attempted_priorities[priority_name]}/{self.max_retries})"
             )
 
-            logger.info("⏳ Waiting for architect to create spec... (will retry next iteration)")
-            return  # Return and check again next iteration
+            # Implement priority (returns tuple: success, input_tokens, output_tokens)
+            success, input_tokens, output_tokens = self._implement_priority(next_priority, spec_data)
 
-        logger.info(f"✅ Spec loaded from DATABASE: {spec_data.get('spec_id', 'unknown')}")
+            # Track token usage
+            self.cumulative_input_tokens += input_tokens
+            self.cumulative_output_tokens += output_tokens
+            self.tasks_in_session += 1
 
-        # Check retry limit
-        attempt_count = self.attempted_priorities.get(priority_name, 0)
-        if attempt_count >= self.max_retries:
-            logger.warning(f"⏭️  Skipping {priority_name} - already attempted {attempt_count} times")
-            return
+            if success:
+                # Notify assistant to create demo
+                self._notify_assistant_demo_needed(next_priority)
 
-        # Increment attempt counter
-        self.attempted_priorities[priority_name] = attempt_count + 1
-        logger.info(
-            f"🚀 Starting implementation (attempt {self.attempted_priorities[priority_name]}/{self.max_retries})"
-        )
+                # Update metrics
+                self.metrics["priorities_completed"] = self.metrics.get("priorities_completed", 0) + 1
+                self.metrics["last_completed_priority"] = priority_name
+                self.metrics["last_completion_time"] = datetime.now().isoformat()
 
-        # Implement priority
-        success = self._implement_priority(next_priority, spec_data)
+                logger.info(f"✅ {priority_name} implementation complete!")
+            else:
+                logger.error(f"❌ Implementation failed for {priority_name}")
+                # Continue to next priority even if this one failed
+                continue
 
-        if success:
-            # Notify assistant to create demo
-            self._notify_assistant_demo_needed(next_priority)
+            # Keep-alive check: Should we continue to next priority?
+            context_percent = (self.cumulative_input_tokens / self.max_context_tokens) * 100
+            total_tokens = self.cumulative_input_tokens + self.cumulative_output_tokens
 
-            # Update metrics
-            self.metrics["priorities_completed"] = self.metrics.get("priorities_completed", 0) + 1
-            self.metrics["last_completed_priority"] = priority_name
-            self.metrics["last_completion_time"] = datetime.now().isoformat()
+            logger.info(
+                f"📊 Session tokens: {self.cumulative_input_tokens:,} input + "
+                f"{self.cumulative_output_tokens:,} output = {total_tokens:,} total "
+                f"({context_percent:.1f}% of budget)"
+            )
 
-            logger.info(f"✅ {priority_name} implementation complete!")
-        else:
-            logger.error(f"❌ Implementation failed for {priority_name}")
+            if self.cumulative_input_tokens >= self.max_context_tokens:
+                logger.info(
+                    f"🛑 Context limit reached ({context_percent:.1f}% >= 50%) - "
+                    f"ending session after {self.tasks_in_session} task(s)"
+                )
+                self._log_session_summary()
+                return
 
-    def _implement_priority(self, priority: Dict, spec_data: Dict) -> bool:
+            # Check if more work available
+            peek_next = self.roadmap.get_next_planned()
+            if not peek_next:
+                logger.info(f"✅ No more work available - ending session after {self.tasks_in_session} task(s)")
+                self._log_session_summary()
+                return
+
+            # Continue to next priority
+            logger.info(
+                f"♻️  Keep-alive: Context at {context_percent:.1f}% < 50% AND more work available - "
+                f"continuing to next priority (saves ~4K tokens by not respawning)"
+            )
+
+    def _implement_priority(self, priority: Dict, spec_data: Dict) -> tuple[bool, int, int]:
         """Implement a priority by delegating to Claude Code's code-developer sub-agent.
 
         This method spawns Claude Code's code-developer agent which has:
@@ -311,7 +369,7 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
             spec_data: Specification data dict from database (contains 'content', 'spec_id', etc.)
 
         Returns:
-            True if successful, False otherwise
+            Tuple of (success: bool, input_tokens: int, output_tokens: int)
         """
         priority_name = priority["id"]  # RoadmapDatabase uses 'id' instead of 'name'
         logger.info(f"⚙️  Implementing {priority_name} via Claude Code sub-agent...")
@@ -354,6 +412,11 @@ Follow the implementation steps in the spec. Work methodically and test as you g
 
         # Delegate to Claude Code's code-developer sub-agent with streaming
         logger.info("🚀 Spawning Claude Code's code-developer sub-agent...")
+
+        # Track token usage from API response
+        input_tokens = 0
+        output_tokens = 0
+
         try:
             message_count = 0
             last_tool = None
@@ -387,10 +450,13 @@ Follow the implementation steps in the spec. Work methodically and test as you g
                     logger.debug(f"✅ Tool result for {last_tool}")
 
                 elif msg.message_type == "result":
-                    # Final result
+                    # Final result - capture token usage
+                    input_tokens = msg.metadata.get("input_tokens", 0)
+                    output_tokens = msg.metadata.get("output_tokens", 0)
+
                     logger.info(f"🏁 Sub-agent completed!")
-                    logger.info(f"   Input tokens: {msg.metadata.get('input_tokens', 0)}")
-                    logger.info(f"   Output tokens: {msg.metadata.get('output_tokens', 0)}")
+                    logger.info(f"   Input tokens: {input_tokens:,}")
+                    logger.info(f"   Output tokens: {output_tokens:,}")
                     logger.info(f"   Cost: ${msg.metadata.get('total_cost_usd', 0):.4f}")
                     self.current_task["progress"] = 0.9
 
@@ -398,7 +464,7 @@ Follow the implementation steps in the spec. Work methodically and test as you g
 
         except Exception as e:
             logger.error(f"❌ Error executing Claude Code sub-agent: {e}")
-            return False
+            return False, 0, 0
 
         # Update task progress
         self.current_task["progress"] = 0.6
@@ -407,7 +473,7 @@ Follow the implementation steps in the spec. Work methodically and test as you g
         # Check if files changed
         if self.git.is_clean():
             logger.warning("⚠️  No files changed - priority may already be complete")
-            return True  # Return True to avoid retry loop
+            return True, input_tokens, output_tokens  # Return success with token counts
 
         # Update task progress
         self.current_task["progress"] = 0.7
@@ -417,7 +483,7 @@ Follow the implementation steps in the spec. Work methodically and test as you g
         test_result = self._run_tests()
         if not test_result:
             logger.error("❌ Tests failed!")
-            return False
+            return False, input_tokens, output_tokens  # Return failure with token counts
 
         logger.info("✅ All tests passed")
 
@@ -435,7 +501,7 @@ Follow the implementation steps in the spec. Work methodically and test as you g
         self.current_task["progress"] = 1.0
         self.current_task["step"] = "Complete"
 
-        return True
+        return True, input_tokens, output_tokens
 
     def _load_spec_from_database(self, priority: Dict) -> Optional[Dict]:
         """Load technical specification from DATABASE (specs_specification table).
@@ -665,6 +731,38 @@ Follow the implementation steps in the spec. Work methodically and test as you g
         )
 
         logger.info(f"📨 Notified assistant: demo needed for {priority['id']}")
+
+    def _log_session_summary(self):
+        """Log summary of keep-alive session with token usage statistics."""
+        if self.tasks_in_session == 0:
+            return  # No session to summarize
+
+        total_tokens = self.cumulative_input_tokens + self.cumulative_output_tokens
+        context_percent = (self.cumulative_input_tokens / self.max_context_tokens) * 100
+
+        # Calculate token savings vs respawning
+        # Assuming each respawn costs ~4,000 tokens (commands + README)
+        RESPAWN_COST = 4_000
+        tokens_saved = (self.tasks_in_session - 1) * RESPAWN_COST if self.tasks_in_session > 1 else 0
+
+        logger.info(
+            f"\n"
+            f"{'='*70}\n"
+            f"📊 KEEP-ALIVE SESSION SUMMARY\n"
+            f"{'='*70}\n"
+            f"Tasks completed:     {self.tasks_in_session}\n"
+            f"Input tokens:        {self.cumulative_input_tokens:,} ({context_percent:.1f}% of budget)\n"
+            f"Output tokens:       {self.cumulative_output_tokens:,}\n"
+            f"Total tokens:        {total_tokens:,}\n"
+            f"Tokens saved:        {tokens_saved:,} (vs respawning {self.tasks_in_session}x)\n"
+            f"Avg per task:        {total_tokens // self.tasks_in_session if self.tasks_in_session > 0 else 0:,} tokens\n"
+            f"{'='*70}\n"
+        )
+
+        # Reset counters for next session
+        self.cumulative_input_tokens = 0
+        self.cumulative_output_tokens = 0
+        self.tasks_in_session = 0
 
     def _handle_message(self, message: Dict):
         """Handle inter-agent messages.
