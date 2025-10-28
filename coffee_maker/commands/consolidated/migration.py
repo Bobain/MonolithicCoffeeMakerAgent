@@ -33,10 +33,10 @@ import os
 import re
 from typing import Dict, List, Optional, Tuple
 
-if __name__ != "__main__":
+if __name__ not in ("__main__", "__coffee_maker_test__"):
     from .compatibility import DeprecationRegistry
 else:
-    # When run as script, use absolute import
+    # When run as script or in tests, use absolute import
     from coffee_maker.commands.consolidated.compatibility import DeprecationRegistry
 
 
