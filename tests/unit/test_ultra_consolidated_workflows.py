@@ -404,12 +404,13 @@ class TestCodeReviewerWorkflow:
 
     def test_review_full_scope(self, workflow):
         """Test full code review."""
-        workflow.commands.review = Mock(return_value={"quality_score": 85, "issues": []})
+        workflow.commands.review = Mock(return_value={"quality_score": 85, "issues_found": 2})
 
         result = workflow.review(target="abc123", scope="full")
 
-        assert result["quality_score"] == 85
-        workflow.commands.review.assert_called_once()
+        assert result.status == "success"
+        assert result.quality_score == 85
+        assert result.target == "abc123"
 
     def test_review_quick_scope(self, workflow):
         """Test quick review."""
@@ -417,7 +418,8 @@ class TestCodeReviewerWorkflow:
 
         result = workflow.review(target="def456", scope="quick")
 
-        assert result["quality_score"] == 90
+        assert result.status == "success"
+        assert result.quality_score == 90
 
 
 class TestOrchestratorWorkflow:
@@ -435,7 +437,9 @@ class TestOrchestratorWorkflow:
 
         result = workflow.coordinate(action="agents")
 
-        assert "agents" in result
+        assert result.status == "success"
+        assert result.action == "agents"
+        assert "agents" in result.metadata
 
     def test_coordinate_work_action(self, workflow):
         """Test work assignment."""
@@ -443,12 +447,14 @@ class TestOrchestratorWorkflow:
 
         result = workflow.coordinate(action="work")
 
-        assert result["work_found"] is True
+        assert result.status == "success"
+        assert result.action == "work"
 
     def test_coordinate_invalid_action(self, workflow):
         """Test error handling for invalid action."""
-        with pytest.raises(ValueError, match="Unknown action"):
-            workflow.coordinate(action="invalid")
+        result = workflow.coordinate(action="invalid")
+
+        assert result.status == "failed"
 
 
 class TestUserListenerWorkflow:
