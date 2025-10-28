@@ -108,10 +108,21 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
         self.specs_dir.mkdir(parents=True, exist_ok=True)
         self.adrs_dir.mkdir(parents=True, exist_ok=True)
 
+        # Token tracking for keep-alive optimization
+        self.cumulative_input_tokens = 0  # Track tokens across spec creation chain
+        self.cumulative_output_tokens = 0
+        self.max_context_tokens = 100_000  # 50% of 200K context window
+        self.specs_in_session = 0  # Count specs created in current session
+
         logger.info("✅ ArchitectAgent initialized (proactive spec creation)")
 
     def _do_background_work(self):
-        """Architect's background work: skills integration + proactive spec creation.
+        """Architect's background work: skills integration + proactive spec creation with keep-alive.
+
+        Keep-Alive Optimization:
+        - Continues creating specs in same session if context < 50% (100K tokens)
+        - Saves ~4,000 tokens per spec by not reloading commands/README
+        - Exits when context >= 50% OR no more specs needed
 
         Workflow (Enhanced with Skills):
         1. Process commit review requests (CRITICAL priority)
@@ -124,15 +135,20 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
            - Create specification
            - Document in ADR
            - Commit changes
-        6. Sleep for check_interval
+           - Check context usage and continue if < 50%
+        6. Log session summary
 
         This ensures code_developer always has specs available.
         """
         # STEP 1 & 2: Enhanced background work from mixin (commit reviews + refactoring)
         self._enhanced_background_work()
 
-        # STEP 3+: Original proactive spec creation
+        # STEP 3+: Proactive spec creation with keep-alive
         logger.info("🏗️  Architect: Checking for specs to create...")
+
+        # Reset session counters at start of background work cycle
+        if self.specs_in_session == 0:
+            logger.info(f"🚀 Starting new spec creation session (context budget: {self.max_context_tokens:,} tokens)")
 
         # Sync with roadmap branch
         logger.info("🔄 Syncing with roadmap branch...")
@@ -149,7 +165,7 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
 
         logger.info(f"Found {len(planned)} planned priorities to check for specs")
 
-        # Check each planned priority for missing specs
+        # Keep-alive loop: continue creating specs until context limit or no more specs needed
         for priority in planned:
             priority_number = priority.get("number", "")
             priority_name = priority.get("name", "")
@@ -165,12 +181,63 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
                 continue
 
             # Spec missing - create it!
-            logger.warning(f"📝 Creating spec for {priority_name}")
-            self._create_spec_for_priority(priority)
-            break  # Create one spec per iteration
+            logger.info(f"📝 Creating spec for {priority_name} (spec {self.specs_in_session + 1} in session)")
+
+            # Create spec (returns tuple: success, input_tokens, output_tokens)
+            success, input_tokens, output_tokens = self._create_spec_for_priority(priority)
+
+            if not success:
+                logger.warning(f"⚠️  Spec creation failed for {priority_name}, skipping to next")
+                continue
+
+            # Track token usage
+            self.cumulative_input_tokens += input_tokens
+            self.cumulative_output_tokens += output_tokens
+            self.specs_in_session += 1
+
+            # Update metrics
+            self.metrics["specs_created"] = self.metrics.get("specs_created", 0) + 1
+            self.metrics["last_spec_created"] = priority_name
+            self.metrics["last_spec_time"] = datetime.now().isoformat()
+
+            # Keep-alive check: Should we continue to next spec?
+            context_percent = (self.cumulative_input_tokens / self.max_context_tokens) * 100
+            total_tokens = self.cumulative_input_tokens + self.cumulative_output_tokens
+
+            logger.info(
+                f"📊 Session tokens: {self.cumulative_input_tokens:,} input + "
+                f"{self.cumulative_output_tokens:,} output = {total_tokens:,} total "
+                f"({context_percent:.1f}% of budget)"
+            )
+
+            if self.cumulative_input_tokens >= self.max_context_tokens:
+                logger.info(
+                    f"🛑 Context limit reached ({context_percent:.1f}% >= 50%) - "
+                    f"ending session after {self.specs_in_session} spec(s)"
+                )
+                break
+
+            # Check if more specs needed
+            remaining_planned = [
+                p
+                for p in planned
+                if not self._find_existing_spec(p.get("number", "")) and p.get("number") != priority_number
+            ]
+
+            if not remaining_planned:
+                logger.info(f"✅ No more specs needed - ending session after {self.specs_in_session} spec(s)")
+                break
+
+            # Continue to next spec
+            logger.info(
+                f"♻️  Keep-alive: Context at {context_percent:.1f}% < 50% AND {len(remaining_planned)} more spec(s) needed - "
+                f"continuing (saves ~4K tokens by not respawning)"
+            )
+
+        # Log session summary
+        self._log_session_summary()
 
         # Update metrics
-        self.metrics["specs_created"] = self.metrics.get("specs_created", 0)
         self.metrics["last_check"] = datetime.now().isoformat()
 
         # Update current task
@@ -179,6 +246,38 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
             "status": "idle",
             "last_check": datetime.now().isoformat(),
         }
+
+    def _log_session_summary(self):
+        """Log summary of keep-alive session with token usage statistics."""
+        if self.specs_in_session == 0:
+            return  # No session to summarize
+
+        total_tokens = self.cumulative_input_tokens + self.cumulative_output_tokens
+        context_percent = (self.cumulative_input_tokens / self.max_context_tokens) * 100
+
+        # Calculate token savings vs respawning
+        # Assuming each respawn costs ~4,000 tokens (commands + README)
+        RESPAWN_COST = 4_000
+        tokens_saved = (self.specs_in_session - 1) * RESPAWN_COST if self.specs_in_session > 1 else 0
+
+        logger.info(
+            f"\n"
+            f"{'='*70}\n"
+            f"📊 ARCHITECT KEEP-ALIVE SESSION SUMMARY\n"
+            f"{'='*70}\n"
+            f"Specs created:       {self.specs_in_session}\n"
+            f"Input tokens:        {self.cumulative_input_tokens:,} ({context_percent:.1f}% of budget)\n"
+            f"Output tokens:       {self.cumulative_output_tokens:,}\n"
+            f"Total tokens:        {total_tokens:,}\n"
+            f"Tokens saved:        {tokens_saved:,} (vs respawning {self.specs_in_session}x)\n"
+            f"Avg per spec:        {total_tokens // self.specs_in_session if self.specs_in_session > 0 else 0:,} tokens\n"
+            f"{'='*70}\n"
+        )
+
+        # Reset counters for next session
+        self.cumulative_input_tokens = 0
+        self.cumulative_output_tokens = 0
+        self.specs_in_session = 0
 
     def _handle_message(self, message: Dict):
         """Handle inter-agent messages.
@@ -271,7 +370,7 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
 
         return None
 
-    def _create_spec_for_priority(self, priority: Dict):
+    def _create_spec_for_priority(self, priority: Dict) -> tuple[bool, int, int]:
         """Create technical specification for a priority using Claude.
 
         MANDATORY STEPS (in order):
@@ -280,6 +379,9 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
 
         Args:
             priority: Priority dictionary from ROADMAP
+
+        Returns:
+            Tuple of (success: bool, input_tokens: int, output_tokens: int)
         """
         priority_name = priority.get("name", "unknown")
         priority_number = priority.get("number", "unknown")
@@ -321,7 +423,7 @@ class ArchitectAgent(ArchitectSkillsMixin, BaseAgent):
 
             # Block spec creation - return early
             logger.error(f"⛔ Blocking spec creation for {priority_name} until CFR-011 compliant")
-            return
+            return False, 0, 0
 
         # Update current task
         self.current_task = {
@@ -400,17 +502,29 @@ The technical spec should reference this POC and explain what it proves.
         invoker = get_invoker()
         logger.info("🚀 Spawning Claude Code's architect sub-agent for spec creation...")
 
+        # Track token usage from API response
+        input_tokens = 0
+        output_tokens = 0
+
         try:
             result = invoker.invoke_agent(
                 agent_type="architect", prompt=prompt, working_dir=str(Path.cwd()), timeout=3600
             )
             if not result.success:
                 logger.error(f"Architect sub-agent failed: {result.error}")
-                return
-            logger.info(f"✅ Architect sub-agent complete (${result.cost_usd:.4f}, {result.duration_ms}ms)")
+                return False, 0, 0
+
+            # Extract token usage from result
+            input_tokens = result.usage.get("input_tokens", 0)
+            output_tokens = result.usage.get("output_tokens", 0)
+
+            logger.info(
+                f"✅ Architect sub-agent complete (${result.cost_usd:.4f}, {result.duration_ms}ms, "
+                f"{input_tokens:,} + {output_tokens:,} tokens)"
+            )
         except Exception as e:
             logger.error(f"❌ Error executing architect sub-agent: {e}")
-            return
+            return False, 0, 0
 
         # Update progress
         self.current_task["progress"] = 0.8
@@ -421,14 +535,11 @@ The technical spec should reference this POC and explain what it proves.
 
         logger.info(f"✅ Spec created and committed for {priority_name}")
 
-        # Update metrics
-        self.metrics["specs_created"] = self.metrics.get("specs_created", 0) + 1
-        self.metrics["last_spec_created"] = priority_name
-        self.metrics["last_spec_time"] = datetime.now().isoformat()
-
         # Update progress
         self.current_task["progress"] = 1.0
         self.current_task["status"] = "complete"
+
+        return True, input_tokens, output_tokens
 
     def _should_create_poc(self, effort_hours: float, complexity: str) -> bool:
         """Determine if POC creation is needed using decision matrix.
