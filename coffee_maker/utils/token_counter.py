@@ -39,9 +39,10 @@ class TokenUsage:
 
 
 def estimate_tokens_from_text(text: str) -> int:
-    """Estimate token count from text using character-based heuristic.
+    """Estimate token count from text using word-based heuristic.
 
-    Uses Anthropic's rule of thumb: ~4 characters per token.
+    Uses the rule of thumb: ~0.75 words per token (or ~1.33 tokens per word).
+    This is more accurate than character-based counting for English text.
 
     Args:
         text: The text to estimate tokens for
@@ -52,12 +53,21 @@ def estimate_tokens_from_text(text: str) -> int:
     Note:
         This is an approximation. For exact counts, use Anthropic's API
         token counting endpoint (when available).
-    """
-    # Remove excessive whitespace but count newlines as chars
-    char_count = len(text)
 
-    # Anthropic's rule of thumb: ~4 chars per token
-    estimated_tokens = char_count // 4
+    Examples:
+        >>> estimate_tokens_from_text("Hello world")
+        3  # 2 words * 1.33 ≈ 3 tokens
+
+        >>> estimate_tokens_from_text("The quick brown fox jumps")
+        7  # 5 words * 1.33 ≈ 7 tokens
+    """
+    # Count words (split on whitespace)
+    words = text.split()
+    word_count = len(words)
+
+    # Rule of thumb: ~1.33 tokens per word (or ~0.75 words per token)
+    # Rounded to nearest integer
+    estimated_tokens = int(word_count * 1.33 + 0.5)
 
     return estimated_tokens
 
