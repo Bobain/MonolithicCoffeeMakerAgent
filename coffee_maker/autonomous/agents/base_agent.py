@@ -74,6 +74,7 @@ from typing import Any, Dict, List, Optional
 
 from coffee_maker.autonomous.agent_registry import AgentType
 from coffee_maker.autonomous.git_manager import GitManager
+from coffee_maker.autonomous.message_queue import MessageQueue
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +154,10 @@ class BaseAgent(ABC):
         self.current_task: Optional[Dict[str, Any]] = None
         self.metrics: Dict[str, Any] = {}
 
-        # Message queue
+        # Message queue (database-backed)
+        self.message_queue = MessageQueue()
+
+        # Legacy file-based inbox (kept for backward compatibility during migration)
         self.inbox_dir = self.message_dir / f"{agent_type.value}_inbox"
         self.inbox_dir.mkdir(parents=True, exist_ok=True)
 
@@ -197,13 +201,13 @@ class BaseAgent(ABC):
                 urgent_message = self._check_inbox_urgent()
                 if urgent_message:
                     logger.info(f"🚨 {self.agent_type.value} interrupted by urgent message")
-                    self._handle_message(urgent_message)
+                    self._process_message(urgent_message)
                     continue  # Skip background work this iteration
 
                 # Normal priority: Check for regular messages
                 messages = self._check_inbox()
                 for message in messages:
-                    self._handle_message(message)
+                    self._process_message(message)
 
                 # Background work (agent-specific)
                 self._do_background_work()
@@ -277,7 +281,7 @@ class BaseAgent(ABC):
         3. Remain responsive to user signals (Ctrl+C)
 
         This solves the "stale heartbeat" problem where agents with long
-        check_intervals (architect=1h, code-searcher=24h) don't update their
+        check_intervals (architect=1h) don't update their
         status for hours, causing monitoring systems to report them as unhealthy.
 
         Args:
@@ -299,17 +303,43 @@ class BaseAgent(ABC):
             urgent_message = self._check_inbox_urgent()
             if urgent_message:
                 logger.info(f"🚨 {self.agent_type.value} interrupted during sleep by urgent message")
-                self._handle_message(urgent_message)
+                self._process_message(urgent_message)
                 # Exit sleep early to handle urgent message
                 break
 
             # Update heartbeat to show we're alive
             self._write_status()
 
+    def _process_message(self, message: Dict) -> None:
+        """Process a message and mark it as completed or failed in database.
+
+        Args:
+            message: Message dictionary to process
+        """
+        message_id = message.get("message_id")
+        error_msg = None
+
+        try:
+            # Call the subclass handler
+            self._handle_message(message)
+            logger.info(f"✅ Message {message_id} processed successfully")
+
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"❌ Error processing message {message_id}: {e}")
+
+        finally:
+            # Mark message as processed in database
+            if message_id:
+                try:
+                    self.message_queue.mark_message_processed(message_id, error=error_msg)
+                except Exception as e:
+                    logger.error(f"Error marking message processed: {e}")
+
     def _check_inbox_urgent(self) -> Optional[Dict]:
         """Check inbox for URGENT messages only (CFR-012 Priority 1).
 
-        Urgent messages are files named urgent_*.json in the inbox.
+        Urgent messages have priority='urgent' in the database.
         These represent high-priority requests that should interrupt
         background work:
         - Spec requests from code_developer (blocking work)
@@ -320,23 +350,40 @@ class BaseAgent(ABC):
             Urgent message dict if found, None otherwise
 
         Side effects:
-            - Removes message file after reading (one-time processing)
+            - Marks message as being processed in database
         """
-        for msg_file in self.inbox_dir.glob("urgent_*.json"):
-            try:
-                message = json.loads(msg_file.read_text())
-                msg_file.unlink()  # Remove after reading
-                logger.info(f"📨 Urgent message received: {message.get('type', 'unknown')}")
-                return message
-            except Exception as e:
-                logger.error(f"Error reading urgent message {msg_file}: {e}")
+        try:
+            messages = self.message_queue.get_pending_messages(
+                to_agent=self.agent_type.value, urgent_only=True, limit=1
+            )
 
-        return None
+            if messages:
+                message = messages[0]
+                logger.info(f"📨 Urgent message received: {message.get('message_type', 'unknown')}")
+
+                # Convert database format to expected format for backward compatibility
+                formatted_message = {
+                    "message_id": message["message_id"],
+                    "from": message["from_agent"],
+                    "to": message["to_agent"],
+                    "type": message["message_type"],
+                    "priority": message["priority"],
+                    "timestamp": message["created_at"],
+                    "content": message["content"],
+                }
+
+                return formatted_message
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error reading urgent message: {e}")
+            return None
 
     def _check_inbox(self) -> List[Dict]:
         """Check inbox for regular messages.
 
-        Regular messages are files named *.json in the inbox (excluding urgent_*.json).
+        Regular messages have priority='normal' in the database.
         These represent normal-priority requests:
         - Demo requests
         - Analysis requests
@@ -346,23 +393,34 @@ class BaseAgent(ABC):
             List of message dictionaries
 
         Side effects:
-            - Removes message files after reading (one-time processing)
+            - Messages remain in database until marked as processed
         """
-        messages = []
+        try:
+            db_messages = self.message_queue.get_pending_messages(to_agent=self.agent_type.value, urgent_only=False)
 
-        for msg_file in self.inbox_dir.glob("*.json"):
-            # Skip urgent messages (handled by _check_inbox_urgent)
-            if msg_file.name.startswith("urgent_"):
-                continue
+            # Convert database format to expected format for backward compatibility
+            formatted_messages = []
+            for message in db_messages:
+                # Skip urgent messages (handled by _check_inbox_urgent)
+                if message["priority"] == "urgent":
+                    continue
 
-            try:
-                message = json.loads(msg_file.read_text())
-                messages.append(message)
-                msg_file.unlink()  # Remove after reading
-            except Exception as e:
-                logger.error(f"Error reading message {msg_file}: {e}")
+                formatted_message = {
+                    "message_id": message["message_id"],
+                    "from": message["from_agent"],
+                    "to": message["to_agent"],
+                    "type": message["message_type"],
+                    "priority": message["priority"],
+                    "timestamp": message["created_at"],
+                    "content": message["content"],
+                }
+                formatted_messages.append(formatted_message)
 
-        return messages
+            return formatted_messages
+
+        except Exception as e:
+            logger.error(f"Error reading messages: {e}")
+            return []
 
     def _read_messages(self, type_filter: Optional[str] = None, limit: int = 10) -> List[Dict]:
         """Read messages from MessageQueue (SQLite-based).
@@ -528,7 +586,10 @@ class BaseAgent(ABC):
         else:
             self.git.add_all()
 
-        self.git.commit(full_message)
+        # Use robust commit with retry for pre-commit hooks
+        if not self.git.commit_with_retry(full_message, add_all=False, max_retries=10):
+            logger.error(f"Failed to commit after 10 retries - check pre-commit hooks")
+            raise RuntimeError("Failed to commit changes after multiple retries")
 
         # Push to roadmap branch
         self.git.push("roadmap")
@@ -563,28 +624,15 @@ class BaseAgent(ABC):
             ...     priority="urgent"
             ... )
         """
-        message = {
-            "message_id": f"{message_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            "from": self.agent_type.value,
-            "to": to_agent.value,
-            "type": message_type,
-            "priority": priority,
-            "timestamp": datetime.now().isoformat(),
-            "content": content,
-        }
-
-        # Write to recipient's inbox
-        recipient_inbox = self.message_dir / f"{to_agent.value}_inbox"
-        recipient_inbox.mkdir(parents=True, exist_ok=True)
-
-        if priority == "urgent":
-            msg_file = recipient_inbox / f"urgent_{message['message_id']}.json"
-        else:
-            msg_file = recipient_inbox / f"{message['message_id']}.json"
-
+        # Send via database-backed message queue
         try:
-            msg_file.write_text(json.dumps(message, indent=2))
-            logger.info(f"📨 Sent {priority} message to {to_agent.value}: {message_type}")
+            self.message_queue.send_message(
+                from_agent=self.agent_type.value,
+                to_agent=to_agent.value,
+                message_type=message_type,
+                content=content,
+                priority=priority,
+            )
         except Exception as e:
             logger.error(f"Error sending message to {to_agent.value}: {e}")
 
@@ -602,7 +650,7 @@ class BaseAgent(ABC):
         ArchitectAgent:
             - Check ROADMAP for spec coverage
             - Create missing specs proactively
-            - Read code-searcher reports
+            - Read code review summaries
             - Analyze codebase for refactoring
 
         CodeDeveloperAgent:

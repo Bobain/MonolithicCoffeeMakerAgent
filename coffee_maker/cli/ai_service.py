@@ -49,16 +49,14 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Import Claude CLI interface (optional)
+# Import Claude agent invoker (unified interface)
 try:
-    from coffee_maker.autonomous.claude_cli_interface import (
-        ClaudeCLIInterface,
-    )
+    from coffee_maker.claude_agent_invoker import get_invoker
 
-    CLI_AVAILABLE = True
+    INVOKER_AVAILABLE = True
 except ImportError:
-    CLI_AVAILABLE = False
-    logger.warning("ClaudeCLIInterface not available, API mode only")
+    INVOKER_AVAILABLE = False
+    logger.warning("Claude agent invoker not available")
 
 
 @dataclass
@@ -152,13 +150,12 @@ class AIService:
             elif "haiku" in model.lower():
                 cli_model = "haiku"
 
-            self.cli_interface = ClaudeCLIInterface(
-                claude_path=claude_cli_path,
-                model=cli_model,
-                max_tokens=max_tokens,
-            )
+            # Use Claude Code sub-agent invoker instead
+            self.invoker = get_invoker()
+            self.cli_model = cli_model  # Store for reference
+            self.cli_interface = None  # Deprecated
 
-            logger.info(f"AIService initialized with Claude CLI: {cli_model}")
+            logger.info(f"AIService initialized with Claude Code sub-agent invoker: {cli_model}")
 
         else:
             # Use Anthropic API (requires API credits)

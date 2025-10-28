@@ -78,7 +78,7 @@ This document defines how agents collaborate on the MonolithicCoffeeMakerAgent p
 
 ### Specialized Analysis
 
-**code-searcher**
+**assistant (with code analysis skills)**
 - Deep codebase analysis
 - Security audits
 - Dependency tracing
@@ -946,7 +946,7 @@ result = delegate_task(
 # → result returned to project_manager
 ```
 
-**Example 2: assistant delegates code analysis to code-searcher**:
+**Example 2: assistant delegates code analysis to assistant (with code analysis skills)**:
 ```python
 # ❌ DON'T: Direct agent call
 analysis = code_searcher.analyze_security_vulnerabilities()
@@ -961,8 +961,8 @@ analysis = delegate_task(
     },
     requesting_agent="assistant"
 )
-# → generator routes to code-searcher
-# → code-searcher performs analysis
+# → generator routes to assistant (with code analysis skills)
+# → assistant (with code analysis skills) performs analysis
 # → assistant receives findings
 # → assistant delegates documentation to project_manager
 ```
@@ -1252,7 +1252,7 @@ Agents delegate outside their domain:
 - **user_listener** delegates ALL work to team
 - **assistant** delegates implementation to code_developer
 - **assistant** delegates bug fixes to project_manager → code_developer
-- **code-searcher** delegates documentation to project_manager
+- **assistant (with code analysis skills)** delegates documentation to project_manager
 
 ### 3. No Overlap
 
@@ -1266,7 +1266,7 @@ Agents NEVER do another agent's work:
 
 **READ-ONLY** (for code/docs):
 - assistant
-- code-searcher
+- assistant (with code analysis skills)
 - ux-design-expert
 
 **WRITE** (specific domains):

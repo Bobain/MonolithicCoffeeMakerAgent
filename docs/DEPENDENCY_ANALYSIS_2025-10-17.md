@@ -1,6 +1,6 @@
 # Dependency Analysis Report - 2025-10-17
 
-**Analyzed by**: code-searcher agent
+**Analyzed by**: assistant agent (with code analysis skills)
 **Analysis Date**: 2025-10-17
 **Scope**: pyproject.toml, poetry.lock, Python 3.11+
 **Total Dependencies**: 45+ direct, 150+ transitive
@@ -441,4 +441,4 @@ All dependencies appear compatible (poetry.lock resolves cleanly)
 
 **Report Generated**: 2025-10-17
 **Next Review**: 2025-12-17 (quarterly)
-**Analyzer**: code-searcher agent
+**Analyzer**: assistant agent (with code analysis skills)

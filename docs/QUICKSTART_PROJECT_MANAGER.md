@@ -131,7 +131,7 @@ Want the AI to implement features autonomously? Start the daemon:
 export ANTHROPIC_API_KEY='your-api-key-here'
 
 # Start the daemon in autonomous mode
-python run_daemon.py --auto-approve
+python run_code_developer.py --auto-approve
 ```
 
 **The daemon will:**
@@ -389,7 +389,7 @@ Now that you have the basics:
    - Be specific about deliverables to help the daemon
 
 3. **🤖 Let the Daemon Work**
-   - Run `python run_daemon.py --auto-approve`
+   - Run `python run_code_developer.py --auto-approve`
    - Check notifications with `project-manager notifications`
    - Review PRs before merging
 

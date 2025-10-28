@@ -26,7 +26,7 @@ Example:
     Create tables:
     >>> from coffee_maker.langfuse_observe.analytics.models_sqlite import init_database
     >>>
-    >>> conn = init_database("llm_metrics.db")
+    >>> conn = init_database("data/metrics.db")
     >>> conn.close()
 
     Query recent generations:
@@ -35,7 +35,7 @@ Example:
 
 ation
     >>>
-    >>> conn = sqlite3.connect("llm_metrics.db")
+    >>> conn = sqlite3.connect("data/metrics.db")
     >>> cursor = conn.execute("SELECT * FROM generations ORDER BY created_at DESC LIMIT 10")
     >>> rows = cursor.fetchall()
 """
@@ -346,7 +346,7 @@ def init_database(db_path: str) -> sqlite3.Connection:
         sqlite3.Connection: Database connection
 
     Example:
-        >>> conn = init_database("llm_metrics.db")
+        >>> conn = init_database("data/metrics.db")
         >>> conn.close()
     """
     conn = sqlite3.connect(db_path)

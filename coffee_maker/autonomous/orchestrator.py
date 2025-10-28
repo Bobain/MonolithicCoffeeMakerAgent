@@ -12,11 +12,11 @@ Architecture:
     └── Coordinates graceful shutdown
 
 Agent Processes (running simultaneously):
-    1. ARCHITECT - Proactive spec creation (CFR-011)
+    1. ARCHITECT - Proactive spec creation, code review reading
     2. CODE_DEVELOPER - Implementation execution
     3. PROJECT_MANAGER - GitHub monitoring, DoD verification
     4. ASSISTANT - Demo creation, bug reporting
-    5. CODE_SEARCHER - Weekly code analysis
+    5. CODE_REVIEWER - Implementation-level code reviews
     6. UX_DESIGN_EXPERT - Design reviews and guidance
 
 Inter-Process Communication (IPC):
@@ -29,7 +29,7 @@ Expected Impact:
     - Zero spec blocking (architect creates ahead)
     - Continuous QA (assistant demos automatically)
     - Real-time monitoring (project_manager checks GitHub)
-    - Weekly code quality improvements (code-searcher analysis)
+    - Quality loop (code_reviewer → architect → improved specs)
 
 Prerequisites (US-056):
     - All agents must work on roadmap branch ONLY (CFR-013)
@@ -248,7 +248,7 @@ class OrchestratorAgent(BaseAgent):
             2. CODE_DEVELOPER (implements, notifies assistant)
             3. PROJECT_MANAGER (monitors GitHub, verifies DoD)
             4. ASSISTANT (demos, bug reporting)
-            5. CODE_SEARCHER (weekly analysis)
+            5. CODE_REVIEWER (implementation-level reviews)
             6. UX_DESIGN_EXPERT (design reviews)
         """
         return {
@@ -280,7 +280,7 @@ class OrchestratorAgent(BaseAgent):
                 "check_interval": 1800,  # 30 minutes - demo creation
                 "priority": 3,  # Normal: reactive demos and bug reporting
             },
-            AgentType.CODE_SEARCHER: {
+            AgentType.ASSISTANT: {
                 "name": "code_searcher",
                 "module": "coffee_maker.autonomous.agents.code_searcher_agent",
                 "class": "CodeSearcherAgent",
@@ -695,7 +695,7 @@ class OrchestratorAgent(BaseAgent):
         1. ARCHITECT (priority 1) - creates specs proactively
         2. CODE_DEVELOPER (priority 2) - implements features
         3. PROJECT_MANAGER & ASSISTANT (priority 3) - coordination
-        4. CODE_SEARCHER & UX_DESIGN_EXPERT (priority 4) - analysis
+        4. CODE_REVIEWER & UX_DESIGN_EXPERT (priority 4) - reviews
 
         Staggered launches (1 second apart) prevent resource contention.
         """

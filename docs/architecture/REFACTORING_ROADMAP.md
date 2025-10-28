@@ -68,7 +68,7 @@ This roadmap prioritizes **10 high-value refactorings** identified in the compre
 
 **Dependencies**: None
 
-**Specification**: `docs/architecture/specs/REFACTOR-003-defensive-error-handling.md`
+**Specification**: `docs/architecture/specs/REFACTOR-003-implement-defensive-error-handling/`
 
 ---
 
@@ -93,7 +93,7 @@ This roadmap prioritizes **10 high-value refactorings** identified in the compre
 
 **Dependencies**: None (can run in parallel with REFACTOR-003)
 
-**Specification**: `docs/architecture/specs/REFACTOR-001-split-monolithic-cli.md`
+**Specification**: `docs/architecture/specs/REFACTOR-001-split-monolithic-cli-files/`
 
 ---
 
@@ -159,7 +159,7 @@ This roadmap prioritizes **10 high-value refactorings** identified in the compre
 
 **Dependencies**: None
 
-**Specification**: `docs/architecture/specs/REFACTOR-002-pattern-extraction-consolidation.md`
+**Specification**: `docs/architecture/specs/REFACTOR-002-consolidate-pattern-extraction-logic/`
 
 ---
 
@@ -498,9 +498,9 @@ This roadmap prioritizes **10 high-value refactorings** identified in the compre
 ### Specifications (Detailed)
 
 - [CODE_QUALITY_AUDIT_2025-10-16.md](CODE_QUALITY_AUDIT_2025-10-16.md) - Full audit report
-- [REFACTOR-001-split-monolithic-cli.md](specs/REFACTOR-001-split-monolithic-cli.md) - CLI refactoring spec
-- [REFACTOR-002-pattern-extraction-consolidation.md](specs/REFACTOR-002-pattern-extraction-consolidation.md) - Pattern extraction spec
-- [REFACTOR-003-defensive-error-handling.md](specs/REFACTOR-003-defensive-error-handling.md) - Error handling spec
+- [REFACTOR-001-split-monolithic-cli-files/](specs/REFACTOR-001-split-monolithic-cli-files/) - CLI refactoring spec
+- [REFACTOR-002-consolidate-pattern-extraction-logic/](specs/REFACTOR-002-consolidate-pattern-extraction-logic/) - Pattern extraction spec
+- [REFACTOR-003-implement-defensive-error-handling/](specs/REFACTOR-003-implement-defensive-error-handling/) - Error handling spec
 
 ### ADRs (To Be Created)
 

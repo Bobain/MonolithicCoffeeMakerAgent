@@ -11,7 +11,7 @@ Example:
     Analyze LLM performance:
     >>> from coffee_maker.langfuse_observe.analytics import PerformanceAnalyzer
     >>>
-    >>> analyzer = PerformanceAnalyzer("sqlite:///llm_metrics.db")
+    >>> analyzer = PerformanceAnalyzer("sqlite:///data/metrics.db")
     >>> perf = analyzer.get_llm_performance(days=7, model="openai/gpt-4o")
     >>> print(f"Avg latency: {perf['avg_latency_ms']:.0f}ms")
     >>> print(f"P95 latency: {perf['p95_latency_ms']:.0f}ms")
@@ -54,7 +54,7 @@ class PerformanceAnalyzer:
         Session: SQLAlchemy session factory
 
     Example:
-        >>> analyzer = PerformanceAnalyzer("sqlite:///llm_metrics.db")
+        >>> analyzer = PerformanceAnalyzer("sqlite:///data/metrics.db")
         >>> stats = analyzer.get_llm_performance(days=7)
     """
 
@@ -62,7 +62,7 @@ class PerformanceAnalyzer:
         """Initialize analyzer with database URL.
 
         Args:
-            db_url: SQLAlchemy database URL (e.g., "sqlite:///llm_metrics.db")
+            db_url: SQLAlchemy database URL (e.g., "sqlite:///data/metrics.db")
         """
         self.engine = create_engine(db_url, echo=False)
         self.Session = sessionmaker(bind=self.engine)

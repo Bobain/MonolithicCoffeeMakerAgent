@@ -46,7 +46,7 @@ I've completed a **comprehensive overnight analysis** of the MonolithicCoffeeMak
 
 #### REFACTOR-001: Split Monolithic CLI Files
 
-**File**: `docs/architecture/specs/REFACTOR-001-split-monolithic-cli.md`
+**File**: `docs/architecture/specs/REFACTOR-001-split-monolithic-cli-files/`
 
 **Summary**:
 - Split `roadmap_cli.py` (1,593 lines) into focused command modules
@@ -62,7 +62,7 @@ I've completed a **comprehensive overnight analysis** of the MonolithicCoffeeMak
 
 #### REFACTOR-002: Consolidate Pattern Extraction Logic
 
-**File**: `docs/architecture/specs/REFACTOR-002-pattern-extraction-consolidation.md`
+**File**: `docs/architecture/specs/REFACTOR-002-consolidate-pattern-extraction-logic/`
 
 **Summary**:
 - Create unified `PatternExtractor` class
@@ -79,7 +79,7 @@ I've completed a **comprehensive overnight analysis** of the MonolithicCoffeeMak
 
 #### REFACTOR-003: Implement Defensive Error Handling ⭐ HIGHEST ROI
 
-**File**: `docs/architecture/specs/REFACTOR-003-defensive-error-handling.md`
+**File**: `docs/architecture/specs/REFACTOR-003-implement-defensive-error-handling/`
 
 **Summary**:
 - Create defensive utilities layer (DefensiveFileMixin, retry decorator, validation)
@@ -245,9 +245,9 @@ docs/architecture/
 ├── REFACTORING_ROADMAP.md                     # Implementation roadmap ⭐
 ├── REFACTORING_SUMMARY.md                     # This file
 ├── specs/
-│   ├── REFACTOR-001-split-monolithic-cli.md
-│   ├── REFACTOR-002-pattern-extraction-consolidation.md
-│   └── REFACTOR-003-defensive-error-handling.md
+│   ├── REFACTOR-001-split-monolithic-cli-files/
+│   ├── REFACTOR-002-consolidate-pattern-extraction-logic/
+│   └── REFACTOR-003-implement-defensive-error-handling/
 └── decisions/
     └── ADR-008-defensive-programming-strategy.md
 ```

@@ -231,19 +231,19 @@ Output JSON:
 }}
 """
 
-        # Execute LLM analysis
-        from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+        # Execute LLM analysis via Claude Code's architect sub-agent
+        from coffee_maker.claude_agent_invoker import get_invoker
 
-        claude = ClaudeCLIInterface()
+        invoker = get_invoker()
 
         try:
-            result = claude.execute_prompt(prompt, timeout=600)
-            if not result or not getattr(result, "success", False):
-                logger.error("LLM analysis failed")
+            result = invoker.invoke_agent("architect", prompt, timeout=600)
+            if not result.success:
+                logger.error(f"Architect sub-agent failed: {result.error}")
                 return None
 
             # Parse JSON response
-            response_text = getattr(result, "output", "")
+            response_text = result.content
             # Extract JSON from markdown code block if present
             if "```json" in response_text:
                 response_text = response_text.split("```json")[1].split("```")[0]
@@ -396,18 +396,18 @@ Output JSON:
             logger.info("⏭️  Skipping refactoring analysis - skill not found")
             return
 
-        # Execute skill with LLM
-        from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+        # Execute skill with architect sub-agent
+        from coffee_maker.claude_agent_invoker import get_invoker
 
-        claude = ClaudeCLIInterface()
+        invoker = get_invoker()
 
         try:
-            result = claude.execute_prompt(skill_prompt, timeout=1800)  # 30 min timeout
-            if not result or not getattr(result, "success", False):
-                logger.error("Refactoring analysis failed")
+            result = invoker.invoke_agent("architect", skill_prompt, timeout=1800)  # 30 min timeout
+            if not result.success:
+                logger.error(f"Refactoring analysis failed: {result.error}")
                 return
 
-            report = getattr(result, "output", "")
+            report = result.content
 
         except Exception as e:
             logger.error(f"❌ Refactoring analysis error: {e}")
@@ -558,17 +558,17 @@ Output JSON:
                 },
             )
 
-            # Execute skill with LLM
-            from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
+            # Execute skill with architect sub-agent
+            from coffee_maker.claude_agent_invoker import get_invoker
 
-            claude = ClaudeCLIInterface()
+            invoker = get_invoker()
 
-            result = claude.execute_prompt(skill_prompt, timeout=600)
-            if not result or not getattr(result, "success", False):
-                logger.warning("Architecture reuse check failed - proceeding without it")
+            result = invoker.invoke_agent("architect", skill_prompt, timeout=600)
+            if not result.success:
+                logger.warning(f"Architecture reuse check failed: {result.error}")
                 return "## 🔍 Architecture Reuse Check\n\n⚠️  Skill execution failed\n"
 
-            reuse_analysis = getattr(result, "output", "")
+            reuse_analysis = result.content
             logger.info("✅ Architecture reuse check complete")
 
             return reuse_analysis

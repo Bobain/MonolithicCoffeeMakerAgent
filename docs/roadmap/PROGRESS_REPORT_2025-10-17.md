@@ -40,7 +40,7 @@
 **Overall**: 🟢 HEALTHY
 
 **Strengths**:
-- ✅ Strong documentation (CFR-011 strategy, code-searcher integration)
+- ✅ Strong documentation (CFR-011 strategy, assistant (with code analysis skills) integration)
 - ✅ Active development (19 commits in 2 days)
 - ✅ Clear roadmap (US-054 added with detailed requirements)
 - ✅ Multiple work streams in parallel (5 PRs)
@@ -54,14 +54,14 @@
 
 ## New Additions Today (2025-10-17)
 
-### US-054: Architect Daily Integration of code-searcher Findings (CFR-011)
+### US-054: Architect Daily Integration of assistant (with code analysis skills) Findings (CFR-011)
 
 **Status**: 📝 Planned - CRITICAL
 **Estimated Effort**: 1-2 days (11-16 hours)
 **Priority**: CRITICAL (CFR-011 enforcement)
 
 **What It Does**:
-Enforces CFR-011 through code - architect MUST read code-searcher reports daily and analyze codebase weekly before creating new specs. This creates a continuous quality improvement loop.
+Enforces CFR-011 through code - architect MUST read assistant (with code analysis skills) reports daily and analyze codebase weekly before creating new specs. This creates a continuous quality improvement loop.
 
 **Key Components**:
 1. ✅ `ArchitectDailyRoutine` class with enforcement
@@ -98,8 +98,8 @@ Enforces CFR-011 through code - architect MUST read code-searcher reports daily 
 
 **Key Sections**:
 1. **The Quality Improvement Loop**: Before vs. After CFR-011
-2. **Three-Agent Quality Triangle**: code-searcher → architect → code_developer
-3. **Integration With Existing Work**: Building on code-searcher integration (2025-10-17)
+2. **Three-Agent Quality Triangle**: assistant (with code analysis skills) → architect → code_developer
+3. **Integration With Existing Work**: Building on assistant (with code analysis skills) integration (2025-10-17)
 4. **Refactoring Priorities Roadmap**: SPEC-050 through SPEC-053 (32.5 hours)
 5. **Implementation Timeline**: Phases 1-4 over 9 weeks
 6. **Success Metrics**: Compliance + Quality + Business impact
@@ -199,8 +199,8 @@ Enforces CFR-011 through code - architect MUST read code-searcher reports daily 
    - Full enforcement mechanism for architect daily integration
    - Ready for US-054 implementation
 
-2. **code-searcher Integration Complete** (Commit: bc2403d)
-   - Architectural planning now integrated with code-searcher findings
+2. **assistant (with code analysis skills) Integration Complete** (Commit: bc2403d)
+   - Architectural planning now integrated with assistant (with code analysis skills) findings
    - 4 technical specs created (SPEC-050 through SPEC-053)
    - 1 ADR documented (ADR-004)
    - Integration report published
@@ -228,7 +228,7 @@ Enforces CFR-011 through code - architect MUST read code-searcher reports daily 
 
 | Date | Commits | Focus |
 |------|---------|-------|
-| 2025-10-17 | 6 | CFR-011, SPEC-054, code-searcher integration |
+| 2025-10-17 | 6 | CFR-011, SPEC-054, assistant (with code analysis skills) integration |
 | 2025-10-16 | 13 | Multiple specs, test fixes, documentation |
 | **Total** | **19** | **High activity** |
 
@@ -236,7 +236,7 @@ Enforces CFR-011 through code - architect MUST read code-searcher reports daily 
 
 ## Refactoring Priorities Status
 
-### Ready for Implementation (From code-searcher Integration)
+### Ready for Implementation (From assistant (with code analysis skills) Integration)
 
 All four refactoring specs created on 2025-10-17 are ready:
 
@@ -389,7 +389,7 @@ if consecutive_failures >= 3:
 **Components**:
 1. ✅ US-054: Enforcement mechanism (ROADMAP entry complete)
 2. ✅ Strategic document: CFR_011_CODE_QUALITY_STRATEGY.md
-3. ✅ Integration report: CODE_SEARCHER_INTEGRATION_2025-10-17.md
+3. ✅ Integration report: ASSISTANT_INTEGRATION_2025-10-17.md
 4. ✅ ADR-004: Code Quality Improvement Strategy
 5. ✅ Refactoring specs: SPEC-050 through SPEC-053 (32.5 hours)
 
@@ -548,7 +548,7 @@ if consecutive_failures >= 3:
 2. `docs/roadmap/ROADMAP.md` - US-054 entry (lines 26769-27003)
 
 ### Integration Reports
-1. `docs/architecture/CODE_SEARCHER_INTEGRATION_2025-10-17.md` - code-searcher findings integration
+1. `docs/architecture/ASSISTANT_INTEGRATION_2025-10-17.md` - assistant (with code analysis skills) findings integration
 
 ### Technical Specifications (Ready)
 1. `docs/architecture/specs/SPEC-050-refactor-roadmap-cli-modularization.md`

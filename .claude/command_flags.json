@@ -1,0 +1,20 @@
+{
+  "agent_flags": {
+    "project_manager": {},
+    "architect": {},
+    "code_developer": {
+      "claim_priority": false,
+      "test_cmd": false
+    },
+    "code_reviewer": {},
+    "orchestrator": {},
+    "assistant": {},
+    "user_listener": {},
+    "ux_design_expert": {},
+    "test_agent": {
+      "test_action": false,
+      "increment": false
+    }
+  },
+  "last_updated": "2025-10-26T20:06:21.831066"
+}

@@ -35,7 +35,7 @@ Delegated to: CODE_DEVELOPER
 **Expected Behavior**:
 ```
 Intent: code_searcher (confidence: 0.90)
-Delegated to: CODE_SEARCHER
+Delegated to: ASSISTANT
 ```
 
 **Why**: "Where is X" is a more specific 2-word pattern that should take priority over the generic "implement" keyword.
@@ -87,7 +87,7 @@ def classify_intent(self, user_input: str) -> Tuple[AgentType, float]:
        AgentType.PROJECT_MANAGER: [...],   # Checked second
        AgentType.CODE_DEVELOPER: [...],    # Checked third (problematic!)
        AgentType.ASSISTANT: [...],         # Checked fourth
-       AgentType.CODE_SEARCHER: [...],     # Checked fifth (should be earlier!)
+       AgentType.ASSISTANT: [...],     # Checked fifth (should be earlier!)
        AgentType.UX_DESIGN_EXPERT: [...],  # Checked sixth
    }
    ```
@@ -106,7 +106,7 @@ def classify_intent(self, user_input: str) -> Tuple[AgentType, float]:
 ## Technical Impact
 
 **Affected Functionality**:
-- Requests for code analysis may route to code_developer instead of code-searcher
+- Requests for code analysis may route to code_developer instead of assistant (with code analysis skills)
 - UI/UX design requests may route to code_developer instead of ux-design-expert
 - Any request matching multiple patterns will route incorrectly
 
@@ -194,10 +194,10 @@ Add unit tests in `tests/unit/test_agent_router.py`:
 
 ```python
 def test_classify_intent_prefers_code_searcher_over_code_developer():
-    """Test that 'where is' pattern routes to code-searcher, not code-developer."""
+    """Test that 'where is' pattern routes to assistant (with code analysis skills), not code-developer."""
     router = AgentDelegationRouter(mock_ai_service)
     agent_type, confidence = router.classify_intent("Where is authentication implemented")
-    assert agent_type == AgentType.CODE_SEARCHER
+    assert agent_type == AgentType.ASSISTANT
     assert confidence == 0.9
 
 def test_classify_intent_prefers_ux_expert_for_ui_questions():
@@ -250,9 +250,9 @@ def test_pattern_scoring_rewards_multiple_matches():
 ```
 Input: "Where is authentication implemented"
 Pattern matches: code_developer (score: 1.0), code_searcher (score: 3.5)
-Result: CODE_SEARCHER (highest score: 3.5)
+Result: ASSISTANT (highest score: 3.5)
 Confidence: 0.90
-Delegate to: code-searcher ✓
+Delegate to: assistant (with code analysis skills) ✓
 ```
 
 ### Case 2: UX-Design-Expert Query
@@ -268,9 +268,9 @@ Delegate to: ux-design-expert ✓
 ```
 Input: "Find where config is loaded"
 Pattern matches: code_developer (score: 1.0), code_searcher (score: 4.0)
-Result: CODE_SEARCHER (multi-word pattern "find in code" gets bonus)
+Result: ASSISTANT (multi-word pattern "find in code" gets bonus)
 Confidence: 0.90
-Delegate to: code-searcher ✓
+Delegate to: assistant (with code analysis skills) ✓
 ```
 
 ---

@@ -48,9 +48,8 @@ from typing import Dict, List, Optional
 from coffee_maker.autonomous.agent_registry import AgentType
 from coffee_maker.autonomous.agents.base_agent import BaseAgent
 from coffee_maker.autonomous.agents.code_developer_commit_review_mixin import CodeDeveloperCommitReviewMixin
-from coffee_maker.autonomous.claude_cli_interface import ClaudeCLIInterface
-from coffee_maker.autonomous.prompt_loader import PromptNames, load_prompt
-from coffee_maker.autonomous.roadmap_parser import RoadmapParser
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+from coffee_maker.claude_agent_invoker import get_invoker
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +87,6 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         status_dir: Path,
         message_dir: Path,
         check_interval: int = 300,  # 5 minutes
-        roadmap_file: str = "docs/roadmap/ROADMAP.md",
         auto_approve: bool = True,
     ):
         """Initialize CodeDeveloperAgent.
@@ -97,7 +95,6 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
             status_dir: Directory for agent status files
             message_dir: Directory for inter-agent messages
             check_interval: Seconds between priority checks (default: 5 minutes)
-            roadmap_file: Path to ROADMAP.md file
             auto_approve: Auto-approve implementation (default: True for daemon)
         """
         super().__init__(
@@ -107,12 +104,19 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
             check_interval=check_interval,
         )
 
-        self.roadmap = RoadmapParser(roadmap_file)
-        self.claude = ClaudeCLIInterface()
+        # Use RoadmapDatabase instead of RoadmapParser for proper database access
+        self.roadmap = RoadmapDatabase(agent_name="code_developer")
+        self.invoker = get_invoker()  # Use Claude Code sub-agent invoker
         self.auto_approve = auto_approve
         self.attempted_priorities: Dict[str, int] = {}
         self.max_retries = 3
         self._current_priority_name = None  # Track current priority for commit reviews
+
+        # Token tracking for keep-alive optimization
+        self.cumulative_input_tokens = 0  # Track tokens across task chain
+        self.cumulative_output_tokens = 0
+        self.max_context_tokens = 100_000  # 50% of 200K context window
+        self.tasks_in_session = 0  # Count tasks in current session
 
         logger.info(f"✅ CodeDeveloperAgent initialized (auto_approve={auto_approve})")
 
@@ -200,9 +204,14 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
             # Don't fail the commit if review request fails
 
     def _do_background_work(self):
-        """Implement next planned priority from ROADMAP.
+        """Implement planned priorities from ROADMAP with keep-alive optimization.
 
-        Workflow:
+        Keep-Alive Optimization:
+        - Continues processing priorities in same session if context < 50% (100K tokens)
+        - Saves ~3,000-4,500 tokens per task by not reloading commands/README
+        - Exits when context >= 50% OR no more work available
+
+        Workflow per priority:
         1. Sync with roadmap branch (pull latest)
         2. Parse ROADMAP for next planned priority
         3. Check if spec exists
@@ -213,135 +222,249 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         6. Commit changes
         7. Push to roadmap
         8. Send message to assistant for demo
-        9. Update metrics
+        9. Check context usage and continue if < 50%
 
         Returns early if:
         - No more planned priorities
+        - Context >= 50% (100K tokens)
         - Spec missing (wait for architect)
         - Implementation failed
         """
-        # Sync with roadmap branch
-        logger.info("🔄 Syncing with roadmap branch...")
-        self.git.pull("roadmap")
-        self.roadmap.reload()
+        # Reset session counters at start of background work cycle
+        if self.tasks_in_session == 0:
+            logger.info(f"🚀 Starting new work session (context budget: {self.max_context_tokens:,} tokens)")
 
-        # Get next priority
-        next_priority = self.roadmap.get_next_planned_priority()
+        # Keep-alive loop: continue until context limit or no more work
+        while True:
+            # Sync with roadmap branch
+            logger.info("🔄 Syncing with roadmap branch...")
+            self.git.pull("roadmap")
+            # No need to reload - RoadmapDatabase reads directly from DB
 
-        if not next_priority:
-            logger.info("✅ No more planned priorities - all done!")
-            self.current_task = None
-            return
+            # Get next priority
+            next_priority = self.roadmap.get_next_planned()
 
-        priority_name = next_priority["name"]
-        logger.info(f"📋 Next priority: {priority_name}")
+            if not next_priority:
+                logger.info("✅ No more planned priorities - all done!")
+                self._log_session_summary()
+                self.current_task = None
+                return
 
-        # Track current priority for commit reviews
-        self._current_priority_name = priority_name
+            # RoadmapDatabase returns 'id' and 'title' instead of 'name'
+            priority_name = next_priority["id"]  # e.g., "US-062" or "PRIORITY-1"
+            logger.info(f"📋 Next priority: {priority_name} (task {self.tasks_in_session + 1} in session)")
 
-        # Update current task for status tracking
-        self.current_task = {
-            "type": "implementation",
-            "priority": priority_name,
-            "title": next_priority.get("title", ""),
-            "started_at": datetime.now().isoformat(),
-            "progress": 0.0,
-        }
+            # Track current priority for commit reviews
+            self._current_priority_name = priority_name
 
-        # Check spec exists (CFR-008: architect creates specs)
-        spec_file = self._find_spec(next_priority)
-        if not spec_file:
-            logger.warning(f"⚠️  Spec missing for {priority_name}")
-            logger.info("📨 Sending urgent spec request to architect...")
+            # Update current task for status tracking
+            self.current_task = {
+                "type": "implementation",
+                "priority": priority_name,
+                "title": next_priority.get("title", ""),
+                "started_at": datetime.now().isoformat(),
+                "progress": 0.0,
+            }
 
-            # Send urgent message to architect
-            self.send_message_to_agent(
-                to_agent=AgentType.ARCHITECT,
-                message_type="spec_request",
-                content={
-                    "priority": next_priority,
-                    "reason": "Implementation blocked - spec missing",
-                    "requester": "code_developer",
-                },
-                priority="urgent",
+            # Check spec exists in DATABASE (CFR-008: architect creates specs)
+            spec_data = self._load_spec_from_database(next_priority)
+            if not spec_data:
+                logger.warning(f"⚠️  Spec missing for {priority_name}")
+                logger.info("📨 Sending urgent spec request to architect...")
+
+                # Send urgent message to architect
+                self.send_message_to_agent(
+                    to_agent=AgentType.ARCHITECT,
+                    message_type="spec_request",
+                    content={
+                        "priority": next_priority,
+                        "reason": "Implementation blocked - spec missing from database",
+                        "requester": "code_developer",
+                    },
+                    priority="urgent",
+                )
+
+                logger.info("⏳ Waiting for architect to create spec... (will retry next iteration)")
+                self._log_session_summary()
+                return  # Return and check again next iteration
+
+            logger.info(f"✅ Spec loaded from DATABASE: {spec_data.get('spec_id', 'unknown')}")
+
+            # Check retry limit
+            attempt_count = self.attempted_priorities.get(priority_name, 0)
+            if attempt_count >= self.max_retries:
+                logger.warning(f"⏭️  Skipping {priority_name} - already attempted {attempt_count} times")
+                continue  # Skip to next priority instead of returning
+
+            # Increment attempt counter
+            self.attempted_priorities[priority_name] = attempt_count + 1
+            logger.info(
+                f"🚀 Starting implementation (attempt {self.attempted_priorities[priority_name]}/{self.max_retries})"
             )
 
-            logger.info("⏳ Waiting for architect to create spec... (will retry next iteration)")
-            return  # Return and check again next iteration
+            # Implement priority (returns tuple: success, input_tokens, output_tokens)
+            success, input_tokens, output_tokens = self._implement_priority(next_priority, spec_data)
 
-        logger.info(f"✅ Spec found: {spec_file}")
+            # Track token usage
+            self.cumulative_input_tokens += input_tokens
+            self.cumulative_output_tokens += output_tokens
+            self.tasks_in_session += 1
 
-        # Check retry limit
-        attempt_count = self.attempted_priorities.get(priority_name, 0)
-        if attempt_count >= self.max_retries:
-            logger.warning(f"⏭️  Skipping {priority_name} - already attempted {attempt_count} times")
-            return
+            if success:
+                # Notify assistant to create demo
+                self._notify_assistant_demo_needed(next_priority)
 
-        # Increment attempt counter
-        self.attempted_priorities[priority_name] = attempt_count + 1
-        logger.info(
-            f"🚀 Starting implementation (attempt {self.attempted_priorities[priority_name]}/{self.max_retries})"
-        )
+                # Update metrics
+                self.metrics["priorities_completed"] = self.metrics.get("priorities_completed", 0) + 1
+                self.metrics["last_completed_priority"] = priority_name
+                self.metrics["last_completion_time"] = datetime.now().isoformat()
 
-        # Implement priority
-        success = self._implement_priority(next_priority, spec_file)
+                logger.info(f"✅ {priority_name} implementation complete!")
+            else:
+                logger.error(f"❌ Implementation failed for {priority_name}")
+                # Continue to next priority even if this one failed
+                continue
 
-        if success:
-            # Notify assistant to create demo
-            self._notify_assistant_demo_needed(next_priority)
+            # Keep-alive check: Should we continue to next priority?
+            context_percent = (self.cumulative_input_tokens / self.max_context_tokens) * 100
+            total_tokens = self.cumulative_input_tokens + self.cumulative_output_tokens
 
-            # Update metrics
-            self.metrics["priorities_completed"] = self.metrics.get("priorities_completed", 0) + 1
-            self.metrics["last_completed_priority"] = priority_name
-            self.metrics["last_completion_time"] = datetime.now().isoformat()
+            logger.info(
+                f"📊 Session tokens: {self.cumulative_input_tokens:,} input + "
+                f"{self.cumulative_output_tokens:,} output = {total_tokens:,} total "
+                f"({context_percent:.1f}% of budget)"
+            )
 
-            logger.info(f"✅ {priority_name} implementation complete!")
-        else:
-            logger.error(f"❌ Implementation failed for {priority_name}")
+            if self.cumulative_input_tokens >= self.max_context_tokens:
+                logger.info(
+                    f"🛑 Context limit reached ({context_percent:.1f}% >= 50%) - "
+                    f"ending session after {self.tasks_in_session} task(s)"
+                )
+                self._log_session_summary()
+                return
 
-    def _implement_priority(self, priority: Dict, spec_file: Path) -> bool:
-        """Implement a priority using Claude API.
+            # Check if more work available
+            peek_next = self.roadmap.get_next_planned()
+            if not peek_next:
+                logger.info(f"✅ No more work available - ending session after {self.tasks_in_session} task(s)")
+                self._log_session_summary()
+                return
+
+            # Continue to next priority
+            logger.info(
+                f"♻️  Keep-alive: Context at {context_percent:.1f}% < 50% AND more work available - "
+                f"continuing to next priority (saves ~4K tokens by not respawning)"
+            )
+
+    def _implement_priority(self, priority: Dict, spec_data: Dict) -> tuple[bool, int, int]:
+        """Implement a priority by delegating to Claude Code's code-developer sub-agent.
+
+        This method spawns Claude Code's code-developer agent which has:
+        - Full tool access (Read, Write, Edit, Bash, etc.)
+        - Complete system prompt from .claude/agents/code_developer.md
+        - Real-time streaming progress
 
         Args:
             priority: Priority dictionary from ROADMAP
-            spec_file: Path to technical specification
+            spec_data: Specification data dict from database (contains 'content', 'spec_id', etc.)
 
         Returns:
-            True if successful, False otherwise
+            Tuple of (success: bool, input_tokens: int, output_tokens: int)
         """
-        priority_name = priority["name"]
-        logger.info(f"⚙️  Implementing {priority_name}...")
+        priority_name = priority["id"]  # RoadmapDatabase uses 'id' instead of 'name'
+        logger.info(f"⚙️  Implementing {priority_name} via Claude Code sub-agent...")
 
         # Update task progress
         self.current_task["progress"] = 0.2
-        self.current_task["step"] = "Loading prompt"
+        self.current_task["step"] = "Loading spec and building prompt"
 
-        # Load implementation prompt
-        prompt = load_prompt(
-            PromptNames.IMPLEMENT_FEATURE,
-            {
-                "PRIORITY_NAME": priority_name,
-                "PRIORITY_TITLE": priority.get("title", ""),
-                "SPEC_FILE": str(spec_file),
-                "PRIORITY_CONTENT": priority.get("content", "")[:1000],
-            },
-        )
+        # Get spec content from database data (already loaded from database)
+        spec_content = spec_data.get("content", "")
+
+        # Build prompt for Claude Code's code-developer sub-agent
+        prompt = f"""
+Implement {priority_name}: {priority.get('title', '')}
+
+## Technical Specification
+
+{spec_content}
+
+## Instructions
+
+1. Read the spec above carefully
+2. Implement the feature following the spec exactly
+3. Add tests as specified in the spec
+4. Run tests to verify (pytest)
+5. Commit with message: "feat: Implement {priority_name} - {priority.get('title', '')}"
+
+IMPORTANT: You are Claude Code's code-developer agent. You have full access to:
+- Read tool: Read any file
+- Write tool: Create new files
+- Edit tool: Modify existing files
+- Bash tool: Run commands (pytest, git, etc.)
+
+Follow the implementation steps in the spec. Work methodically and test as you go.
+"""
 
         # Update task progress
         self.current_task["progress"] = 0.3
-        self.current_task["step"] = "Executing Claude API"
+        self.current_task["step"] = "Spawning code-developer sub-agent (streaming)"
 
-        # Execute with Claude
-        logger.info("🤖 Executing Claude API...")
+        # Delegate to Claude Code's code-developer sub-agent with streaming
+        logger.info("🚀 Spawning Claude Code's code-developer sub-agent...")
+
+        # Track token usage from API response
+        input_tokens = 0
+        output_tokens = 0
+
         try:
-            result = self.claude.execute_prompt(prompt, timeout=3600)
-            if not result or not getattr(result, "success", False):
-                logger.error(f"Claude API failed: {getattr(result, 'error', 'Unknown error')}")
-                return False
-            logger.info(f"✅ Claude API complete")
+            message_count = 0
+            last_tool = None
+
+            for msg in self.invoker.invoke_agent_streaming(
+                agent_type="code-developer",
+                prompt=prompt,
+                working_dir=str(Path.cwd()),
+                timeout=3600,  # 1 hour for implementation
+            ):
+                message_count += 1
+
+                # Track progress based on message types
+                if msg.message_type == "init":
+                    logger.info(f"🎬 Sub-agent initialized: {msg.metadata.get('session_id', 'N/A')}")
+                    self.current_task["progress"] = 0.4
+
+                elif msg.message_type == "message":
+                    # Log agent's messages
+                    logger.info(f"💬 Sub-agent: {msg.content[:100]}...")
+                    # Update progress incrementally
+                    self.current_task["progress"] = min(0.4 + (message_count * 0.01), 0.8)
+
+                elif msg.message_type == "tool_use":
+                    tool_name = msg.metadata.get("name", "unknown")
+                    last_tool = tool_name
+                    logger.info(f"🔧 Sub-agent using tool: {tool_name}")
+                    self.current_task["step"] = f"Tool: {tool_name}"
+
+                elif msg.message_type == "tool_result":
+                    logger.debug(f"✅ Tool result for {last_tool}")
+
+                elif msg.message_type == "result":
+                    # Final result - capture token usage
+                    input_tokens = msg.metadata.get("input_tokens", 0)
+                    output_tokens = msg.metadata.get("output_tokens", 0)
+
+                    logger.info(f"🏁 Sub-agent completed!")
+                    logger.info(f"   Input tokens: {input_tokens:,}")
+                    logger.info(f"   Output tokens: {output_tokens:,}")
+                    logger.info(f"   Cost: ${msg.metadata.get('total_cost_usd', 0):.4f}")
+                    self.current_task["progress"] = 0.9
+
+            logger.info(f"✅ Sub-agent execution complete ({message_count} messages)")
+
         except Exception as e:
-            logger.error(f"❌ Error executing Claude API: {e}")
-            return False
+            logger.error(f"❌ Error executing Claude Code sub-agent: {e}")
+            return False, 0, 0
 
         # Update task progress
         self.current_task["progress"] = 0.6
@@ -350,7 +473,7 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         # Check if files changed
         if self.git.is_clean():
             logger.warning("⚠️  No files changed - priority may already be complete")
-            return True  # Return True to avoid retry loop
+            return True, input_tokens, output_tokens  # Return success with token counts
 
         # Update task progress
         self.current_task["progress"] = 0.7
@@ -360,7 +483,7 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         test_result = self._run_tests()
         if not test_result:
             logger.error("❌ Tests failed!")
-            return False
+            return False, input_tokens, output_tokens  # Return failure with token counts
 
         logger.info("✅ All tests passed")
 
@@ -378,78 +501,77 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
         self.current_task["progress"] = 1.0
         self.current_task["step"] = "Complete"
 
-        return True
+        return True, input_tokens, output_tokens
 
-    def _find_spec(self, priority: Dict) -> Optional[Path]:
-        """Find technical specification for a priority.
+    def _load_spec_from_database(self, priority: Dict) -> Optional[Dict]:
+        """Load technical specification from DATABASE (specs_specification table).
 
-        Looks in:
-        - docs/architecture/specs/SPEC-{us_number}-*.md (priority: US-104)
-        - docs/architecture/specs/SPEC-{priority_number}-*.md (fallback)
-        - docs/roadmap/PRIORITY_{priority_number}_TECHNICAL_SPEC.md
+        This method reads specs from the database, not from files.
+        Extracts US number from priority title and uses it to find spec in database.
 
         Args:
-            priority: Priority dictionary
+            priority: Priority dictionary from RoadmapDatabase (has 'title', 'id', 'number')
 
         Returns:
-            Path to spec file if found, None otherwise
+            Dict with spec data from database: {'spec_id', 'content', 'spec_type', ...}
+            or None if spec not found in database
         """
         import re
 
-        priority_number = priority.get("number", "")
+        priority.get("number", "")
         priority_title = priority.get("title", "")
+        priority_id = priority.get("id", "")
 
-        if not priority_number:
-            return None
+        logger.info(f"📂 Loading spec from DATABASE for {priority_id}")
 
         # Extract US number from title (e.g., "US-104" from "US-104 - Orchestrator...")
         us_match = re.search(r"US-(\d+)", priority_title)
-        us_number = us_match.group(1) if us_match else None
+        if not us_match:
+            logger.warning(f"⚠️  No US number found in priority title: {priority_title}")
+            return None
 
-        # Try architect's specs directory first (CFR-008)
-        specs_dir = Path("docs/architecture/specs")
-        if specs_dir.exists():
-            patterns = []
+        us_number = us_match.group(1)
+        us_id = f"US-{us_number}"
 
-            # PRIMARY: Try US number first (e.g., SPEC-104-*.md for US-104)
-            if us_number:
-                patterns.extend(
-                    [
-                        f"SPEC-{us_number}-*.md",  # SPEC-104-*.md
-                        f"SPEC-{us_number.zfill(3)}-*.md",  # SPEC-104-*.md (padded)
-                    ]
-                )
+        # Load spec from DATABASE using direct database query
+        try:
+            import sqlite3
 
-            # FALLBACK: Try priority number (e.g., SPEC-20-*.md for PRIORITY 20)
-            patterns.extend(
-                [
-                    f"SPEC-{priority_number}-*.md",  # SPEC-20-*.md
-                    f"SPEC-{priority_number.replace('.', '-')}-*.md",  # SPEC-2-6-*.md
-                    f"SPEC-{priority_number.zfill(5).replace('.', '-')}-*.md",  # SPEC-002-6-*.md (padded)
-                ]
+            # Get database path from roadmap (which has it)
+            db_path = self.roadmap.db_path
+
+            # Query specs_specification table directly
+            logger.debug(f"🔧 Querying database for spec: {us_id}")
+
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # Build spec_id from US number (e.g., "SPEC-104" for "US-104")
+            spec_num = us_number
+            spec_id = f"SPEC-{spec_num:03d}"
+
+            cursor.execute(
+                """
+                SELECT * FROM specs_specification WHERE id = ?
+                """,
+                (spec_id,),
             )
 
-            # Also try without dots/dashes for edge cases
-            if "." in priority_number:
-                major, minor = priority_number.split(".", 1)
-                patterns.extend(
-                    [
-                        f"SPEC-{major.zfill(3)}-{minor}-*.md",  # SPEC-002-6-*.md
-                        f"SPEC-{major}-{minor}-*.md",  # SPEC-2-6-*.md
-                    ]
-                )
+            row = cursor.fetchone()
+            conn.close()
 
-            for pattern in patterns:
-                for spec_file in specs_dir.glob(pattern):
-                    logger.info(f"Found spec: {spec_file}")
-                    return spec_file
+            if row:
+                spec = dict(row)
+                logger.info(f"✅ Loaded spec from DATABASE: {spec.get('id', 'unknown')}")
+                return spec
+            else:
+                logger.warning(f"❌ Spec not found in database: {spec_id}")
+                return None
 
-        # Fallback: Check old strategic spec location
-        roadmap_spec = Path(f"docs/roadmap/PRIORITY_{priority_number}_TECHNICAL_SPEC.md")
-        if roadmap_spec.exists():
-            return roadmap_spec
-
-        return None
+        except Exception as e:
+            logger.error(f"❌ Error loading spec from database: {e}", exc_info=True)
+            return None
 
     def _run_tests(self) -> bool:
         """Run pytest test suite.
@@ -600,15 +722,47 @@ class CodeDeveloperAgent(CodeDeveloperCommitReviewMixin, BaseAgent):
             to_agent=AgentType.ASSISTANT,
             message_type="demo_request",
             content={
-                "feature": priority["name"],
+                "feature": priority["id"],  # RoadmapDatabase uses 'id' instead of 'name'
                 "title": priority.get("title", ""),
-                "acceptance_criteria": priority.get("acceptance_criteria", []),
+                "acceptance_criteria": priority.get("content", ""),
                 "description": priority.get("content", "")[:500],
             },
             priority="normal",
         )
 
-        logger.info(f"📨 Notified assistant: demo needed for {priority['name']}")
+        logger.info(f"📨 Notified assistant: demo needed for {priority['id']}")
+
+    def _log_session_summary(self):
+        """Log summary of keep-alive session with token usage statistics."""
+        if self.tasks_in_session == 0:
+            return  # No session to summarize
+
+        total_tokens = self.cumulative_input_tokens + self.cumulative_output_tokens
+        context_percent = (self.cumulative_input_tokens / self.max_context_tokens) * 100
+
+        # Calculate token savings vs respawning
+        # Assuming each respawn costs ~4,000 tokens (commands + README)
+        RESPAWN_COST = 4_000
+        tokens_saved = (self.tasks_in_session - 1) * RESPAWN_COST if self.tasks_in_session > 1 else 0
+
+        logger.info(
+            f"\n"
+            f"{'='*70}\n"
+            f"📊 KEEP-ALIVE SESSION SUMMARY\n"
+            f"{'='*70}\n"
+            f"Tasks completed:     {self.tasks_in_session}\n"
+            f"Input tokens:        {self.cumulative_input_tokens:,} ({context_percent:.1f}% of budget)\n"
+            f"Output tokens:       {self.cumulative_output_tokens:,}\n"
+            f"Total tokens:        {total_tokens:,}\n"
+            f"Tokens saved:        {tokens_saved:,} (vs respawning {self.tasks_in_session}x)\n"
+            f"Avg per task:        {total_tokens // self.tasks_in_session if self.tasks_in_session > 0 else 0:,} tokens\n"
+            f"{'='*70}\n"
+        )
+
+        # Reset counters for next session
+        self.cumulative_input_tokens = 0
+        self.cumulative_output_tokens = 0
+        self.tasks_in_session = 0
 
     def _handle_message(self, message: Dict):
         """Handle inter-agent messages.

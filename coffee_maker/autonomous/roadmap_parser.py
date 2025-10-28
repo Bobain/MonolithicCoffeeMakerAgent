@@ -254,6 +254,109 @@ class RoadmapParser:
         logger.info("No planned priorities found")
         return None
 
+    def get_next_code_developer_priority(self) -> Optional[Dict]:
+        """Get the next priority that code_developer can implement.
+
+        This method is specific to code_developer daemon and:
+        1. Finds planned priorities (📝 Planned status)
+        2. Skips priorities already in progress (🔄 In Progress)
+        3. Skips priorities without technical specs
+        4. Skips blocked priorities (⏸️ Blocked)
+        5. Returns first priority ready to implement
+
+        This prevents code_developer from blocking on priorities
+        waiting for architect to create specs, or re-implementing
+        priorities already in progress.
+
+        Returns:
+            Priority dict ready to implement, or None if none available
+
+        Example:
+            >>> parser = RoadmapParser("docs/roadmap/ROADMAP.md")
+            >>> next_task = parser.get_next_code_developer_priority()
+            >>> if next_task:
+            ...     print(f"Ready to implement: {next_task['title']}")
+            >>> else:
+            ...     print("All planned priorities need specs - waiting for architect")
+        """
+        from pathlib import Path
+
+        priorities = self.get_priorities()
+        architect_spec_dir = Path("docs/architecture/specs")
+
+        for priority in priorities:
+            status = priority["status"].lower()
+
+            # Skip if not planned (only process "📝 Planned" priorities)
+            if "planned" not in status and "📝" not in status:
+                continue
+
+            # Skip if already in progress
+            if "in progress" in status or "🔄" in status:
+                logger.info(f"Skipping in-progress priority: {priority['name']}")
+                continue
+
+            # Skip if blocked
+            if "blocked" in status or "⏸️" in status:
+                logger.info(f"Skipping blocked priority: {priority['name']}")
+                continue
+
+            # Skip if complete
+            if "complete" in status or "✅" in status:
+                continue
+
+            # Extract priority number for spec checking
+            priority_name = priority["name"]
+            priority_number = None
+
+            if priority_name.startswith("PRIORITY "):
+                priority_number = priority_name.replace("PRIORITY ", "").split(":")[0].strip()
+            elif priority_name.startswith("US-"):
+                us_num = priority_name.replace("US-", "").split(":")[0].strip()
+                priority_number = us_num  # Use US number
+
+            # Check if spec exists
+            if priority_number:
+                # Try multiple patterns to handle inconsistent naming (with/without zero-padding)
+                patterns_to_try = []
+
+                # Try both with and without zero-padding
+                patterns_to_try.append(f"SPEC-{priority_number}-*.md")  # Without padding
+                patterns_to_try.append(f"SPEC-{priority_number.zfill(3)}-*.md")  # With padding (3 digits)
+                patterns_to_try.append(f"SPEC-{priority_number.zfill(2)}-*.md")  # With padding (2 digits)
+
+                # Also check for directories (hierarchical specs)
+                patterns_to_try.append(f"SPEC-{priority_number}-*")  # Directory without .md
+                patterns_to_try.append(f"SPEC-{priority_number.zfill(3)}-*")  # Directory with padding
+
+                if architect_spec_dir.exists():
+                    spec_found = False
+                    for spec_pattern in patterns_to_try:
+                        matching_specs = list(architect_spec_dir.glob(spec_pattern))
+                        if matching_specs:
+                            # Check if it's a valid spec (either .md file or directory with phase files)
+                            for spec_file in matching_specs:
+                                if spec_file.is_dir():
+                                    # Check if directory contains phase files
+                                    phase_files = list(spec_file.glob("phase*.md")) + list(spec_file.glob("README.md"))
+                                    if phase_files:
+                                        logger.info(
+                                            f"Next code_developer priority: {priority['name']} (spec exists: {spec_file.name}/)"
+                                        )
+                                        return priority
+                                elif spec_file.suffix == ".md":
+                                    logger.info(
+                                        f"Next code_developer priority: {priority['name']} (spec exists: {spec_file.name})"
+                                    )
+                                    return priority
+
+                    if not spec_found:
+                        logger.info(f"Skipping {priority['name']} - no spec found (tried multiple patterns)")
+                        continue
+
+        logger.info("No code_developer-ready priorities found (all need specs)")
+        return None
+
     def get_priority_by_number(self, priority_number: int) -> Optional[Dict]:
         """Get a specific priority by its number.
 

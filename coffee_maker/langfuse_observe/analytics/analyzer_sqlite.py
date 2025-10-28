@@ -7,7 +7,7 @@ Example:
     Analyze LLM performance:
     >>> from coffee_maker.langfuse_observe.analytics.analyzer_sqlite import PerformanceAnalyzer
     >>>
-    >>> analyzer = PerformanceAnalyzer("llm_metrics.db")
+    >>> analyzer = PerformanceAnalyzer("data/metrics.db")
     >>> perf = analyzer.get_llm_performance(days=7, model="openai/gpt-4o")
     >>> print(f"Avg latency: {perf['avg_latency_ms']:.0f}ms")
     >>> print(f"Total cost: ${perf['total_cost_usd']:.2f}")
@@ -34,7 +34,7 @@ class PerformanceAnalyzer:
         conn: SQLite connection
 
     Example:
-        >>> analyzer = PerformanceAnalyzer("llm_metrics.db")
+        >>> analyzer = PerformanceAnalyzer("data/metrics.db")
         >>> stats = analyzer.get_llm_performance(days=7)
     """
 

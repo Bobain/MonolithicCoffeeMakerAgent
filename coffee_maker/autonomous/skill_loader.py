@@ -25,24 +25,12 @@ logger = logging.getLogger(__name__)
 class SkillNames(str, Enum):
     """Enumeration of available skill names."""
 
-    # Architect skills
-    ARCHITECTURE_REUSE_CHECK = "architecture-reuse-check"
-    CONTINUOUS_SPEC_IMPROVEMENT = "continuous-spec-improvement"
-    CODE_REVIEW_HISTORY = "code-review-history"
-    PROACTIVE_REFACTORING_ANALYSIS = "proactive-refactoring-analysis"
-
-    # Project Manager skills
-    ROADMAP_HEALTH_CHECK = "roadmap-health-check"
-    PR_MONITORING_ANALYSIS = "pr-monitoring-analysis"
-
-    # Code Developer skills
-    TEST_DRIVEN_IMPLEMENTATION = "test-driven-implementation"
-    TEST_FAILURE_ANALYSIS = "test-failure-analysis"
-
     # Shared skills
-    DOD_VERIFICATION = "dod-verification"
     GIT_WORKFLOW_AUTOMATION = "git-workflow-automation"
-    CONTEXT_BUDGET_OPTIMIZER = "context-budget-optimizer"
+    INTROSPECTION_DATABASE = "introspection-database"
+    INTROSPECTION_WORKFLOWS = "introspection-workflows"
+    INTROSPECTION_CLAUDE_CONFIG = "introspection-claude-config"
+    TECHNICAL_SPECIFICATION_HANDLING = "technical-specification-handling"
 
 
 @dataclass

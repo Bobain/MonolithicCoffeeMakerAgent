@@ -26,9 +26,9 @@ docs/architecture/
 ├── REFACTORING_ROADMAP.md            # Refactoring implementation plan ⭐
 ├── REFACTORING_SUMMARY.md            # Executive summary ⭐
 ├── specs/                            # Technical specifications
-│   ├── REFACTOR-001-split-monolithic-cli.md
-│   ├── REFACTOR-002-pattern-extraction-consolidation.md
-│   ├── REFACTOR-003-defensive-error-handling.md
+│   ├── REFACTOR-001-split-monolithic-cli-files/
+│   ├── REFACTOR-002-consolidate-pattern-extraction-logic/
+│   ├── REFACTOR-003-implement-defensive-error-handling/
 │   └── SPEC-000-template.md          # Template for new specs
 ├── decisions/                        # Architectural Decision Records
 │   ├── ADR-000-template.md           # Template for new ADRs
@@ -108,9 +108,9 @@ Start here:
 3. [`REFACTORING_ROADMAP.md`](REFACTORING_ROADMAP.md) - Implementation plan
 
 **Detailed Specifications**:
-- [`REFACTOR-001`](specs/REFACTOR-001-split-monolithic-cli.md) - Split CLI files (12h, ROI 4.2)
-- [`REFACTOR-002`](specs/REFACTOR-002-pattern-extraction-consolidation.md) - Pattern extraction (6-8h, ROI 3.8)
-- [`REFACTOR-003`](specs/REFACTOR-003-defensive-error-handling.md) - Error handling (10-15h, ROI 5.0) ⭐ HIGHEST
+- [`REFACTOR-001`](specs/REFACTOR-001-split-monolithic-cli-files/) - Split CLI files (12h, ROI 4.2)
+- [`REFACTOR-002`](specs/REFACTOR-002-consolidate-pattern-extraction-logic/) - Pattern extraction (6-8h, ROI 3.8)
+- [`REFACTOR-003`](specs/REFACTOR-003-implement-defensive-error-handling/) - Error handling (10-15h, ROI 5.0) ⭐ HIGHEST
 
 **Architectural Decisions**:
 - [`ADR-008`](decisions/ADR-008-defensive-programming-strategy.md) - Defensive programming (proposed)
@@ -288,17 +288,17 @@ cp guidelines/GUIDELINE-000-template.md guidelines/GUIDELINE-XXX-title.md
 ### By Topic
 
 **Error Handling**:
-- Spec: `REFACTOR-003-defensive-error-handling.md`
+- Spec: `REFACTOR-003-implement-defensive-error-handling/`
 - ADR: `ADR-008-defensive-programming-strategy.md`
 - Guideline: TBD
 
 **CLI Architecture**:
-- Spec: `REFACTOR-001-split-monolithic-cli.md`
+- Spec: `REFACTOR-001-split-monolithic-cli-files/`
 - ADR: TBD
 - Guideline: TBD
 
 **Pattern Extraction**:
-- Spec: `REFACTOR-002-pattern-extraction-consolidation.md`
+- Spec: `REFACTOR-002-consolidate-pattern-extraction-logic/`
 - ADR: TBD
 - Guideline: TBD
 

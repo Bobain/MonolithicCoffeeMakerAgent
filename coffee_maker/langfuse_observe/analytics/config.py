@@ -7,7 +7,7 @@ Example:
     Load configuration from environment:
     >>> config = ExportConfig.from_env()
     >>> print(config.db_url)
-    'sqlite:///llm_metrics.db'
+    'sqlite:///data/metrics.db'
 
     Use PostgreSQL instead:
     >>> config = ExportConfig(
@@ -38,7 +38,7 @@ class ExportConfig:
         langfuse_secret_key: Langfuse secret API key
         langfuse_host: Langfuse host URL (default: https://cloud.langfuse.com)
         db_type: Database type ("sqlite" or "postgresql")
-        sqlite_path: Path to SQLite database file (default: llm_metrics.db)
+        sqlite_path: Path to SQLite database file (default: data/metrics.db)
         postgres_host: PostgreSQL host (required if db_type="postgresql")
         postgres_port: PostgreSQL port (default: 5432)
         postgres_database: PostgreSQL database name
@@ -51,7 +51,7 @@ class ExportConfig:
     Example:
         >>> config = ExportConfig.from_env()
         >>> print(config.db_url)
-        'sqlite:///llm_metrics.db'
+        'sqlite:///data/metrics.db'
     """
 
     # Langfuse credentials
@@ -59,9 +59,9 @@ class ExportConfig:
     langfuse_secret_key: str
     langfuse_host: str = "https://cloud.langfuse.com"
 
-    # Database configuration
+    # Database configuration (CFR-015: All databases in data/ directory)
     db_type: str = "sqlite"  # "sqlite" or "postgresql"
-    sqlite_path: str = "llm_metrics.db"
+    sqlite_path: str = "data/metrics.db"
 
     # PostgreSQL connection (only if db_type="postgresql")
     postgres_host: str = "localhost"
@@ -84,7 +84,7 @@ class ExportConfig:
             LANGFUSE_SECRET_KEY: Langfuse secret key (required)
             LANGFUSE_HOST: Langfuse host (optional)
             DB_TYPE: Database type - "sqlite" or "postgresql" (default: sqlite)
-            SQLITE_PATH: SQLite database path (default: llm_metrics.db)
+            SQLITE_PATH: SQLite database path (default: data/metrics.db)
             POSTGRES_HOST: PostgreSQL host (required if DB_TYPE=postgresql)
             POSTGRES_PORT: PostgreSQL port (default: 5432)
             POSTGRES_DATABASE: PostgreSQL database name
@@ -116,7 +116,7 @@ class ExportConfig:
             langfuse_secret_key=secret_key,
             langfuse_host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
             db_type=os.getenv("DB_TYPE", "sqlite"),
-            sqlite_path=os.getenv("SQLITE_PATH", "llm_metrics.db"),
+            sqlite_path=os.getenv("SQLITE_PATH", "data/metrics.db"),
             postgres_host=os.getenv("POSTGRES_HOST", "localhost"),
             postgres_port=int(os.getenv("POSTGRES_PORT", "5432")),
             postgres_database=os.getenv("POSTGRES_DATABASE", "llm_metrics"),

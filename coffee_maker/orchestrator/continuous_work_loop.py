@@ -37,29 +37,24 @@ from typing import Any, Dict, List, Optional
 
 from coffee_maker.cli.notifications import NotificationDB
 from coffee_maker.orchestrator.architect_coordinator import ArchitectCoordinator
+from coffee_maker.skills import get_skill
 
 logger = logging.getLogger(__name__)
 
-# Import orchestrator agent management skill
-agent_mgmt_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "orchestrator-agent-management"
-sys.path.insert(0, str(agent_mgmt_dir))
-from agent_management import OrchestratorAgentManagementSkill
+# Add .claude to sys.path for skill imports (CFR-026: Pythonic skill loading)
+repo_root = Path(__file__).parent.parent.parent
+skills_parent = repo_root / ".claude"
+if str(skills_parent) not in sys.path:
+    sys.path.insert(0, str(skills_parent))
 
-sys.path.pop(0)
+# Import skills using proper Python imports (PRIORITY 26: Refactored skill loading)
+from claude.skills.shared.orchestrator_agent_management.agent_management import (
+    OrchestratorAgentManagementSkill,
+)
+from claude.skills.shared.bug_tracking.bug_tracking import BugTrackingSkill
 
-# Import roadmap management skill (SINGLE SOURCE OF TRUTH for ROADMAP operations)
-roadmap_mgmt_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "roadmap-management"
-sys.path.insert(0, str(roadmap_mgmt_dir))
-from roadmap_management import RoadmapManagementSkill
-
-sys.path.pop(0)
-
-# Import bug tracking skill (database-backed bug tracking)
-bug_tracking_dir = Path(__file__).parent.parent.parent / ".claude" / "skills" / "shared" / "bug-tracking"
-sys.path.insert(0, str(bug_tracking_dir))
-from bug_tracking import BugTrackingSkill
-
-sys.path.pop(0)
+# Use RoadmapDatabase instead of RoadmapManagementSkill for proper database access
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
 
 @dataclass
@@ -112,11 +107,16 @@ class ContinuousWorkLoop:
         self.recently_completed: Dict[str, float] = {}
         self.completion_cooldown_seconds = 300  # 5 minutes cooldown
 
+        # Track recently failed architect attempts to prevent respawning
+        # Maps priority_number → failure_timestamp
+        self.architect_failures: Dict[str, float] = {}
+        self.architect_failure_cooldown_seconds = 300  # 5 minutes cooldown
+
         # Initialize agent management skill
         self.agent_mgmt = OrchestratorAgentManagementSkill()
 
-        # Initialize roadmap management skill (SINGLE SOURCE OF TRUTH)
-        self.roadmap_skill = RoadmapManagementSkill()
+        # Initialize roadmap database (SINGLE SOURCE OF TRUTH - database-backed)
+        self.roadmap_db = RoadmapDatabase(agent_name="orchestrator")
 
         # Initialize bug tracking skill (database-backed bug tracking)
         self.bug_skill = BugTrackingSkill()
@@ -221,6 +221,9 @@ class ContinuousWorkLoop:
         # Step 4: Monitor task progress
         self._monitor_tasks()
 
+        # Step 4.5: Self-healing - detect and report agent failures
+        self._detect_and_report_agent_failures()
+
         # Step 5: Save state
         self._save_state()
 
@@ -261,14 +264,18 @@ class ContinuousWorkLoop:
         3. Spawn architect instances for first N missing specs (parallel execution)
         4. Target: Always have 2-3 specs ahead of code_developer
         """
-        # Load all priorities from ROADMAP using skill (SINGLE SOURCE OF TRUTH)
-        result = self.roadmap_skill.execute(operation="get_all_priorities")
+        # Load all priorities from database (SINGLE SOURCE OF TRUTH)
+        priorities = self.roadmap_db.get_all_items()
 
-        if result.get("error"):
-            logger.error(f"Failed to get priorities: {result['error']}")
+        if priorities is None:
+            logger.error("Failed to get priorities from database")
             return
 
-        priorities = result.get("result", [])
+        # Add compatibility mapping: database uses 'id' field for US-XXX values
+        # but existing orchestrator code expects 'us_id' field
+        for p in priorities:
+            if p.get("id", "").startswith("US-"):
+                p["us_id"] = p["id"]  # Map id to us_id for user stories
 
         if not priorities:
             logger.debug("No priorities found in ROADMAP")
@@ -285,17 +292,30 @@ class ContinuousWorkLoop:
         logger.info(f"📋 Found {len(missing_specs)} priorities without specs")
 
         # Prioritize: Create specs for first N missing (spec backlog target)
+        current_time = time.time()
         for priority in missing_specs[: self.config.spec_backlog_target]:
+            priority_num = str(priority.get("number"))
+            priority_name = priority.get("us_id") or f"PRIORITY {priority['number']}"
+
+            # Check if architect recently failed to create this spec (prevent respawning)
+            if priority_num in self.architect_failures:
+                failure_time = self.architect_failures[priority_num]
+                elapsed = current_time - failure_time
+                if elapsed < self.architect_failure_cooldown_seconds:
+                    logger.debug(
+                        f"Skipping {priority_name} (architect failed {elapsed:.0f}s ago, cooldown: {self.architect_failure_cooldown_seconds}s)"
+                    )
+                    continue
+                else:
+                    # Cooldown expired, remove from tracking
+                    del self.architect_failures[priority_num]
+
             # Check if already creating this spec
             if self._is_spec_in_progress(priority["number"]):
-                # Construct name from us_id or number for logging
-                priority_name = priority.get("us_id") or f"PRIORITY {priority['number']}"
                 logger.debug(f"Spec for {priority_name} already in progress")
                 continue
 
             # Spawn architect to create spec
-            # Skill returns: us_id (e.g., "US-059") and number (e.g., "59")
-            priority_name = priority.get("us_id") or f"PRIORITY {priority['number']}"
             priority_number = priority["number"]  # e.g., "59" or "1.5"
             logger.info(f"🏗️  Spawning architect for {priority_name} spec creation")
 
@@ -436,8 +456,10 @@ class ContinuousWorkLoop:
             reviews_dir.mkdir(parents=True, exist_ok=True)
 
             for commit_sha in recent_commits:
-                review_file = reviews_dir / f"REVIEW-{commit_sha[:8]}.md"
-                if not review_file.exists():
+                # Check if review exists using glob pattern (REVIEW-{date}-{commit[:7]}.md)
+                review_pattern = f"REVIEW-*-{commit_sha[:7]}.md"
+                existing_reviews = list(reviews_dir.glob(review_pattern))
+                if not existing_reviews:
                     unreviewed_commits.append(commit_sha)
 
             if not unreviewed_commits:
@@ -517,14 +539,18 @@ class ContinuousWorkLoop:
         3. If independent: spawn parallel code_developers in worktrees
         4. If not independent: fall back to sequential execution
         """
-        # Use roadmap-management skill (SINGLE SOURCE OF TRUTH)
-        result = self.roadmap_skill.execute(operation="get_all_priorities")
+        # Use roadmap database (SINGLE SOURCE OF TRUTH)
+        priorities = self.roadmap_db.get_all_items()
 
-        if result.get("error"):
-            logger.error(f"Failed to get priorities: {result['error']}")
+        if priorities is None:
+            logger.error("Failed to get priorities from database")
             return
 
-        priorities = result.get("result", [])
+        # Add compatibility mapping: database uses 'id' field for US-XXX values
+        # but existing orchestrator code expects 'us_id' field
+        for p in priorities:
+            if p.get("id", "").startswith("US-"):
+                p["us_id"] = p["id"]  # Map id to us_id for user stories
 
         if not priorities:
             return
@@ -540,7 +566,7 @@ class ContinuousWorkLoop:
 
             # Check if spec exists
             # Use US number for spec lookup (e.g., "US-104" -> "SPEC-104-*.md")
-            # Skill returns: number="20" (PRIORITY number), us_id="US-104"
+            # Compatibility: us_id field is mapped from database 'id' field
             # Specs are named with US number, not PRIORITY number
             us_id = p.get("us_id")
             spec_number = None
@@ -553,12 +579,28 @@ class ContinuousWorkLoop:
                 spec_number = p.get("number")
 
             if spec_number:
-                spec_pattern = f"SPEC-{spec_number}-*.md"
+                # Zero-pad spec number to 3 digits (SPEC-001, SPEC-025, SPEC-104)
+                if str(spec_number).isdigit():
+                    spec_number = str(spec_number).zfill(3)
+
                 spec_dir = Path("docs/architecture/specs")
-                spec_files = list(spec_dir.glob(spec_pattern))
-                if len(spec_files) > 0:
+
+                # Check for both monolithic (.md files) and hierarchical (directories) specs
+                # Monolithic: SPEC-{number}-{slug}.md
+                file_pattern = f"SPEC-{spec_number}-*.md"
+                monolithic_specs = list(spec_dir.glob(file_pattern))
+
+                # Hierarchical: SPEC-{number}-{slug}/ directory
+                dir_pattern = f"SPEC-{spec_number}-*"
+                hierarchical_specs = [p for p in spec_dir.glob(dir_pattern) if p.is_dir()]
+
+                if len(monolithic_specs) > 0:
                     p["has_spec"] = True
-                    p["spec_path"] = str(spec_files[0])
+                    p["spec_path"] = str(monolithic_specs[0])
+                    planned_priorities.append(p)
+                elif len(hierarchical_specs) > 0:
+                    p["has_spec"] = True
+                    p["spec_path"] = str(hierarchical_specs[0])  # Path to directory
                     planned_priorities.append(p)
 
         # BUG-074: Filter out recently completed priorities (cooldown period)
@@ -763,6 +805,29 @@ class ContinuousWorkLoop:
                 # Task completed, remove from active_tasks
                 completed_tasks.append(task_key)
                 logger.debug(f"✅ Task {task_key} completed (PID {task_pid} finished)")
+
+                # Check if this was a spec creation task that failed
+                if task_info.get("type") == "spec_creation":
+                    priority_num = task_key.replace("spec_", "")
+                    # Check if spec was actually created
+                    # Build priority dict for _has_spec check
+                    us_id = f"US-{priority_num}" if priority_num.isdigit() else None
+                    priority_dict = {"number": priority_num, "us_id": us_id}
+                    if not self.architect_coordinator._has_spec(priority_dict):
+                        # Spec creation failed, add to cooldown
+                        self.architect_failures[priority_num] = time.time()
+                        logger.warning(
+                            f"⚠️  Architect failed to create spec for priority {priority_num}, added to cooldown ({self.architect_failure_cooldown_seconds}s)"
+                        )
+
+                # BUG-074: Check if this was an implementation task (code_developer)
+                # Add to cooldown to prevent immediate re-spawning (both success and failure)
+                if task_info.get("type") == "implementation":
+                    priority_num = str(task_info.get("priority_number"))
+                    self.recently_completed[priority_num] = time.time()
+                    logger.info(
+                        f"✅ Marked priority {priority_num} as recently completed (cooldown: {self.completion_cooldown_seconds}s)"
+                    )
 
                 # CFR-013: Clean up worktree if task had one
                 worktree_path = task_info.get("worktree_path")
@@ -1038,20 +1103,11 @@ class ContinuousWorkLoop:
             Dict with validation result from task-separator skill
         """
         try:
-            # Import and execute task-separator skill
-            import importlib.util
-
-            skill_path = self.repo_root / ".claude" / "skills" / "architect" / "task-separator" / "task_separator.py"
-
-            if not skill_path.exists():
-                return {"valid": False, "reason": f"task-separator skill not found: {skill_path}"}
-
-            spec = importlib.util.spec_from_file_location("task_separator", skill_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            # Load task_separator skill using Pythonic imports (PRIORITY 26)
+            task_separator_module = get_skill("architect.task_separator", repo_root=self.repo_root)
 
             # Call skill
-            result = module.main({"priority_ids": priority_ids})
+            result = task_separator_module.main({"priority_ids": priority_ids})
             return result
 
         except Exception as e:
@@ -1199,6 +1255,16 @@ class ContinuousWorkLoop:
                 ("active_tasks", active_tasks_json, now),
             )
 
+            # Save architect_failures as JSON blob
+            architect_failures_json = json.dumps(self.architect_failures)
+            cursor.execute(
+                """
+                INSERT OR REPLACE INTO orchestrator_state (key, value, updated_at)
+                VALUES (?, ?, ?)
+                """,
+                ("architect_failures", architect_failures_json, now),
+            )
+
             conn.commit()
             conn.close()
 
@@ -1233,6 +1299,9 @@ class ContinuousWorkLoop:
                 elif key == "active_tasks":
                     # Load active_tasks from JSON blob
                     self.current_state["active_tasks"] = json.loads(value)
+                elif key == "architect_failures":
+                    # Load architect_failures from JSON blob
+                    self.architect_failures = json.loads(value)
                 elif key == "orchestrator_start_time":
                     # Load start time for crash recovery
                     self.start_time = datetime.fromisoformat(value)
@@ -1246,3 +1315,131 @@ class ContinuousWorkLoop:
         except Exception as e:
             logger.warning(f"Failed to load state from database: {e}, starting fresh")
             self.current_state = {}
+
+    def _detect_and_report_agent_failures(self):
+        """
+        Self-healing: Detect repeated agent failures and file bug tickets.
+
+        This method provides autonomous observability by:
+        1. Detecting agents that fail repeatedly (exit without exit code)
+        2. Analyzing failure patterns
+        3. Creating bug tickets for systematic failures
+        4. Ensuring no duplicate tickets for same issue
+
+        Returns:
+            Number of bug tickets created
+        """
+        try:
+            import sqlite3
+
+            conn = sqlite3.connect(str(self.repo_root / "data" / "orchestrator.db"))
+            cursor = conn.cursor()
+
+            # Find agents that failed recently (NULL exit code = crash/immediate exit)
+            cursor.execute(
+                """
+                SELECT agent_type, task_id, spawned_at, completed_at,
+                       COUNT(*) as failure_count
+                FROM agent_lifecycle
+                WHERE status = 'completed'
+                  AND exit_code IS NULL
+                  AND completed_at > datetime('now', '-30 minutes')
+                GROUP BY agent_type, SUBSTR(task_id, 1, INSTR(task_id || '-', '-') - 1)
+                HAVING failure_count >= 3
+                """
+            )
+            repeated_failures = cursor.fetchall()
+            conn.close()
+
+            if not repeated_failures:
+                return 0
+
+            bugs_created = 0
+
+            for agent_type, task_id, spawned_at, completed_at, failure_count in repeated_failures:
+                # Extract task identifier (spec-031, impl-24, etc.)
+                task_prefix = task_id.split("-")[0] if "-" in task_id else task_id
+
+                # Check if we already reported this issue
+                bug_title = f"{agent_type.title()} failing on {task_prefix} tasks"
+
+                # Check existing bugs with same title
+                try:
+                    existing_bugs = self.bug_skill.list_bugs(
+                        status_filter=["open", "analyzing", "in_progress"], category_filter=[f"{agent_type}_failure"]
+                    )
+
+                    already_reported = any(bug.get("title") == bug_title for bug in existing_bugs.get("bugs", []))
+
+                    if already_reported:
+                        logger.debug(f"Bug already reported for {agent_type} {task_prefix} failures, skipping")
+                        continue
+
+                except Exception as e:
+                    logger.warning(f"Failed to check existing bugs: {e}")
+
+                # Analyze failure - check stderr logs if available
+                failure_analysis = f"""Detected {failure_count} repeated failures of {agent_type} in the last 30 minutes.
+
+**Pattern**: {agent_type} spawns and exits immediately (NO EXIT CODE) without completing work.
+**Task Pattern**: {task_prefix}-* tasks
+**Example Task**: {task_id}
+**Last Occurrence**: {completed_at}
+
+**Likely Root Causes**:
+1. Missing LLM configuration (for architect/code-reviewer agents)
+2. Missing environment variables
+3. Configuration file issues
+4. Dependency conflicts
+
+**Recommended Investigation**:
+1. Check agent logs for error messages
+2. Verify .env file exists and has correct API keys
+3. Test agent manually: `poetry run {agent_type} --help`
+4. Check database for error patterns
+"""
+
+                # Create bug ticket
+                bug_result = self.bug_skill.report_bug(
+                    title=bug_title,
+                    description=failure_analysis,
+                    reporter="orchestrator",
+                    priority="High",
+                    category=f"{agent_type}_failure",
+                    reproduction_steps=[
+                        f"1. Start orchestrator: `poetry run orchestrator start`",
+                        f"2. Observe {agent_type} spawning for {task_prefix} tasks",
+                        f"3. Agent exits immediately without work completion",
+                        f"4. Pattern repeats {failure_count}+ times",
+                    ],
+                    assigned_to="architect",  # Architect should investigate infrastructure issues
+                )
+
+                if bug_result.get("error"):
+                    logger.error(f"Failed to create bug ticket: {bug_result['error']}")
+                else:
+                    bug_number = bug_result.get("bug_number", "???")
+                    logger.warning(
+                        f"🐛 Created BUG-{bug_number:03d}: {agent_type.title()} failing ({failure_count} failures detected)"
+                    )
+
+                    # Send notification
+                    self.notifications.create_notification(
+                        type="bug_detected",
+                        title=f"Bug Detected: BUG-{bug_number:03d}",
+                        message=f"{agent_type.title()} failing repeatedly. Bug ticket created for investigation.",
+                        priority="high",
+                        sound=False,  # CFR-009: Silent for background agent
+                        agent_id="orchestrator",
+                    )
+
+                    bugs_created += 1
+
+            if bugs_created > 0:
+                logger.warning(f"🔍 Self-healing: Created {bugs_created} bug ticket(s) for repeated failures")
+
+            return bugs_created
+
+        except Exception as e:
+            logger.error(f"Failed to detect/report agent failures: {e}", exc_info=True)
+            return 0

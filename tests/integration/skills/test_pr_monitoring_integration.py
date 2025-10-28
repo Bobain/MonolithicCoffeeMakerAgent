@@ -1,29 +1,29 @@
 """
 Integration test for pr-monitoring-analysis skill with real GitHub PRs.
 
+Updated to use Pythonic imports (PRIORITY 26).
+
 Tests the full workflow against actual repository PRs (if available).
 
 Author: code_developer (implementing US-071)
 Date: 2025-10-19
 """
 
-import importlib.util
+import json
 import sys
 import time
-from pathlib import Path
-from unittest.mock import patch, MagicMock
-import json
 from datetime import datetime, timezone
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
+# Add .claude to path for skill imports (PRIORITY 26)
+repo_root = Path(__file__).parent.parent.parent.parent
+sys.path.insert(0, str(repo_root / ".claude"))
 
-# Load pr_monitoring module
-skill_path = (
-    Path(__file__).parent.parent.parent.parent / ".claude/skills/project-manager/pr-monitoring/pr_monitoring.py"
-)
-spec = importlib.util.spec_from_file_location("pr_monitoring", skill_path)
-pm = importlib.util.module_from_spec(spec)
+# Import using proper Python imports (PRIORITY 26)
+from claude.skills.project_manager.pr_monitoring import pr_monitoring as pm
+
 sys.modules["pr_monitoring"] = pm
-spec.loader.exec_module(pm)
 
 
 class TestPRMonitoringIntegration:

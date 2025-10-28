@@ -78,7 +78,7 @@ def example_concurrent_different_agents():
         AgentType.PROJECT_MANAGER,
         AgentType.ARCHITECT,
         AgentType.ASSISTANT,
-        AgentType.CODE_SEARCHER,
+        AgentType.ASSISTANT,
     ]
 
     registered = []

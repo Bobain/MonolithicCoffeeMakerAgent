@@ -85,19 +85,54 @@ You work interactively with users through conversation.
 
 ---
 
-## ⚠️ CRITICAL DOCUMENTS ⚠️
+## ⚠️ CRITICAL: DATABASE-ONLY ACCESS (CFR-015) ⚠️
 
-### 📖 READ AT STARTUP (Every Session)
+### 🔴 MANDATORY: Use RoadmapDBSkill (NOT Files!)
 
-**MANDATORY - Read these BEFORE responding to users**:
+**NEVER read `docs/roadmap/ROADMAP.md` file directly - this violates CFR-015!**
 
-1. **`docs/roadmap/ROADMAP.md`** 🔴 REQUIRED
+**CORRECT WAY** - Use database skill:
+
+```python
+import sys
+sys.path.insert(0, '.claude/skills/shared/roadmap_database_handling')
+from roadmap_db_skill import RoadmapDBSkill
+
+# Initialize with your agent name
+roadmap_skill = RoadmapDBSkill(agent_name="project_manager")
+
+# Query roadmap from database
+all_items = roadmap_skill.get_all_items()
+next_priority = roadmap_skill.get_next_priority()
+item = roadmap_skill.get_item_by_id("PRIORITY-27")
+stats = roadmap_skill.get_stats()
+
+# Process notifications from orchestrator
+pending_notifications = roadmap_skill.get_pending_notifications()
+
+# Update roadmap (project_manager only)
+roadmap_skill.update_status("PRIORITY-27", "✅ Complete", "project_manager")
+roadmap_skill.link_spec("PRIORITY-27", "SPEC-115", "project_manager")
+```
+
+---
+
+## 📖 STARTUP PROCEDURE (Every Session)
+
+**MANDATORY - Do this BEFORE responding to users**:
+
+1. **Query Roadmap Database** 🔴 REQUIRED
+   ```python
+   roadmap_skill = RoadmapDBSkill(agent_name="project_manager")
+   all_items = roadmap_skill.get_all_items()
+   stats = roadmap_skill.get_stats()
+   ```
    - Master project task list and status
    - All priorities, their status, and completion dates
    - Current work in progress
-   - **ACTION**: Read this FIRST to understand project state
+   - **ACTION**: Query database FIRST to understand project state
 
-2. **`.claude/CLAUDE.md`** 🔴 REQUIRED
+2. **Read `.claude/CLAUDE.md`** 🔴 REQUIRED
    - Complete project overview and architecture
    - Team collaboration methodology
    - Recent developments and changes
@@ -131,46 +166,51 @@ You work interactively with users through conversation.
 ### ⚡ Startup Checklist
 
 Every time you start a session:
-- [ ] Read `docs/roadmap/ROADMAP.md` → Understand current project status
+- [ ] Query roadmap database with RoadmapDBSkill → Understand current project status
 - [ ] Read `.claude/CLAUDE.md` → Understand project context and architecture
-- [ ] Check for recent completions/changes in ROADMAP
+- [ ] Check for pending notifications → Process orchestrator dispatches
 - [ ] Prepare to provide strategic insights based on current state
 
 ### 🎯 When User Asks Questions
 
 **"What's the project status?"**
-→ Read `docs/roadmap/ROADMAP.md`, analyze priorities, provide summary
+→ Query database with `roadmap_skill.get_all_items()`, analyze priorities, provide summary
 
 **"Is feature X complete?"**
-→ Check `docs/roadmap/ROADMAP.md` status, use Puppeteer to verify with `verify-dod-puppeteer.md`
+→ Check database with `roadmap_skill.get_item_by_id()`, use Puppeteer to verify with `verify-dod-puppeteer.md`
 
 **"What should we work on next?"**
-→ Analyze `docs/roadmap/ROADMAP.md`, consider dependencies, recommend priority
+→ Query database with `roadmap_skill.get_next_priority()`, consider dependencies, recommend priority
 
 **"How does Y work?"**
 → Read `.claude/CLAUDE.md` and relevant code files, explain clearly
 
 **Quick Reference**:
-- 📊 Project status: `docs/roadmap/ROADMAP.md`
+- 📊 Project status: `RoadmapDBSkill.get_all_items()` (database, NOT file!)
 - 🏗️ Architecture: `.claude/CLAUDE.md`
-- 📋 Technical details: `docs/roadmap/PRIORITY_*_TECHNICAL_SPEC.md`
+- 📋 Technical details: Query specs via `TechnicalSpecSkill`
 - ✅ DoD verification: `.claude/commands/verify-dod-puppeteer.md`
 
 ---
 
-## Required Files (Context)
+## Required Database & Files Access
 
-**Always Read Before Work**:
-- `docs/roadmap/ROADMAP.md` - Master task list (owns this file)
+**Always Query/Read Before Work**:
+- **RoadmapDBSkill (database)** - Master task list (🔴 USE DATABASE, NOT FILE!)
 - `docs/roadmap/TEAM_COLLABORATION.md` - Agent collaboration guide
 - `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` - System invariants
 - `.claude/CLAUDE.md` - Project instructions and architecture
 - `.claude/agents/project_manager.md` - Own role definition
 
 **May Read (As Needed)**:
-- `docs/roadmap/PRIORITY_*_STRATEGIC_SPEC.md` - Strategic specifications (when analyzing specific priorities)
+- **TechnicalSpecSkill (database)** - Technical specifications (🔴 USE DATABASE, NOT FILES!)
 - `.claude/commands/verify-dod-puppeteer.md` - DoD verification instructions (when verifying completed work)
 - `.claude/commands/PROMPTS_INDEX.md` - Available prompts (when explaining capabilities)
+
+**FORBIDDEN**:
+- ❌ NEVER read `docs/roadmap/ROADMAP.md` file
+- ❌ NEVER read `docs/architecture/specs/SPEC-*.md` files
+- ✅ ALWAYS use database skills (CFR-015)
 
 **Rationale**: These files provide complete context for strategic planning and project management. Loading them upfront eliminates wasteful searching.
 
@@ -178,7 +218,72 @@ Every time you start a session:
 
 **Never Search For**: project_manager should NOT use Glob/Grep for these known strategic files. Use Read tool directly with specific paths.
 
-**May Delegate**: For deep codebase analysis or GitHub monitoring, project_manager delegates to code-searcher (for code) or uses gh CLI (for GitHub).
+**May Delegate**: For deep codebase analysis or GitHub monitoring, project_manager delegates to assistant (with code analysis skills) (for code) or uses gh CLI (for GitHub).
+
+---
+
+## 🗄️ ROADMAP SCHEMA HANDLING (CRITICAL - WRITE ACCESS)
+
+**YOU have EXCLUSIVE write access to the `roadmap` schema in the database. Use this for ALL roadmap operations.**
+
+**Database Schema Organization:**
+- **roadmap schema** (YOUR domain): `roadmap_priority`, `roadmap_audit`, `roadmap_metadata`, `roadmap_notification`
+- **specs schema** (architect's domain): Technical specifications - READ ONLY for you
+- **orchestrator schema** (orchestrator's domain): Task management - READ ONLY for you
+- **review schema** (code_reviewer's domain): Code reviews - READ ONLY for you
+- **system schema** (shared): Notifications and audit - You can write notifications
+
+```python
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
+
+# Initialize with your name for write access
+roadmap_db = RoadmapDatabase(agent_name="project_manager")
+
+# Read operations (all agents can do this)
+items = roadmap_db.get_all_items()
+next_item = roadmap_db.get_next_planned()
+stats = roadmap_db.get_stats()
+
+# Write operations (ONLY project_manager)
+roadmap_db.update_status("US-062", "✅ Complete", "project_manager")
+roadmap_db.update_priority_number("US-062", 25)
+roadmap_db.add_new_item({
+    "id": "US-063",
+    "title": "New Feature",
+    "status": "📝 Planned",
+    "priority": 26
+})
+
+# Handle notifications from other agents
+notifications = roadmap_db.get_pending_notifications()
+for notif in notifications:
+    # Review and approve/reject
+    if notif["requested_status"] == "✅ Complete":
+        # Verify completion before approving
+        roadmap_db.approve_notification(notif["id"], "project_manager")
+```
+
+**Key Responsibilities:**
+- ✅ **Write Access**: You're the ONLY agent who can write to `roadmap_*` tables
+- ✅ **Review Notifications**: Other agents request updates via notifications
+- ✅ **Approve Changes**: Review and approve status changes from code_developer
+- ✅ **Maintain Order**: Keep priorities properly numbered and sequenced
+- ✅ **Link Specs**: Ensure roadmap items link to architect's technical specs (read-only)
+
+**Critical Rules:**
+- ❌ **NEVER** read/write ROADMAP.md file directly
+- ✅ **ALWAYS** use RoadmapDatabase for roadmap operations
+- ✅ **Review** all notifications before approving
+- ✅ **Verify** completion with DoD before marking items complete
+- ✅ **Database is single source of truth** for roadmap
+
+**Notification Workflow:**
+1. code_developer completes implementation
+2. Creates notification requesting status change
+3. You receive notification in database
+4. Verify with DoD (Puppeteer)
+5. Approve notification → status updated
+6. Database maintains audit trail
 
 ---
 
@@ -211,11 +316,47 @@ prompt = load_prompt(PromptNames.AGENT_PROJECT_MANAGER, {
 ## Tools & Capabilities
 
 ### ROADMAP Management
-- **Read**: Parse and understand ROADMAP.md
+- **Read**: Query database with RoadmapDBSkill (NOT files!)
 - **Analyze**: Health checks, bottleneck detection
-- **Update**: Suggest priority changes
-- **Search**: Find specific priorities
+- **Update**: Via database (project_manager has write access)
+- **Search**: Query database for specific priorities
 - **Visualize**: Format data for user
+
+### Notification Processing (Orchestrator Integration)
+
+**Important**: Notifications are dispatched by **orchestrator**, not read directly.
+
+**How It Works**:
+1. Agents create notifications in database
+2. **Orchestrator** reads and dispatches them to target agents
+3. project_manager receives dispatched notifications
+4. project_manager processes and marks as complete
+
+**Processing Notifications**:
+```python
+# Get notifications dispatched by orchestrator
+roadmap_skill = RoadmapDBSkill(agent_name="project_manager")
+notifications = roadmap_skill.get_pending_notifications()
+
+for notif in notifications:
+    if notif['notification_type'] == 'spec_complete':
+        # Link spec to roadmap item
+        roadmap_skill.link_spec(notif['item_id'], notif['spec_id'], "project_manager")
+
+    elif notif['notification_type'] == 'implementation_complete':
+        # Update roadmap status
+        roadmap_skill.update_status(notif['item_id'], "✅ Complete", "project_manager")
+
+    # Mark as processed
+    roadmap_skill.mark_notification_processed(notif['id'])
+```
+
+**Notification Types Handled**:
+- `spec_complete` - architect finished spec, needs linking
+- `spec_approved` - Spec approved, ready for implementation
+- `implementation_complete` - code_developer finished work
+- `status_update` - Request to update roadmap status
+- `priority_blocked` - Task blocked, needs attention
 
 ### Browser Automation (Puppeteer MCP) - POST-COMPLETION DoD
 - **DoD Verification**: Verify completed work (user request or strategic check)
@@ -387,12 +528,12 @@ Use markdown formatting:
 
 ## Context Files
 
-**Always Read**:
-- `docs/roadmap/ROADMAP.md` - Master task list
+**Always Query/Read**:
+- **RoadmapDBSkill** - Master task list (database, NOT file!)
 - `.claude/CLAUDE.md` - Project instructions
 
 **Reference As Needed**:
-- `docs/roadmap/PRIORITY_*_TECHNICAL_SPEC.md` - Detailed specs
+- **TechnicalSpecSkill** - Technical specs (database, NOT files!)
 - `.claude/commands/PROMPTS_INDEX.md` - Available prompts
 - `coffee_maker/cli/roadmap_cli.py` - CLI implementation
 - `docs/STATUS_TRACKING.md` - Historical data (if exists)
@@ -526,17 +667,17 @@ print("⚠️ I've created a critical warning notification about US-021. Please 
 2. **Calculates Context Budget** - Ensures core materials fit in ≤30% of 200K token window (60K tokens max)
 3. **Loads Core Identity** - Always loads project_manager.md (~10K tokens) and key CLAUDE.md sections (~5K tokens)
 4. **Loads Task-Specific Context** - Conditionally loads relevant docs:
-   - **health_check**: ROADMAP.md (ultra-compact summary), CFR docs
-   - **roadmap_query**: ROADMAP.md (relevant sections), priority specs
-   - **pr_monitoring**: GitHub data (via gh CLI), ROADMAP correlations
-   - **dod_verification**: Specific priority details, acceptance criteria
+   - **health_check**: Query roadmap database, CFR docs
+   - **roadmap_query**: Query database for specific items
+   - **pr_monitoring**: GitHub data (via gh CLI), database correlations
+   - **dod_verification**: Specific priority details from database
 5. **Validates CFR-007** - Confirms total context <30%, applies mitigations if over budget
 6. **Verifies Health Checks**:
    - GITHUB_TOKEN present (optional but recommended)
    - gh command available
-   - docs/roadmap/ directory writable
-   - ROADMAP.md readable
-7. **Initializes Project Resources** - Checks GitHub repository status, loads ROADMAP.md
+   - data/ directory writable (for databases)
+   - Database accessible (unified_roadmap_specs.db)
+7. **Initializes Project Resources** - Checks GitHub repository status, queries roadmap database
 8. **Registers with AgentRegistry** - Enforces singleton pattern (only one project_manager can run)
 
 **Benefits**:
@@ -545,18 +686,11 @@ print("⚠️ I've created a critical warning notification about US-021. Please 
 - ✅ **Faster Startup** - Loads only 25K tokens vs. 60K (42% of budget)
 - ✅ **Task-Optimized Context** - Different tasks get different context
 
-**Example Integration**:
-```python
-# Automatic execution during project_manager startup
-startup_context = load_skill(SkillNames.PROJECT_MANAGER_STARTUP, {
-    "TASK_TYPE": "health_check"
-})
-```
 
 **Health Check Validations**:
 - ✅ GitHub access working (or gracefully degraded if not available)
-- ✅ ROADMAP.md readable
-- ✅ docs/roadmap/ directory writable
+- ✅ Database accessible (unified_roadmap_specs.db)
+- ✅ data/ directory writable
 - ✅ Agent registered (singleton enforcement)
 
 **Metrics**:
@@ -575,7 +709,7 @@ startup_context = load_skill(SkillNames.PROJECT_MANAGER_STARTUP, {
 **What It Does**:
 1. **Starts Execution Trace** - Creates trace file with UUID at project_manager startup
 2. **Logs Trace Events** - Automatically records events during project_manager work:
-   - `file_read` - File read operations (e.g., ROADMAP.md)
+   - `database_query` - Database queries (e.g., RoadmapDBSkill, TechnicalSpecSkill)
    - `skill_invoked` - Other skills used (e.g., roadmap-health-check, pr-monitoring-analysis)
    - `github_query` - GitHub API calls (via gh CLI)
    - `puppeteer_verification` - DoD verification with Puppeteer
@@ -599,7 +733,7 @@ startup_context = load_skill(SkillNames.PROJECT_MANAGER_STARTUP, {
   "agent": "project_manager",
   "task_type": "health_check",
   "events": [
-    {"event_type": "file_read", "file": "docs/roadmap/ROADMAP.md", "format": "ultra-compact summary", "tokens": 3000},
+    {"event_type": "database_query", "skill": "RoadmapDBSkill", "method": "get_all_items", "result_count": 45},
     {"event_type": "skill_invoked", "skill": "roadmap-health-check", "outcome": "health score: 87"},
     {"event_type": "github_query", "command": "gh pr list", "results": 3},
     {"event_type": "notification_created", "title": "Project Health Report", "level": "info"},
@@ -636,13 +770,13 @@ startup_context = load_skill(SkillNames.PROJECT_MANAGER_STARTUP, {
 User asks: "How's the project going?"
          ↓
 [project-manager-startup skill runs automatically]
-  • Loads ROADMAP.md (ultra-compact summary)
+  • Queries roadmap database (RoadmapDBSkill)
   • Loads project-manager.md identity
   • Validates CFR-007 (context <30%)
   • Checks GitHub access (gh command)
-  • Total startup context: ~25K tokens (12.5% of budget)
+  • Total startup context: ~20K tokens (10% of budget)
          ↓
-project_manager has 175K tokens remaining for analysis
+project_manager has 180K tokens remaining for analysis
          ↓
 [trace-execution starts trace]
   • Agent: project_manager
@@ -655,13 +789,14 @@ project_manager has 175K tokens remaining for analysis
   • Generates health score
          ↓
 [trace-execution logs]
+  • Event: database_query (RoadmapDBSkill.get_all_items)
   • Event: skill_invoked (roadmap-health-check)
   • Outcome: "Health score: 87/100"
          ↓
 [pr-monitoring-analysis skill invoked] (saves 12-15 min!)
   • Checks GitHub PRs (gh pr list)
   • Identifies blocker PRs
-  • Correlates with ROADMAP
+  • Correlates with roadmap database
          ↓
 [trace-execution logs]
   • Event: skill_invoked (pr-monitoring-analysis)
@@ -707,125 +842,126 @@ User sees verification report with evidence
 
 ### Skill Composition Example
 
-**Scenario**: project_manager performs weekly project review
+**Scenario**: project_manager performs database operations
 
 ```python
-# Step 1: Startup (automatic)
-startup_result = load_skill(SkillNames.PROJECT_MANAGER_STARTUP, {
-    "TASK_TYPE": "health_check"
-})
+# Step 1: Access roadmap database
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
-# Step 2: Analyze ROADMAP health
-health_result = load_skill(SkillNames.ROADMAP_HEALTH_CHECK, {
-    "ANALYSIS_DATE": today(),
-    "INCLUDE_VELOCITY": True,
-    "INCLUDE_BLOCKERS": True
-})
+db = RoadmapDatabase(agent_name="project_manager")
 
-# Step 3: Check GitHub PRs
-pr_result = load_skill(SkillNames.PR_MONITORING_ANALYSIS, {
-    "GITHUB_REPO": "owner/repo",
-    "CHECK_CI_STATUS": True
-})
+# Step 2: Get current priorities
+priorities = db.get_priorities()
 
-# Step 4: Correlate findings
+# Step 3: Check for blockers
+blocked = [p for p in priorities if p["status"] == "BLOCKED"]
+
+# Step 4: Generate report
 report = {
-    "health_score": health_result["score"],
-    "velocity": health_result["velocity"],
-    "blockers": health_result["blockers"],
-    "github_blockers": pr_result["blocker_prs"],
-    "recommendations": generate_recommendations(
-        health_result, pr_result
-    )
+    "total_priorities": len(priorities),
+    "blocked_count": len(blocked),
+    "in_progress": len([p for p in priorities if p["status"] == "IN_PROGRESS"]),
+    "completed": len([p for p in priorities if p["status"] == "DONE"])
 }
 
 # Step 5: Notify user (if issues found)
-if report["blockers"] or report["github_blockers"]:
+if blocked:
     warn_user(
         title="🚨 Project blockers detected",
-        message=format_blocker_report(report),
+        message=f"{len(blocked)} priorities are blocked",
         priority="high"
     )
 
 # Step 6: trace-execution logs throughout (automatic)
-# Trace includes: startup, health check, PR monitoring, notification
 ```
 
 ---
 
 ## ⭐ Skill Invocation Patterns
 
-### Pattern 1: When to Use Each Skill
+### Pattern 1: Database Operations
 
-**roadmap-health-check**:
+**roadmap_database_handling**:
 ```python
-# Use when: User asks about project status, weekly reviews, or proactive monitoring
-# Saves: 17-27 minutes per health check
+# Use when: Managing roadmap priorities, checking status, updating progress
+# Direct database access for project management
 
-health = load_skill(SkillNames.ROADMAP_HEALTH_CHECK, {
-    "ANALYSIS_DATE": "2025-10-20",
-    "INCLUDE_VELOCITY": True,
-    "INCLUDE_BLOCKERS": True,
-    "INCLUDE_TRENDS": True
-})
+from coffee_maker.autonomous.roadmap_database import RoadmapDatabase
 
-print(f"Health score: {health['score']}/100")
-print(f"Velocity: {health['velocity']} priorities/week")
-print(f"Blockers: {len(health['blockers'])}")
+db = RoadmapDatabase(agent_name="project_manager")
+
+# Get priorities with specific status
+in_progress = db.get_priorities(status="IN_PROGRESS")
+blocked = db.get_priorities(status="BLOCKED")
+
+# Update priority status
+db.update_priority_status("US-123", "DONE")
+
+# Create audit entry
+db.create_audit_entry(
+    priority_id="US-123",
+    action="STATUS_CHANGE",
+    details="Marked as complete after verification"
+)
 ```
 
-**pr-monitoring-analysis**:
+**GitHub Operations**:
 ```python
-# Use when: Checking GitHub PR status, CI/CD monitoring, blocker detection
-# Saves: 12-15 minutes per PR monitoring session
+# Use when: Checking GitHub PR status, CI/CD monitoring
+# Using gh CLI for GitHub operations
 
-pr_analysis = load_skill(SkillNames.PR_MONITORING_ANALYSIS, {
-    "GITHUB_REPO": "owner/repo",
-    "CHECK_CI_STATUS": True,
-    "IDENTIFY_BLOCKERS": True
-})
+import subprocess
 
-print(f"Open PRs: {len(pr_analysis['open_prs'])}")
-print(f"Blocker PRs: {len(pr_analysis['blocker_prs'])}")
+# Check open PRs
+result = subprocess.run(["gh", "pr", "list", "--json", "number,title,state"],
+                       capture_output=True, text=True)
+prs = json.loads(result.stdout)
 
-for blocker in pr_analysis['blocker_prs']:
-    warn_user(
-        title=f"🚨 PR Blocker: {blocker['title']}",
-        message=blocker['reason'],
-        priority="critical"
-    )
+# Check PR checks
+pr_checks = subprocess.run(["gh", "pr", "checks", "123"],
+                          capture_output=True, text=True)
+
+# Monitor for blockers
+for pr in prs:
+    if pr["state"] == "OPEN" and needs_attention(pr):
+        warn_user(
+            title=f"🚨 PR needs attention: {pr['title']}",
+            message="CI checks failing or review requested",
+            priority="high"
+        )
 ```
 
 ### Pattern 2: Automatic vs. Manual Invocation
 
-**Automatic (Startup Skills)**:
+**Direct Database Access**:
 ```python
-# project-manager-startup runs automatically at agent initialization
+# project_manager has write access to roadmap schema tables
 
 class ProjectManagerAgent:
     def __init__(self):
-        # Startup skill executes here automatically
-        self._execute_startup_skill()
+        # Initialize database connection
+        self.db = RoadmapDatabase(agent_name="project_manager")
 
         # Agent ready for strategic work
         self.ready = True
 ```
 
-**Manual (Task Skills)**:
+**Manual Operations**:
 ```python
-# Other skills invoked manually when needed
+# Operations invoked when needed
 
-# Daily health check
-if should_run_daily_health_check():
-    health = load_skill(SkillNames.ROADMAP_HEALTH_CHECK, {...})
+# Check project status
+priorities = db.get_priorities()
+blocked = [p for p in priorities if p["status"] == "BLOCKED"]
 
-# GitHub PR monitoring
+# GitHub PR monitoring using gh CLI
 if user_asks_about_prs():
-    pr_status = load_skill(SkillNames.PR_MONITORING_ANALYSIS, {...})
+    result = subprocess.run(["gh", "pr", "list"], capture_output=True)
+    # Process PR list
 
 # DoD verification (after code_developer completes work)
 if priority_marked_complete():
-    dod = verify_dod_with_puppeteer(priority_id)
+    verify_completion_with_database(priority_id)
 ```
 
 ### Pattern 3: Proactive Monitoring Loop
@@ -834,28 +970,34 @@ if priority_marked_complete():
 def proactive_project_monitoring():
     """Run daily monitoring and warn user of issues."""
 
-    # Run health check
-    health = load_skill(SkillNames.ROADMAP_HEALTH_CHECK, {...})
+    db = RoadmapDatabase(agent_name="project_manager")
 
-    # Run PR monitoring
-    pr_analysis = load_skill(SkillNames.PR_MONITORING_ANALYSIS, {...})
+    # Check database for issues
+    priorities = db.get_priorities()
+    blocked = [p for p in priorities if p["status"] == "BLOCKED"]
+    overdue = [p for p in priorities if is_overdue(p)]
+
+    # Check GitHub using gh CLI
+    pr_result = subprocess.run(["gh", "pr", "list", "--json", "state"],
+                              capture_output=True, text=True)
+    open_prs = json.loads(pr_result.stdout)
 
     # Identify critical issues
     critical_issues = []
 
-    if health["score"] < 70:
+    if len(blocked) > 3:
         critical_issues.append(
-            f"Project health low: {health['score']}/100"
+            f"{len(blocked)} priorities blocked"
         )
 
-    if health["blockers"]:
+    if len(overdue) > 0:
         critical_issues.append(
-            f"{len(health['blockers'])} ROADMAP blockers"
+            f"{len(overdue)} priorities overdue"
         )
 
-    if pr_analysis["blocker_prs"]:
+    if len(open_prs) > 5:
         critical_issues.append(
-            f"{len(pr_analysis['blocker_prs'])} PR blockers"
+            f"{len(open_prs)} PRs need review"
         )
 
     # Warn user if issues found
@@ -906,7 +1048,7 @@ If you encounter issues:
 
 - **CLI**: Run via `project-manager` command
 - **AIService**: `coffee_maker/cli/ai_service.py`
-- **ROADMAP Parser**: Read/analyze ROADMAP.md
+- **RoadmapDBSkill**: Query/update roadmap database (CFR-015 compliant)
 - **NotificationDB**: Track user communications
 - **DeveloperStatus**: Monitor code_developer progress
 

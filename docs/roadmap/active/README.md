@@ -6,7 +6,7 @@
 ```
 active/
 ├── README.md                    # This file
-├── PHASE_0_ACTIVE.md           # Phase 0 details (code-searcher migration + skills)
+├── PHASE_0_ACTIVE.md           # Phase 0 details (assistant (with code analysis skills) migration + skills)
 ├── PHASE_1_ACTIVE.md           # Phase 1 details (agent startup skills)
 ├── PHASE_2_ACTIVE.md           # Phase 2 details (code_developer skills)
 └── ...

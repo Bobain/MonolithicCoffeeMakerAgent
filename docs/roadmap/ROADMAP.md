@@ -1,10 +1,60 @@
 # Coffee Maker Agent - Prioritized Roadmap
 
-**Last Updated**: 2025-10-18 🚀 **ACE FRAMEWORK: 42 User Stories Added (US-062 through US-103) - 7 Phases**
+**Last Updated**: 2025-10-24 🚀 **MAJOR UPDATES: Task Group Dependencies, Database Schema Cleanup, Priority Ordering**
 **Current Branch**: `roadmap`
 **Status**: **🚨 PHASE 0 - ACCELERATION ⚡ US-090 (START HERE)** | Total: 185-235 hrs → 3-4 weeks Phase 0, then 4-6 weeks Phases 1-3
-**Quick-Start**: ⚡ CLI: `project-manager` (defaults to chat!) | Daemon: `python run_daemon.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py`
-**Achievement**: 🎉 **ACE IMPLEMENTATION PLAN REORGANIZED** - Phase 0 (Force Multiplier) now HIGHEST PRIORITY!
+**Quick-Start**: ⚡ CLI: `project-manager` (defaults to chat!) | Daemon: `python run_code_developer.py` | UI: `streamlit run streamlit_apps/agent_interface/app.py`
+**Achievement**: 🎉 **DEPENDENCY SYSTEM COMPLETE** - Architect can now define prerequisite task groups!
+
+---
+
+## 🎉 Recent Completions (2025-10-24)
+
+### ✅ Task Group Dependency Management System (PRIORITY 32)
+**Completed**: 2025-10-24 | **Effort**: 4 hours
+
+architect can now define dependencies between task groups to prevent code_developer from starting dependent work before prerequisites complete.
+
+**Key Features**:
+- `task_group_dependencies` table with hard (blocking) and soft (preferred) dependencies
+- Automatic enforcement in `ImplementationTaskManager` - blocks dependent groups
+- Example: GROUP-20 and GROUP-35 cannot start until GROUP-36 (shared library) completes
+- Comprehensive test suite (5 tests, all passing)
+
+**Files**:
+- Migration: `coffee_maker/autonomous/migrate_add_task_group_dependencies.py`
+- Enforcement: `coffee_maker/autonomous/implementation_task_manager.py`
+- Tests: `tests/unit/test_implementation_task_manager.py::TestTaskGroupDependencies`
+
+**Documentation**: Updated in `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` (CFR-013) and `.claude/agents/architect.md` (Workflow 2)
+
+---
+
+### ✅ Database Schema Cleanup (Multiple Improvements)
+**Completed**: 2025-10-24 | **Effort**: 3 hours
+
+**Changes**:
+1. **Renamed `section_order` → `priority_order`**: More accurate field name with UNIQUE constraint
+2. **Auto-increment default**: New items default to `MAX(priority_order) + 1`
+3. **Removed version suffixes**: `roadmap_database_v2.py` → `roadmap_database.py`
+
+**Rationale**: Git handles versioning, code should use clean names. `priority_order` clearly indicates roadmap priority position.
+
+**Files**:
+- Migration: `coffee_maker/autonomous/migrate_rename_section_order_to_priority_order.py`
+- Updated: All 17+ references in codebase
+- Class renamed: `RoadmapDatabaseV2` → `RoadmapDatabase`
+
+---
+
+### ✅ Architect Workflow Enhancement (PRIORITY 33)
+**Completed**: 2025-10-24 | **Effort**: 1 hour
+
+architect now uses `RoadmapDBSkill` for consistent priority ordering with project_manager.
+
+**Key Addition**: Workflow 0 in `.claude/agents/architect.md` - "Finding Next Priority to Work On"
+
+**Benefit**: Both agents use the same `priority_order` field, ensuring alignment.
 
 ---
 
@@ -81,7 +131,7 @@ The daemon operates autonomously by:
 
 ```markdown
 ## 🔴 TOP PRIORITY FOR code_developer (START HERE)
-PRIORITY 2: Project Manager with UI ← Current focus
+PRIORITY 25: Hierarchical Spec Architecture - Phase 3 (Guidelines Library) ✅ Complete (2025-10-21)
 
 ### PRIORITY 1: Analytics ✅ Complete
 ### PRIORITY 1.5: Database Sync ✅ Complete
@@ -178,11 +228,11 @@ See [US-049](#us-049-architect-continuous-spec-improvement-loop-cfr-010) for ful
 
 ---
 
-### PRIORITY 15: US-054 - Architect Daily Integration of code-searcher Findings (CFR-011) ✅ Complete
+### PRIORITY 15: US-054 - Architect Daily Integration of assistant (with code analysis skills) Findings (CFR-011) ✅ Complete
 
 **Status**: ✅ Complete - CRITICAL (CFR-011 Enforcement)
 
-See [US-054](#us-054-architect-daily-integration-of-code-searcher-findings-cfr-011) for full details.
+See [US-054](#us-054-architect-daily-integration-of-assistant (with code analysis skills)-findings-cfr-011) for full details.
 
 **Strategic Value**: CRITICAL CFR enforcement, quality improvement loop
 
@@ -226,7 +276,7 @@ See [US-056](#us-056-claude-skills-integration---phase-2-medium-value-skills) fo
 - ✅ Dependency Impact skill (architect) - 80% time savings
 - ✅ Demo Creator skill (assistant) - 78% time savings (placeholder for Puppeteer)
 - ✅ Bug Analyzer skill (assistant) - 75-85% time savings (placeholder for Puppeteer)
-- ✅ Security Audit skill (code-searcher) - 83% time savings (placeholder for bandit/safety)
+- ✅ Security Audit skill (assistant (with code analysis skills)) - 83% time savings (placeholder for bandit/safety)
 - ✅ Langfuse tracking integration
 - ✅ Comprehensive unit tests (11 tests, all passing)
 
@@ -315,231 +365,208 @@ See [US-106](#priority-22-us-106---code-reviewer-agent-for-quality-assurance-✅
 
 ---
 
-### PRIORITY 24: US-107 - Dependency Conflict Resolver Skill ✅ Complete
 
-**Status**: ✅ Complete - 🔴 CRITICAL PRIORITY (Highest ROI - 40 hrs/month saved)
+### PRIORITY 24: Technical Prerequisite Identification and Tracking 📝 Planned
 
-See [US-107](#us-107-dependency-conflict-resolver-skill) for full details.
+**Status**: 📝 Planned - HIGH PRIORITY (Prevents Duplicate Technical Work)
 
-**Strategic Value**: Automate dependency evaluation, save 40 hrs/month (93-95% time reduction)
+**Created**: 2025-10-21
 
-**Created**: 2025-10-19
+**Estimated Effort**: 7-11 hours
 
-**Estimated Effort**: 2-3 days
+**Priority Rationale**: This is HIGH PRIORITY because it prevents 40-60% waste in implementation time by identifying common technical foundations BEFORE multiple user stories duplicate the same work.
 
 **User Story**:
-As architect, I want an automated dependency conflict resolver skill so that I can quickly evaluate dependency additions, detect conflicts, and provide recommendations without spending 45+ minutes on manual analysis.
+As an architect, I need a systematic way to identify common technical prerequisites needed by multiple user stories, group dependent stories, and recommend prioritizing prerequisites to project_manager, so that we avoid duplicate technical work and ensure consistent implementations.
 
-**Problem Statement**:
-Currently, architect spends significant time on dependency management:
-- Manual dependency conflict detection (15-20 min per dependency)
-- Manual security scanning (10-15 min)
-- Manual license compatibility checks (5-10 min)
-- Manual version compatibility analysis (10-15 min)
-- **Total: 40-60 minutes per dependency addition**
+**Problem**:
+Currently, architect has no formal responsibility or tooling to identify common technical foundations. This leads to:
+- Duplicate technical work across multiple user story implementations (e.g., 3 stories each implement authentication separately)
+- Mid-implementation blockers when prerequisites are discovered late
+- Inefficient prioritization (implementing dependent USs before foundations)
+- Technical debt from inconsistent implementations of same foundation
 
-This is the **#1 bottleneck** identified by the Acceleration Dashboard.
-
-**Agent Role**: architect (skill)
-
-**Skill Responsibilities**:
-
-1. **Automated Dependency Evaluation**:
-   - Parse pyproject.toml and poetry.lock
-   - Check for version conflicts with existing dependencies
-   - Analyze dependency tree depth and complexity
-   - Identify circular dependencies
-
-2. **Security Scanning**:
-   - Check CVE databases (pip-audit, safety)
-   - Scan for known vulnerabilities
-   - Assess security risk level (Critical/High/Medium/Low)
-   - Provide mitigation recommendations
-
-3. **License Compatibility**:
-   - Extract license from package metadata
-   - Check compatibility with project license (Apache 2.0)
-   - Flag GPL or incompatible licenses
-   - Suggest alternatives if incompatible
-
-4. **Version Analysis**:
-   - Check if version is latest stable
-   - Identify breaking changes in release notes
-   - Suggest optimal version range (e.g., "^2.0.0")
-   - Detect if version is deprecated
-
-5. **Impact Assessment**:
-   - Estimate installation time
-   - Calculate bundle size impact
-   - Identify sub-dependencies added
-   - Check for platform compatibility
-
-**Workflow**:
-
-```bash
-# architect wants to add a new dependency
-architect dependency-conflict-resolver pytest-timeout
-
-# Skill runs automatically:
-# 1. Checks conflicts with existing deps
-# 2. Scans for security vulnerabilities
-# 3. Validates license compatibility
-# 4. Analyzes version compatibility
-# 5. Generates comprehensive report
-
-# Output:
-# ✅ pytest-timeout 2.2.0 - APPROVED
-#
-# Conflicts: None
-# Security: No vulnerabilities (0 CVEs)
-# License: MIT (✅ Compatible with Apache 2.0)
-# Version: Latest stable (2.2.0)
-# Bundle Size: +250 KB
-# Sub-dependencies: 0 (no transitive deps)
-#
-# Recommendation: SAFE TO ADD
-# Command: poetry add pytest-timeout
+**Example Impact Without This Feature**:
+```
+US-050: User authentication (implements JWT auth, 40 hours)
+US-060: Admin authentication (re-implements auth, 30 hours)
+US-070: API authentication (re-implements auth again, 25 hours)
+Total: 95 hours, 3 inconsistent auth implementations, tech debt
 ```
 
-**Benefits**:
-
-- **Time Savings**: 40-60 min → 2-3 min (93-95% reduction) = **40 hrs/month saved**
-- **ROI**: Highest of all automation opportunities
-- **Risk Reduction**: Automated security and license checks
-- **Faster Development**: Quick approval for safe dependencies
-- **Better Decisions**: Comprehensive analysis in seconds
-
-**Acceptance Criteria**:
-
-✅ **Dependency Analysis**:
-- [x] Parse pyproject.toml and poetry.lock
-- [x] Detect version conflicts with existing dependencies
-- [x] Identify circular dependencies
-- [x] Calculate dependency tree depth
-
-✅ **Security Scanning**:
-- [x] Integrate pip-audit for CVE scanning
-- [x] Integrate safety for known vulnerabilities
-- [x] Severity classification (Critical/High/Medium/Low)
-- [x] Mitigation recommendations
-
-✅ **License Compatibility**:
-- [x] Extract package license from PyPI metadata
-- [x] Check compatibility with Apache 2.0
-- [x] Flag GPL/AGPL licenses
-- [x] Suggest compatible alternatives
-
-✅ **Version Analysis**:
-- [x] Check latest stable version
-- [x] Parse release notes for breaking changes
-- [x] Suggest optimal version constraint
-- [x] Detect deprecated versions
-
-✅ **Reporting**:
-- [x] Generate comprehensive markdown report
-- [x] Include approval recommendation (APPROVE/REVIEW/REJECT)
-- [x] Provide installation command if approved
-- [x] List alternatives if rejected
-
-✅ **Integration**:
-- [x] Skill usable via Python API
-- [x] Skill file: `.claude/skills/architect/dependency-conflict-resolver/SKILL.md`
-- [x] Unit tests (15 tests, 100% passing)
-- [x] Ready for SPEC-070 pre-approval matrix integration
-
-**Technical Implementation**:
-
-1. **DependencyAnalyzer** (`coffee_maker/utils/dependency_analyzer.py`):
-   ```python
-   class DependencyAnalyzer:
-       def analyze_dependency(self, package_name: str) -> AnalysisReport
-       def check_conflicts(self, package: str, version: str) -> List[Conflict]
-       def scan_security(self, package: str, version: str) -> SecurityReport
-       def check_license(self, package: str) -> LicenseInfo
-       def analyze_version(self, package: str, version: str) -> VersionInfo
-   ```
-
-2. **Integration with pip-audit and safety**:
-   - Run pip-audit for CVE scanning
-   - Run safety for known vulnerabilities
-   - Parse output and categorize severity
-
-3. **PyPI API Integration**:
-   - Fetch package metadata from PyPI
-   - Extract license information
-   - Get release notes and changelog
-   - Check deprecation status
-
-4. **Conflict Detection**:
-   - Parse poetry.lock for dependency tree
-   - Use poetry show --tree for visualization
-   - Detect version range conflicts
-   - Identify circular dependencies
-
-**Deliverables**:
-
-- [x] DependencyAnalyzer class with all analysis logic
-- [x] ConflictAnalyzer, SecurityScanner, LicenseChecker, VersionAnalyzer, ImpactAssessor components
-- [x] Security scanning integration (pip-audit, safety)
-- [x] License compatibility checker with Apache 2.0 validation
-- [x] Version analysis and recommendation engine
-- [x] Markdown report generator
-- [x] Python API for programmatic usage
-- [x] Skill documentation in `.claude/skills/architect/dependency-conflict-resolver/SKILL.md`
-- [x] Unit tests (15 tests, 100% passing)
-- [x] End-to-end tested with real packages (2.66s analysis time)
-
-**Performance**: Analysis completes in **2-3 seconds** (vs. 40-60 min manual) = **93-95% time savings**
-
-**Example Scenarios**:
-
-1. **Safe Dependency** → Analysis time: 2 min → APPROVED → Add immediately
-2. **Security Vulnerability** → Analysis time: 3 min → REJECTED → Suggest alternatives
-3. **License Conflict** → Analysis time: 2 min → REJECTED → Suggest MIT/Apache alternatives
-4. **Version Conflict** → Analysis time: 4 min → REVIEW NEEDED → Manual resolution required
-
-**Integration with Existing Workflow**:
-
+**Example Impact WITH This Feature**:
 ```
-architect wants to add dependency
-       ↓
-Uses dependency-conflict-resolver skill
-       ↓
-Skill analyzes: conflicts, security, license, version
-       ↓
-Generates report with recommendation
-       ↓
-If APPROVED: architect runs poetry add
-If REJECTED: architect uses suggested alternative
-If REVIEW: architect asks user for decision
+architect identifies TECH-001: Unified Auth System
+project_manager prioritizes TECH-001 first (30 hours)
+US-050, US-060, US-070 use existing auth (25 hours combined)
+Total: 55 hours (42% savings!), 1 consistent implementation, zero debt
 ```
 
-**Dependencies**:
-- pip-audit (CVE scanning) ✅ Available
-- safety (vulnerability scanning) ✅ Available
-- poetry (dependency management) ✅ Available
-- PyPI API (package metadata) ✅ Available
+**Key Features**:
+1. Database schema for technical prerequisites (TECH-001, TECH-002, etc.)
+2. Link user stories to prerequisites with dependency tracking
+3. Architect workflow for identifying common patterns
+4. Automatic notifications to project_manager with prioritization recommendations
+5. Grouped dependency reports showing impact
+6. Integration with ROADMAP management
 
-**Testing**:
-- Unit tests for each analysis component
-- Integration tests with real PyPI packages
-- Mock tests for CVE database queries
-- Performance tests (target: <3 min per analysis)
+**Technical Specification**:
+See `docs/architecture/specs/SPEC-NEXT-technical-prerequisite-tracking.md` for complete implementation details.
+
+**Implementation Phases**:
+- Phase 1: Database schema (1-2 hours)
+- Phase 2: Database methods and queries (2-3 hours)
+- Phase 3: Architect skill for prerequisite identification (2-3 hours)
+- Phase 4: project_manager integration and UI (1-2 hours)
+- Phase 5: Documentation and examples (1 hour)
+
+**Common Prerequisite Categories**:
+- Authentication/Authorization (JWT, RBAC, OAuth)
+- Database Infrastructure (migrations, ORMs, pooling)
+- API Foundations (REST, validation, rate limiting)
+- UI Component Libraries (design systems, themes)
+- Infrastructure (logging, monitoring, CI/CD)
+- Data Processing (ETL, validation, transformation)
+- Third-party Integrations (APIs, webhooks)
+- Testing Frameworks (fixtures, mocks, test data)
 
 **Success Metrics**:
-- Time per dependency analysis: <3 minutes (currently: 40-60 min)
-- Accuracy: >95% correct recommendations
-- Security: Zero vulnerabilities introduced
-- License: Zero license conflicts
-- ROI: 40 hours/month saved
+- Number of technical prerequisites identified
+- User stories grouped per prerequisite (higher = more savings)
+- Implementation time savings (estimated vs. actual)
+- Technical debt reduction (fewer inconsistent patterns)
+- code_developer feedback on prerequisite quality
+
+**Dependencies**:
+- RoadmapDatabase ✅ Available
+- NotificationDB ✅ Available
+- architect agent ✅ Available
+- project_manager CLI ✅ Available
+
+**Acceptance Criteria**:
+- [ ] Database schema created with tables for prerequisites and dependencies
+- [ ] Architect can create TECH-XXX prerequisites with category, priority, description
+- [ ] Architect can link multiple user stories to a prerequisite
+- [ ] System generates notifications to project_manager with recommendations
+- [ ] project_manager can review and approve prerequisite recommendations
+- [ ] Query system shows grouped dependencies and impact analysis
+- [ ] Documentation updated in AGENT_OWNERSHIP.md
+- [ ] Examples and tutorial created
+- [ ] Integration tests verify end-to-end workflow
+
+**Related**:
+- CFR-XXX (to be assigned): Technical Prerequisite Identification
+- AGENT_OWNERSHIP.md (architect responsibilities)
+- RoadmapDatabase (dependency tracking storage)
 
 ---
 
-### PRIORITY 25: Refactor Skill Loading to Use Proper Python Imports 📝 Planned
+### PRIORITY 25: Hierarchical, Modular Technical Specification Architecture 📝 Planned - Phase 4
 
-**Status**: 📝 Planned - MEDIUM PRIORITY (Technical Debt - Code Quality)
+**Status**: 📝 Planned - Phase 4 (Spec Migration) - READY FOR IMPLEMENTATION
+
+**Created**: 2025-10-21
+
+**Estimated Effort**: 10 hours
+
+**Priority Rationale**: This is HIGH PRIORITY because it enables:
+- **71% context reduction** for code_developer (150 lines vs 350 per iteration)
+- **30% faster implementation** through better focus
+- **Unlimited scalability** for large features (10+ phases)
+- **CFR-016 compliance** (incremental implementation steps)
+- **CFR-007 compliance** (context budget optimization)
+
+**Problem Statement**:
+
+Currently, technical specifications are monolithic documents that code_developer reads in their entirety, even when only implementing a specific phase or subtask.
+
+**Impact Without This**:
+- 80% context waste: code_developer loads 350-line spec when only needs 50 lines for current phase
+- Cognitive overload: Too much information reduces focus on current subtask
+- Context budget violations: Large features (10+ phases) exceed context limits
+- Duplicate patterns: Common approaches repeated across specs instead of referenced
+
+**Solution**: Hierarchical, modular spec architecture with progressive disclosure
+
+**Architecture**:
+
+```
+docs/architecture/specs/SPEC-{number}-{slug}/
+├── README.md (Overview - 100-150 lines) ← Always read
+├── phase1-{name}.md (50-100 lines) ← Read only when implementing Phase 1
+├── phase2-{name}.md (50-100 lines) ← Read only when implementing Phase 2
+├── phase3-{name}.md (50-100 lines) ← Read only when implementing Phase 3
+├── references.md (Links to guidelines)
+└── diagrams/ (Architecture diagrams)
+```
+
+**Implementation Phases**:
+
+**Phase 1: Shared Skill Enhancement** (COMPLETED ✅)
+- [x] Extend `.claude/skills/shared/technical-specification-handling/` to v2.0.0
+- [x] Add hierarchical spec support (create_hierarchical, read_hierarchical)
+- [x] Document templates for README.md and phase documents
+- [x] Add phase detection logic (ROADMAP, git, file existence)
+- [x] Provide examples and guidelines
+- [x] Maintain backward compatibility with monolithic specs
+
+**Phase 2: Daemon Enhancement** (3 hours) ✅ COMPLETE
+- [x] Add `_detect_current_phase()` method to daemon_implementation.py
+- [x] Add `_mark_phase_complete()` method to update ROADMAP after phase completion
+- [x] Update `_build_feature_prompt()` to use hierarchical loading
+- [x] Add context efficiency logging
+- [x] Add error handling for hierarchical specs
+- [x] Write unit tests for hierarchical spec functionality
+- [x] Test with existing specs (all 10 tests passing)
+
+**Phase 3: Guidelines Library** (2 hours) ✅ COMPLETE
+- [x] Create `docs/architecture/guidelines/` directory structure (exists)
+- [x] Extract common patterns from existing specs into guidelines
+- [x] Create 5-10 initial guidelines (GUIDELINE-012 through GUIDELINE-021 created)
+- [x] Update specs to reference guidelines (REFACTOR-003, SPEC-057 updated)
+
+**Phase 4: Spec Migration** (3 hours)
+- [ ] Migrate 3-5 recent specs to hierarchical structure
+- [ ] Create migration guide for remaining specs
+- [ ] Document backward compatibility strategy
+
+**Phase 5: Testing and Documentation** (2 hours)
+- [ ] Verify context reduction metrics (target: 70%+)
+- [ ] Test code_developer with hierarchical specs
+- [ ] Update architect workflow documentation
+- [ ] Add examples to README
+
+**Benefits**:
+- ✅ **71% context reduction**: 150 lines loaded vs 350 (monolithic)
+- ✅ **30% faster implementation**: Better focus, clearer steps
+- ✅ **Scalable**: Large features (10+ phases) stay manageable
+- ✅ **Reusable**: Common patterns in guidelines (referenced, not duplicated)
+- ✅ **Maintainable**: Update one phase without touching others
+- ✅ **CFR Compliant**: Aligns with CFR-007 (context budget) and CFR-016 (incremental steps)
+
+**Technical Specification**: [SPEC-NEXT-hierarchical-modular-spec-architecture.md](../architecture/specs/SPEC-NEXT-hierarchical-modular-spec-architecture.md)
+
+**Claude Skill**: `.claude/skills/shared/technical-specification-handling/SKILL.md` (v2.0.0 - hierarchical support)
+
+**Success Metrics**:
+- Average spec context usage: <150 lines (vs 300+ currently)
+- Phase implementation time: 30% faster
+- Spec reusability: 50%+ content from referenced guidelines
+- code_developer iterations: 20% fewer (clearer guidance)
+
+**Related**:
+- CFR-007: Agent Context Budget (30% Maximum)
+- CFR-016: Technical Specs Must Be Broken Into Small, Incremental Implementation Steps
+- PRIORITY 24: Technical Prerequisite Identification and Tracking
+
+---
+
+### PRIORITY 26: Refactor Skill Loading to Use Proper Python Imports ✅ Complete
+
+**Status**: ✅ COMPLETE (2025-10-23) - MEDIUM PRIORITY (Technical Debt - Code Quality)
 
 **Created**: 2025-10-20
+**Completed**: 2025-10-23
 
 **Estimated Effort**: 4-6 hours
 
@@ -660,6 +687,771 @@ result = task_separator_main({"priority_ids": priority_ids})
 - Non-breaking change (internal refactoring only)
 - Skills functionality unchanged
 - Can be tested incrementally (one skill at a time)
+
+---
+
+### PRIORITY 28: BUG-XXX - Implement Notification Processing Loop (CFR-015 Workflow) 🔴 P0 CRITICAL - DO THIS FIRST!
+
+**Status**: 📝 Planned - CRITICAL (HIGHEST PRIORITY - DO THIS FIRST! Blocks all workflow automation)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 4-6 hours
+
+**Implementation Order**: #1 - MOST CRITICAL - DO THIS FIRST!
+
+**User Story**:
+As project_manager, I want to process pending notifications so that specs get linked to roadmap items, architect gets notified of issues, and the workflow automation loop is complete.
+
+**Problem Statement**:
+Notifications pile up in the database but no one processes them. This breaks the entire workflow:
+1. architect creates spec → notification created ✅
+2. **NO ONE PROCESSES NOTIFICATION** ❌
+3. Spec never linked to roadmap (spec_id stays NULL)
+4. code_developer can't find task
+5. Task never implemented despite having complete spec
+
+**Critical Issue**:
+- **Location**: Missing entirely
+- **Problem**: Notifications accumulate in database with no processing mechanism
+- **Impact**: Workflow stalls, specs never linked, tasks never start
+
+**Deadlock Scenarios**:
+1. **Spec Never Linked**: architect creates spec → notification ignored → roadmap.spec_id = NULL → code_developer can't find task → STUCK
+2. **Status Never Updates**: code_developer completes work → no completion notification → roadmap shows "In Progress" forever
+3. **Reviews Never Read**: code_reviewer finds issues → notification ignored → issues never addressed → STUCK
+
+**Why This Must Be Done First**:
+- PRIORITY-27 (code_reviewer DB integration) DEPENDS on this notification processor
+- PRIORITY-29 (code_developer notifications) DEPENDS on this notification processor
+- PRIORITY-30 (architect feedback loop) DEPENDS on this notification processor
+- Blocks all workflow automation until complete
+- No other priorities can be truly verified without this processor running
+
+**Solution**:
+1. Create notification processor in orchestrator or project_manager
+2. Process pending notifications every 60 seconds
+3. Handle notification types:
+   - `spec_complete` → Link spec to roadmap item
+   - `implementation_complete` → Update roadmap status to "✅ Complete"
+   - `review_changes_needed` → Create bug ticket or update spec
+4. Mark notifications as processed when done
+5. Log all notification processing for observability
+
+**Files to Create**:
+- `coffee_maker/autonomous/notification_processor.py` (or integrate into orchestrator)
+
+**Files to Modify**:
+- `coffee_maker/orchestrator/continuous_work_loop.py` (add notification processing loop)
+- `coffee_maker/orchestrator/orchestrator.py` (if separate orchestrator)
+
+**Dependencies**:
+- None - this is a foundational service
+
+**Enables**:
+- PRIORITY 27 (code_reviewer database integration) - required for architect notifications
+- PRIORITY 29 (code_developer completion notifications) - required for status updates
+- PRIORITY 30 (architect feedback) - required for notification delivery
+- Complete workflow automation
+
+**Related Documents**:
+- `docs/WORKFLOW_FLAW_ANALYSIS.md` (detailed workflow analysis with deadlock scenarios)
+- `docs/WORKFLOW_FLAWS_EXECUTIVE_SUMMARY.md` (executive summary)
+
+**Success Criteria**:
+- [ ] Notification processor implemented
+- [ ] Processes at least 3 notification types (spec_complete, implementation_complete, review_changes_needed)
+- [ ] Runs every 60 seconds
+- [ ] Marks notifications as processed in database
+- [ ] Spec links created automatically within 5 minutes of creation
+- [ ] architect receives notifications for review issues
+- [ ] Roadmap status updates automatically on implementation completion
+- [ ] Comprehensive tests (15+ tests, all passing)
+- [ ] No stale/unprocessed notifications after 1 hour
+
+---
+
+### PRIORITY 27: BUG-XXX - Fix code_reviewer Database Integration (CFR-015 Violation) 🔴 P0 CRITICAL
+
+**Status**: 📝 Planned - CRITICAL (Depends on PRIORITY-28)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 4-5 hours
+
+**Implementation Order**: #2 - After PRIORITY-28
+
+**User Story**:
+As code_reviewer, I want to write review reports to the database instead of files so that architect can receive automatic notifications and the workflow automation loop is complete.
+
+**Problem Statement**:
+Currently, code_reviewer writes review reports to `docs/code-reviews/*.md` files instead of storing them in the database. This breaks CFR-015 (database-only pattern) and prevents workflow automation:
+- architect never gets notified when reviews find issues
+- No automated feedback loop between code_reviewer and architect
+- Can't query reviews by spec or quality score
+- File-based communication breaks automation
+
+**Critical Issue**:
+- **Location**: `coffee_maker/autonomous/code_reviewer.py:713, 943`
+- **Problem**: `report_path.write_text(content)` writes to files
+- **Impact**: No architect notification, broken workflow, data inconsistency
+
+**Dependencies**:
+- PRIORITY-28 must be complete (notification processor required)
+
+**Blocks**:
+- PRIORITY-29, PRIORITY-30
+- Complete workflow automation
+
+**Solution**:
+1. Create `review_reports` table in unified_database.py
+2. Move review report writing from files to database
+3. Add database trigger to notify architect on low-quality reviews
+4. Update code_reviewer to write to database instead of files
+5. Add helper methods for architect to query review reports
+
+**Files to Modify**:
+- `coffee_maker/autonomous/unified_database.py` (add review_reports table)
+- `coffee_maker/autonomous/code_reviewer.py` (stop writing files, write to database)
+- `.claude/skills/shared/code_review_tracking/review_tracking_skill.py` (add query methods)
+
+**Related Documents**:
+- `docs/DATABASE_VS_FILE_VIOLATIONS.md` (detailed analysis with code fixes)
+- `docs/WORKFLOW_FLAW_ANALYSIS.md` (workflow impact analysis)
+
+**Success Criteria**:
+- [ ] review_reports table created with proper schema
+- [ ] code_reviewer writes all reviews to database
+- [ ] Database trigger notifies architect on review_quality_score < 80 or approved = 0
+- [ ] architect can query reviews needing attention via skill methods
+- [ ] Old file-based review code removed
+- [ ] Tests pass (existing + new)
+- [ ] Zero regression in code_reviewer functionality
+
+---
+
+### PRIORITY 29: BUG-XXX - Add code_developer Completion Notifications 🔴 P0 CRITICAL
+
+**Status**: 📝 Planned - CRITICAL (Depends on PRIORITY-28)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 2-3 hours
+
+**Implementation Order**: #3 - After PRIORITY-28 (notification processor required)
+
+**User Story**:
+As code_developer, I want to notify project_manager when implementation is complete so that roadmap status updates automatically and DoD verification is triggered.
+
+**Problem Statement**:
+When code_developer completes implementation, no one is notified. This causes:
+- Roadmap status never updates (stays "🔄 In Progress" forever)
+- DoD verification never happens
+- project_manager doesn't know work is done
+- Tasks appear stuck even when actually complete
+
+**Critical Issue**:
+- **Location**: Missing from code_developer workflow
+- **Problem**: No notification sent when implementation completes
+- **Impact**: Status never updates, DoD never verified, tasks stuck in "In Progress"
+
+**Dependencies**:
+- PRIORITY-28 (notification processor) - must be running first to process these notifications
+- PRIORITY-27 should also be done (database integration for code_reviewer)
+
+**Blocks**:
+- DoD verification automation
+- Roadmap status updates
+- Workflow completion signaling
+
+**Solution**:
+1. Add completion notification when code_developer finishes implementation
+2. Create notification: `implementation_complete` with roadmap_item_id and commit_sha
+3. Send notification to project_manager
+4. Include link to commit and spec details
+
+**Files to Modify**:
+- `coffee_maker/autonomous/code_developer.py` (add notification on completion)
+
+**Related Documents**:
+- `docs/WORKFLOW_FLAW_ANALYSIS.md` (deadlock scenarios section)
+
+**Success Criteria**:
+- [ ] code_developer sends notification when implementation complete
+- [ ] Notification includes: roadmap_item_id, commit_sha, spec_id
+- [ ] Notification type: "implementation_complete"
+- [ ] Notification recipient: "project_manager"
+- [ ] Tests verify notification is created
+- [ ] No regression in code_developer functionality
+
+---
+
+### PRIORITY 30: BUG-XXX - Architect Adds Review Notification on Code Issues 🔴 P0 CRITICAL
+
+**Status**: 📝 Planned - CRITICAL (Depends on PRIORITY-28, 27)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 2-3 hours
+
+**Implementation Order**: #4 - After PRIORITY-28 and PRIORITY-27
+
+**User Story**:
+As code_reviewer, I want to notify architect when code reviews find issues so that the feedback loop is complete and issues are addressed.
+
+**Problem Statement**:
+code_reviewer writes review reports but doesn't notify architect. This breaks the feedback loop:
+- code_reviewer finds issues ❌ No notification
+- architect doesn't know review exists
+- architect must manually check review files (won't happen)
+- issues never get addressed
+- bugs ship to production
+
+**Critical Issue**:
+- **Location**: `coffee_maker/autonomous/code_reviewer.py` (complete_review method)
+- **Problem**: Review marked as `changes_requested` but no notification sent to architect
+- **Impact**: Issues never addressed, no feedback loop, bugs not caught
+
+**Dependencies**:
+- PRIORITY-28 (notification processor) - must be running first to deliver notifications
+- PRIORITY-27 (code_reviewer database integration) - reviews must be stored in database
+
+**Blocks**:
+- Complete feedback loop
+- Issue remediation
+- Quality assurance automation
+
+**Solution**:
+1. Add notification when code_reviewer completes review with issues
+2. Create notification: `review_changes_needed` when quality_score < 80 or approved = 0
+3. Include review details, issues found, recommendations
+4. architect automatically receives notification in database
+5. architect can query database for detailed review information
+
+**Files to Modify**:
+- `coffee_maker/autonomous/code_reviewer.py` (add architect notification in complete_review method)
+
+**Related Documents**:
+- `docs/WORKFLOW_FLAW_ANALYSIS.md` (communication gap analysis)
+
+**Success Criteria**:
+- [ ] Notification sent when quality_score < 80
+- [ ] Notification sent when approved = 0
+- [ ] Notification includes: review_report_id, commit_sha, quality_score, issues summary
+- [ ] Notification recipient: "architect"
+- [ ] Notification type: "review_changes_needed"
+- [ ] architect can query reviews needing attention
+- [ ] Tests verify notification is created
+- [ ] No regression in code_reviewer functionality
+
+---
+
+### PRIORITY 31: LAYER 1 - code_developer work_sessions Integration 🔴 P0 CRITICAL
+
+**Status**: 📝 Planned - CRITICAL (Foundation Layer)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 5-7 hours
+
+**Implementation Order**: FIRST - Foundation for all parallel development
+
+**User Story**:
+As code_developer, I need to read technical specs from database, claim work_sessions, validate assigned_files, and work only on my assigned scope so that parallel development is safe and tracked.
+
+**Problem Statement**:
+code_developer currently reads ROADMAP and works on entire priorities without:
+- Reading from technical_specs database (hierarchical specs)
+- Claiming work_sessions from database
+- Validating assigned_files before touching files
+- Using technical-specs skill for hierarchical spec reading
+- Updating work_session status on completion
+
+**This Priority Implements**:
+
+1. **Technical Spec Reading** (Hierarchical)
+   - Use `unified-spec-skill` to read from technical_specs table
+   - Support hierarchical spec sections (/overview, /implementation, /testing)
+   - Read only the section specified in work_session.scope_description
+   - Example: work_session specifies "Phase 2: /implementation" → read only /implementation section
+
+2. **work_session Claiming**
+   - Query available work_sessions (status='pending', claimed_by IS NULL)
+   - Claim work_session atomically (UPDATE with WHERE status='pending')
+   - Handle race conditions (multiple code_developers claiming simultaneously)
+   - Set claimed_at, claimed_by='code_developer', status='in_progress'
+
+3. **assigned_files Validation**
+   - Parse work_session.assigned_files JSON array
+   - Before ANY file operation, validate file is in assigned_files
+   - Raise error if attempting to touch file outside assigned scope
+   - Log all file operations for audit trail
+
+4. **work_session Lifecycle Management**
+   - Update started_at when work begins
+   - Update commit_sha when work completes
+   - Update completed_at and status='completed' on success
+   - Update status='failed' on error with error message
+
+**Critical Files to Modify**:
+- `coffee_maker/autonomous/daemon.py`:
+  - Add: `_query_available_work_sessions()` - queries DB for pending work
+  - Add: `_claim_work_session(work_id)` - atomic claim with race condition handling
+  - Add: `_validate_file_access(file_path)` - checks against assigned_files
+  - Modify: `run()` - accept work_session_id argument, claim before starting
+  - Add: `_read_technical_spec_for_work()` - uses unified-spec-skill
+
+- `coffee_maker/autonomous/daemon_implementation.py`:
+  - Add: File access validation wrapper
+  - Integrate with existing implementation loop
+
+- `coffee_maker/autonomous/daemon_cli.py`:
+  - Add: `--work-session` argument for spawning with specific work_session
+
+**Dependencies**:
+- ✅ work_sessions table (commit 64e78e7)
+- ✅ technical_specs table with hierarchical sections
+- ✅ unified-spec-skill (for reading hierarchical specs)
+- ✅ CFR-000 documentation
+
+**Success Criteria**:
+- [ ] code_developer accepts --work-session argument
+- [ ] code_developer queries work_sessions table on startup
+- [ ] code_developer claims work_session atomically (race-safe)
+- [ ] code_developer reads technical spec from database using unified-spec-skill
+- [ ] code_developer reads only the spec section from work_session.scope
+- [ ] code_developer validates ALL file operations against assigned_files
+- [ ] code_developer updates work_session.started_at on start
+- [ ] code_developer updates work_session.commit_sha on completion
+- [ ] code_developer updates work_session.completed_at on success
+- [ ] code_developer updates work_session.status='completed' on success
+- [ ] code_developer updates work_session.status='failed' on error
+- [ ] Integration test: spawn 2 code_developers, both claim different work_sessions
+- [ ] Integration test: code_developer fails when trying to touch file NOT in assigned_files
+- [ ] Race condition test: 3 code_developers try to claim same work_session, only 1 succeeds
+
+**Blocks**:
+- All parallel development features
+- architect work_session creation (needs code_developer to consume them)
+- orchestrator spawning (needs code_developer to accept work_sessions)
+
+---
+
+### PRIORITY 32: LAYER 2 - architect work_session Creation & Task Decomposition 🔴 P0 CRITICAL
+
+**Status**: 📝 Planned - CRITICAL (Enables Parallelization)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 6-8 hours
+
+**Implementation Order**: SECOND - After code_developer can consume work_sessions
+
+**User Story**:
+As architect, I need to analyze technical specifications, identify parallelizable work units, perform file dependency analysis, and create work_sessions with non-overlapping assigned_files so that multiple code_developers can work safely in parallel.
+
+**Problem Statement**:
+architect currently creates technical specs but does NOT:
+- Decompose specs into parallelizable work units (phases/sections/modules)
+- Analyze file dependencies to identify conflicts
+- Create work_sessions with assigned_files
+- Validate no file overlaps between work_sessions
+- Enable parallel development through proper task separation
+
+**This Priority Implements**:
+
+1. **Technical Spec Analysis & Decomposition**
+   - Read technical spec from database (hierarchical structure)
+   - Identify natural work boundaries:
+     - Phase-level: Separate phases with different file sets
+     - Section-level: Hierarchical spec sections (/overview, /api_design, /implementation)
+     - Module-level: Independent modules/classes/files
+   - Choose granularity based on file dependencies and spec structure
+
+2. **File Dependency Analysis**
+   - For each work unit, identify ALL files that will be touched
+   - Use codebase analysis skills:
+     - `assistant (with code analysis skills)` for finding related code
+     - `dependency-tracer` for import chains
+     - Static analysis for cross-file dependencies
+   - Generate assigned_files list for each work unit
+   - Validate NO overlaps between work units
+
+3. **work_session Creation**
+   - For each parallelizable work unit, create work_session entry:
+     ```python
+     INSERT INTO work_sessions (
+         work_id,              # "WORK-{spec_id}-{phase_num}"
+         spec_id,              # Links to technical_specs
+         roadmap_item_id,      # Links to roadmap_items
+         scope,                # "phase", "section", "module"
+         scope_description,    # "Phase 2: API implementation (/api_design)"
+         assigned_files,       # JSON: ["coffee_maker/api.py", "tests/test_api.py"]
+         branch_name,          # "roadmap-work-42"
+         status,               # "pending"
+         created_by,           # "architect"
+         created_at            # ISO timestamp
+     )
+     ```
+
+4. **Conflict Detection & Validation**
+   - Before creating work_sessions, validate file independence:
+     ```python
+     files_work_1 = ["coffee_maker/api.py"]
+     files_work_2 = ["coffee_maker/database.py"]
+     overlap = set(files_work_1) & set(files_work_2)
+     if overlap:
+         raise ConflictError(f"File overlap detected: {overlap}")
+     ```
+   - If conflicts detected, adjust work unit boundaries or serialize
+
+5. **Skills Integration**
+   - Create architect skill: `work-session-creator`
+   - Inputs: spec_id, roadmap_item_id
+   - Outputs: List of work_sessions with assigned_files
+   - Uses: assistant (with code analysis skills), dependency-tracer, file analysis
+
+**Critical Files to Modify**:
+- New: `.claude/skills/architect/work-session-creator/SKILL.md`
+  - Analyzes spec structure
+  - Performs file dependency analysis
+  - Creates work_sessions with validation
+  - Returns work_sessions created
+
+- `coffee_maker/orchestrator/architect_coordinator.py`:
+  - Add: Method to trigger work_session creation for spec
+  - Call: architect skill with spec_id
+  - Validate: No file conflicts in created work_sessions
+
+- `coffee_maker/autonomous/unified_database.py`:
+  - Add: Helper methods for work_session CRUD operations
+
+**Dependencies**:
+- ✅ PRIORITY 31 (code_developer must be able to consume work_sessions)
+- ✅ technical_specs table with hierarchical sections
+- ✅ work_sessions table
+- ✅ assistant (with code analysis skills) skill
+- ✅ dependency-tracer skill
+
+**Success Criteria**:
+- [ ] architect analyzes technical spec and identifies work units
+- [ ] architect performs file dependency analysis for each work unit
+- [ ] architect generates assigned_files list for each work unit
+- [ ] architect validates NO file overlaps between work units
+- [ ] architect creates work_sessions entries in database
+- [ ] architect skill: work-session-creator implemented and tested
+- [ ] work_session.scope set correctly (phase/section/module)
+- [ ] work_session.scope_description is human-readable
+- [ ] work_session.assigned_files is valid JSON array
+- [ ] work_session.branch_name follows "roadmap-work-{id}" convention
+- [ ] Integration test: architect creates 3 work_sessions for 3-phase spec
+- [ ] Integration test: File conflict detection prevents overlapping work_sessions
+- [ ] Validation test: architect refuses to create conflicting work_sessions
+
+**Example Workflow**:
+```
+Input: SPEC-117 (3 phases)
+  Phase 1: Database schema (/database_design)
+  Phase 2: API implementation (/api_design)
+  Phase 3: Testing (/testing)
+
+architect analysis:
+  Phase 1 files: ["coffee_maker/autonomous/unified_database.py"]
+  Phase 2 files: ["coffee_maker/autonomous/code_reviewer.py"]
+  Phase 3 files: ["tests/test_code_reviewer.py"]
+
+Validation: NO overlaps ✅
+
+Output: 3 work_sessions created
+  WORK-117-1: Phase 1 (assigned_files: [unified_database.py])
+  WORK-117-2: Phase 2 (assigned_files: [code_reviewer.py])
+  WORK-117-3: Phase 3 (assigned_files: [tests/test_code_reviewer.py])
+```
+
+**Blocks**:
+- Parallel code_developer spawning (no work_sessions to claim)
+- orchestrator work distribution
+- True parallel development velocity gains
+
+---
+
+### PRIORITY 33: LAYER 3 - project_manager Monitoring & Coordination Features 🔴 HIGH PRIORITY
+
+**Status**: 📝 Planned - HIGH PRIORITY (Visibility & Coordination)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 4-5 hours
+
+**Implementation Order**: THIRD - After architect creates work_sessions
+
+**User Story**:
+As project_manager, I need to monitor work_sessions, report on parallel work progress, identify roadmap items without technical specs, detect stale work_sessions, and provide dashboard visibility so that the development process is transparent and coordinated.
+
+**Problem Statement**:
+project_manager currently monitors roadmap_items but does NOT:
+- Query work_sessions table for parallel work status
+- Report on which code_developers are working on which work_sessions
+- Identify roadmap items lacking technical specifications
+- Detect stale work_sessions (>24 hours in_progress)
+- Provide CLI commands for work_session visibility
+- Show parallel work progress in dashboard
+
+**This Priority Implements**:
+
+1. **work_session Monitoring**
+   - Query work_sessions table by status (pending/in_progress/completed/failed)
+   - Show which code_developer claimed which work_session
+   - Display work_session progress (started_at, elapsed time)
+   - Track work_session completion rate
+
+2. **Roadmap Item Analysis**
+   - Identify roadmap items without technical specs
+   - Identify roadmap items with specs but no work_sessions
+   - Prioritize items blocking code_developer pipeline
+   - Generate work_session creation recommendations for architect
+
+3. **Stale Work Detection**
+   - Query work_sessions where claimed_at >24 hours ago AND status='in_progress'
+   - Reset stale work_sessions to status='pending', claimed_by=NULL
+   - Log stale detection events for investigation
+   - Notify about abandoned work
+
+4. **CLI Commands**
+   - `project-manager work-sessions` - List all work_sessions
+   - `project-manager work-sessions --status pending` - Filter by status
+   - `project-manager work-sessions --stale` - Show stale work_sessions
+   - `project-manager work-sessions --reset-stale` - Reset stale work_sessions
+   - `project-manager items-needing-specs` - Show roadmap items without specs
+   - `project-manager parallel-status` - Show all parallel work in progress
+
+5. **Dashboard Integration**
+   - Add work_sessions panel to dashboard
+   - Show parallel work progress visualization
+   - Display work_session timeline (pending → in_progress → completed)
+   - Alert on stale work_sessions
+
+**Critical Files to Modify**:
+- `coffee_maker/cli/project_manager_cli.py`:
+  - Add: `work_sessions` command group
+  - Add: `items_needing_specs` command
+  - Add: `parallel_status` command
+  - Add: `reset_stale_work_sessions` command
+
+- `coffee_maker/orchestrator/dashboard.py`:
+  - Add: work_sessions monitoring panel
+  - Add: Parallel work progress visualization
+  - Add: Stale work_session alerts
+
+- `coffee_maker/autonomous/unified_database.py`:
+  - Add: Helper queries for work_session analysis
+  - Add: Stale detection query
+  - Add: Items without specs query
+
+**Dependencies**:
+- ✅ PRIORITY 31 (code_developer uses work_sessions)
+- ✅ PRIORITY 32 (architect creates work_sessions)
+- ✅ work_sessions table
+- ✅ technical_specs table
+
+**Success Criteria**:
+- [ ] project_manager queries work_sessions table
+- [ ] project_manager displays work_sessions by status
+- [ ] project_manager identifies stale work_sessions (>24h)
+- [ ] project_manager resets stale work_sessions on command
+- [ ] project_manager identifies roadmap items without specs
+- [ ] CLI command: `project-manager work-sessions` implemented
+- [ ] CLI command: `project-manager work-sessions --status pending` works
+- [ ] CLI command: `project-manager work-sessions --stale` works
+- [ ] CLI command: `project-manager items-needing-specs` works
+- [ ] CLI command: `project-manager parallel-status` works
+- [ ] Dashboard shows work_sessions panel
+- [ ] Dashboard shows parallel work progress
+- [ ] Dashboard alerts on stale work_sessions
+- [ ] Integration test: project_manager detects and resets stale work_session
+- [ ] Integration test: project_manager identifies items needing specs
+
+**Example Output**:
+```
+$ project-manager parallel-status
+
+Parallel Work Status:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Work ID      | Status      | Claimed By       | Elapsed | Scope
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WORK-117-1   | in_progress | code_developer-1 | 1.5h    | Phase 1: DB schema
+WORK-117-2   | in_progress | code_developer-2 | 0.8h    | Phase 2: API
+WORK-117-3   | pending     | -                | -       | Phase 3: Testing
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Roadmap Items Needing Specs:
+- PRIORITY 35: New Feature (estimated: 2 days)
+- PRIORITY 36: Bug Fix (estimated: 4 hours)
+- PRIORITY 37: Refactoring (estimated: 1 day)
+```
+
+**Blocks**:
+- Visibility into parallel development process
+- Stale work detection and recovery
+- Identifying spec creation bottlenecks
+
+---
+
+### PRIORITY 34: LAYER 4 - orchestrator Parallel Execution & Coordination 🔴 HIGH PRIORITY
+
+**Status**: 📝 Planned - HIGH PRIORITY (Execution Layer)
+
+**Created**: 2025-10-23
+
+**Estimated Effort**: 6-8 hours
+
+**Implementation Order**: FOURTH - Final integration layer
+
+**User Story**:
+As orchestrator, I need to query available work_sessions, spawn code_developer instances with work_session assignments, create git worktrees, spawn parallel architect instances for spec creation, monitor running instances, merge completed work, and handle the complete parallel execution lifecycle.
+
+**Problem Statement**:
+orchestrator currently uses `parallel_execution_coordinator.py` but does NOT:
+- Query work_sessions table for available work
+- Spawn code_developers with --work-session argument
+- Create work_sessions entries before spawning
+- Spawn parallel architect instances for spec creation
+- Handle work_session lifecycle (pending → in_progress → completed)
+- Reset stale work_sessions automatically
+
+**This Priority Implements**:
+
+1. **work_session-Based Spawning**
+   - Query available work_sessions (status='pending', scope='phase'|'section'|'module')
+   - For each work_session, spawn code_developer with --work-session argument
+   - Create git worktree for work_session.branch_name
+   - Pass work_session_id to code_developer for claiming
+
+2. **Parallel Architect Spawning**
+   - Identify roadmap items without technical specs
+   - Create work_sessions with scope='spec_creation' for each item
+   - Spawn multiple architect instances (2-3) to claim spec work_sessions
+   - NO git worktrees needed (database-only operations)
+   - architect writes specs to technical_specs table
+
+3. **Parallel code_reviewer Spawning**
+   - Identify commits needing review
+   - Create work_sessions with scope='review' for each commit
+   - Spawn multiple code_reviewer instances (2-3)
+   - NO git worktrees needed (read-only operations)
+
+4. **Work Session Lifecycle Management**
+   - Before spawning: Check work_session exists and status='pending'
+   - During execution: Monitor work_session status updates from agents
+   - On completion: Merge worktree branch if status='completed'
+   - On failure: Log error, keep worktree for debugging
+   - Cleanup: Remove worktrees, prune stale references
+
+5. **Stale Work Automatic Reset**
+   - Run stale detection every hour
+   - Reset work_sessions where claimed_at >24h AND status='in_progress'
+   - Log stale resets for investigation
+   - Allow work to be re-claimed by other agents
+
+6. **Resource Management**
+   - Enforce max 3 concurrent code_developer instances
+   - Enforce max 3 concurrent architect instances
+   - Enforce max 2 concurrent code_reviewer instances
+   - Check system resources before spawning (CPU, memory)
+
+**Critical Files to Modify**:
+- `coffee_maker/orchestrator/continuous_work_loop.py`:
+  - Add: `_query_available_work_sessions()` - queries DB for pending work
+  - Add: `_spawn_code_developer_for_work_session(work_session)` - spawns with --work-session
+  - Add: `_spawn_parallel_architects()` - spawns architects for spec creation
+  - Add: `_spawn_parallel_code_reviewers()` - spawns reviewers for commits
+  - Add: `_reset_stale_work_sessions()` - automatic stale detection
+  - Modify: Main loop to check work_sessions instead of just roadmap_items
+
+- `coffee_maker/orchestrator/parallel_execution_coordinator.py`:
+  - Modify: `_create_worktrees()` - accept work_session, use work_session.branch_name
+  - Modify: `_spawn_instances()` - pass --work-session argument
+  - Add: `_create_work_sessions_for_priorities()` - creates entries before spawning
+
+- New: `coffee_maker/orchestrator/architect_spawner.py`:
+  - Create work_sessions for spec creation
+  - Spawn parallel architect instances
+  - NO worktrees (database only)
+
+- New: `coffee_maker/orchestrator/code_reviewer_spawner.py`:
+  - Create work_sessions for code review
+  - Spawn parallel code_reviewer instances
+  - NO worktrees (read only)
+
+**Dependencies**:
+- ✅ PRIORITY 31 (code_developer accepts --work-session)
+- ✅ PRIORITY 32 (architect creates work_sessions)
+- ✅ PRIORITY 33 (project_manager monitors work_sessions)
+- ✅ work_sessions table
+- ✅ parallel_execution_coordinator.py
+
+**Success Criteria**:
+- [ ] orchestrator queries work_sessions for available work
+- [ ] orchestrator spawns code_developer with --work-session argument
+- [ ] orchestrator creates git worktrees for code_developer work_sessions
+- [ ] orchestrator spawns parallel architects for spec creation
+- [ ] orchestrator spawns parallel code_reviewers for commits
+- [ ] orchestrator monitors work_session status changes
+- [ ] orchestrator merges completed work_sessions to roadmap branch
+- [ ] orchestrator cleans up worktrees after completion
+- [ ] orchestrator resets stale work_sessions automatically (every hour)
+- [ ] orchestrator enforces max concurrent instance limits
+- [ ] orchestrator checks system resources before spawning
+- [ ] Integration test: orchestrator spawns 3 code_developers for 3 work_sessions
+- [ ] Integration test: orchestrator spawns 2 architects for 2 spec creation tasks
+- [ ] Integration test: orchestrator detects and resets stale work_session
+- [ ] Integration test: orchestrator merges 3 completed work_sessions sequentially
+- [ ] End-to-end test: Full parallel development cycle from spec to merge
+
+**Example Workflow**:
+```
+1. project_manager identifies PRIORITY 35 without technical spec
+2. orchestrator creates work_session (scope='spec_creation', roadmap_item_id='PRIORITY-35')
+3. orchestrator spawns architect instance
+4. architect claims work_session, creates SPEC-135 in database
+5. architect marks work_session complete
+
+6. architect analyzes SPEC-135, creates 3 work_sessions:
+   - WORK-135-1: Phase 1 (assigned_files: ["coffee_maker/api.py"])
+   - WORK-135-2: Phase 2 (assigned_files: ["coffee_maker/db.py"])
+   - WORK-135-3: Phase 3 (assigned_files: ["tests/test_api.py"])
+
+7. orchestrator queries 3 available work_sessions
+8. orchestrator creates 3 git worktrees:
+   - MonolithicCoffeeMakerAgent-work-135-1 (branch: roadmap-work-135-1)
+   - MonolithicCoffeeMakerAgent-work-135-2 (branch: roadmap-work-135-2)
+   - MonolithicCoffeeMakerAgent-work-135-3 (branch: roadmap-work-135-3)
+
+9. orchestrator spawns 3 code_developers in parallel:
+   - code-developer --work-session WORK-135-1 (in worktree-1)
+   - code-developer --work-session WORK-135-2 (in worktree-2)
+   - code-developer --work-session WORK-135-3 (in worktree-3)
+
+10. Each code_developer:
+    - Claims their work_session
+    - Reads their spec section from database
+    - Works only on assigned_files
+    - Commits when done
+    - Updates work_session to completed
+
+11. orchestrator merges sequentially:
+    - Merge roadmap-work-135-1 → roadmap
+    - Merge roadmap-work-135-2 → roadmap
+    - Merge roadmap-work-135-3 → roadmap
+
+12. orchestrator cleans up worktrees
+13. PRIORITY 35 completed in parallel!
+```
+
+**Blocks**:
+- Full parallel development pipeline
+- 2-3x velocity increase
+- True autonomous parallel development
 
 ---
 
@@ -954,7 +1746,7 @@ Clean up worktrees, continue with next tasks
 ---
 
 **Deliverables Completed** (PRIORITY 19):
-- ✅ Code Forensics skill (code-searcher) - 85% time savings
+- ✅ Code Forensics skill (assistant (with code analysis skills)) - 85% time savings
 - ✅ Design System skill (ux-design-expert) - 90% time savings
 - ✅ Visual Regression skill (ux-design-expert) - 83% time savings (placeholder for Puppeteer MCP)
 - ✅ Parallel execution optimization (skill_invoker.py)
@@ -969,10 +1761,41 @@ Clean up worktrees, continue with next tasks
 
 ## 🔴 TOP PRIORITY FOR orchestrator (START HERE)
 
-**CURRENT PRIORITY**: PRIORITY 23 - US-108 Parallel Agent Execution with Git Worktree 🔴 (HIGHEST PRIORITY - 2x-3x Velocity)
+**🚨 WORKFLOW AUTOMATION CRITICAL - BLOCKS ALL PROGRESS 🚨**
 
-**NEXT PRIORITIES**:
-- PRIORITY 24 - US-107 Dependency Conflict Resolver Skill 🔴 (CRITICAL - Highest ROI: 40 hrs/month)
+**PHASE 0 CRITICAL BUGS** (Must fix before continuing):
+1. **PRIORITY 27** - Fix code_reviewer Database Integration (CFR-015) 🔴 (4-5 hrs)
+   - Stop writing reviews to files
+   - Write to database instead
+   - Enable architect notifications
+2. **PRIORITY 28** - Implement Notification Processing Loop 🔴 (4-6 hrs)
+   - Core workflow automation missing
+   - Specs never get linked to roadmap
+   - Tasks stuck because notifications aren't processed
+3. **PRIORITY 29** - Add code_developer Completion Notifications 🔴 (2-3 hrs)
+   - No one knows when work is done
+   - Roadmap status never updates
+   - DoD verification never triggered
+4. **PRIORITY 30** - Architect Review Notifications 🔴 (2-3 hrs)
+   - Feedback loop broken
+   - Issues never addressed
+   - Reviews go unread
+
+**Why These Are Critical**:
+- Current state: Workflow completely broken (architect creates spec → notification ignored → task never starts → DEADLOCK)
+- Impact: All future work stalls, entire system unusable
+- Estimated velocity loss: 100% (nothing works without these fixes)
+- Duration to fix: ~12-15 hours total (can be done in 1-2 days)
+- Then can continue with PRIORITY 23 and beyond
+
+**Related Analysis Documents**:
+- `docs/WORKFLOW_FLAWS_EXECUTIVE_SUMMARY.md` - Executive summary of issues
+- `docs/WORKFLOW_FLAW_ANALYSIS.md` - Detailed 200+ line analysis
+- `docs/DATABASE_VS_FILE_VIOLATIONS.md` - Code violations with fixes
+
+**NEXT PRIORITIES** (after workflow bugs fixed):
+- PRIORITY 23 - US-108 Parallel Agent Execution with Git Worktree 🔴 (2x-3x Velocity)
+- PRIORITY 24 - US-107 Dependency Conflict Resolver Skill 🔴 (Highest ROI: 40 hrs/month)
 - PRIORITY 25 - US-109 Advanced Task Separator (Check: Shared Files, Critical Paths, Race Conditions)
 
 **RECENTLY COMPLETED**:
@@ -1009,11 +1832,11 @@ Clean up worktrees, continue with next tasks
 - **US-091**: Build code index infrastructure ✅
   - 3-level hierarchical index (categories → components → implementations)
   - Sub-second queries, 50-150x faster than grep
-- **US-092**: Migrate code-searcher responsibilities to architect ✅
-- **US-093**: Migrate code-searcher responsibilities to code_developer ✅
+- **US-092**: Migrate assistant (with code analysis skills) responsibilities to architect ✅
+- **US-093**: Migrate assistant (with code analysis skills) responsibilities to code_developer ✅
 - **US-094**: Transition period validation ✅ (skills working perfectly)
-- **US-095**: Retire code-searcher agent ✅
-- **US-096**: Archive code-searcher.md ✅
+- **US-095**: Retire assistant agent (with code analysis skills) ✅
+- **US-096**: Archive assistant (with code analysis skills).md ✅
 
 ### Group 2: Startup Skills (US-062, US-063, US-064) ✅ **COMPLETE**
 - **US-062**: code_developer-startup skill ✅ (SKILL.md created)
@@ -7908,13 +8731,13 @@ After implementing PRIORITY 1 & 2, we have:
 4. **Run the daemon:**
    ```bash
    # Interactive mode (asks for approval)
-   python run_daemon.py
+   python run_code_developer.py
 
    # Autonomous mode (auto-approve)
-   python run_daemon.py --auto-approve
+   python run_code_developer.py --auto-approve
 
    # See all options
-   python run_daemon.py --help
+   python run_code_developer.py --help
    ```
 
 The script includes runtime detection and will warn you if it detects a Claude session.
@@ -16633,7 +17456,7 @@ This transforms the daemon from a **sequential executor** into an **intelligent 
 #### 🚨 **KNOWN ISSUE: Daemon Infinite Loop** (Discovered: 2025-10-09)
 
 **Problem Description**:
-The autonomous daemon (run_daemon.py) is stuck in an infinite loop when trying to implement PRIORITY 2.5:
+The autonomous daemon (run_code_developer.py) is stuck in an infinite loop when trying to implement PRIORITY 2.5:
 
 1. ✅ Claude CLI executes successfully (exit code 0)
 2. ❌ BUT: No files are created or modified
@@ -16719,7 +17542,7 @@ logger.info(f"🚀 Starting implementation (attempt {attempt_count+1}/{self.max_
 - ✅ No breaking changes to existing functionality
 
 **Next Steps**:
-1. Resume daemon: `python run_daemon.py --auto-approve`
+1. Resume daemon: `python run_code_developer.py --auto-approve`
 2. Verify it skips PRIORITY 2.5 after 3 attempts
 3. Check notification: `project-manager notifications`
 4. Manually implement or clarify PRIORITY 2.5 deliverables
@@ -16797,7 +17620,7 @@ The daemon's Claude session detection always returns `True`, preventing daemon f
 
 1. **Wrong Environment Variables**: Checked for non-existent vars
    ```python
-   # run_daemon.py:49-52 (OLD)
+   # run_code_developer.py:49-52 (OLD)
    claude_env_vars = [
        "CLAUDE_SESSION_ID",      # ❌ Doesn't exist
        "CLAUDE_CLI_SESSION",     # ❌ Doesn't exist
@@ -16806,7 +17629,7 @@ The daemon's Claude session detection always returns `True`, preventing daemon f
 
 2. **Too Broad Process Check**: Matched ANY Claude process
    ```python
-   # run_daemon.py:59-62 (OLD)
+   # run_code_developer.py:59-62 (OLD)
    result = subprocess.run(["pgrep", "-f", "claude"], ...)
    if result.returncode == 0:
        return True  # ❌ Always True if ANY Claude process exists
@@ -18327,7 +19150,7 @@ All done!
 fg
 
 # OR restart daemon
-python run_daemon.py --auto-approve
+python run_code_developer.py --auto-approve
 
 # Monitor behavior - daemon should move past PRIORITY 2.5
 ```
@@ -18354,7 +19177,7 @@ on:
     branches: [main]
     paths:
       - 'coffee_maker/autonomous/**'
-      - 'run_daemon.py'
+      - 'run_code_developer.py'
 
   # Run on version tags (e.g., v1.0.0, v1.1.0)
   push:
@@ -18397,7 +19220,7 @@ jobs:
 
       - name: Run daemon for 5 minutes
         run: |
-          timeout 300 python run_daemon.py --auto-approve || true
+          timeout 300 python run_code_developer.py --auto-approve || true
 
       - name: Check for infinite loop
         run: |
@@ -18619,7 +19442,7 @@ Run this checklist before creating a new release (v1.x.x, v2.x.x, etc.)
 
 ## Production Monitoring
 
-1. Daemon runs continuously: `python run_daemon.py --auto-approve`
+1. Daemon runs continuously: `python run_code_developer.py --auto-approve`
 2. Monitor logs for issues
 3. Check notifications: `poetry run project-manager notifications`
 4. **Testing**: GitHub Actions runs all tests automatically on merge to main
@@ -18934,7 +19757,7 @@ Please check logs for details:
   tail -f logs/daemon.log
 
 To restart:
-  python run_daemon.py --auto-approve
+  python run_code_developer.py --auto-approve
 """,
                     priority=NOTIF_PRIORITY_CRITICAL,
                     context={
@@ -23687,7 +24510,7 @@ Implement singleton enforcement for all agents to prevent multiple instances of 
 **Non-File-Owning Agents** (multiple instances OK):
 - assistant (READ-ONLY, only reads and delegates)
 - user_listener (delegation-only, no writes)
-- code-searcher (READ-ONLY, only analyzes)
+- assistant (with code analysis skills) (READ-ONLY, only analyzes)
 - ux-design-expert (provides specs, doesn't write)
 
 **Exception Logic**:
@@ -23741,7 +24564,7 @@ Without singleton enforcement, we risk:
   - [x] user_listener (user_listener.py:493) ✅
   - [x] architect (integrated) ✅
   - [x] assistant (integrated) ✅
-  - [x] code-searcher (integrated) ✅
+  - [x] assistant (with code analysis skills) (integrated) ✅
   - [x] ux-design-expert (integrated) ✅
   - [x] code_reviewer (code_reviewer.py:870) ✅
   - [x] orchestrator (orchestrator.py:120) ✅
@@ -25719,7 +26542,7 @@ def test_level_4_agent_self_check():
 - US-034 marked as COMPLETE (created architect documentation)
 - BUT: architect is NOT available in Task tool
 - Error message: "Agent type 'architect' not found"
-- Available agents: general-purpose, assistant, code-searcher, project_manager, code_developer, etc.
+- Available agents: general-purpose, assistant, assistant (with code analysis skills), project_manager, code_developer, etc.
 - architect is MISSING from this list
 
 **Impact**:
@@ -26193,7 +27016,7 @@ Currently, agents use Glob/Grep to search for files during execution. This is:
 - **Inefficient**: Adds latency to agent operations
 - **Unclear**: File requirements not documented
 
-code-searcher exists specifically for file discovery. Other agents should have their context specified upfront.
+assistant (with code analysis skills) exists specifically for file discovery. Other agents should have their context specified upfront.
 
 **Description**:
 Ensure agents receive required files upfront, eliminating wasteful file searching during execution. Each agent's role definition should specify "Required Files (Context)" that are provided at invocation time.
@@ -26204,7 +27027,7 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
    - All `.claude/agents/*.md` include "Required Files (Context)" section
    - Clear specification of which files agent needs
    - Explanation of WHY each file is needed
-   - Exceptions documented (code-searcher, architect for analysis)
+   - Exceptions documented (assistant (with code analysis skills), architect for analysis)
 
 2. **generator Context Provision**:
    - generator loads context files before routing to agents
@@ -26214,14 +27037,14 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
 3. **Agents Use Read for Known Paths**:
    - Agents use Read tool for known file paths
    - Glob/Grep only for:
-     - code-searcher (discovery is the role)
+     - assistant (with code analysis skills) (discovery is the role)
      - architect (analyzing codebase patterns)
      - Exceptional cases (documented)
 
-4. **File Searching Delegated to code-searcher**:
-   - "Find all files that..." → code-searcher
-   - "Where is X implemented?" → code-searcher
-   - Discovery tasks → code-searcher
+4. **File Searching Delegated to assistant (with code analysis skills)**:
+   - "Find all files that..." → assistant (with code analysis skills)
+   - "Where is X implemented?" → assistant (with code analysis skills)
+   - Discovery tasks → assistant (with code analysis skills)
 
 5. **Logging & Monitoring**:
    - generator logs when agents unexpectedly search
@@ -26239,7 +27062,7 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
 - [x] generator provides context files when routing to agents
 - [x] Agents receive context in prompts (not searching)
 - [x] Agents use Read for known paths (not Glob/Grep)
-- [x] code-searcher handles discovery tasks (delegated)
+- [x] assistant (with code analysis skills) handles discovery tasks (delegated)
 - [x] Performance metrics show reduced searching (baseline vs after)
 - [x] Documentation updated (CFRs, agent definitions, CLAUDE.md)
 - [x] Logging captures unexpected file searches
@@ -26256,7 +27079,7 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
    - project_manager.md: Strategic docs + team collaboration
    - architect.md: Design docs + ADRs + dependencies
    - assistant.md: Documentation expertise + prompts index
-   - code-searcher.md: Exception - discovery is role
+   - assistant (with code analysis skills).md: Exception - discovery is role
    - ux-design-expert.md: Design standards + feature requirements
 
 2. **Generator Context Loading** (coffee_maker/autonomous/ace/generator.py):
@@ -26269,7 +27092,7 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
    - monitor_file_search(): Track unexpected searches
    - _log_search_trace(): Record traces for reflector
    - get_search_stats(): Statistics on searches
-   - code-searcher exempt (expected to search)
+   - assistant (with code analysis skills) exempt (expected to search)
    - architect allowed (for codebase analysis)
 
 4. **Comprehensive Tests** (tests/unit/test_context_upfront.py):
@@ -26290,7 +27113,7 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
 
 **Key Design Decisions**:
 
-1. **code-searcher is Exception**: Discovery IS the role
+1. **assistant (with code analysis skills) is Exception**: Discovery IS the role
 2. **architect May Search**: For codebase analysis when designing
 3. **Context Truncation**: Max 5000 chars per file in prompts (configurable)
 4. **Graceful Degradation**: Missing files return error messages (not failures)
@@ -26301,7 +27124,7 @@ Ensure agents receive required files upfront, eliminating wasteful file searchin
 - .claude/agents/project_manager.md
 - .claude/agents/architect.md
 - .claude/agents/assistant.md
-- .claude/agents/code-searcher.md
+- .claude/agents/assistant (with code analysis skills).md
 - .claude/agents/ux-design-expert.md
 - coffee_maker/autonomous/ace/generator.py
 - docs/roadmap/ROADMAP.md
@@ -26334,9 +27157,9 @@ architect:
 
 assistant:
   Always Read: ROADMAP.md, CLAUDE.md, assistant.md
-  May Search: (delegates to code-searcher for deep analysis, uses Grep/Read for 1-2 files)
+  May Search: (delegates to assistant (with code analysis skills) for deep analysis, uses Grep/Read for 1-2 files)
 
-code-searcher:
+assistant (with code analysis skills):
   Always Read: None (discovery is the role)
   Primary Tool: Glob, Grep, Read
 ```
@@ -26396,7 +27219,7 @@ roadmap = context["docs/roadmap/ROADMAP.md"]["content"]  # Fast!
 
 ```python
 # generator logs unexpected searches
-if agent_type != "code-searcher" and tool_call == "Glob":
+if agent_type != "assistant (with code analysis skills)" and tool_call == "Glob":
     logger.warning(
         f"Agent '{agent_type}' used Glob unexpectedly. "
         f"Pattern: {pattern}. "
@@ -26421,7 +27244,7 @@ if agent_type != "code-searcher" and tool_call == "Glob":
 
 **Success Metrics**:
 
-- **Performance**: Reduced Glob/Grep calls by 80%+ (except code-searcher)
+- **Performance**: Reduced Glob/Grep calls by 80%+ (except assistant (with code analysis skills))
 - **Clarity**: All agents have documented context requirements
 - **Predictability**: Consistent agent startup time
 - **Monitoring**: Unexpected searches logged and traced
@@ -26433,7 +27256,7 @@ if agent_type != "code-searcher" and tool_call == "Glob":
 1. **Performance**: File system operations are expensive
 2. **Clarity**: Obvious what agent needs to work
 3. **Debugging**: Easy to see if context is missing
-4. **Separation of Concerns**: code-searcher handles discovery
+4. **Separation of Concerns**: assistant (with code analysis skills) handles discovery
 
 **Related**:
 - CRITICAL_FUNCTIONAL_REQUIREMENTS.md v1.4 - "Agent File Access Patterns"
@@ -26985,9 +27808,10 @@ This user story directly addresses user feedback about lack of parallel executio
 
 ## US-044: Regular Refactoring and Technical Debt Reduction Workflow
 
-**Status**: 📝 PLANNED - HIGH PRIORITY (Code Quality)
+**Status**: ✅ COMPLETE (2025-10-21) - HIGH PRIORITY (Code Quality)
 
 **Created**: 2025-10-16
+**Completed**: 2025-10-21
 
 **Type**: Process / Workflow
 
@@ -27382,9 +28206,9 @@ This US implements CFR-005 (Ownership Includes Maintenance Responsibility):
 
 This user story addresses the user's requirement for regular, systematic refactoring. architect takes the lead on deciding WHEN and WHAT to refactor, while code_developer executes the refactoring based on architect's detailed plans.
 
-**Implementation Progress** (2025-10-16):
+**Implementation Progress**:
 
-**Phase 1: Infrastructure Setup - COMPLETE**
+**Phase 1: Infrastructure Setup - ✅ COMPLETE** (2025-10-16)
 - Created docs/architecture/refactoring/ directory structure (active/, completed/, templates/)
 - Created REFACTOR_TEMPLATE.md template for architect to use
 - Created example refactoring plan (REFACTOR_2025_10_16_daemon_simplification.md)
@@ -27392,14 +28216,63 @@ This user story addresses the user's requirement for regular, systematic refacto
 - Created check_complexity.sh script for monitoring
 - Generated baseline complexity metrics (baseline_complexity_2025_10_16.txt)
 
-Infrastructure is now ready for architect to create refactoring plans and for code_developer to execute them.
+**Phase 2: Documentation & Workflow - ✅ COMPLETE** (2025-10-21)
+- Created comprehensive ARCHITECT_WORKFLOW.md (724 lines) with monitoring, planning, and review processes
+- Created detailed CODE_DEVELOPER_WORKFLOW.md (819 lines) with execution guidelines
+- Created MONITORING_GUIDE.md (653 lines) with metrics interpretation
+- Created REFACTORING_BEST_PRACTICES.md (500+ lines) with real codebase examples
+- Created REFACTORING_WORKFLOW_INTEGRATION.md (680+ lines) showing complete end-to-end workflow
+- All documentation tested with real commands from the codebase
 
-**Next Steps** (Phase 2 - Workflow Automation):
-- architect monitoring workflow (weekly metrics review)
-- architect refactoring plan generation workflow
-- code_developer refactoring execution workflow
-- ROADMAP integration (REFACTOR-XXX priorities)
-- architect review process automation
+**Deliverables Completed**:
+
+1. **Directory Structure** ✅
+   - `docs/architecture/refactoring/active/` - Active refactoring plans
+   - `docs/architecture/refactoring/completed/` - Archived completed plans
+   - `docs/architecture/refactoring/templates/` - Plan templates
+
+2. **Templates & Tools** ✅
+   - `REFACTOR_TEMPLATE.md` - Standardized refactoring plan template
+   - `scripts/check_complexity.sh` - Automated complexity monitoring
+   - Baseline metrics for tracking improvements
+
+3. **Workflow Documentation** ✅
+   - `ARCHITECT_WORKFLOW.md` - Complete architect monitoring and planning workflow
+   - `CODE_DEVELOPER_WORKFLOW.md` - Step-by-step execution guide
+   - `MONITORING_GUIDE.md` - Metrics interpretation and thresholds
+   - `REFACTORING_BEST_PRACTICES.md` - Patterns with real codebase examples
+   - `REFACTORING_WORKFLOW_INTEGRATION.md` - End-to-end integration guide
+   - `README.md` - Directory overview
+
+4. **Example Refactoring Plan** ✅
+   - `REFACTOR_2025_10_16_daemon_simplification.md` - Real example showing format
+
+5. **Integration** ✅
+   - ROADMAP integration (REFACTOR-XXX priority format)
+   - Notification system integration
+   - Git workflow integration (CFR-013)
+   - CI/CD integration examples
+
+**Acceptance Criteria Status**:
+- [x] docs/architecture/refactoring/ directory created
+- [x] Refactoring plan template created (REFACTOR_TEMPLATE.md)
+- [x] architect monitors code quality weekly (documented in ARCHITECT_WORKFLOW.md)
+- [x] architect can create refactoring plans (complete workflow documented)
+- [x] code_developer can execute refactoring tasks (complete workflow documented)
+- [x] Refactoring tasks appear in ROADMAP (REFACTOR-XXX format documented)
+- [x] Code complexity metrics tracked (radon, pylint)
+- [x] architect review process documented (complete in ARCHITECT_WORKFLOW.md)
+- [x] Example refactoring plan exists (REFACTOR_2025_10_16_daemon_simplification.md)
+- [x] Integration with CI/CD documented (in REFACTORING_WORKFLOW_INTEGRATION.md)
+
+**Impact**:
+- Proactive code quality management now fully operational
+- architect has complete monitoring and planning workflow
+- code_developer has clear execution guidelines
+- 2,700+ lines of comprehensive documentation
+- Real examples from codebase (chat_interface.py, continuous_work_loop.py, etc.)
+- Systematic approach prevents technical debt accumulation
+- Clear thresholds and decision criteria (complexity >20, files >2000 lines, etc.)
 
 ---
 
@@ -27413,7 +28286,7 @@ Infrastructure is now ready for architect to create refactoring plans and for co
 
 **Why**:
 - **Architectural Alignment**: Matches documented architecture in CLAUDE.md where `user_listener` is defined as the PRIMARY USER INTERFACE
-- **Clear Separation of Concerns**: Establishes clear boundary between UI (user_listener) and backend agents (project_manager, architect, code-searcher, etc.)
+- **Clear Separation of Concerns**: Establishes clear boundary between UI (user_listener) and backend agents (project_manager, architect, assistant (with code analysis skills), etc.)
 - **Full Agent Delegation**: Enables proper delegation to all specialized agents through a single, consistent interface
 - **User Experience**: Provides a unified, intuitive command for all user interactions instead of using `project-manager chat`
 
@@ -27436,7 +28309,7 @@ The project architecture in CLAUDE.md clearly defines `user_listener` as the "PR
 2. **Agent Delegation System**:
    - Delegate strategic tasks to project_manager (ROADMAP updates, GitHub monitoring, status reports)
    - Delegate architectural decisions to architect (technical specs, ADRs, dependencies)
-   - Delegate code analysis to code-searcher (deep codebase analysis, forensics)
+   - Delegate code analysis to assistant (with code analysis skills) (deep codebase analysis, forensics)
    - Delegate demos and bug reports to assistant (Puppeteer demos, comprehensive bug analysis)
    - Delegate design decisions to ux-design-expert (UI/UX, Tailwind CSS)
 
@@ -27466,7 +28339,7 @@ The project architecture in CLAUDE.md clearly defines `user_listener` as the "PR
 - [ ] Command provides rich terminal experience (markdown, syntax highlighting, streaming)
 - [ ] Delegates to project_manager for strategic tasks (ROADMAP, GitHub, status)
 - [ ] Delegates to architect for architectural decisions (specs, ADRs, dependencies)
-- [ ] Delegates to code-searcher for code analysis (deep analysis, patterns)
+- [ ] Delegates to assistant (with code analysis skills) for code analysis (deep analysis, patterns)
 - [ ] Delegates to assistant for demos and bug reports (Puppeteer, comprehensive QA)
 - [ ] Delegates to ux-design-expert for design decisions (UI/UX, Tailwind)
 - [ ] AgentRegistry enforces singleton (only one UI session at time)
@@ -28011,7 +28884,7 @@ This is the **continuous improvement loop** that ensures architectural quality d
 
 ---
 
-### US-054: Architect Daily Integration of code-searcher Findings (CFR-011) 📝 Planned
+### US-054: Architect Daily Integration of assistant (with code analysis skills) Findings (CFR-011) 📝 Planned
 
 **PRIORITY**: 15 (CRITICAL - CFR-011 Enforcement)
 
@@ -28022,25 +28895,25 @@ This is the **continuous improvement loop** that ensures architectural quality d
 **Estimated Effort**: 1-2 days
 
 **User Story**:
-As the architect agent, I must read code-searcher analysis reports daily and analyze the codebase weekly to identify refactoring opportunities and technical debt reduction, so that all findings are integrated into technical specifications before creating new specs.
+As the architect agent, I must read assistant (with code analysis skills) analysis reports daily and analyze the codebase weekly to identify refactoring opportunities and technical debt reduction, so that all findings are integrated into technical specifications before creating new specs.
 
 **Problem Statement**:
-Currently, code-searcher produces valuable analysis reports about code quality, duplication, technical debt, and refactoring opportunities, but architect does not systematically integrate these findings:
-- **Reports ignored**: code-searcher reports sit unread in docs/
+Currently, assistant (with code analysis skills) produces valuable analysis reports about code quality, duplication, technical debt, and refactoring opportunities, but architect does not systematically integrate these findings:
+- **Reports ignored**: assistant (with code analysis skills) reports sit unread in docs/
 - **Technical debt accumulates**: Refactoring opportunities missed
 - **Duplicate work**: Same patterns implemented multiple times
 - **Quality degradation**: Code quality issues not addressed proactively
 - **No enforcement**: No mechanism to ensure architect reads reports
 
-This is a **Critical Functional Requirement** (CFR-011) that ensures architect maintains code quality through continuous integration of code-searcher findings.
+This is a **Critical Functional Requirement** (CFR-011) that ensures architect maintains code quality through continuous integration of assistant (with code analysis skills) findings.
 
 **Description**:
-Implement enforcement mechanism where architect MUST read code-searcher reports daily AND analyze the codebase weekly before being allowed to create new technical specifications. This creates a feedback loop: code-searcher identifies issues → architect reads and acts on findings → new specs incorporate improvements → code_developer implements better code.
+Implement enforcement mechanism where architect MUST read assistant (with code analysis skills) reports daily AND analyze the codebase weekly before being allowed to create new technical specifications. This creates a feedback loop: assistant (with code analysis skills) identifies issues → architect reads and acts on findings → new specs incorporate improvements → code_developer implements better code.
 
 **Requirements**:
 
 1. **Daily Integration Workflow**:
-   - Check for new code-searcher reports every day
+   - Check for new assistant (with code analysis skills) reports every day
    - BLOCK spec creation if unread reports exist
    - Read all reports and extract action items
    - Update existing specs with findings
@@ -28082,7 +28955,7 @@ Implement enforcement mechanism where architect MUST read code-searcher reports 
 - [x] `ArchitectDailyRoutine` class implemented in `coffee_maker/autonomous/architect_daily_routine.py`
 - [x] `CFR011ViolationError` exception defined
 - [x] `enforce_cfr_011()` method raises exception if:
-  - Unread code-searcher reports exist
+  - Unread assistant (with code analysis skills) reports exist
   - >7 days since last codebase analysis
 - [x] Tracking file `data/architect_integration_status.json` created and maintained
 - [x] CLI command `architect daily-integration` works (guided workflow)
@@ -28100,7 +28973,7 @@ Implement enforcement mechanism where architect MUST read code-searcher reports 
 **Phase 1: Core Enforcement Mechanism** (4-6 hours)
 - Create `ArchitectDailyRoutine` class
 - Implement `enforce_cfr_011()` with both checks:
-  - Part 1: code-searcher report reading (daily)
+  - Part 1: assistant (with code analysis skills) report reading (daily)
   - Part 2: Codebase analysis (weekly)
 - Define `CFR011ViolationError` exception
 - Create tracking file structure
@@ -28130,7 +29003,7 @@ Implement enforcement mechanism where architect MUST read code-searcher reports 
 
 **Dependencies**:
 - US-047 (architect must be creating specs for enforcement to matter)
-- code-searcher must be producing reports (already happening)
+- assistant (with code analysis skills) must be producing reports (already happening)
 
 **Technical Specification Required**: Yes - architect will create detailed implementation spec
 
@@ -28157,19 +29030,19 @@ Implement enforcement mechanism where architect MUST read code-searcher reports 
 - `docs/architecture/specs/SPEC-051-centralized-prompt-utilities.md` - Example refactoring spec
 - `docs/architecture/specs/SPEC-052-standardized-error-handling.md` - Example refactoring spec
 - `docs/architecture/specs/SPEC-053-test-coverage-expansion.md` - Example refactoring spec
-- `docs/architecture/decisions/ADR-004-code-searcher-integration.md` - code-searcher integration approach
+- `docs/architecture/decisions/ADR-004-assistant (with code analysis skills)-integration.md` - assistant (with code analysis skills) integration approach
 - `.claude/agents/architect.md` - Architect role definition
-- `.claude/agents/code-searcher.md` - code-searcher role definition
+- `.claude/agents/assistant (with code analysis skills).md` - assistant (with code analysis skills) role definition
 
 **Unblocks**:
-- US-049 (continuous spec improvement needs findings from code-searcher)
+- US-049 (continuous spec improvement needs findings from assistant (with code analysis skills))
 - All refactoring priorities (SPEC-050, SPEC-051, SPEC-052, SPEC-053)
 
 **Blocked By**: None (can start immediately)
 
 **Notes**:
 This creates a powerful feedback loop:
-1. code-searcher analyzes codebase → finds issues
+1. assistant (with code analysis skills) analyzes codebase → finds issues
 2. architect reads reports daily → extracts improvements
 3. architect creates/updates specs → incorporates findings
 4. code_developer implements → better code quality
@@ -28188,7 +29061,7 @@ This creates a powerful feedback loop:
 Day 1 (Monday):
 1. architect starts work day
 2. enforce_cfr_011() runs automatically
-3. Finds 2 new code-searcher reports
+3. Finds 2 new assistant (with code analysis skills) reports
 4. BLOCKS spec creation with: "CFR-011 VIOLATION: Must read 2 new reports"
 5. architect runs: architect daily-integration
 6. Reads reports, extracts 5 refactoring opportunities
@@ -28224,13 +29097,13 @@ class ArchitectDailyRoutine:
         """Mandatory daily check before architect can create new specs."""
         today = datetime.now().date()
 
-        # Part 1: code-searcher report reading
+        # Part 1: assistant (with code analysis skills) report reading
         if self.last_code_searcher_read < today:
             reports = self._find_new_code_searcher_reports()
             if reports and not self._has_read_reports(reports):
                 raise CFR011ViolationError(
                     f"CFR-011 VIOLATION: Must read {len(reports)} new "
-                    f"code-searcher reports before creating specs today.\n\n"
+                    f"assistant (with code analysis skills) reports before creating specs today.\n\n"
                     f"Reports to read:\n" + "\n".join(f"- {r}" for r in reports) +
                     f"\n\nRun: architect daily-integration"
                 )
@@ -28431,7 +29304,7 @@ As an autonomous agent, I want additional skills for strategic workflows (ROADMA
    - **Bug Analysis Skill** (assistant): Reproduce bug, capture logs, analyze root cause, comprehensive report
 
 2. **Deep Analysis Skills** (Week 3):
-   - **Security Audit Skill** (code-searcher): Comprehensive security scanning (vulnerabilities, dependencies, auth flows)
+   - **Security Audit Skill** (assistant (with code analysis skills)): Comprehensive security scanning (vulnerabilities, dependencies, auth flows)
    - **Dependency Impact Skill** (architect): Analyze dependency changes, identify risks, suggest migration paths
 
 **Acceptance Criteria**:
@@ -28470,7 +29343,7 @@ As an autonomous agent, I want enhancement skills (code forensics, design system
 **Phase 3 Deliverables**:
 
 1. **Enhancement Skills** (Week 1):
-   - **Code Forensics Skill** (code-searcher): Trace code evolution, identify contributors, analyze patterns
+   - **Code Forensics Skill** (assistant (with code analysis skills)): Trace code evolution, identify contributors, analyze patterns
    - **Design System Skill** (ux-design-expert): Generate design systems from Tailwind
    - **Visual Regression Skill** (ux-design-expert): Detect unintended visual changes
 
@@ -28488,7 +29361,7 @@ As an autonomous agent, I want enhancement skills (code forensics, design system
 - [x] Comprehensive documentation complete - **NOTE**: Skills documented in SKILL.md files; additional guides deferred
 - [x] Maintenance playbook created - **NOTE**: Deferred (existing skills require minimal maintenance)
 - [x] 60%+ time reduction validated in production - **VERIFIED** (85-90% time savings per skill)
-- [x] All agents have 2-5 skills each - **VERIFIED** (code-searcher: 2, ux-design-expert: 2, etc.)
+- [x] All agents have 2-5 skills each - **VERIFIED** (assistant (with code analysis skills): 2, ux-design-expert: 2, etc.)
 
 **Dependencies**:
 - US-056 (Phase 2) must be complete
@@ -28571,7 +29444,7 @@ The architect agent was passive - it only created specs when requested. It shoul
    - `docs/architecture/ARCHITECT_SKILLS_SUMMARY.md`: Skills overview (800+ lines)
    - `docs/architecture/COMMIT_REVIEW_TRIGGER_COMPARISON.md`: Orchestrator vs git hooks (1000+ lines)
    - `docs/architecture/ARCHITECT_COMMIT_REVIEW_WORKFLOW.md`: Complete workflow (1500+ lines)
-   - `docs/architecture/decisions/ADR-009-retire-code-searcher-replace-with-skills.md`
+   - `docs/architecture/decisions/ADR-009-retire-assistant (with code analysis skills)-replace-with-skills.md`
    - `docs/architecture/decisions/ADR-010-code-architect-commit-review-skills-maintenance.md`
    - `docs/architecture/decisions/ADR-011-orchestrator-based-commit-review.md`
 
@@ -28667,7 +29540,7 @@ Spec includes "## 🔍 Architecture Reuse Check" section
 - Skills summary: `docs/architecture/ARCHITECT_SKILLS_SUMMARY.md`
 - Workflow: `docs/architecture/ARCHITECT_COMMIT_REVIEW_WORKFLOW.md`
 - Comparison: `docs/architecture/COMMIT_REVIEW_TRIGGER_COMPARISON.md`
-- ADR-009: Retire code-searcher, replace with skills
+- ADR-009: Retire assistant (with code analysis skills), replace with skills
 - ADR-010: Architect commit review & skills maintenance
 - ADR-011: Orchestrator-based commit review (corrected git hooks approach)
 
@@ -28915,7 +29788,7 @@ Reason: Single source of truth, prevents branch conflicts, simplifies coordinati
 - US-056: Enforce CFR-013 (Daemon on roadmap branch only) 🚨 REQUIRED
 
 **User Story**:
-As a user, I want ALL agents (architect, code_developer, project_manager, assistant, code-searcher, ux-design-expert) to run simultaneously in parallel, so that work happens 3-6x faster through coordinated team collaboration.
+As a user, I want ALL agents (architect, code_developer, project_manager, assistant, assistant (with code analysis skills), ux-design-expert) to run simultaneously in parallel, so that work happens 3-6x faster through coordinated team collaboration.
 
 **Problem Statement**:
 
@@ -28938,7 +29811,7 @@ architect ────────► Creating specs (proactive, CFR-011)
 code_developer ───► Implementing (never blocked)
 assistant ────────► Creating demos (automatic)
 project_manager ──► Monitoring GitHub (continuous)
-code-searcher ────► Analyzing codebase (weekly)
+assistant (with code analysis skills) ────► Analyzing codebase (weekly)
 ux-design-expert ─► Reviewing UI/UX (as needed)
 Total: 4 hours per priority (2.25x faster)
 ```
@@ -28985,7 +29858,7 @@ Transform the current single-agent daemon into a **Multi-Agent Orchestrator** th
 **1. architect (Proactive Spec Creation)**
 - **Continuous Loop**: Check ROADMAP every hour
 - **CFR-011 Enforcement**: Create 3-5 specs AHEAD of code_developer
-- **Daily Integration**: Read code-searcher reports, integrate findings
+- **Daily Integration**: Read assistant (with code analysis skills) reports, integrate findings
 - **Weekly Analysis**: Analyze codebase for refactoring opportunities
 - **Responds to**: Urgent spec requests (CFR-012)
 - **File Ownership**: docs/architecture/, pyproject.toml
@@ -29025,7 +29898,7 @@ Transform the current single-agent daemon into a **Multi-Agent Orchestrator** th
 - **File Access**: READ-ONLY for code/docs, ACTIVE for demos/bug reports
 - **Works on**: roadmap branch only (CFR-013)
 
-**5. code-searcher (Continuous Analysis)**
+**5. assistant (with code analysis skills) (Continuous Analysis)**
 - **Continuous Loop**: Weekly codebase analysis
 - **Security Audits**: Weekly security scanning
 - **Dependency Analysis**: Trace dependencies, identify issues
@@ -29132,7 +30005,7 @@ Message Format:
 5. **Create architect Agent** (2 days):
    - [ ] Implement `ArchitectAgent` with CFR-011 logic
    - [ ] Morning ROADMAP check for spec coverage
-   - [ ] Daily code-searcher report reading
+   - [ ] Daily assistant (with code analysis skills) report reading
    - [ ] Weekly codebase analysis
    - [ ] Test in orchestrator
    - [ ] Verify creates specs proactively
@@ -29153,7 +30026,7 @@ Message Format:
    - [ ] Test in orchestrator
    - [ ] Verify demo creation works
 
-8. **Create code-searcher & ux-design-expert Agents** (1 day):
+8. **Create assistant (with code analysis skills) & ux-design-expert Agents** (1 day):
    - [ ] Implement `CodeSearcherAgent` (weekly analysis)
    - [ ] Implement `UXDesignExpertAgent` (reactive + review)
    - [ ] Test in orchestrator
@@ -29206,7 +30079,7 @@ Message Format:
 - [ ] code_developer implementation time unchanged (~4 hours/priority)
 - [ ] assistant creates demo within 30 minutes of feature completion
 - [ ] project_manager checks GitHub every 15 minutes
-- [ ] code-searcher runs weekly analysis automatically
+- [ ] assistant (with code analysis skills) runs weekly analysis automatically
 - [ ] Overall priority completion time reduced by 50% (from 9 hours → 4 hours)
 
 **Quality**:
@@ -29275,7 +30148,7 @@ Message Format:
 - Continuous testing via assistant demos
 - Bugs caught within 1 hour of completion
 - Comprehensive bug reports enable quick fixes
-- Weekly code-searcher analysis improves codebase
+- Weekly assistant (with code analysis skills) analysis improves codebase
 
 **3. Autonomy (True Self-Management)**:
 - Team operates without human intervention
@@ -29290,7 +30163,7 @@ Message Format:
 - No surprises, no delays
 
 **5. Learning (Continuous Improvement)**:
-- Weekly code-searcher analysis
+- Weekly assistant (with code analysis skills) analysis
 - architect integrates findings into specs
 - Codebase quality improves over time
 - Technical debt addressed proactively
@@ -29506,7 +30379,7 @@ The trace-execution skill (converted from generator agent) represents a major ar
 - `docs/architecture/specs/PROPOSED_SKILLS_2025-10-18.md` - Document to update
 - `.claude/skills/trace-execution.md` - Recent generator-to-skill success
 - `docs/curator/` - Curator playbooks (source of insights)
-- `docs/architecture/decisions/ADR-009-retire-code-searcher-replace-with-skills.md` - Related ADR
+- `docs/architecture/decisions/ADR-009-retire-assistant (with code analysis skills)-replace-with-skills.md` - Related ADR
 
 **Timeline**: 1 day (4-6 hours)
 
@@ -30031,7 +30904,7 @@ Recommendation    | SKILL ✅   | ?         | ?
 - Implementation plan (if needed): Clear and realistic
 
 **Related Documents**:
-- `docs/architecture/decisions/ADR-009-retire-code-searcher-replace-with-skills.md` - Related precedent
+- `docs/architecture/decisions/ADR-009-retire-assistant (with code analysis skills)-replace-with-skills.md` - Related precedent
 - `.claude/skills/trace-execution.md` - Generator conversion result
 - `docs/curator/` - Curator playbooks (analyze this)
 - `docs/reflector/` - Reflector delta items (analyze this)
@@ -30073,7 +30946,7 @@ Phase 0 is the "force multiplier" that makes ALL subsequent work 3-5x faster. By
 ### Phase 0 Success Metrics
 
 **Before Phase 0**:
-- Code analysis: 10-30 seconds per search (code-searcher agent)
+- Code analysis: 10-30 seconds per search (assistant agent (with code analysis skills))
 - code_developer velocity: Baseline (1.0x)
 - architect spec creation: 117 minutes per spec
 - Context budget violations: 40-60 per month
@@ -30095,7 +30968,7 @@ Phase 0 is the "force multiplier" that makes ALL subsequent work 3-5x faster. By
 
 **Group 1: Code Analysis Skills (US-090 through US-096) - START HERE**
 
-These skills replace the code-searcher agent with lightning-fast skills (50-150x speed improvement):
+These skills replace the assistant agent (with code analysis skills) with lightning-fast skills (50-150x speed improvement):
 
 - **US-090**: Create 5 code analysis skills (20-25 hrs) **← BEGIN HERE**
   - dependency-trace skill
@@ -30106,11 +30979,11 @@ These skills replace the code-searcher agent with lightning-fast skills (50-150x
 - **US-091**: Build code index infrastructure (5-7 hrs)
   - Pre-indexed codebase for instant lookups
   - Automatic index updates on file changes
-- **US-092**: Migrate code-searcher responsibilities to architect (3-5 hrs)
-- **US-093**: Migrate code-searcher responsibilities to code_developer (3-5 hrs)
+- **US-092**: Migrate assistant (with code analysis skills) responsibilities to architect (3-5 hrs)
+- **US-093**: Migrate assistant (with code analysis skills) responsibilities to code_developer (3-5 hrs)
 - **US-094**: Transition period validation (2-3 hrs)
-- **US-095**: Retire code-searcher agent (1-2 hrs)
-- **US-096**: Archive code-searcher.md (1 hr)
+- **US-095**: Retire assistant agent (with code analysis skills) (1-2 hrs)
+- **US-096**: Archive assistant (with code analysis skills).md (1 hr)
 
 **Subtotal**: 35-51 hours | **Impact**: 50-150x code analysis speed
 
@@ -30194,7 +31067,7 @@ These skills make architect spec creation 78% faster:
 **Phase 0 Completion Criteria**:
 - [ ] All 5 code analysis skills operational (US-090)
 - [ ] Code index built and updating automatically (US-091)
-- [ ] code-searcher agent retired (US-092 through US-096)
+- [ ] assistant agent (with code analysis skills) retired (US-092 through US-096)
 - [ ] All 3 startup skills integrated (US-062, US-063, US-064)
 - [ ] CFR-007 violations = 0/month for 1 week
 - [ ] All 4 code_developer acceleration skills working (US-065 through US-067, US-102)
@@ -30947,18 +31820,18 @@ As a system architect, I need a comprehensive orchestrator agent design, so that
 
 ## PHASE 0 - GROUP 1: Code-Searcher Migration 🔄 ⭐⭐⭐ (Part of Phase 0 - START HERE)
 
-**Note**: Phase 6 contains 7 user stories (US-090 through US-096) to retire code-searcher agent and replace with 5 high-performance skills.
+**Note**: Phase 6 contains 7 user stories (US-090 through US-096) to retire assistant agent (with code analysis skills) and replace with 5 high-performance skills.
 
 ### US-090 through US-096: Code-Searcher Retirement
 
-**Summary**: Migrate code-searcher to skills:
+**Summary**: Migrate assistant (with code analysis skills) to skills:
 - US-090: Create 5 code analysis skills - 12-15 hours
 - US-091: Build code index - 4-6 hours
 - US-092: Migrate responsibilities to architect - 3-5 hours
 - US-093: Migrate responsibilities to code_developer - 3-5 hours
 - US-094: 3-week transition validation - 2-4 hours monitoring
-- US-095: Retire code-searcher agent - 2-3 hours
-- US-096: Archive code-searcher.md - 1 hour
+- US-095: Retire assistant agent (with code analysis skills) - 2-3 hours
+- US-096: Archive assistant (with code analysis skills).md - 1 hour
 
 **Total Phase 6 Effort**: 25-30 hours (5-6 days) + 3-week validation period
 
@@ -31771,11 +32644,15 @@ code-reviewer → Re-reviews → Verifies → Approves
 
 **Priority**: HIGH (CFR Compliance)
 
-**Status**: 📝 Planned
+**Status**: ✅ Complete
 
 **Created**: 2025-10-20
 
+**Completed**: 2025-10-21
+
 **Estimated Effort**: 2-3 days (6-8 hours)
+
+**Actual Effort**: Implementation already existed, verified and tested
 
 **User Story**:
 As the orchestrator, I want all agent lifecycle events (spawning, running, completion) traced in SQLite database instead of JSON files, so that we can analyze velocity, detect bottlenecks, and maintain data integrity.
@@ -31979,7 +32856,7 @@ ORDER BY elapsed_ms DESC;
 
 **Priority**: HIGH
 
-**Status**: 📝 Planned
+**Status**: ✅ Complete
 
 **Created**: 2025-10-20
 
@@ -32196,31 +33073,3 @@ On 2025-10-20 at 10:51 AM, the architect agent crashed for 13+ hours because:
 - [ ] Zero false positives in validation
 
 ---
-
-## 🔴 TOP PRIORITY FOR orchestrator (PARALLEL EXECUTION TEST)
-
-### PRIORITY 9: US-009 - Daily Report Generator ✅ Complete
-**Spec**: docs/architecture/specs/SPEC-009-enhanced-communication.md
-**Deliverables**:
-- Implement daily report generator
-- CLI integration
-- Tests
-
-### PRIORITY 10: US-010 - User Listener Implementation ✅ Complete
-**Spec**: docs/architecture/specs/SPEC-010-USER-LISTENER-UI-SIMPLIFIED.md
-**Deliverables**:
-- ✅ User listener agent (coffee_maker/cli/user_listener.py)
-- ✅ CLI interface (poetry run user-listener)
-- ✅ Tests (unit + integration tests passing)
-
-### PRIORITY 12: US-012 - User Story Command Handler ✅ Complete
-**Spec**: docs/architecture/specs/SPEC-012-user-story-command-handler.md
-**Deliverables**:
-- ✅ User story command handler (coffee_maker/cli/commands/user_story_command.py)
-- ✅ AI service integration (prompt templates in .claude/commands/)
-- ✅ ChatSession integration
-- ✅ Tests (18 unit tests - 100% passing)
-- ✅ Zero new dependencies (uses stdlib difflib)
-
-**Usage**: `/US [description]` in chat interface
-**Example**: `/US I want users to export reports to PDF`

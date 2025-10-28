@@ -66,7 +66,7 @@ write_tool.write_file("docs/roadmap/ROADMAP.md", "# roadmap")  # ⚠️ Delegate
 | `docs/roadmap/**` | `project_manager` | ROADMAP and strategic planning |
 | `docs/templates/**` | `project_manager` | Documentation templates |
 | `docs/tutorials/**` | `project_manager` | Tutorial content |
-| `docs/code-searcher/**` | `project_manager` | Code analysis documentation |
+| `docs/assistant (with code analysis skills)/**` | `project_manager` | Code analysis documentation |
 | `docs/user_interpret/**` | `project_manager` | user_interpret meta-docs |
 | `docs/code_developer/**` | `project_manager` | code_developer meta-docs |
 | `docs/architecture/**` | `architect` | Technical specs, ADRs, guidelines |

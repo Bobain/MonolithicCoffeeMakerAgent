@@ -1,6 +1,6 @@
 # Security Audit Report - 2025-10-17
 
-**Analyzed by**: code-searcher agent
+**Analyzed by**: assistant agent (with code analysis skills)
 **Analysis Date**: 2025-10-17
 **Scope**: MonolithicCoffeeMakerAgent codebase
 **Files Scanned**: 358 Python files + configuration
@@ -368,5 +368,5 @@ The MonolithicCoffeeMakerAgent demonstrates mature security practices with well-
 ---
 
 **Report Generated**: 2025-10-17
-**Auditor**: code-searcher agent
+**Auditor**: assistant agent (with code analysis skills)
 **Time Investment**: ~2 hours (comprehensive analysis)

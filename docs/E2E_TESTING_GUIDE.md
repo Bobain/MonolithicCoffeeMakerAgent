@@ -313,7 +313,7 @@ Run daemon in controlled mode:
 
 **Option A: No PR Creation** (safest):
 ```bash
-python run_daemon.py \
+python run_code_developer.py \
     --roadmap /tmp/ROADMAP_E2E_TEST.md \
     --auto-approve \
     --no-pr \
@@ -323,7 +323,7 @@ python run_daemon.py \
 
 **Option B: With PR Creation**:
 ```bash
-python run_daemon.py \
+python run_code_developer.py \
     --roadmap /tmp/ROADMAP_E2E_TEST.md \
     --auto-approve \
     --sleep 5 \
@@ -332,7 +332,7 @@ python run_daemon.py \
 
 **Option C: Interactive (asks for approval)**:
 ```bash
-python run_daemon.py \
+python run_code_developer.py \
     --roadmap /tmp/ROADMAP_E2E_TEST.md \
     --sleep 5
 ```
@@ -616,7 +616,7 @@ claude code -p "print hello world"
 # Visit https://status.anthropic.com
 
 # 4. Increase timeout
-python run_daemon.py --roadmap /tmp/test.md --timeout 7200
+python run_code_developer.py --roadmap /tmp/test.md --timeout 7200
 ```
 
 ### Branch Creation Fails
@@ -843,7 +843,7 @@ Update ROADMAP.md:
 
 Start using daemon for real work:
 ```bash
-python run_daemon.py \
+python run_code_developer.py \
     --roadmap docs/roadmap/ROADMAP.md \
     --sleep 30 \
     --model claude-sonnet-4

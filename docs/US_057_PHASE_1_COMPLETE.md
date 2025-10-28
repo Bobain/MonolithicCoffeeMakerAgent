@@ -29,7 +29,7 @@ US-057 Phase 1 is **COMPLETE** and **OPERATIONAL**. All 7 autonomous agents have
 
 2. **ArchitectAgent** (CFR-011: Proactive spec creation)
    - Creates specs 3-5 priorities ahead
-   - Reads code-searcher reports daily
+   - Reads assistant (with code analysis skills) reports daily
    - Weekly codebase analysis
    - **File**: `coffee_maker/autonomous/agents/architect_agent.py` (6.5 KB)
 
@@ -241,7 +241,7 @@ All agents inherit from BaseAgent and get:
 
 ### Phase 3 (Days 9-10): Remaining Agents
 - Enhance assistant with Puppeteer integration
-- Complete code-searcher analysis logic
+- Complete assistant (with code analysis skills) analysis logic
 - Implement ux-design-expert recommendations
 
 ### Phase 4 (Days 11-12): Coordination
@@ -278,7 +278,7 @@ From US-057 Technical Spec (Phase 1):
 
 - ✅ **Orchestrator foundation created**: OrchestratorAgent class (566 LOC)
 - ✅ **BaseAgent abstract class implemented**: (530 LOC)
-- ✅ **All 7 agent classes created**: architect, code_developer, project_manager, assistant, code-searcher, ux-design-expert, orchestrator
+- ✅ **All 7 agent classes created**: architect, code_developer, project_manager, assistant, assistant (with code analysis skills), ux-design-expert, orchestrator
 - ✅ **CFR-013 enforcement in BaseAgent**: Validated at startup
 - ✅ **CFR-012 interruption handling pattern**: Urgent → normal → background
 - ✅ **Status file infrastructure**: `data/agent_status/` directory structure
@@ -328,7 +328,7 @@ From US-057 Technical Spec (Phase 1):
 - Continuous QA (assistant demos automatically)
 - Proactive architecture (specs always ready)
 - Real-time monitoring (project_manager checks continuously)
-- Weekly codebase improvements (code-searcher + architect)
+- Weekly codebase improvements (assistant (with code analysis skills) + architect)
 
 ---
 
