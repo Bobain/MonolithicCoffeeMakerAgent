@@ -10,7 +10,7 @@ Tests:
 
 US-054 UPDATE: Tests updated to handle CFR-011 enforcement
 - Mock ArchitectDailyRoutine to be compliant
-- Tests run in isolated environment (no real assistant (with code analysis skills) reports)
+- Tests run in isolated environment (no real assistant (using code analysis skills) reports)
 """
 
 import pytest

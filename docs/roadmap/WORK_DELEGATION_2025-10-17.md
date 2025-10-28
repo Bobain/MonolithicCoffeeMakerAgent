@@ -269,8 +269,8 @@ The spec MUST include:
 
 4. **Two-Part Enforcement**:
 
-   **Part 1: assistant (with code analysis skills) Report Reading (Daily)**
-   - Find new assistant (with code analysis skills) reports in `docs/architecture/analysis/`
+   **Part 1: assistant (using code analysis skills) Report Reading (Daily)**
+   - Find new assistant (using code analysis skills) reports in `docs/architecture/analysis/`
    - Check if architect has read them (tracking file)
    - BLOCK spec creation if unread reports exist
    - Error: "CFR-011 VIOLATION: Must read N new reports before creating specs"
@@ -318,7 +318,7 @@ The spec MUST include:
 - `docs/roadmap/CRITICAL_FUNCTIONAL_REQUIREMENTS.md` → CFR-011 full definition
 - `docs/roadmap/ROADMAP.md` → US-054 description (search for "US-054")
 - `.claude/agents/architect.md` → Your role definition
-- `.claude/agents/assistant (with code analysis skills).md` → assistant (with code analysis skills) role
+- `.claude/agents/assistant (using code analysis skills).md` → assistant (using code analysis skills) role
 
 **Acceptance Criteria**:
 - ✅ Spec is complete and implementable

@@ -57,7 +57,7 @@ These tests were failing BEFORE our changes:
    - Action: Needs fixing separately
 
 4. **test_agent_registry.py::test_agent_type_enum_values**
-   - Error: Missing `assistant (with code analysis skills)` AgentType
+   - Error: Missing `assistant (using code analysis skills)` AgentType
    - Status: Pre-existing issue (1 of 26 tests failing)
    - Action: Add ASSISTANT to AgentType enum
 

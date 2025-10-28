@@ -189,7 +189,7 @@ Results
 
 **When to skip**:
 - If your agent is **READ-ONLY** or **DELEGATION-ONLY**
-- Examples: assistant, user_listener, assistant (with code analysis skills)
+- Examples: assistant, user_listener, assistant (using code analysis skills)
 
 **Ownership Check**:
 
@@ -200,7 +200,7 @@ Results
 | architect | YES (docs/architecture/) | YES |
 | assistant | NO (reads/delegates only) | NO |
 | user_listener | NO (delegates only) | NO |
-| assistant (with code analysis skills) | NO (reads only) | NO |
+| assistant (using code analysis skills) | NO (reads only) | NO |
 
 **Singleton Code**:
 

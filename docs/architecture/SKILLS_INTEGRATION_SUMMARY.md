@@ -100,7 +100,7 @@ result = controller.execute("evaluate redis dependency", mode=ExecutionMode.HYBR
 
 **Phase 1 (2 weeks)**: Infrastructure + 3 pilot skills
 - architect/dependency-analysis
-- assistant (with code analysis skills)/security-audit
+- assistant (using code analysis skills)/security-audit
 - assistant/demo-creator
 
 **Phase 2 (1-2 months)**: Add 2-3 skills per agent (15-20 total)
@@ -146,7 +146,7 @@ result = skill_controller.execute_task(
 
 **Deliverables**:
 - 3 pilot skills implemented
-- Agent integration (architect, assistant (with code analysis skills), assistant)
+- Agent integration (architect, assistant (using code analysis skills), assistant)
 - Integration tests
 - Production validation
 

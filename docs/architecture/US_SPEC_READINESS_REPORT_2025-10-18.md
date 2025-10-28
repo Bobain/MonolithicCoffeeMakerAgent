@@ -94,7 +94,7 @@
 
 ---
 
-### PRIORITY 15: US-054 - Architect Daily Integration of assistant (with code analysis skills) Findings 📝 NEEDS SPEC
+### PRIORITY 15: US-054 - Architect Daily Integration of assistant (using code analysis skills) Findings 📝 NEEDS SPEC
 
 **Status**: 📝 **MISSING SPEC**
 **Existing File**: `SPEC-054-context-budget-enforcement.md` (DIFFERENT US!)
@@ -105,7 +105,7 @@
 - Novel patterns: Yes (daily workflow enforcement, CFR-011 validation)
 
 **What This US Requires**:
-1. Daily integration workflow (read assistant (with code analysis skills) reports)
+1. Daily integration workflow (read assistant (using code analysis skills) reports)
 2. Weekly codebase analysis (architect scans code)
 3. Enforcement mechanism (CFR-011 violation detection)
 4. Tracking data (`data/architect_integration_status.json`)
@@ -118,7 +118,7 @@
 - New patterns (CFR enforcement) not used elsewhere
 
 **Assessment**: **REQUIRES NEW SPEC** 📝
-- Create: `SPEC-054-architect-assistant (with code analysis skills)-daily-integration.md`
+- Create: `SPEC-054-architect-assistant (using code analysis skills)-daily-integration.md`
 - Estimated spec creation time: 2-3 hours
 - Include architecture diagram, workflow, validation logic
 
@@ -157,7 +157,7 @@
 ### PRIORITY 17: US-055 - Claude Skills Integration Phase 1 📝 NEEDS SPEC
 
 **Status**: 📝 **MISSING SPEC**
-**Existing File**: `SPEC-055-architect-assistant (with code analysis skills)-integration.md` (DIFFERENT US!)
+**Existing File**: `SPEC-055-architect-assistant (using code analysis skills)-integration.md` (DIFFERENT US!)
 
 **Rationale**:
 - Estimated effort: 4 weeks (84-104 hours) → **SPEC ABSOLUTELY REQUIRED**
@@ -253,7 +253,7 @@
 | 12 | US-047 | Architect-Only Spec Creation | ✅ Yes | ✅ Yes | **READY** | None - implement immediately |
 | 13 | US-048 | Silent Background Agents | ⚠️ Yes | ❓ Optional | **READY** | Optional - spec may be overkill |
 | 14 | US-049 | Continuous Spec Improvement | ✅ Yes | ✅ Yes | **READY** | None - implement immediately |
-| 15 | US-054 | assistant (with code analysis skills) Daily Integration | ❌ No | ✅ Yes | **NEEDS SPEC** | Create SPEC-054 (2-3 hours) |
+| 15 | US-054 | assistant (using code analysis skills) Daily Integration | ❌ No | ✅ Yes | **NEEDS SPEC** | Create SPEC-054 (2-3 hours) |
 | 16 | US-050 | POC Creation Framework | ❌ No | ✅ Yes | **NEEDS SPEC** | Create SPEC-050 (2-3 hours) |
 | 17 | US-055 | Claude Skills Phase 1 | ❌ No | ✅ Yes | **NEEDS SPEC + POC** | Create SPEC-055 (8-12 hours) + POC |
 | 18 | US-056 | Claude Skills Phase 2 | ❌ No | ✅ Yes | **BLOCKED** | Defer until US-055 complete |
@@ -263,11 +263,11 @@
 
 ## Immediate Actions Required
 
-### 1. Create SPEC-054: Architect assistant (with code analysis skills) Daily Integration (HIGH PRIORITY)
+### 1. Create SPEC-054: Architect assistant (using code analysis skills) Daily Integration (HIGH PRIORITY)
 
 **Estimated Time**: 2-3 hours
 **Why**: PRIORITY 15 is blocked without spec
-**Deliverable**: `docs/architecture/specs/SPEC-054-architect-assistant (with code analysis skills)-daily-integration.md`
+**Deliverable**: `docs/architecture/specs/SPEC-054-architect-assistant (using code analysis skills)-daily-integration.md`
 
 **Spec Should Include**:
 - Daily integration workflow (check for reports → read → extract actions)
@@ -346,7 +346,7 @@
 - Implement US-049 (Continuous Improvement) - 8-16 hours
 
 **Week 2-3**:
-- Implement US-054 (assistant (with code analysis skills) Integration) - 8-16 hours
+- Implement US-054 (assistant (using code analysis skills) Integration) - 8-16 hours
 - Implement US-050 (POC Framework) - 8-16 hours
 - Start US-055 Phase 1 (Skills Infrastructure) - 84-104 hours (4 weeks)
 

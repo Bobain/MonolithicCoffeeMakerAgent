@@ -72,9 +72,9 @@ class TestContextLoading:
         generator = Generator()
         context = generator.load_agent_context(AgentType.ASSISTANT)
 
-        # assistant (with code analysis skills) gets minimal context (project overview)
+        # assistant (using code analysis skills) gets minimal context (project overview)
         assert ".claude/CLAUDE.md" in context
-        assert ".claude/agents/assistant (with code analysis skills).md" in context
+        assert ".claude/agents/assistant (using code analysis skills).md" in context
         assert "docs/roadmap/ROADMAP.md" in context
 
         # Should NOT load codebase files (discovery is the role)
@@ -175,10 +175,10 @@ class TestSearchMonitoring:
         assert "code_developer" in stats["searches_by_agent"]
 
     def test_monitor_search_code_searcher(self):
-        """Test monitoring expected search from assistant (with code analysis skills)."""
+        """Test monitoring expected search from assistant (using code analysis skills)."""
         generator = Generator()
 
-        # assistant (with code analysis skills) searching is EXPECTED (that's its role)
+        # assistant (using code analysis skills) searching is EXPECTED (that's its role)
         generator.monitor_file_search(AgentType.ASSISTANT, "glob", "**/*.py", context_provided=True)
 
         # Should NOT log as unexpected
@@ -234,7 +234,7 @@ class TestSearchStatistics:
         stats = generator.get_search_stats()
 
         assert stats["total_searches"] == 3
-        assert stats["unexpected_searches"] == 3  # All unexpected (not assistant (with code analysis skills))
+        assert stats["unexpected_searches"] == 3  # All unexpected (not assistant (using code analysis skills))
         assert "code_developer" in stats["searches_by_agent"]
         assert "assistant" in stats["searches_by_agent"]
         assert len(stats["most_common_patterns"]) > 0

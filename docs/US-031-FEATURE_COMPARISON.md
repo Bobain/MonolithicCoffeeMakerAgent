@@ -551,7 +551,7 @@ poetry run code-reviewer review HEAD~1..HEAD
 # Checks style guide compliance
 ```
 
-**6. assistant (with code analysis skills)** - Deep analysis
+**6. assistant (using code analysis skills)** - Deep analysis
 ```bash
 # Via user_listener:
 > "Find all singleton patterns in the codebase"

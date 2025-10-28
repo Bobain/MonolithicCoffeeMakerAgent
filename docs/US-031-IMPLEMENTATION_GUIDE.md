@@ -625,7 +625,7 @@ def main():
 3. **project_manager** - ROADMAP management
 4. **architect** - Technical specs, ADRs
 5. **code-reviewer** - Quality assurance
-6. **assistant (with code analysis skills)** - Deep code analysis
+6. **assistant (using code analysis skills)** - Deep code analysis
 7. **orchestrator** - Parallel execution
 
 ### Agent Routing
@@ -669,7 +669,7 @@ class RequestClassifier:
 
 | Intent | Agent | Example |
 |--------|-------|---------|
-| code_search | assistant (with code analysis skills) | "Find all singleton patterns" |
+| code_search | assistant (using code analysis skills) | "Find all singleton patterns" |
 | architecture | architect | "Create spec for priority 25" |
 | project_management | project_manager | "Show ROADMAP status" |
 | user_story | project_manager | "I want email notifications" |

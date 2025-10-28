@@ -75,9 +75,9 @@ class TestFileOwnershipLookup:
         assert FileOwnership.get_owner("docs/CONTRIBUTING.md") == AgentType.PROJECT_MANAGER
 
     def test_project_manager_owns_code_searcher_docs(self):
-        """Test project_manager owns docs/assistant (with code analysis skills)/ directory."""
+        """Test project_manager owns docs/assistant (using code analysis skills)/ directory."""
         assert (
-            FileOwnership.get_owner("docs/assistant (with code analysis skills)/security_audit_2025-10-13.md")
+            FileOwnership.get_owner("docs/assistant (using code analysis skills)/security_audit_2025-10-13.md")
             == AgentType.PROJECT_MANAGER
         )
 

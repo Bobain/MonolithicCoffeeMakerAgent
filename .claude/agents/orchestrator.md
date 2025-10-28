@@ -582,7 +582,7 @@ orchestrator.start()
 2. **Creating specs** → Use architect
 3. **Managing ROADMAP** → Use project_manager
 4. **Answering questions** → Use assistant
-5. **Code analysis** → Use assistant (with code analysis skills)
+5. **Code analysis** → Use assistant (using code analysis skills)
 6. **Design decisions** → Use ux-design-expert
 
 **Orchestrator is SYSTEM INFRASTRUCTURE**, not a user-facing agent.

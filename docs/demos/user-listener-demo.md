@@ -65,7 +65,7 @@ poetry run user-listener
     └────────────┘ └──────────┘ └──────────┘ └──────────┘     │
                                                                │
           ┌──────────────────┐    ┌────────────────────┐      │
-          │  assistant (with code analysis skills)   │    │  ux-design-expert  │      │
+          │  assistant (using code analysis skills)   │    │  ux-design-expert  │      │
           └──────────────────┘    └────────────────────┘      │
           │                                                      │
           └─────────────────────────────────────────────────────┘
@@ -275,8 +275,8 @@ Type /exit or /quit to leave.
 - Confidence: 0.90 (pattern match - but wrong pattern)
 
 **Expected Behavior**:
-1. Intent classified: assistant (with code analysis skills) (pattern match, 0.90)
-2. Delegated to assistant (with code analysis skills) for code analysis
+1. Intent classified: assistant (using code analysis skills) (pattern match, 0.90)
+2. Delegated to assistant (using code analysis skills) for code analysis
 
 **Actual Behavior**: ❌ FAIL
 - Incorrectly classified as code_developer
@@ -458,7 +458,7 @@ def classify_intent(self, user_input: str) -> Tuple[AgentType, float]:
 - Matches: code_developer ("implement"), code_searcher ("where is")
 - Scoring: code_searcher scores higher (specific 2-word pattern)
 - Result: **code_searcher with 0.90 confidence** ✓
-- Delegate to: **assistant (with code analysis skills)** ✓
+- Delegate to: **assistant (using code analysis skills)** ✓
 
 **Input**: "Improve the dashboard UI"
 - Matches: code_developer ("code"), ux_design_expert ("dashboard", "ui")
@@ -483,7 +483,7 @@ def classify_intent(self, user_input: str) -> Tuple[AgentType, float]:
 | project_manager → roadmap | ✅ WORKING | Pattern: "roadmap" |
 | code_developer → implement | ✅ WORKING | Pattern: "implement" |
 | assistant → demos | ✅ WORKING | Pattern: "demo" |
-| assistant (with code analysis skills) → code analysis | ⚠️ ISSUE | Pattern matching bug (low priority) |
+| assistant (using code analysis skills) → code analysis | ⚠️ ISSUE | Pattern matching bug (low priority) |
 | ux-design-expert → ui/ux | ⚠️ ISSUE | Pattern matching bug (low priority) |
 | **Error Handling** | | |
 | Missing API key | ✅ WORKING | Clear error message |
@@ -557,9 +557,9 @@ Assistant: "Let me create a visual demo of the dashboard..."
 ```
 › Analyze the authentication module for security issues
   ↓
-[user-listener classifies as: assistant (with code analysis skills) (0.90) - if bug fixed]
+[user-listener classifies as: assistant (using code analysis skills) (0.90) - if bug fixed]
   ↓
-[Delegates to assistant (with code analysis skills)]
+[Delegates to assistant (using code analysis skills)]
   ↓
 Code-Searcher: "The authentication module contains: ..."
 [Response with code analysis, security review, recommendations]

@@ -1,7 +1,7 @@
 # CLEANUP-001: Tactical Breakdown
 
 **Status**: Ready to execute
-**Total Files**: 91 files with assistant (with code analysis skills) references
+**Total Files**: 91 files with assistant (using code analysis skills) references
 **Estimated Time**: 3-4 hours
 
 ---
@@ -25,22 +25,22 @@
 ### Files to Update:
 
 1. **coffee_maker/cli/architect_cli.py** (7 refs)
-   - Remove `daily-integration` command (reads assistant (with code analysis skills) reports)
+   - Remove `daily-integration` command (reads assistant (using code analysis skills) reports)
    - Update help text
-   - Remove CFR-011 assistant (with code analysis skills) checks
+   - Remove CFR-011 assistant (using code analysis skills) checks
 
 2. **coffee_maker/autonomous/daemon_spec_manager.py** (7 refs)
-   - Remove CFR-011 assistant (with code analysis skills) enforcement
+   - Remove CFR-011 assistant (using code analysis skills) enforcement
    - Update spec creation checks
    - Remove report reading requirements
 
 3. **coffee_maker/autonomous/architect_daily_routine.py** (8 refs)
-   - Remove `ArchitectDailyRoutine` class entirely (reads assistant (with code analysis skills) reports)
+   - Remove `ArchitectDailyRoutine` class entirely (reads assistant (using code analysis skills) reports)
    - Update imports where used
 
 4. **coffee_maker/autonomous/orchestrator.py** (4 refs)
    - Update comments about code quality improvements
-   - Remove assistant (with code analysis skills) scheduling
+   - Remove assistant (using code analysis skills) scheduling
 
 5. **coffee_maker/autonomous/agents/base_agent.py** (2 refs)
    - Update comments about check intervals
@@ -49,7 +49,7 @@
    - Update CFR-011 enforcement comment
 
 7. **coffee_maker/autonomous/ace/generator.py** (4 refs)
-   - Remove assistant (with code analysis skills) from expected search agents
+   - Remove assistant (using code analysis skills) from expected search agents
    - Update search tracking logic
 
 8. **coffee_maker/autonomous/implementation_task_creator.py** (1 ref)
@@ -77,7 +77,7 @@
 ### Files to Update:
 
 1. **.claude/agents/architect.md** (7 refs)
-   - Update CFR-011 requirements (remove assistant (with code analysis skills) reports)
+   - Update CFR-011 requirements (remove assistant (using code analysis skills) reports)
    - Update delegation rules
    - Update workflow examples
 
@@ -87,17 +87,17 @@
    - Document code-forensics and security-audit skills
 
 3. **.claude/agents/README.md** (4 refs)
-   - Remove assistant (with code analysis skills) from agent list
+   - Remove assistant (using code analysis skills) from agent list
    - Update agent count (8 → 7 agents)
    - Update skill ownership
 
 4. **.claude/agents/user_listener.md** (3 refs)
    - Update routing examples
-   - Remove assistant (with code analysis skills) from delegation patterns
+   - Remove assistant (using code analysis skills) from delegation patterns
 
 5. **.claude/agents/orchestrator.md** (2 refs)
    - Update agent coordination list
-   - Remove assistant (with code analysis skills) scheduling
+   - Remove assistant (using code analysis skills) scheduling
 
 6. **.claude/agents/project_manager.md** (1 ref)
    - Update delegation examples
@@ -105,7 +105,7 @@
 ### Action Plan:
 ```bash
 # For each file:
-1. Find all "assistant (with code analysis skills)" mentions
+1. Find all "assistant (using code analysis skills)" mentions
 2. Replace with "assistant (using code-forensics/security-audit skills)"
 3. Update agent lists and counts
 4. Verify examples still make sense
@@ -129,25 +129,25 @@
    - Update search expectation tests
 
 3. **tests/unit/test_file_ownership_enforcement.py** (2 refs)
-   - Remove docs/assistant (with code analysis skills)/ ownership test
+   - Remove docs/assistant (using code analysis skills)/ ownership test
 
 4. **tests/unit/test_phase2_skills.py** (4 refs)
    - Update security-audit skill tests
-   - Change agent from assistant (with code analysis skills) to assistant
+   - Change agent from assistant (using code analysis skills) to assistant
 
 5. **tests/unit/test_phase3_skills.py** (10 refs)
    - Update code-forensics skill tests
-   - Change agent from assistant (with code analysis skills) to assistant
+   - Change agent from assistant (using code analysis skills) to assistant
 
 6. **tests/unit/test_architect_daily_routine.py** (1 ref)
-   - Remove assistant (with code analysis skills) report tests OR
+   - Remove assistant (using code analysis skills) report tests OR
    - Archive entire test file if ArchitectDailyRoutine removed
 
 7. **tests/unit/test_singleton_enforcement.py** (1 ref)
-   - Remove assistant (with code analysis skills) parallel run test
+   - Remove assistant (using code analysis skills) parallel run test
 
 8. **tests/ci_tests/test_cfr_011_integration.py** (5 refs)
-   - Remove CFR-011 assistant (with code analysis skills) report requirements
+   - Remove CFR-011 assistant (using code analysis skills) report requirements
    - Update integration tests
 
 ### Action Plan:
@@ -182,11 +182,11 @@ Most of these are in docs/ and .claude/ directories with simple mentions.
 sed -i '' 's/assistant agent (with code analysis skills)/assistant agent (using code analysis skills)/g' FILE
 
 # Pattern 2: Agent lists
-sed -i '' 's/, assistant (with code analysis skills)//g' FILE
-sed -i '' 's/assistant (with code analysis skills), //g' FILE
+sed -i '' 's/, assistant (using code analysis skills)//g' FILE
+sed -i '' 's/assistant (using code analysis skills), //g' FILE
 
 # Pattern 3: Delegation examples
-sed -i '' 's/delegate to assistant (with code analysis skills)/delegate to assistant for code analysis/g' FILE
+sed -i '' 's/delegate to assistant (using code analysis skills)/delegate to assistant for code analysis/g' FILE
 
 # Then manually verify critical files:
 - AGENT_DELEGATION_RULES.md (complex examples)
@@ -211,12 +211,12 @@ sed -i '' 's/delegate to assistant (with code analysis skills)/delegate to assis
 
 ### Options:
 **Option A**: Archive all to backup
-**Option B**: Add header noting assistant (with code analysis skills) is deprecated
+**Option B**: Add header noting assistant (using code analysis skills) is deprecated
 **Option C**: Update references inline
 
 ### Recommendation: **Option B**
 ```markdown
-> **Note**: This document references the deprecated `assistant (with code analysis skills)` agent.
+> **Note**: This document references the deprecated `assistant (using code analysis skills)` agent.
 > As of 2025-10-24, code analysis is handled by `assistant` using skills
 > (code-forensics, security-audit). See CLEANUP-001 for details.
 ```
@@ -258,9 +258,9 @@ sed -i '' 's/delegate to assistant (with code analysis skills)/delegate to assis
 After each phase:
 ```bash
 # 1. Search verification
-grep -r "assistant (with code analysis skills)" --include="*.py" --include="*.md" . | \
+grep -r "assistant (using code analysis skills)" --include="*.py" --include="*.md" . | \
   grep -v ".git/" | \
-  grep -v ".claude/skills/assistant (with code analysis skills)/" | \
+  grep -v ".claude/skills/assistant (using code analysis skills)/" | \
   wc -l
 
 # 2. Test suite
@@ -292,11 +292,11 @@ These may need design decisions:
 
 1. **architect_daily_routine.py** (8 refs)
    - **Decision**: Remove entire module? Or repurpose?
-   - CFR-011 requires architect to read assistant (with code analysis skills) reports
+   - CFR-011 requires architect to read assistant (using code analysis skills) reports
    - If no reports exist, what should CFR-011 be?
 
 2. **daemon_spec_manager.py** (7 refs)
-   - **Decision**: How to enforce CFR-011 without assistant (with code analysis skills)?
+   - **Decision**: How to enforce CFR-011 without assistant (using code analysis skills)?
    - Remove CFR-011 entirely?
    - Replace with different requirement?
 
@@ -306,14 +306,14 @@ These may need design decisions:
 
 4. **.claude/AGENT_DELEGATION_RULES.md** (28 refs)
    - **Decision**: Extensive rewrite needed
-   - Many delegation examples involve assistant (with code analysis skills)
+   - Many delegation examples involve assistant (using code analysis skills)
    - Need to rethink code analysis delegation
 
 ---
 
 ## Success Metrics
 
-- [ ] Zero "assistant (with code analysis skills)" references (except in skills directory)
+- [ ] Zero "assistant (using code analysis skills)" references (except in skills directory)
 - [ ] All tests pass
 - [ ] Documentation accurate
 - [ ] No broken links or examples

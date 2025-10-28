@@ -21,7 +21,7 @@
 | **docs/generator/** | generator | YES - Execution traces | All others: READ-ONLY |
 | **docs/reflector/** | reflector | YES - Delta items (insights) | All others: READ-ONLY |
 | **docs/curator/** | curator | YES - Playbooks and curation | All others: READ-ONLY |
-| **docs/assistant (with code analysis skills)/** | project_manager | YES - Code analysis documentation | assistant (with code analysis skills): Prepares findings (READ-ONLY) |
+| **docs/assistant (using code analysis skills)/** | project_manager | YES - Code analysis documentation | assistant (using code analysis skills): Prepares findings (READ-ONLY) |
 | **docs/code-reviews/** | code-reviewer | YES - Code review reports | architect: Reads frequently via skill, All others: READ-ONLY |
 | **docs/templates/** | project_manager | YES - Documentation templates | All others: READ-ONLY |
 | **docs/tutorials/** | project_manager | YES - Tutorial content | All others: READ-ONLY |
@@ -58,8 +58,8 @@
 | **GitHub queries** | project_manager | All `gh` commands | user_listener delegates via UI |
 | **Code editing** | code_developer | ALL code changes | assistant READ-ONLY |
 | **Code search (simple)** | assistant | 1-2 files with Grep/Read | user_listener delegates via UI |
-| **Code search (complex)** | assistant (with code analysis skills) | Deep analysis, patterns, forensics | user_listener delegates via UI |
-| **Code analysis docs** | project_manager | Creates docs/[analysis]_[date].md | assistant (with code analysis skills) prepares findings, user_listener delegates |
+| **Code search (complex)** | assistant (using code analysis skills) | Deep analysis, patterns, forensics | user_listener delegates via UI |
+| **Code analysis docs** | project_manager | Creates docs/[analysis]_[date].md | assistant (using code analysis skills) prepares findings, user_listener delegates |
 | **ROADMAP updates** | project_manager (full), code_developer (status only) | Strategic vs. execution updates | assistant READ-ONLY |
 | **Design decisions** | ux-design-expert | All UI/UX, Tailwind, charts | user_listener delegates via UI |
 | **ACE observation** | generator | Capture all agent executions | Others: Observed by generator |
@@ -119,14 +119,14 @@
 
 ### 4. Specialized agents own their domain
 
-**assistant (with code analysis skills)**: Deep codebase analysis (READ-ONLY)
+**assistant (using code analysis skills)**: Deep codebase analysis (READ-ONLY)
 - Has PROFOUND KNOWLEDGE of entire codebase structure, dependencies, patterns
 - Performs security audits, dependency tracing, code reuse identification
 - Identifies refactoring opportunities, architectural analysis
 - **Documentation Process**: Prepares findings → Presents to assistant → assistant delegates to project_manager → project_manager writes docs
 - **NEVER writes docs directly** - Always delegates via assistant to project_manager
 - **Document Format**: docs/[analysis_type]_analysis_[date].md (e.g., docs/security_audit_2025-10-13.md)
-- See .claude/agents/assistant (with code analysis skills).md for complete documentation workflow
+- See .claude/agents/assistant (using code analysis skills).md for complete documentation workflow
 
 **ux-design-expert**: Design decisions (provides specs, doesn't implement)
 
@@ -170,7 +170,7 @@ Is it architectural design? → architect
 Is it a quick question? → assistant
 Is it a demo creation? → assistant (ONLY agent that creates demos)
 Is it a bug found in demo? → assistant analyzes → reports to project_manager
-Is it about code internals? → assistant (with code analysis skills)
+Is it about code internals? → assistant (using code analysis skills)
 Is it about project status? → project_manager
 Is it about design? → ux-design-expert
 Is it implementation? → code_developer
@@ -213,7 +213,7 @@ User to user_listener: "Test the registration flow"
 
 ```
 User: "Where is authentication implemented?"
-→ assistant (with code analysis skills) (complex code analysis)
+→ assistant (using code analysis skills) (complex code analysis)
 
 User: "What's our PR status?"
 → project_manager (GitHub monitoring)

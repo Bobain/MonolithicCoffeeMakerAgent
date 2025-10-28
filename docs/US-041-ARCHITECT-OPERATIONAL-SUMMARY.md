@@ -33,7 +33,7 @@ class AgentType(Enum):
     CODE_DEVELOPER = "code_developer"
     PROJECT_MANAGER = "project_manager"
     ASSISTANT = "assistant"
-    ASSISTANT = "assistant (with code analysis skills)"
+    ASSISTANT = "assistant (using code analysis skills)"
     UX_DESIGN_EXPERT = "ux-design-expert"
     ARCHITECT = "architect"  # ✅ ALREADY REGISTERED
     USER_LISTENER = "user_listener"

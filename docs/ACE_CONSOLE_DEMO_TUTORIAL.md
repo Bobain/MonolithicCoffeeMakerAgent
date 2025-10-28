@@ -523,7 +523,7 @@ By agent: {'code_developer': 1}
 
 | Severity | Meaning | Action |
 |----------|---------|--------|
-| **INFO** | Expected search (assistant (with code analysis skills) or architect analysis) | None needed |
+| **INFO** | Expected search (assistant (using code analysis skills) or architect analysis) | None needed |
 | **WARNING** | Unexpected search (context was provided) | Add file to agent's required context |
 
 ### Improving Agent Context

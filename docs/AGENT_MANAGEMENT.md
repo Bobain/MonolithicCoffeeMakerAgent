@@ -163,7 +163,7 @@ project_manager
 Example:
 ```python
 # project_manager detects issue
-# → Delegates to assistant (with code analysis skills)
+# → Delegates to assistant (using code analysis skills)
 # → Warns user with evidence
 
 service.warn_user(

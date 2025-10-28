@@ -17,7 +17,7 @@ The architect agent was **already registered** in the Python codebase (AgentType
 
 **Missing from README**:
 - architect (#4)
-- assistant (with code analysis skills) (#5)
+- assistant (using code analysis skills) (#5)
 - ux-design-expert (#6)
 
 All three agents existed with full configuration but were not discoverable because they weren't documented in the README.
@@ -45,9 +45,9 @@ All three agents existed with full configuration but were not discoverable becau
 **Invoke**: `> Use the architect subagent to create a technical specification for feature X`
 ```
 
-**assistant (with code analysis skills) (NEW)**:
+**assistant (using code analysis skills) (NEW)**:
 ```markdown
-### 5. assistant (with code analysis skills)
+### 5. assistant (using code analysis skills)
 **Purpose**: Deep codebase analysis and forensic examination
 
 **Use When**:
@@ -57,7 +57,7 @@ All three agents existed with full configuration but were not discoverable becau
 - Architectural analysis of existing code
 - Identifying refactoring opportunities
 
-**Invoke**: `> Use the assistant (with code analysis skills) subagent to find all authentication code`
+**Invoke**: `> Use the assistant (using code analysis skills) subagent to find all authentication code`
 ```
 
 **ux-design-expert (NEW)**:
@@ -80,7 +80,7 @@ All three agents existed with full configuration but were not discoverable becau
 Added comprehensive "Startup Documents" sections for each new agent:
 
 - **architect**: Lists ROADMAP, CLAUDE.md, own role definition, ownership matrix as mandatory startup reads
-- **assistant (with code analysis skills)**: Lists CLAUDE.md, own role definition as mandatory
+- **assistant (using code analysis skills)**: Lists CLAUDE.md, own role definition as mandatory
 - **ux-design-expert**: Lists CLAUDE.md, own role definition as mandatory
 
 This ensures each agent loads the correct context files when invoked.
@@ -114,7 +114,7 @@ All 24 architect agent tests continue to pass:
 
 **Added in this commit**:
 - ✅ architect listed in .claude/agents/README.md
-- ✅ assistant (with code analysis skills) listed in .claude/agents/README.md
+- ✅ assistant (using code analysis skills) listed in .claude/agents/README.md
 - ✅ ux-design-expert listed in .claude/agents/README.md
 - ✅ Startup documents for all three agents
 
@@ -281,7 +281,7 @@ The `.claude/agents/README.md` file serves as:
 - ✅ Listed in discovery README (.claude/agents/README.md) ← **THIS WAS THE MISSING PIECE**
 - ✅ Ready to be invoked via Claude Code's Task tool
 
-Additionally, assistant (with code analysis skills) and ux-design-expert are now also discoverable, making the entire agent ecosystem complete.
+Additionally, assistant (using code analysis skills) and ux-design-expert are now also discoverable, making the entire agent ecosystem complete.
 
 ---
 

@@ -5,7 +5,7 @@
 
 ## Analysis Overview
 
-Comprehensive assistant (with code analysis skills) analysis of MonolithicCoffeeMakerAgent codebase performed on 2025-10-17. This document synthesizes findings from 4 detailed analysis reports.
+Comprehensive assistant (using code analysis skills) analysis of MonolithicCoffeeMakerAgent codebase performed on 2025-10-17. This document synthesizes findings from 4 detailed analysis reports.
 
 ### Documents Generated
 

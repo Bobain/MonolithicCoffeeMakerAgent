@@ -343,13 +343,13 @@ timeout detection logic. Low effort (2 hours), high impact on user trust.
 **Usage**: 2 times in 3 months (expected: 10-15 times)
 **Issue**: Slower than manual (12 min vs 8 min), output not actionable
 **Recommendation**: Remove skill, use assistant agent (with code analysis skills) instead
-**Migration Path**: assistant (with code analysis skills) provides better analysis in less time
+**Migration Path**: assistant (using code analysis skills) provides better analysis in less time
 **Confidence**: HIGH (clear usage pattern: agents avoid this skill)
 **Delta Items**: #11, #17 (pattern: "prefer manual analysis over skill")
 
 **Curator's Rationale**:
 Skill created 6 months ago, never adopted. Agents consistently choose
-manual analysis or assistant (with code analysis skills) over this skill. Performance data shows
+manual analysis or assistant (using code analysis skills) over this skill. Performance data shows
 skill is actually slower than alternatives. Recommendation: Deprecate,
 free up maintenance effort, direct users to better alternatives.
 

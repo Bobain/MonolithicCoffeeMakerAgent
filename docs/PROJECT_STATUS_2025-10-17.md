@@ -15,7 +15,7 @@
 - code_developer fixing 37 test failures
 - architect creating 6 refactoring specs
 - assistant testing implementations
-- assistant (with code analysis skills) delivering analysis reports
+- assistant (using code analysis skills) delivering analysis reports
 - user_listener coordinating
 
 **Actual Current State**:
@@ -239,7 +239,7 @@
    - User task mentions 5 agents, but only code_developer is running
    - If architect is needed, user should invoke via user_listener
    - If assistant is needed for testing, user should invoke
-   - If assistant (with code analysis skills) analysis is needed, user should request
+   - If assistant (using code analysis skills) analysis is needed, user should request
 
 2. **Review and Prioritize PRs**:
    - Focus on getting 1-2 PRs merged first
@@ -267,7 +267,7 @@
 **Agent Activation**:
 - If you want architect to work on specs, invoke via user_listener
 - If you want assistant to test features, invoke via user_listener
-- If you want assistant (with code analysis skills) analysis, request via user_listener
+- If you want assistant (using code analysis skills) analysis, request via user_listener
 - If you want to coordinate all agents, use user_listener as the UI
 
 ### For project_manager (Me)

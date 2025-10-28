@@ -330,7 +330,7 @@ class CodeDeveloperAgent(GitOpsMixin, ImplementationMixin, StatusMixin, BaseAgen
 - ✅ **Clear error messages**: AgentAlreadyRunningError with PID and timestamp
 
 **US-057 Requirements**:
-- Launch 6 agents simultaneously (architect, code_developer, project_manager, assistant, assistant (with code analysis skills), ux-design-expert)
+- Launch 6 agents simultaneously (architect, code_developer, project_manager, assistant, assistant (using code analysis skills), ux-design-expert)
 - Ensure NO duplicate instances
 - Automatic cleanup on crash
 

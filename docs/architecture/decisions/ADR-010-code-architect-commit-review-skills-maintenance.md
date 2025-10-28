@@ -872,7 +872,7 @@ Evening (5:00 PM):
 
 ## References
 
-- [ADR-009: Retire assistant (with code analysis skills), Replace with Skills](./ADR-009-retire-assistant (with code analysis skills)-replace-with-skills.md)
+- [ADR-009: Retire assistant (using code analysis skills), Replace with Skills](./ADR-009-retire-assistant (using code analysis skills)-replace-with-skills.md)
 - [SPEC-001: Advanced Code Search Skills Architecture](../specs/SPEC-001-advanced-code-search-skills.md)
 - [.claude/CLAUDE.md: Agent Tool Ownership Matrix](../../.claude/CLAUDE.md)
 - [User Decision: 2025-10-18 Conversation](context)
@@ -968,7 +968,7 @@ This decision is based on the user's explicit directive:
 **Recommendation**: Accept this ADR and proceed with implementation according to the phased plan outlined above.
 
 **Next Steps**:
-1. Update SPEC-001 to reflect architect as skills maintainer (replaces assistant (with code analysis skills))
+1. Update SPEC-001 to reflect architect as skills maintainer (replaces assistant (using code analysis skills))
 2. Update ADR-009 to document architect as skills owner
 3. Begin Phase 1 implementation (commit review framework)
 4. Pilot with code_developer to validate feedback quality

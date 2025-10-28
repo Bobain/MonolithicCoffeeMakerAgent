@@ -3,7 +3,7 @@
 **Status**: Accepted
 **Date**: 2025-10-17
 **Author**: architect agent
-**Related**: CODE_QUALITY_ANALYSIS_2025-10-17.md (assistant (with code analysis skills) findings)
+**Related**: CODE_QUALITY_ANALYSIS_2025-10-17.md (assistant (using code analysis skills) findings)
 
 ---
 
@@ -348,7 +348,7 @@ Track improvements via:
    - Automated code review (linting, complexity)
 
 2. **Continuous Improvement Culture**
-   - Regular assistant (with code analysis skills) analysis (quarterly)
+   - Regular assistant (using code analysis skills) analysis (quarterly)
    - "Fix-It Fridays" for technical debt
    - Quality metrics dashboard
 
@@ -367,7 +367,7 @@ Track improvements via:
 ## References
 
 ### Related Documents
-- **CODE_QUALITY_ANALYSIS_2025-10-17.md** - assistant (with code analysis skills) findings
+- **CODE_QUALITY_ANALYSIS_2025-10-17.md** - assistant (using code analysis skills) findings
 - **SPEC-050** - roadmap_cli.py modularization
 - **SPEC-051** - Centralized prompt utilities
 - **SPEC-052** - Standardized error handling

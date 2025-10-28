@@ -90,7 +90,7 @@ Agent: The system has 7 specialized agents:
 3. project_manager - ROADMAP management
 4. architect - Technical specs and ADRs
 5. code-reviewer - Quality assurance
-6. assistant (with code analysis skills) - Deep code analysis
+6. assistant (using code analysis skills) - Deep code analysis
 7. orchestrator - Parallel execution
 
 Each agent specializes in specific tasks. Would you like details on any?

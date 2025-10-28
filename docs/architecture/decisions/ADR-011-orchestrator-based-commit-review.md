@@ -695,7 +695,7 @@ Total time: <5 minutes (CRITICAL review SLA met) ✅
 ## References
 
 - [ADR-010: Architect Commit Review and Skills Maintenance](./ADR-010-code-architect-commit-review-skills-maintenance.md)
-- [ADR-009: Retire assistant (with code analysis skills), Replace with Skills](./ADR-009-retire-assistant (with code analysis skills)-replace-with-skills.md)
+- [ADR-009: Retire assistant (using code analysis skills), Replace with Skills](./ADR-009-retire-assistant (using code analysis skills)-replace-with-skills.md)
 - [Orchestrator Implementation](../../coffee_maker/autonomous/orchestrator.py)
 - [BaseAgent Messaging](../../coffee_maker/autonomous/agents/base_agent.py)
 

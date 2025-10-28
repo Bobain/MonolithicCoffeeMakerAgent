@@ -92,7 +92,7 @@ class TestSingletonEnforcementAcrossAgents:
         assert "assistant" in str(exc_info.value).lower()
 
     def test_code_searcher_singleton_enforcement(self):
-        """Test assistant (with code analysis skills) cannot run in parallel."""
+        """Test assistant (using code analysis skills) cannot run in parallel."""
         registry = AgentRegistry()
 
         registry.register_agent(AgentType.ASSISTANT)

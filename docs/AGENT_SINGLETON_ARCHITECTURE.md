@@ -151,7 +151,7 @@ These agents are READ-ONLY or delegation-only and can have multiple instances:
 |-------|--------------------------|
 | `assistant` | READ-ONLY, only reads and delegates |
 | `user_listener` | Delegation-only, no writes |
-| `assistant (with code analysis skills)` | READ-ONLY, only analyzes code |
+| `assistant (using code analysis skills)` | READ-ONLY, only analyzes code |
 | `ux-design-expert` | Provides specs, doesn't write files |
 
 **Note**: While multiple instances are technically safe for these agents, the current implementation enforces singleton for ALL agents for consistency and simplicity.

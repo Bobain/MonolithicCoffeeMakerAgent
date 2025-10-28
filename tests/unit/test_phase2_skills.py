@@ -7,7 +7,7 @@ Tests all 6 Phase 2 skills:
 - dependency-impact (architect)
 - demo-creator (assistant)
 - bug-analyzer (assistant)
-- security-audit (assistant (with code analysis skills))
+- security-audit (assistant (using code analysis skills))
 
 Author: code_developer (implementing architect's spec)
 Date: 2025-10-19
@@ -218,11 +218,11 @@ class TestBugAnalyzerSkill:
 
 
 class TestSecurityAuditSkill:
-    """Tests for security-audit skill (assistant (with code analysis skills))."""
+    """Tests for security-audit skill (assistant (using code analysis skills))."""
 
     def test_security_audit_execution(self):
         """Test that security-audit skill executes successfully."""
-        skill_path = Path(".claude/skills/assistant (with code analysis skills)/security-audit/security_audit.py")
+        skill_path = Path(".claude/skills/assistant (using code analysis skills)/security-audit/security_audit.py")
         assert skill_path.exists(), "security_audit.py not found"
 
         context = {"scope": "coffee_maker/"}
@@ -245,7 +245,7 @@ class TestSecurityAuditSkill:
 
     def test_security_audit_generates_report(self):
         """Test that security-audit generates a report file."""
-        skill_path = Path(".claude/skills/assistant (with code analysis skills)/security-audit/security_audit.py")
+        skill_path = Path(".claude/skills/assistant (using code analysis skills)/security-audit/security_audit.py")
 
         context = {"scope": "coffee_maker/"}
         result = subprocess.run(

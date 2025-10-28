@@ -58,7 +58,7 @@
 - **Blocks**: US-092, US-093 (migrations need index)
 - **Target Date**: 2025-10-20
 
-#### US-092: Migrate assistant (with code analysis skills) Responsibilities to architect
+#### US-092: Migrate assistant (using code analysis skills) Responsibilities to architect
 - **Status**: PLANNED
 - **Dependencies**: US-090 (complete), US-091 (in progress)
 - **Time Estimate**: 3-5 hours
@@ -70,7 +70,7 @@
   5. Documentation updates
 - **Target Date**: 2025-10-21
 
-#### US-093: Migrate assistant (with code analysis skills) Responsibilities to code_developer
+#### US-093: Migrate assistant (using code analysis skills) Responsibilities to code_developer
 - **Status**: PLANNED
 - **Dependencies**: US-090 (complete), US-091 (in progress)
 - **Time Estimate**: 3-5 hours
@@ -94,24 +94,24 @@
   5. Rollback plan (documented)
 - **Target Date**: 2025-11-08 (3-week validation period)
 
-#### US-095: Retire assistant (with code analysis skills) Agent
+#### US-095: Retire assistant (using code analysis skills) Agent
 - **Status**: PLANNED
 - **Dependencies**: US-094 (transition validated)
 - **Time Estimate**: 1-2 hours
 - **Deliverables**:
-  1. Remove assistant (with code analysis skills) from agent registry
+  1. Remove assistant (using code analysis skills) from agent registry
   2. Update agent registry
   3. Update all documentation
   4. Retirement announcement
   5. Final validation
 - **Target Date**: 2025-11-09
 
-#### US-096: Archive assistant (with code analysis skills).md
+#### US-096: Archive assistant (using code analysis skills).md
 - **Status**: PLANNED
 - **Dependencies**: US-095 (retirement complete)
 - **Time Estimate**: 1 hour
 - **Deliverables**:
-  1. .claude/agents/archive/assistant (with code analysis skills).md
+  1. .claude/agents/archive/assistant (using code analysis skills).md
   2. Archive README with context
   3. Documentation links updated
   4. Git commit with clear message
@@ -353,7 +353,7 @@
 
 2. **US-092, US-093 (Migrations)** - Start immediately after US-091
    - Parallel implementation possible
-   - Goal: assistant (with code analysis skills) fully migrated by 2025-10-21
+   - Goal: assistant (using code analysis skills) fully migrated by 2025-10-21
 
 3. **US-094 (Transition Validation)** - Begin 3-week observation period
    - Monitor performance, collect metrics
@@ -376,7 +376,7 @@
 - [ ] DoD verification <5 min (measured by timed execution)
 - [ ] Spec creation <60 min (measured by timed execution)
 - [ ] Commit review 100% coverage (measured by commits reviewed / total)
-- [ ] assistant (with code analysis skills) retired (agent count reduced 6 → 5)
+- [ ] assistant (using code analysis skills) retired (agent count reduced 6 → 5)
 - [ ] All tests passing (unit + integration)
 - [ ] Documentation complete and accurate
 

@@ -49,9 +49,9 @@ US-092 + US-093 (Both complete)
   │
   └─ BLOCKS → US-094 (Transition Validation - 3 weeks)
                  │
-                 └─ BLOCKS → US-095 (Retire assistant (with code analysis skills))
+                 └─ BLOCKS → US-095 (Retire assistant (using code analysis skills))
                                 │
-                                └─ BLOCKS → US-096 (Archive assistant (with code analysis skills).md)
+                                └─ BLOCKS → US-096 (Archive assistant (using code analysis skills).md)
 ```
 
 **Status**:
@@ -211,7 +211,7 @@ US-103 (commit-review-automation)
 
 ### Coordination Point 2: Week 2 (Migrations Complete)
 **Date**: 2025-10-21 (target)
-**Milestone**: assistant (with code analysis skills) responsibilities migrated to architect + code_developer
+**Milestone**: assistant (using code analysis skills) responsibilities migrated to architect + code_developer
 **Unblocks**:
 - US-094 (3-week transition validation period begins)
 - US-062 (startup skills can begin in parallel)
@@ -311,7 +311,7 @@ US-103 (commit-review-automation)
 **Mitigation**:
 - Continuous monitoring during 3-week period
 - Early detection → early fix (don't wait 3 weeks)
-- Rollback plan: Keep assistant (with code analysis skills) available during validation
+- Rollback plan: Keep assistant (using code analysis skills) available during validation
 
 ---
 
