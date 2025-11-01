@@ -2,10 +2,10 @@
 
 import pytest
 
-from coffee_maker.skills.dod_verification.criteria_parser import CriteriaParser, DoDCriterion
-from coffee_maker.skills.dod_verification.code_quality_checker import CodeQualityChecker
-from coffee_maker.skills.dod_verification.documentation_checker import DocumentationChecker
-from coffee_maker.skills.dod_verification.integration_verifier import IntegrationVerifier
+from claude.skills.dod_verification.criteria_parser import CriteriaParser, DoDCriterion
+from claude.skills.dod_verification.code_quality_checker import CodeQualityChecker
+from claude.skills.dod_verification.documentation_checker import DocumentationChecker
+from claude.skills.dod_verification.integration_verifier import IntegrationVerifier
 
 
 class TestCriteriaParser:

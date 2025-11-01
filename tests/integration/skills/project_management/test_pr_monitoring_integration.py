@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from coffee_maker.skills.project_management.pr_monitoring import (
+from claude.skills.project_management.pr_monitoring import (
     PRAnalysisReport,
     PRMonitoring,
 )

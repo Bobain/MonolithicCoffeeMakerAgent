@@ -11,7 +11,7 @@ Tests cover:
 
 import pytest
 from pathlib import Path
-from coffee_maker.skills.architecture import (
+from claude.skills.architecture import (
     ArchitectureReuseChecker,
     ArchitecturalComponent,
     check_architecture_reuse,

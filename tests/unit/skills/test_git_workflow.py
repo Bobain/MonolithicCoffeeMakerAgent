@@ -3,14 +3,14 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from coffee_maker.skills.git_workflow.commit_generator import (
+from claude.skills.git_workflow.commit_generator import (
     CommitMessageGenerator,
     CommitMessage,
 )
-from coffee_maker.skills.git_workflow.semantic_versioner import (
+from claude.skills.git_workflow.semantic_versioner import (
     SemanticVersioner,
 )
-from coffee_maker.skills.git_workflow.pr_creator import (
+from claude.skills.git_workflow.pr_creator import (
     PullRequestCreator,
 )
 

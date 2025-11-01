@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from coffee_maker.skills import get_skill
+from claude.skills import get_skill
 
 logger = logging.getLogger(__name__)
 

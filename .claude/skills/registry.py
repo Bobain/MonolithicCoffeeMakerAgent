@@ -5,7 +5,7 @@ Provides Pythonic skill loading using proper imports instead of importlib.util.
 This replaces the non-Pythonic approach of loading skills dynamically from file paths.
 
 Usage:
-    from coffee_maker.skills import get_skill
+    from claude.skills import get_skill
 
     # Load a skill
     task_separator = get_skill("architect.task_separator")

@@ -7,7 +7,7 @@ Tests acceptance criteria using appropriate methods (Puppeteer for web, subproce
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from coffee_maker.skills.dod_verification.criteria_parser import DoDCriterion
+from claude.skills.dod_verification.criteria_parser import DoDCriterion
 
 
 class FunctionalityTester:

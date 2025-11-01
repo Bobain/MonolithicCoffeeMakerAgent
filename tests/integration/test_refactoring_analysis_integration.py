@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from coffee_maker.skills.architecture.proactive_refactoring_analyzer import (
+from claude.skills.architecture.proactive_refactoring_analyzer import (
     CodeHealthReport,
     analyze_codebase_health,
     generate_weekly_report,

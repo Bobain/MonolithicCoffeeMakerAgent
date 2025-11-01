@@ -37,7 +37,7 @@ from typing import Any, Dict, List, Optional
 
 from coffee_maker.cli.notifications import NotificationDB
 from coffee_maker.orchestrator.architect_coordinator import ArchitectCoordinator
-from coffee_maker.skills import get_skill
+from claude.skills import get_skill
 
 logger = logging.getLogger(__name__)
 

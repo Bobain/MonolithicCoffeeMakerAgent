@@ -12,12 +12,12 @@ Code Analysis Skills
 All skills execute in <200ms for fast, deterministic results.
 """
 
-from coffee_maker.skills.code_analysis.code_explainer import CodeExplainer
-from coffee_maker.skills.code_analysis.code_forensics import CodeForensics
-from coffee_maker.skills.code_analysis.dependency_tracer import DependencyTracer
-from coffee_maker.skills.code_analysis.functional_search import FunctionalSearch
-from coffee_maker.skills.code_analysis.security_audit import SecurityAudit
-from coffee_maker.skills.code_analysis.test_failure_analyzer import (
+from claude.skills.code_analysis.code_explainer import CodeExplainer
+from claude.skills.code_analysis.code_forensics import CodeForensics
+from claude.skills.code_analysis.dependency_tracer import DependencyTracer
+from claude.skills.code_analysis.functional_search import FunctionalSearch
+from claude.skills.code_analysis.security_audit import SecurityAudit
+from claude.skills.code_analysis.test_failure_analyzer import (
     TestFailureAnalyzerSkill as TestFailureAnalyzer,
     AnalysisResult,
     TestFailure,

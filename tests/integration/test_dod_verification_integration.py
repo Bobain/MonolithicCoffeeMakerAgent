@@ -8,9 +8,9 @@ import pytest
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from coffee_maker.skills.dod_verification.criteria_parser import CriteriaParser
-from coffee_maker.skills.dod_verification.automated_checks import AutomatedChecks
-from coffee_maker.skills.dod_verification.code_quality_checker import CodeQualityChecker
+from claude.skills.dod_verification.criteria_parser import CriteriaParser
+from claude.skills.dod_verification.automated_checks import AutomatedChecks
+from claude.skills.dod_verification.code_quality_checker import CodeQualityChecker
 
 
 class TestDoDVerificationIntegration:
@@ -135,9 +135,9 @@ class TestDoDVerificationEndToEnd:
 
     def test_verify_current_implementation(self):
         """Test DoD verification on current US-066 implementation."""
-        from coffee_maker.skills.dod_verification.automated_checks import AutomatedChecks
-        from coffee_maker.skills.dod_verification.code_quality_checker import CodeQualityChecker
-        from coffee_maker.skills.dod_verification.documentation_checker import DocumentationChecker
+        from claude.skills.dod_verification.automated_checks import AutomatedChecks
+        from claude.skills.dod_verification.code_quality_checker import CodeQualityChecker
+        from claude.skills.dod_verification.documentation_checker import DocumentationChecker
 
         codebase_root = Path(__file__).parent.parent.parent
 

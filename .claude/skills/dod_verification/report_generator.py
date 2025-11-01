@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from coffee_maker.skills.dod_verification.dod_verification import DoDResult
+    from claude.skills.dod_verification.dod_verification import DoDResult
 
 
 class ReportGenerator:

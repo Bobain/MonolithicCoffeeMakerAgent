@@ -1,6 +1,6 @@
 """Tests for ROI Calculator."""
 
-from coffee_maker.skills.refactoring_analysis.proactive_refactoring_analysis import (
+from claude.skills.refactoring_analysis.proactive_refactoring_analysis import (
     ROICalculator,
 )
 

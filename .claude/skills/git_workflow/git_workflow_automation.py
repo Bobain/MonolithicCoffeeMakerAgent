@@ -7,11 +7,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from coffee_maker.skills.git_workflow.commit_generator import (
+from claude.skills.git_workflow.commit_generator import (
     CommitMessage,
     CommitMessageGenerator,
 )
-from coffee_maker.skills.git_workflow.pr_creator import PullRequestCreator
+from claude.skills.git_workflow.pr_creator import PullRequestCreator
 
 
 @dataclass

@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-from coffee_maker.skills.refactoring_analysis.proactive_refactoring_analysis import (
+from claude.skills.refactoring_analysis.proactive_refactoring_analysis import (
     TrendTracker,
 )
 

@@ -4,7 +4,7 @@ Skill Loader: Unified API for accessing all code analysis skills
 This module provides functions to instantiate and use skills throughout the codebase.
 
 Usage:
-    from coffee_maker.skills import functional_search, code_forensics, security_audit
+    from claude.skills import functional_search, code_forensics, security_audit
 
     # Search code by functional area
     results = functional_search("authentication")
@@ -28,19 +28,19 @@ All skills are initialized with codebase_root (defaults to current directory).
 from pathlib import Path
 from typing import Any, Dict
 
-from coffee_maker.skills.code_analysis.code_explainer import CodeExplainer
-from coffee_maker.skills.code_analysis.code_forensics import CodeForensics
-from coffee_maker.skills.code_analysis.dependency_tracer import DependencyTracer
-from coffee_maker.skills.code_analysis.functional_search import FunctionalSearch
-from coffee_maker.skills.code_analysis.security_audit import SecurityAudit
-from coffee_maker.skills.code_analysis.test_failure_analyzer import TestFailureAnalyzerSkill
-from coffee_maker.skills.dod_verification.criteria_parser import CriteriaParser
-from coffee_maker.skills.dod_verification.automated_checks import AutomatedChecks
-from coffee_maker.skills.dod_verification.code_quality_checker import CodeQualityChecker
-from coffee_maker.skills.dod_verification.functionality_tester import FunctionalityTester
-from coffee_maker.skills.dod_verification.documentation_checker import DocumentationChecker
-from coffee_maker.skills.dod_verification.integration_verifier import IntegrationVerifier
-from coffee_maker.skills.dod_verification.report_generator import ReportGenerator
+from claude.skills.code_analysis.code_explainer import CodeExplainer
+from claude.skills.code_analysis.code_forensics import CodeForensics
+from claude.skills.code_analysis.dependency_tracer import DependencyTracer
+from claude.skills.code_analysis.functional_search import FunctionalSearch
+from claude.skills.code_analysis.security_audit import SecurityAudit
+from claude.skills.code_analysis.test_failure_analyzer import TestFailureAnalyzerSkill
+from claude.skills.dod_verification.criteria_parser import CriteriaParser
+from claude.skills.dod_verification.automated_checks import AutomatedChecks
+from claude.skills.dod_verification.code_quality_checker import CodeQualityChecker
+from claude.skills.dod_verification.functionality_tester import FunctionalityTester
+from claude.skills.dod_verification.documentation_checker import DocumentationChecker
+from claude.skills.dod_verification.integration_verifier import IntegrationVerifier
+from claude.skills.dod_verification.report_generator import ReportGenerator
 from coffee_maker.utils.code_index.indexer import CodeIndexer
 from coffee_maker.utils.code_index.query_engine import CodeIndexQueryEngine
 

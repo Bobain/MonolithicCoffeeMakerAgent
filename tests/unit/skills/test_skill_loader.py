@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from coffee_maker.skills.skill_loader import (
+from claude.skills.skill_loader import (
     CFR007ViolationError,
     ContextLoadError,
     HealthCheckError,

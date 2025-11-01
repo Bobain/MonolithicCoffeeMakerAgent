@@ -5,7 +5,7 @@ Tests all failure categories and fix recommendations.
 """
 
 import pytest
-from coffee_maker.skills.code_analysis.test_failure_analyzer import (
+from claude.skills.code_analysis.test_failure_analyzer import (
     TestFailureAnalyzerSkill,
     FailureCategory,
 )
@@ -275,7 +275,7 @@ tests/unit/test_auth.py::test_register PASSED                           [100%]
 
     def test_calculate_priority_critical(self, analyzer):
         """Test priority calculation for critical failure."""
-        from coffee_maker.skills.code_analysis.test_failure_analyzer import TestFailure
+        from claude.skills.code_analysis.test_failure_analyzer import TestFailure
 
         failure = TestFailure(
             test_name="test_login",
@@ -293,7 +293,7 @@ tests/unit/test_auth.py::test_register PASSED                           [100%]
 
     def test_calculate_priority_high(self, analyzer):
         """Test priority calculation for high priority failure."""
-        from coffee_maker.skills.code_analysis.test_failure_analyzer import TestFailure
+        from claude.skills.code_analysis.test_failure_analyzer import TestFailure
 
         failure = TestFailure(
             test_name="test_validate",
@@ -311,7 +311,7 @@ tests/unit/test_auth.py::test_register PASSED                           [100%]
 
     def test_calculate_priority_medium(self, analyzer):
         """Test priority calculation for medium priority failure."""
-        from coffee_maker.skills.code_analysis.test_failure_analyzer import TestFailure
+        from claude.skills.code_analysis.test_failure_analyzer import TestFailure
 
         failure = TestFailure(
             test_name="test_fixture",
@@ -390,7 +390,7 @@ tests/unit/test_auth.py PASSED                                         [100%]
 
     def test_recommend_import_fix(self, analyzer):
         """Test import error fix recommendation."""
-        from coffee_maker.skills.code_analysis.test_failure_analyzer import TestFailure
+        from claude.skills.code_analysis.test_failure_analyzer import TestFailure
 
         failure = TestFailure(
             test_name="test_login",
@@ -409,7 +409,7 @@ tests/unit/test_auth.py PASSED                                         [100%]
 
     def test_recommend_assertion_fix(self, analyzer):
         """Test assertion error fix recommendation."""
-        from coffee_maker.skills.code_analysis.test_failure_analyzer import TestFailure
+        from claude.skills.code_analysis.test_failure_analyzer import TestFailure
 
         failure = TestFailure(
             test_name="test_value",
@@ -427,7 +427,7 @@ tests/unit/test_auth.py PASSED                                         [100%]
 
     def test_recommend_attribute_fix(self, analyzer):
         """Test attribute error fix recommendation."""
-        from coffee_maker.skills.code_analysis.test_failure_analyzer import TestFailure
+        from claude.skills.code_analysis.test_failure_analyzer import TestFailure
 
         failure = TestFailure(
             test_name="test_method",
@@ -561,7 +561,7 @@ class TestTestFailureAnalysisIntegration:
 
     def test_test_failure_analysis_function(self, sample_import_error_output):
         """Test test_failure_analysis convenience function."""
-        from coffee_maker.skills import test_failure_analysis
+        from claude.skills import test_failure_analysis
 
         result = test_failure_analysis(
             test_output=sample_import_error_output,

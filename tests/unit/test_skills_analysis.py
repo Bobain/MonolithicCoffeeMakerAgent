@@ -9,10 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from coffee_maker.skills.code_analysis.code_explainer import CodeExplainer
-from coffee_maker.skills.code_analysis.code_forensics import CodeForensics
-from coffee_maker.skills.code_analysis.dependency_tracer import DependencyTracer
-from coffee_maker.skills.code_analysis.security_audit import SecurityAudit
+from claude.skills.code_analysis.code_explainer import CodeExplainer
+from claude.skills.code_analysis.code_forensics import CodeForensics
+from claude.skills.code_analysis.dependency_tracer import DependencyTracer
+from claude.skills.code_analysis.security_audit import SecurityAudit
 
 
 @pytest.fixture

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from coffee_maker.skills.refactoring_analysis.proactive_refactoring_analysis import (
+from claude.skills.refactoring_analysis.proactive_refactoring_analysis import (
     WeeklyReportGenerator,
     main,
 )
@@ -126,7 +126,7 @@ class TestProactiveRefactoringIntegration:
     @pytest.mark.slow
     def test_trend_tracking_across_runs(self):
         """Test trend tracking accumulates data across multiple runs."""
-        from coffee_maker.skills.refactoring_analysis.proactive_refactoring_analysis import (
+        from claude.skills.refactoring_analysis.proactive_refactoring_analysis import (
             TrendTracker,
         )
 

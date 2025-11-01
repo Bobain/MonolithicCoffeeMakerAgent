@@ -6,12 +6,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from coffee_maker.skills.git_workflow.commit_generator import CommitMessage
-from coffee_maker.skills.git_workflow.git_workflow_automation import (
+from claude.skills.git_workflow.commit_generator import CommitMessage
+from claude.skills.git_workflow.git_workflow_automation import (
     GitWorkflowAutomation,
     GitWorkflowResult,
 )
-from coffee_maker.skills.git_workflow.pr_creator import PullRequest
+from claude.skills.git_workflow.pr_creator import PullRequest
 
 
 @pytest.fixture
@@ -130,9 +130,9 @@ class TestGitWorkflowAutomation:
         title = git_workflow._generate_pr_title("US-067", "")
         assert title == "Implement US-067"
 
-    @patch("coffee_maker.skills.git_workflow.git_workflow_automation.Path.read_text")
-    @patch("coffee_maker.skills.git_workflow.git_workflow_automation.Path.write_text")
-    @patch("coffee_maker.skills.git_workflow.git_workflow_automation.Path.exists")
+    @patch("claude.skills.git_workflow.git_workflow_automation.Path.read_text")
+    @patch("claude.skills.git_workflow.git_workflow_automation.Path.write_text")
+    @patch("claude.skills.git_workflow.git_workflow_automation.Path.exists")
     def test_update_roadmap_status(
         self,
         mock_exists,

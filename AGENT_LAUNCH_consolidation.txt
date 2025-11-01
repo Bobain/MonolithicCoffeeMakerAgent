@@ -1,0 +1,13 @@
+Task Group: consolidation
+Worktree: /tmp/worktrees/roadmap-work-consolidation
+First Task: TASK-100-043
+
+To execute, run this in Claude Code:
+
+/implement task_id=TASK-100-043 task_group_id=consolidation worktree=/tmp/worktrees/roadmap-work-consolidation
+
+This will:
+1. Read task spec from database
+2. Implement the changes
+3. Commit
+4. Continue to next task in consolidation group

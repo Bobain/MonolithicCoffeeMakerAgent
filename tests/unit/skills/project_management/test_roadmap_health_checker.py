@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from coffee_maker.skills.project_management import (
+from claude.skills.project_management import (
     HealthReport,
     Priority,
     RoadmapHealthChecker,
@@ -211,7 +211,7 @@ class TestRoadmapHealthChecker:
         priorities = checker._parse_roadmap()
 
         # Create mock velocity
-        from coffee_maker.skills.project_management import VelocityMetrics
+        from claude.skills.project_management import VelocityMetrics
 
         velocity = VelocityMetrics(last_7_days=2, last_30_days=8, average_per_week=2.0, trend="stable")
 
@@ -278,7 +278,7 @@ class TestRoadmapHealthChecker:
 
         checker = RoadmapHealthChecker(roadmap_path=roadmap_path, project_root=project_root)
 
-        from coffee_maker.skills.project_management import HealthMetrics, VelocityMetrics
+        from claude.skills.project_management import HealthMetrics, VelocityMetrics
 
         velocity = VelocityMetrics(last_7_days=3, last_30_days=10, average_per_week=2.3, trend="stable")
         metrics = HealthMetrics(
@@ -304,7 +304,7 @@ class TestRoadmapHealthChecker:
 
         checker = RoadmapHealthChecker(roadmap_path=roadmap_path, project_root=project_root)
 
-        from coffee_maker.skills.project_management import BlockerInfo, HealthMetrics, VelocityMetrics
+        from claude.skills.project_management import BlockerInfo, HealthMetrics, VelocityMetrics
 
         velocity = VelocityMetrics(last_7_days=1, last_30_days=4, average_per_week=0.9, trend="declining")
         metrics = HealthMetrics(
@@ -360,7 +360,7 @@ class TestRoadmapHealthChecker:
         roadmap_path, project_root = temp_roadmap
         checker = RoadmapHealthChecker(roadmap_path=roadmap_path, project_root=project_root)
 
-        from coffee_maker.skills.project_management import HealthMetrics, VelocityMetrics
+        from claude.skills.project_management import HealthMetrics, VelocityMetrics
 
         velocity = VelocityMetrics(last_7_days=3, last_30_days=10, average_per_week=2.3, trend="stable")
         metrics = HealthMetrics(
@@ -386,7 +386,7 @@ class TestRoadmapHealthChecker:
         roadmap_path, project_root = temp_roadmap
         checker = RoadmapHealthChecker(roadmap_path=roadmap_path, project_root=project_root)
 
-        from coffee_maker.skills.project_management import BlockerInfo, HealthMetrics, VelocityMetrics
+        from claude.skills.project_management import BlockerInfo, HealthMetrics, VelocityMetrics
 
         velocity = VelocityMetrics(last_7_days=1, last_30_days=4, average_per_week=0.9, trend="declining")
         metrics = HealthMetrics(
@@ -423,7 +423,7 @@ class TestRoadmapHealthChecker:
         roadmap_path, project_root = temp_roadmap
         checker = RoadmapHealthChecker(roadmap_path=roadmap_path, project_root=project_root)
 
-        from coffee_maker.skills.project_management import HealthMetrics, VelocityMetrics
+        from claude.skills.project_management import HealthMetrics, VelocityMetrics
 
         velocity = VelocityMetrics(last_7_days=2, last_30_days=8, average_per_week=2.0, trend="stable")
         metrics = HealthMetrics(

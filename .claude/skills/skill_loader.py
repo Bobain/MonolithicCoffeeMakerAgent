@@ -5,7 +5,7 @@ This module loads and executes Claude Code Skills during agent startup,
 ensuring CFR-007 compliance, health checks, and proper initialization.
 
 Usage:
-    from coffee_maker.skills import StartupSkillLoader, StartupError
+    from claude.skills import StartupSkillLoader, StartupError
 
     loader = StartupSkillLoader()
     result = loader.execute_startup_skill("architect")

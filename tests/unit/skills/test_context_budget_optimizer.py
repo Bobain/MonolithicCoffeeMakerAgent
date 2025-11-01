@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from coffee_maker.skills.optimization.context_budget_optimizer import (
+from claude.skills.optimization.context_budget_optimizer import (
     ContextBudgetOptimizer,
     FilePrioritizer,
     TokenCounter,
